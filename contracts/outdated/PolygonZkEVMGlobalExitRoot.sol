@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.28;
 
-import "./interfaces/IPolygonZkEVMGlobalExitRoot.sol";
-import "./lib/GlobalExitRootLib.sol";
+import "../interfaces/IPolygonZkEVMGlobalExitRoot.sol";
+import "../lib/GlobalExitRootLib.sol";
 
 /**
  * Contract responsible for managing the exit roots across multiple networks

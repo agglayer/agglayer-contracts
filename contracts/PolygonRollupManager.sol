@@ -3,10 +3,10 @@
 pragma solidity 0.8.28;
 
 import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
-import "../interfaces/IPolygonZkEVMBridge.sol";
+import "./interfaces/IPolygonZkEVMBridge.sol";
 import "./interfaces/IPolygonRollupBase.sol";
-import "../interfaces/IVerifierRollup.sol";
-import "../lib/EmergencyManager.sol";
+import "./interfaces/IVerifierRollup.sol";
+import "./lib/EmergencyManager.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 // @dev For ReentrancyGuardTransient there is no difference between upgradable and not upgradable contracts
 import "@openzeppelin/contracts52/utils/ReentrancyGuardTransient.sol";

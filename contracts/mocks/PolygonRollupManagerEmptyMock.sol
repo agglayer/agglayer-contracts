@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 import "../PolygonRollupManager.sol";
 import "../interfaces/IPolygonRollupBase.sol";
-import "../../lib/EmergencyManager.sol";
+import "../lib/EmergencyManager.sol";
 
 /**
  * PolygonRollupManager used only to test conensus contracts
