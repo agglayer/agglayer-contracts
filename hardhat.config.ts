@@ -7,6 +7,8 @@ import "@nomicfoundation/hardhat-chai-matchers";
 import {HardhatUserConfig} from "hardhat/config";
 import 'solidity-coverage'
 
+import "./tasks/compile";
+
 const DEFAULT_MNEMONIC = "test test test test test test test test test test test junk";
 
 /*
