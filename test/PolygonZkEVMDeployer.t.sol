@@ -27,47 +27,31 @@ abstract contract Common is Test, TestHelpers {
 
     PolygonZkEVMDeployer internal polygonZkEVMDeployer;
 
-    bytes transferCallData =
-        abi.encodeWithSignature(
-            "transfer(address,uint256)",
-            receipient,
-            amount
-        );
+    bytes transferCallData = abi.encodeWithSignature("transfer(address,uint256)", receipient, amount);
 
-    bytes transferCallDataFailure =
-        abi.encodeWithSignature(
-            "transfer(address,uint256)",
-            address(0), // zero address
-            amount
-        );
+    bytes transferCallDataFailure = abi.encodeWithSignature(
+        "transfer(address,uint256)",
+        address(0), // zero address
+        amount
+    );
 
-    bytes initializeCallData =
-        abi.encodeWithSignature(
-            "initialize(string,string,uint256,address)",
-            tokenName,
-            tokenSymbol,
-            tokenSupply,
-            tokenOwner
-        );
+    bytes initializeCallData = abi.encodeWithSignature(
+        "initialize(string,string,uint256,address)", tokenName, tokenSymbol, tokenSupply, tokenOwner
+    );
 
     event NewDeterministicDeployment(address newContractAddress);
     event FunctionCall();
     event FunctionalCall();
 
     constructor() {
-        creationCode = abi.encodePacked(
-            vm.getCode("ERC20PresetFixedSupplyUpgradeable"),
-            ""
-        );
+        creationCode = abi.encodePacked(vm.getCode("ERC20PresetFixedSupplyUpgradeable"), "");
         creationCodeHash = keccak256(abi.encodePacked(creationCode));
     }
 }
 
 abstract contract Predeployment is Common, PolygonZkEVMDeployerDeployer {
     function setUp() public virtual {
-        polygonZkEVMDeployer = PolygonZkEVMDeployer(
-            deployPolygonZkEVMDeployerImplementation(polygonZkEVMDeployerOwner)
-        );
+        polygonZkEVMDeployer = PolygonZkEVMDeployer(deployPolygonZkEVMDeployerImplementation(polygonZkEVMDeployerOwner));
     }
 }
 
@@ -77,14 +61,11 @@ contract PolygonZkEVMDeployerTestPredeployment is Predeployment {
     }
 
     function test_predictDeterministicAddress() public view {
-        address precalculatedTokenAddress = vm.computeCreate2Address(
-            tokenSalt,
-            creationCodeHash,
-            address(polygonZkEVMDeployer)
-        );
+        address precalculatedTokenAddress =
+            vm.computeCreate2Address(tokenSalt, creationCodeHash, address(polygonZkEVMDeployer));
 
-        address deterministicTokenAddress = polygonZkEVMDeployer
-            .predictDeterministicAddress(tokenSalt, creationCodeHash);
+        address deterministicTokenAddress =
+            polygonZkEVMDeployer.predictDeterministicAddress(tokenSalt, creationCodeHash);
 
         assertEq(precalculatedTokenAddress, deterministicTokenAddress);
     }
@@ -96,8 +77,7 @@ contract PolygonZkEVMDeployerTestPredeployment is Predeployment {
     }
 
     function test_deployDeterministic() public {
-        tokenDeterministicAddr = polygonZkEVMDeployer
-            .predictDeterministicAddress(tokenSalt, creationCodeHash);
+        tokenDeterministicAddr = polygonZkEVMDeployer.predictDeterministicAddress(tokenSalt, creationCodeHash);
 
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectEmit();
@@ -106,21 +86,13 @@ contract PolygonZkEVMDeployerTestPredeployment is Predeployment {
     }
 
     function test_deployDeterministicAndCall() public {
-        tokenDeterministicAddr = polygonZkEVMDeployer
-            .predictDeterministicAddress(tokenSalt, creationCodeHash);
+        tokenDeterministicAddr = polygonZkEVMDeployer.predictDeterministicAddress(tokenSalt, creationCodeHash);
 
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectEmit();
         emit NewDeterministicDeployment(tokenDeterministicAddr);
-        polygonZkEVMDeployer.deployDeterministicAndCall(
-            0,
-            tokenSalt,
-            creationCode,
-            initializeCallData
-        );
-        ERC20PresetFixedSupplyUpgradeable token = ERC20PresetFixedSupplyUpgradeable(
-                tokenDeterministicAddr
-            );
+        polygonZkEVMDeployer.deployDeterministicAndCall(0, tokenSalt, creationCode, initializeCallData);
+        ERC20PresetFixedSupplyUpgradeable token = ERC20PresetFixedSupplyUpgradeable(tokenDeterministicAddr);
         assertEq(token.name(), tokenName);
         assertEq(token.symbol(), tokenSymbol);
         assertEq(token.totalSupply(), tokenSupply);
@@ -129,21 +101,14 @@ contract PolygonZkEVMDeployerTestPredeployment is Predeployment {
 
 abstract contract Postdeployment is Common, PolygonZkEVMDeployerDeployer {
     function setUp() public virtual {
-        polygonZkEVMDeployer = PolygonZkEVMDeployer(
-            deployPolygonZkEVMDeployerImplementation(polygonZkEVMDeployerOwner)
-        );
+        polygonZkEVMDeployer = PolygonZkEVMDeployer(deployPolygonZkEVMDeployerImplementation(polygonZkEVMDeployerOwner));
 
-        tokenDeterministicAddr = polygonZkEVMDeployer
-            .predictDeterministicAddress(tokenSalt, creationCodeHash);
+        tokenDeterministicAddr = polygonZkEVMDeployer.predictDeterministicAddress(tokenSalt, creationCodeHash);
 
         vm.startPrank(polygonZkEVMDeployerOwner);
         polygonZkEVMDeployer.deployDeterministic(0, tokenSalt, creationCode);
 
-        polygonZkEVMDeployer.functionCall(
-            tokenDeterministicAddr,
-            initializeCallData,
-            0
-        );
+        polygonZkEVMDeployer.functionCall(tokenDeterministicAddr, initializeCallData, 0);
         vm.stopPrank();
     }
 }
@@ -178,43 +143,26 @@ contract PolygonZkEVMDeployerTestPostdeployment is Postdeployment {
     function testRevert_functionCall_lowLevelCallInternalRevert() public {
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectRevert("ERC20: transfer to the zero address");
-        polygonZkEVMDeployer.functionCall(
-            tokenDeterministicAddr,
-            transferCallDataFailure,
-            0
-        );
+        polygonZkEVMDeployer.functionCall(tokenDeterministicAddr, transferCallDataFailure, 0);
     }
 
     function testRevert_functionCall_notOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");
-        polygonZkEVMDeployer.functionCall(
-            tokenDeterministicAddr,
-            transferCallData,
-            0
-        );
+        polygonZkEVMDeployer.functionCall(tokenDeterministicAddr, transferCallData, 0);
     }
 
     function test_functionCall() public {
         // give some tokens to the polygonZkEVMDeployer contract since it will be the one calling the function
         vm.prank(tokenOwner); // msg.sender
-        ERC20PresetFixedSupplyUpgradeable(tokenDeterministicAddr).transfer(
-            address(polygonZkEVMDeployer),
-            amount
-        );
+        ERC20PresetFixedSupplyUpgradeable(tokenDeterministicAddr).transfer(address(polygonZkEVMDeployer), amount);
 
         // only the polygonZkEVMDeployerOwner can initiate the function call
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectEmit();
         emit FunctionCall();
-        polygonZkEVMDeployer.functionCall(
-            tokenDeterministicAddr,
-            transferCallData,
-            0
-        );
+        polygonZkEVMDeployer.functionCall(tokenDeterministicAddr, transferCallData, 0);
 
-        uint256 receipientBalance = ERC20PresetFixedSupplyUpgradeable(
-            tokenDeterministicAddr
-        ).balanceOf(receipient);
+        uint256 receipientBalance = ERC20PresetFixedSupplyUpgradeable(tokenDeterministicAddr).balanceOf(receipient);
         assertEq(receipientBalance, amount);
     }
 }

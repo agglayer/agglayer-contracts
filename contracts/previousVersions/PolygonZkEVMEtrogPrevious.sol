@@ -24,12 +24,5 @@ contract PolygonZkEVMEtrogPrevious is PolygonRollupBaseEtrogPrevious {
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManager _rollupManager
-    )
-        PolygonRollupBaseEtrogPrevious(
-            _globalExitRootManager,
-            _pol,
-            _bridgeAddress,
-            _rollupManager
-        )
-    {}
+    ) PolygonRollupBaseEtrogPrevious(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager) {}
 }

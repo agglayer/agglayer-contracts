@@ -8,16 +8,10 @@ contract Deploy is Script, PolygonDataCommitteeDeployer {
     function run() public {
         address proxyAdminOwner = makeAddr("proxyAdminOwner");
 
-        (
-            address implementation,
-            address proxyAdmin,
-            address proxy
-        ) = deployPolygonDataCommitteeTransparent(proxyAdminOwner);
+        (address implementation, address proxyAdmin, address proxy) =
+            deployPolygonDataCommitteeTransparent(proxyAdminOwner);
         console.log("PolygonDataCommittee deployed at: ", proxy);
-        console.log(
-            "PolygonDataCommittee implementation deployed at: ",
-            implementation
-        );
+        console.log("PolygonDataCommittee implementation deployed at: ", implementation);
         console.log("PolygonDataCommittee proxy admin: ", proxyAdmin);
     }
 }

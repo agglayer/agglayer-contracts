@@ -31,16 +31,7 @@ contract PolygonZkEVMUpgraded is PolygonZkEVM {
         uint64 _chainID,
         uint64 _forkID,
         uint256 versionBeforeUpgrade
-    )
-        PolygonZkEVM(
-            _globalExitRootManager,
-            _matic,
-            _rollupVerifier,
-            _bridgeAddress,
-            _chainID,
-            _forkID
-        )
-    {
+    ) PolygonZkEVM(_globalExitRootManager, _matic, _rollupVerifier, _bridgeAddress, _chainID, _forkID) {
         VERSION_BEFORE_UPGRADE = versionBeforeUpgrade;
     }
 
@@ -124,12 +115,7 @@ contract PolygonZkEVMUpgraded is PolygonZkEVM {
         }
 
         super._verifyAndRewardBatches(
-            pendingStateNum,
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            newStateRoot,
-            proof
+            pendingStateNum, initNumBatch, finalNewBatch, newLocalExitRoot, newStateRoot, proof
         );
     }
 }

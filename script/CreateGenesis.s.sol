@@ -27,12 +27,9 @@ contract CreateGenesis is Script {
 
     string constant OUTPUT_DIR = "script/";
     string constant OUTPUT_FILENAME = "genesis.json";
-    bytes32 constant ADMIN_SLOT =
-        0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
-    bytes32 constant IMPLEMENTATION_SLOT =
-        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
-    bytes32 constant EMPTY_SLOT_VALUE =
-        0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 constant ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+    bytes32 constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    bytes32 constant EMPTY_SLOT_VALUE = 0x0000000000000000000000000000000000000000000000000000000000000000;
     uint256 constant BALANCE_BRIDGE = 0xffffffffffffffffffffffffffffffff;
     uint256 constant BALANCE_DEPLOYER = 0x152d02c7e14af6800000;
     bytes16 private constant HEX_SYMBOLS = "0123456789abcdef";
@@ -81,16 +78,10 @@ contract CreateGenesis is Script {
 
         string memory input = vm.readFile(inputPath);
         for (uint256 i = 0; i < contractNames.length; i++) {
-            ContractInfo memory currentContract = ContractInfo({
-                name: contractNames[i],
-                addr: input.readAddress(string.concat(".", contractNames[i]))
-            });
+            ContractInfo memory currentContract =
+                ContractInfo({name: contractNames[i], addr: input.readAddress(string.concat(".", contractNames[i]))});
             contracts.push(currentContract);
-            console.log(
-                "%s's address: %s",
-                currentContract.name,
-                currentContract.addr
-            );
+            console.log("%s's address: %s", currentContract.name, currentContract.addr);
         }
         deployerAddr = input.readAddress(".Deployer");
         console.log("Deployer's address: %s", deployerAddr);
@@ -108,16 +99,11 @@ contract CreateGenesis is Script {
         for (uint256 i = 0; i < contracts.length; i++) {
             uint256 balance = 0;
             if (
-                keccak256(abi.encodePacked(contracts[i].name)) ==
-                keccak256(abi.encodePacked("PolygonZkEVMBridgeProxy"))
+                keccak256(abi.encodePacked(contracts[i].name)) == keccak256(abi.encodePacked("PolygonZkEVMBridgeProxy"))
             ) {
                 balance = BALANCE_BRIDGE;
             }
-            string memory contractOutput = _generateContractGenesisInfo(
-                contracts[i].name,
-                balance,
-                contracts[i].addr
-            );
+            string memory contractOutput = _generateContractGenesisInfo(contracts[i].name, balance, contracts[i].addr);
             finalOutput = string.concat(finalOutput, contractOutput);
             if (i != contracts.length - 1) {
                 finalOutput = string.concat(finalOutput, ",");
@@ -137,18 +123,15 @@ contract CreateGenesis is Script {
             bytes32 currentSlot = bytes32(uint256(i));
             bytes32 currentSlotValue = vm.load(contractAddr, currentSlot);
             if (currentSlotValue != EMPTY_SLOT_VALUE) {
-                contractSlots.push(
-                    Slot({slot: currentSlot, value: currentSlotValue})
-                );
+                contractSlots.push(Slot({slot: currentSlot, value: currentSlotValue}));
             }
         }
     }
 
-    function _generateContractGenesisInfo(
-        string memory contractName,
-        uint256 balance,
-        address contractAddr
-    ) internal returns (string memory) {
+    function _generateContractGenesisInfo(string memory contractName, uint256 balance, address contractAddr)
+        internal
+        returns (string memory)
+    {
         string memory contractObj = contractName;
 
         bytes memory runtimeCode = contractAddr.code;
@@ -157,77 +140,42 @@ contract CreateGenesis is Script {
 
         vm.serializeString(contractObj, "contractName", contractName);
         vm.serializeString(contractObj, "balance", _toHexString(balance));
-        vm.serializeString(
-            contractObj,
-            "nonce",
-            _toHexString(vm.getNonce(contractAddr))
-        );
+        vm.serializeString(contractObj, "nonce", _toHexString(vm.getNonce(contractAddr)));
         vm.serializeAddress(contractObj, "address", contractAddr);
 
         _getContractSlots(contractAddr);
 
         // Special handling for PolygonZkEVMTimelock
-        if (
-            keccak256(abi.encodePacked(contractName)) !=
-            keccak256(abi.encodePacked("PolygonZkEVMTimelock"))
-        ) {
+        if (keccak256(abi.encodePacked(contractName)) != keccak256(abi.encodePacked("PolygonZkEVMTimelock"))) {
             bytes32 adminSlotValue = vm.load(contractAddr, ADMIN_SLOT);
             if (adminSlotValue != EMPTY_SLOT_VALUE) {
-                contractSlots.push(
-                    Slot({slot: ADMIN_SLOT, value: adminSlotValue})
-                );
+                contractSlots.push(Slot({slot: ADMIN_SLOT, value: adminSlotValue}));
             }
-            bytes32 implementationSlotValue = vm.load(
-                contractAddr,
-                IMPLEMENTATION_SLOT
-            );
+            bytes32 implementationSlotValue = vm.load(contractAddr, IMPLEMENTATION_SLOT);
             if (implementationSlotValue != EMPTY_SLOT_VALUE) {
-                contractSlots.push(
-                    Slot({
-                        slot: IMPLEMENTATION_SLOT,
-                        value: implementationSlotValue
-                    })
-                );
+                contractSlots.push(Slot({slot: IMPLEMENTATION_SLOT, value: implementationSlotValue}));
             }
         } else {
             for (uint256 i = 0; i < timelockRoles.length; i++) {
                 uint256 rolesMappingStoragePositionStruct = 0;
-                bytes32 storagePosition = keccak256(
-                    abi.encodePacked(
-                        timelockRoles[i],
-                        rolesMappingStoragePositionStruct
-                    )
-                );
+                bytes32 storagePosition =
+                    keccak256(abi.encodePacked(timelockRoles[i], rolesMappingStoragePositionStruct));
 
                 address[] memory addressArray = new address[](2);
                 addressArray[0] = timelockAdminAddress;
                 addressArray[1] = contractAddr;
                 for (uint256 j = 0; j < addressArray.length; j++) {
-                    bytes32 storagePositionRole = keccak256(
-                        abi.encodePacked(
-                            uint256(uint160(addressArray[j])),
-                            storagePosition
-                        )
-                    );
-                    bytes32 valueRole = vm.load(
-                        contractAddr,
-                        storagePositionRole
-                    );
+                    bytes32 storagePositionRole =
+                        keccak256(abi.encodePacked(uint256(uint160(addressArray[j])), storagePosition));
+                    bytes32 valueRole = vm.load(contractAddr, storagePositionRole);
                     if (valueRole != EMPTY_SLOT_VALUE) {
-                        contractSlots.push(
-                            Slot({slot: storagePositionRole, value: valueRole})
-                        );
+                        contractSlots.push(Slot({slot: storagePositionRole, value: valueRole}));
                     }
                 }
                 bytes32 roleAdminSlot = bytes32(uint256(storagePosition) + 1); // shift by 1 to get the next slot
-                bytes32 valueRoleAdminSlot = vm.load(
-                    contractAddr,
-                    roleAdminSlot
-                );
+                bytes32 valueRoleAdminSlot = vm.load(contractAddr, roleAdminSlot);
                 if (valueRoleAdminSlot != EMPTY_SLOT_VALUE) {
-                    contractSlots.push(
-                        Slot({slot: roleAdminSlot, value: valueRoleAdminSlot})
-                    );
+                    contractSlots.push(Slot({slot: roleAdminSlot, value: valueRoleAdminSlot}));
                 }
             }
         }
@@ -235,11 +183,7 @@ contract CreateGenesis is Script {
         string memory slotsObj = string.concat("storage slots:", contractName);
         string memory slotsOutput;
         for (uint256 i = 0; i < contractSlots.length; i++) {
-            slotsOutput = vm.serializeBytes32(
-                slotsObj,
-                vm.toString(contractSlots[i].slot),
-                contractSlots[i].value
-            );
+            slotsOutput = vm.serializeBytes32(slotsObj, vm.toString(contractSlots[i].slot), contractSlots[i].value);
         }
         // reset contractSlots for next contract
         delete contractSlots;
@@ -253,18 +197,12 @@ contract CreateGenesis is Script {
         }
         string memory deployerObj = "deployer info";
         vm.serializeString(deployerObj, "accountName", "deployer");
-        vm.serializeString(
-            deployerObj,
-            "nonce",
-            _toHexString(vm.getNonce(deployerAddr))
-        );
+        vm.serializeString(deployerObj, "nonce", _toHexString(vm.getNonce(deployerAddr)));
         vm.serializeString(deployerObj, "balance", _toHexString(balance));
         return vm.serializeAddress(deployerObj, "address", deployerAddr);
     }
 
-    function _calculateStateRoot(
-        string memory genesis
-    ) public returns (bytes32) {
+    function _calculateStateRoot(string memory genesis) public returns (bytes32) {
         string[] memory operation = new string[](4);
         operation[0] = "node";
         operation[1] = "tools/zkevm-commonjs-wrapper";
@@ -298,24 +236,11 @@ contract CreateGenesis is Script {
         return string(abi.encodePacked("0x", buffer));
     }
 
-    function _wrapJson(
-        string memory json
-    ) internal pure returns (string memory) {
+    function _wrapJson(string memory json) internal pure returns (string memory) {
         return string.concat("{", json, "}");
     }
 
-    function _insertStateRoot(
-        string memory json,
-        bytes32 stateRoot
-    ) internal pure returns (string memory) {
-        return
-            string.concat(
-                "{",
-                '"root":"',
-                vm.toString(stateRoot),
-                '",',
-                json,
-                "}"
-            );
+    function _insertStateRoot(string memory json, bytes32 stateRoot) internal pure returns (string memory) {
+        return string.concat("{", '"root":"', vm.toString(stateRoot), '",', json, "}");
     }
 }

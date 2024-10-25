@@ -13,12 +13,7 @@ import "contracts/PolygonZkEVMGlobalExitRootV2.sol";
 
 import "script/deployers/PolygonZkEVMGlobalExitRootV2Deployer.s.sol";
 
-contract PolygonZkEVMBridgeV2Test is
-    Test,
-    TestHelpers,
-    ZkEVMCommon,
-    PolygonZkEVMGlobalExitRootV2Deployer
-{
+contract PolygonZkEVMBridgeV2Test is Test, TestHelpers, ZkEVMCommon, PolygonZkEVMGlobalExitRootV2Deployer {
     struct ClaimPayload {
         bytes32[32] proofMainnet;
         bytes32[32] proofRollup;
@@ -39,8 +34,7 @@ contract PolygonZkEVMBridgeV2Test is
     address deployer = makeAddr("deployer");
     address rollupManager = makeAddr("rollupManager");
     address user = makeAddr("user");
-    address polygonZkEVMGlobalExitRootV2ProxyOwner =
-        makeAddr("polygonZkEVMGlobalExitRootV2ProxyOwner");
+    address polygonZkEVMGlobalExitRootV2ProxyOwner = makeAddr("polygonZkEVMGlobalExitRootV2ProxyOwner");
     address polOwner = makeAddr("polOwner");
     address destinationAddress = makeAddr("destinationAddress");
     address wethCalculated;
@@ -78,45 +72,25 @@ contract PolygonZkEVMBridgeV2Test is
     );
 
     event ClaimEvent(
-        uint256 globalIndex,
-        uint32 originNetwork,
-        address originAddress,
-        address destinationAddress,
-        uint256 amount
+        uint256 globalIndex, uint32 originNetwork, address originAddress, address destinationAddress, uint256 amount
     );
 
     function setUp() public virtual {
-        IPolygonZkEVMBridgeV2Extended polygonZkEVMBridgeImplementation = IPolygonZkEVMBridgeV2Extended(
-                _preDeployPolygonZkEVMBridgeV2()
-            );
+        IPolygonZkEVMBridgeV2Extended polygonZkEVMBridgeImplementation =
+            IPolygonZkEVMBridgeV2Extended(_preDeployPolygonZkEVMBridgeV2());
 
-        polygonZkEVMBridge = IPolygonZkEVMBridgeV2Extended(
-            _proxify(address(polygonZkEVMBridgeImplementation))
-        );
+        polygonZkEVMBridge = IPolygonZkEVMBridgeV2Extended(_proxify(address(polygonZkEVMBridgeImplementation)));
 
         deployPolygonZkEVMGlobalExitRootV2Transparent(
-            polygonZkEVMGlobalExitRootV2ProxyOwner,
-            rollupManager,
-            address(polygonZkEVMBridge)
+            polygonZkEVMGlobalExitRootV2ProxyOwner, rollupManager, address(polygonZkEVMBridge)
         );
 
-        polygonZkEVMGlobalExitRootV2 = PolygonZkEVMGlobalExitRootV2(
-            polygonZkEVMGlobalExitRootV2
-        );
+        polygonZkEVMGlobalExitRootV2 = PolygonZkEVMGlobalExitRootV2(polygonZkEVMGlobalExitRootV2);
 
-        pol = new ERC20PermitMock(
-            tokenName,
-            tokenSymbol,
-            polOwner,
-            tokenInitialBalance
-        );
+        pol = new ERC20PermitMock(tokenName, tokenSymbol, polOwner, tokenInitialBalance);
 
-        bytes memory bytecode = polygonZkEVMBridge
-            .BASE_INIT_BYTECODE_WRAPPED_TOKEN();
-        bytes memory creationCode = abi.encodePacked(
-            bytecode,
-            abi.encode(WETH_NAME, WETH_SYMBOL, WETH_DECIMALS)
-        );
+        bytes memory bytecode = polygonZkEVMBridge.BASE_INIT_BYTECODE_WRAPPED_TOKEN();
+        bytes memory creationCode = abi.encodePacked(bytecode, abi.encode(WETH_NAME, WETH_SYMBOL, WETH_DECIMALS));
         wethCalculated = vm.computeCreate2Address(
             0, // salt
             keccak256(creationCode),
@@ -129,38 +103,24 @@ contract PolygonZkEVMBridgeV2Test is
         assertEq(polygonZkEVMBridge.networkID(), networkIDMainnet);
         assertEq(polygonZkEVMBridge.gasTokenAddress(), address(0));
         assertEq(polygonZkEVMBridge.gasTokenNetwork(), networkIDMainnet);
-        assertEq(
-            address(polygonZkEVMBridge.globalExitRootManager()),
-            address(polygonZkEVMGlobalExitRootV2)
-        );
+        assertEq(address(polygonZkEVMBridge.globalExitRootManager()), address(polygonZkEVMGlobalExitRootV2));
         assertEq(polygonZkEVMBridge.polygonRollupManager(), rollupManager);
     }
 
     function test_initialize_gasTokenPresent() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
         assertEq(polygonZkEVMBridge.networkID(), networkIDMainnet);
         assertEq(polygonZkEVMBridge.WETHToken(), wethCalculated);
         assertEq(polygonZkEVMBridge.gasTokenAddress(), address(pol));
         assertEq(polygonZkEVMBridge.gasTokenNetwork(), networkIDMainnet);
         assertEq(polygonZkEVMBridge.gasTokenMetadata(), tokenMetaData);
 
-        assertEq(
-            address(polygonZkEVMBridge.globalExitRootManager()),
-            address(polygonZkEVMGlobalExitRootV2)
-        );
+        assertEq(address(polygonZkEVMBridge.globalExitRootManager()), address(polygonZkEVMGlobalExitRootV2));
         assertEq(polygonZkEVMBridge.polygonRollupManager(), rollupManager);
     }
 
     function testRevert_initialize_gasTokenNetworkMustBeZeroOnEther() public {
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended
-                .GasTokenNetworkMustBeZeroOnEther
-                .selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.GasTokenNetworkMustBeZeroOnEther.selector);
         _initializePolygonZkEVMBridge(address(0), networkIDRollup, bytes(""));
     }
 
@@ -168,20 +128,13 @@ contract PolygonZkEVMBridgeV2Test is
         _initializePolygonZkEVMBridge(address(0), networkIDMainnet, bytes(""));
         vm.expectRevert("Initializable: contract is already initialized");
         polygonZkEVMBridge.initialize(
-            networkIDMainnet,
-            address(0),
-            networkIDMainnet,
-            polygonZkEVMGlobalExitRootV2,
-            rollupManager,
-            bytes("")
+            networkIDMainnet, address(0), networkIDMainnet, polygonZkEVMGlobalExitRootV2, rollupManager, bytes("")
         );
     }
 
     function testRevert_bridgeAsset_destinationNetworkInvalid() public {
         _initializePolygonZkEVMBridge(address(0), networkIDMainnet, bytes(""));
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector);
         polygonZkEVMBridge.bridgeAsset(
             networkIDMainnet, // same network as bridge
             destinationAddress,
@@ -195,45 +148,25 @@ contract PolygonZkEVMBridgeV2Test is
     function testRevert_bridgeAsset_amountDoesNotMatchMsgValue() public {
         _initializePolygonZkEVMBridge(address(0), networkIDMainnet, bytes(""));
         // sending native asset
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.AmountDoesNotMatchMsgValue.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.AmountDoesNotMatchMsgValue.selector);
         polygonZkEVMBridge.bridgeAsset( // msg.value = 0 && msg.value != tokenTransferAmount
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            address(0),
-            true,
-            bytes("")
-        );
+        networkIDRollup, destinationAddress, tokenTransferAmount, address(0), true, bytes(""));
     }
 
     function testRevert_bridgeAsset_msgValueNotZero() public {
         _initializePolygonZkEVMBridge(address(0), networkIDMainnet, bytes(""));
         vm.expectRevert(IPolygonZkEVMBridgeV2Extended.MsgValueNotZero.selector);
         polygonZkEVMBridge.bridgeAsset{value: tokenTransferAmount}(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            address(pol),
-            true,
-            bytes("")
+            networkIDRollup, destinationAddress, tokenTransferAmount, address(pol), true, bytes("")
         );
     }
 
     function test_bridgeAsset_assetIsTheGasToken() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         vm.prank(address(polygonZkEVMBridge));
         TokenWrapped(wethCalculated).mint(user, tokenTransferAmount);
-        assertEq(
-            TokenWrapped(wethCalculated).balanceOf(user),
-            tokenTransferAmount
-        );
+        assertEq(TokenWrapped(wethCalculated).balanceOf(user), tokenTransferAmount);
 
         vm.prank(user);
         vm.expectEmit();
@@ -248,23 +181,14 @@ contract PolygonZkEVMBridgeV2Test is
             0
         );
         polygonZkEVMBridge.bridgeAsset(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            wethCalculated,
-            true,
-            bytes("")
+            networkIDRollup, destinationAddress, tokenTransferAmount, wethCalculated, true, bytes("")
         );
         assertEq(TokenWrapped(wethCalculated).balanceOf(user), 0);
         assertEq(polygonZkEVMBridge.lastUpdatedDepositCount(), 1);
     }
 
     function test_bridgeAsset_assetIsTokenOnTheBridgeNetwork() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         vm.prank(polOwner);
         pol.mint(user, tokenTransferAmount);
@@ -285,28 +209,16 @@ contract PolygonZkEVMBridgeV2Test is
             0
         );
         polygonZkEVMBridge.bridgeAsset(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            address(pol),
-            true,
-            bytes("")
+            networkIDRollup, destinationAddress, tokenTransferAmount, address(pol), true, bytes("")
         );
         vm.stopPrank();
-        assertEq(
-            pol.balanceOf(address(polygonZkEVMBridge)),
-            tokenTransferAmount
-        );
+        assertEq(pol.balanceOf(address(polygonZkEVMBridge)), tokenTransferAmount);
         assertEq(pol.balanceOf(user), 0);
         assertEq(polygonZkEVMBridge.lastUpdatedDepositCount(), 1);
     }
 
     function test_bridgeAsset_verifyProof() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -328,12 +240,7 @@ contract PolygonZkEVMBridgeV2Test is
         vm.startPrank(user);
         pol.approve(address(polygonZkEVMBridge), tokenTransferAmount);
         polygonZkEVMBridge.bridgeAsset(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            address(pol),
-            true,
-            bytes("")
+            networkIDRollup, destinationAddress, tokenTransferAmount, address(pol), true, bytes("")
         );
         vm.stopPrank();
 
@@ -341,49 +248,22 @@ contract PolygonZkEVMBridgeV2Test is
         assertEq(polygonZkEVMBridge.getRoot(), calculatedMainnetExitRoot);
 
         bytes32[32] memory proof = _getProofByIndex(encodedLeaves, "0");
-        assertEq(
-            polygonZkEVMBridge.verifyMerkleProof(
-                leaf,
-                proof,
-                0,
-                polygonZkEVMBridge.getRoot()
-            ),
-            true
-        );
+        assertEq(polygonZkEVMBridge.verifyMerkleProof(leaf, proof, 0, polygonZkEVMBridge.getRoot()), true);
     }
 
-    function testRevert_bridgeMessage_noValueInMessagesOnGasTokenNetworks()
-        public
-    {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+    function testRevert_bridgeMessage_noValueInMessagesOnGasTokenNetworks() public {
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended
-                .NoValueInMessagesOnGasTokenNetworks
-                .selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.NoValueInMessagesOnGasTokenNetworks.selector);
         polygonZkEVMBridge.bridgeMessage{value: tokenTransferAmount}(
-            networkIDRollup,
-            destinationAddress,
-            true,
-            bytes("")
+            networkIDRollup, destinationAddress, true, bytes("")
         );
     }
 
     function testRevert_bridgeMessage_destinationNetworkInvalid() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector);
         polygonZkEVMBridge.bridgeMessage(
             networkIDMainnet, // same network as bridge
             destinationAddress,
@@ -397,21 +277,9 @@ contract PolygonZkEVMBridgeV2Test is
 
         vm.expectEmit();
         emit BridgeEvent(
-            LEAF_TYPE_MESSAGE,
-            networkIDMainnet,
-            address(this),
-            networkIDRollup,
-            destinationAddress,
-            0,
-            bytes(""),
-            0
+            LEAF_TYPE_MESSAGE, networkIDMainnet, address(this), networkIDRollup, destinationAddress, 0, bytes(""), 0
         );
-        polygonZkEVMBridge.bridgeMessage(
-            networkIDRollup,
-            destinationAddress,
-            true,
-            bytes("")
-        );
+        polygonZkEVMBridge.bridgeMessage(networkIDRollup, destinationAddress, true, bytes(""));
     }
 
     function test_bridgeMessage_verifyProof() public {
@@ -431,56 +299,30 @@ contract PolygonZkEVMBridgeV2Test is
         leaves[0] = leaf;
         string memory encodedLeaves = _encodeLeaves(leaves);
 
-        polygonZkEVMBridge.bridgeMessage(
-            networkIDRollup,
-            destinationAddress,
-            true,
-            bytes("")
-        );
+        polygonZkEVMBridge.bridgeMessage(networkIDRollup, destinationAddress, true, bytes(""));
 
         bytes32 calculatedMainnetExitRoot = _getMerkleTreeRoot(encodedLeaves);
         assertEq(polygonZkEVMBridge.getRoot(), calculatedMainnetExitRoot);
 
         bytes32[32] memory proof = _getProofByIndex(encodedLeaves, "0");
-        assertEq(
-            polygonZkEVMBridge.verifyMerkleProof(
-                leaf,
-                proof,
-                0,
-                polygonZkEVMBridge.getRoot()
-            ),
-            true
-        );
+        assertEq(polygonZkEVMBridge.verifyMerkleProof(leaf, proof, 0, polygonZkEVMBridge.getRoot()), true);
     }
 
     function testRevert_bridgeMessageWETH_nativeTokenIsEther() public {
         _initializePolygonZkEVMBridge(address(0), networkIDMainnet, bytes(""));
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.NativeTokenIsEther.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.NativeTokenIsEther.selector);
         polygonZkEVMBridge.bridgeMessageWETH(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            true,
-            wethMetaData
+            networkIDRollup, destinationAddress, tokenTransferAmount, true, wethMetaData
         );
     }
 
     function test_bridgeMessageWETH() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         vm.prank(address(polygonZkEVMBridge));
         TokenWrapped(wethCalculated).mint(user, tokenTransferAmount);
-        assertEq(
-            TokenWrapped(wethCalculated).balanceOf(user),
-            tokenTransferAmount
-        );
+        assertEq(TokenWrapped(wethCalculated).balanceOf(user), tokenTransferAmount);
 
         vm.prank(user);
         vm.expectEmit();
@@ -495,21 +337,13 @@ contract PolygonZkEVMBridgeV2Test is
             0
         );
         polygonZkEVMBridge.bridgeMessageWETH(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            true,
-            wethMetaData
+            networkIDRollup, destinationAddress, tokenTransferAmount, true, wethMetaData
         );
         assertEq(TokenWrapped(wethCalculated).balanceOf(user), 0);
     }
 
     function test_bridgeMessageWETH_verifyProof() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_MESSAGE,
@@ -529,36 +363,18 @@ contract PolygonZkEVMBridgeV2Test is
         TokenWrapped(wethCalculated).mint(user, tokenTransferAmount);
 
         vm.startPrank(user);
-        polygonZkEVMBridge.bridgeMessageWETH(
-            networkIDRollup,
-            destinationAddress,
-            tokenTransferAmount,
-            true,
-            bytes("")
-        );
+        polygonZkEVMBridge.bridgeMessageWETH(networkIDRollup, destinationAddress, tokenTransferAmount, true, bytes(""));
         vm.stopPrank();
 
         bytes32 calculatedMainnetExitRoot = _getMerkleTreeRoot(encodedLeaves);
         assertEq(polygonZkEVMBridge.getRoot(), calculatedMainnetExitRoot);
 
         bytes32[32] memory proof = _getProofByIndex(encodedLeaves, "0");
-        assertEq(
-            polygonZkEVMBridge.verifyMerkleProof(
-                leaf,
-                proof,
-                0,
-                polygonZkEVMBridge.getRoot()
-            ),
-            true
-        );
+        assertEq(polygonZkEVMBridge.verifyMerkleProof(leaf, proof, 0, polygonZkEVMBridge.getRoot()), true);
     }
 
     function testRevert_claimAsset_destinationNetworkInvalid() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32[32] memory smtEmptyProof;
         ClaimPayload memory payload = ClaimPayload({
@@ -575,9 +391,7 @@ contract PolygonZkEVMBridgeV2Test is
             metadata: tokenMetaData
         });
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector);
         polygonZkEVMBridge.claimAsset(
             payload.proofMainnet,
             payload.proofRollup,
@@ -594,11 +408,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function testRevert_claimAsset_globalExitRootInvalid() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32[32] memory smtEmptyProof;
         ClaimPayload memory payload = ClaimPayload({
@@ -615,9 +425,7 @@ contract PolygonZkEVMBridgeV2Test is
             metadata: tokenMetaData
         });
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.GlobalExitRootInvalid.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.GlobalExitRootInvalid.selector);
         polygonZkEVMBridge.claimAsset(
             payload.proofMainnet,
             payload.proofRollup,
@@ -634,11 +442,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function testRevert_claimAsset_onSameNetwork_invalidSmtProof() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -660,15 +464,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(pol);
         payload.destinationNetwork = networkIDMainnet;
@@ -693,11 +493,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function testRevert_claimAsset_onDiffNetwork_invalidSmtProof() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -727,22 +523,13 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(rollupManager);
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.rollupExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(),
-            payload.rollupExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(), payload.rollupExitRoot);
 
-        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastMainnetExitRoot();
+        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot();
 
         assertEq(
             polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(),
-            keccak256(
-                abi.encodePacked(
-                    payload.mainnetExitRoot,
-                    payload.rollupExitRoot
-                )
-            )
+            keccak256(abi.encodePacked(payload.mainnetExitRoot, payload.rollupExitRoot))
         );
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
@@ -772,11 +559,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function testRevert_claimAsset_alreadyClaimed() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -798,15 +581,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(pol);
         payload.destinationNetwork = networkIDMainnet;
@@ -871,15 +650,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(0);
         payload.destinationNetwork = networkIDMainnet;
@@ -915,11 +690,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function test_claimAsset_assetIsNativeTokenWETH() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -941,15 +712,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(0);
         payload.destinationNetwork = networkIDMainnet;
@@ -978,18 +745,11 @@ contract PolygonZkEVMBridgeV2Test is
             payload.amount,
             payload.metadata
         );
-        assertEq(
-            TokenWrapped(wethCalculated).balanceOf(destinationAddress),
-            tokenTransferAmount
-        );
+        assertEq(TokenWrapped(wethCalculated).balanceOf(destinationAddress), tokenTransferAmount);
     }
 
     function test_claimAsset_assetIsGasToken() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -1011,15 +771,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(pol);
         payload.destinationNetwork = networkIDMainnet;
@@ -1055,11 +811,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function test_claimAsset_assetIsTokenOnSameNetwork() public {
-        _initializePolygonZkEVMBridge(
-            dummyTokenAddress,
-            networkIDMainnet,
-            bytes("")
-        );
+        _initializePolygonZkEVMBridge(dummyTokenAddress, networkIDMainnet, bytes(""));
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -1081,15 +833,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(pol);
         payload.destinationNetwork = networkIDMainnet;
@@ -1127,11 +875,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function test_claimAsset_assetIsNewTokenOnDiffNetwork() public {
-        _initializePolygonZkEVMBridge(
-            dummyTokenAddress,
-            networkIDMainnet,
-            bytes("")
-        );
+        _initializePolygonZkEVMBridge(dummyTokenAddress, networkIDMainnet, bytes(""));
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -1161,22 +905,13 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(rollupManager);
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.rollupExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(),
-            payload.rollupExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(), payload.rollupExitRoot);
 
-        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastMainnetExitRoot();
+        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot();
 
         assertEq(
             polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(),
-            keccak256(
-                abi.encodePacked(
-                    payload.mainnetExitRoot,
-                    payload.rollupExitRoot
-                )
-            )
+            keccak256(abi.encodePacked(payload.mainnetExitRoot, payload.rollupExitRoot))
         );
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
@@ -1212,26 +947,14 @@ contract PolygonZkEVMBridgeV2Test is
         );
         assertEq(polygonZkEVMBridge.isClaimed(0, 5 + 1), true);
 
-        address wrappedTokenAddress = polygonZkEVMBridge
-            .precalculatedWrapperAddress(
-                payload.originNetwork,
-                address(pol),
-                tokenName,
-                tokenSymbol,
-                tokenDecimals
-            );
-        assertEq(
-            TokenWrapped(wrappedTokenAddress).balanceOf(destinationAddress),
-            tokenTransferAmount
+        address wrappedTokenAddress = polygonZkEVMBridge.precalculatedWrapperAddress(
+            payload.originNetwork, address(pol), tokenName, tokenSymbol, tokenDecimals
         );
+        assertEq(TokenWrapped(wrappedTokenAddress).balanceOf(destinationAddress), tokenTransferAmount);
     }
 
     function test_claimAsset_assetIsExistingTokenOnDiffNetwork() public {
-        _initializePolygonZkEVMBridge(
-            dummyTokenAddress,
-            networkIDMainnet,
-            bytes("")
-        );
+        _initializePolygonZkEVMBridge(dummyTokenAddress, networkIDMainnet, bytes(""));
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -1261,22 +984,13 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(rollupManager);
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.rollupExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(),
-            payload.rollupExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(), payload.rollupExitRoot);
 
-        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastMainnetExitRoot();
+        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot();
 
         assertEq(
             polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(),
-            keccak256(
-                abi.encodePacked(
-                    payload.mainnetExitRoot,
-                    payload.rollupExitRoot
-                )
-            )
+            keccak256(abi.encodePacked(payload.mainnetExitRoot, payload.rollupExitRoot))
         );
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
@@ -1319,18 +1033,10 @@ contract PolygonZkEVMBridgeV2Test is
             payload.amount,
             payload.metadata
         );
-        address wrappedTokenAddress = polygonZkEVMBridge
-            .precalculatedWrapperAddress(
-                payload.originNetwork,
-                address(pol),
-                tokenName,
-                tokenSymbol,
-                tokenDecimals
-            );
-        assertEq(
-            TokenWrapped(wrappedTokenAddress).balanceOf(destinationAddress),
-            tokenTransferAmount * 2
+        address wrappedTokenAddress = polygonZkEVMBridge.precalculatedWrapperAddress(
+            payload.originNetwork, address(pol), tokenName, tokenSymbol, tokenDecimals
         );
+        assertEq(TokenWrapped(wrappedTokenAddress).balanceOf(destinationAddress), tokenTransferAmount * 2);
     }
 
     function testRevert_claimMessage_destinationNetworkInvalid() public {
@@ -1351,9 +1057,7 @@ contract PolygonZkEVMBridgeV2Test is
             metadata: abi.encode("Test message")
         });
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.DestinationNetworkInvalid.selector);
         polygonZkEVMBridge.claimMessage(
             payload.proofMainnet,
             payload.proofRollup,
@@ -1387,9 +1091,7 @@ contract PolygonZkEVMBridgeV2Test is
             metadata: abi.encode("Test message")
         });
 
-        vm.expectRevert(
-            IPolygonZkEVMBridgeV2Extended.GlobalExitRootInvalid.selector
-        );
+        vm.expectRevert(IPolygonZkEVMBridgeV2Extended.GlobalExitRootInvalid.selector);
         polygonZkEVMBridge.claimMessage(
             payload.proofMainnet,
             payload.proofRollup,
@@ -1428,15 +1130,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(this);
         payload.destinationNetwork = networkIDMainnet;
@@ -1491,22 +1189,13 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(rollupManager);
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.rollupExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(),
-            payload.rollupExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastRollupExitRoot(), payload.rollupExitRoot);
 
-        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastMainnetExitRoot();
+        payload.mainnetExitRoot = polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot();
 
         assertEq(
             polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(),
-            keccak256(
-                abi.encodePacked(
-                    payload.mainnetExitRoot,
-                    payload.rollupExitRoot
-                )
-            )
+            keccak256(abi.encodePacked(payload.mainnetExitRoot, payload.rollupExitRoot))
         );
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
@@ -1558,15 +1247,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(this);
         payload.destinationNetwork = networkIDMainnet;
@@ -1603,11 +1288,7 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function test_claimMessage_WETH() public {
-        _initializePolygonZkEVMBridge(
-            address(pol),
-            networkIDMainnet,
-            tokenMetaData
-        );
+        _initializePolygonZkEVMBridge(address(pol), networkIDMainnet, tokenMetaData);
 
         bytes32 leaf = polygonZkEVMBridge.getLeafValue(
             LEAF_TYPE_MESSAGE,
@@ -1629,15 +1310,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.prank(address(polygonZkEVMBridge));
         polygonZkEVMGlobalExitRootV2.updateExitRoot(payload.mainnetExitRoot);
 
-        assertEq(
-            polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(),
-            payload.mainnetExitRoot
-        );
+        assertEq(polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot(), payload.mainnetExitRoot);
 
         payload.proofMainnet = _getProofByIndex(encodedLeaves, "0");
         payload.globalIndex = _computeGlobalIndex(0, 0, true);
-        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2
-            .lastRollupExitRoot();
+        payload.rollupExitRoot = polygonZkEVMGlobalExitRootV2.lastRollupExitRoot();
         payload.originNetwork = networkIDMainnet;
         payload.originAddress = address(this);
         payload.destinationNetwork = networkIDMainnet;
@@ -1667,10 +1344,7 @@ contract PolygonZkEVMBridgeV2Test is
             payload.metadata
         );
         assertEq(polygonZkEVMBridge.isClaimed(0, 0), true);
-        assertEq(
-            TokenWrapped(wethCalculated).balanceOf(destinationAddress),
-            tokenTransferAmount
-        );
+        assertEq(TokenWrapped(wethCalculated).balanceOf(destinationAddress), tokenTransferAmount);
     }
 
     //TODO: add more tests
@@ -1691,26 +1365,17 @@ contract PolygonZkEVMBridgeV2Test is
     }
 
     function _proxify(address logic) internal returns (address proxy) {
-        TransparentUpgradeableProxy proxy_ = new TransparentUpgradeableProxy(
-            logic,
-            msg.sender,
-            ""
-        );
+        TransparentUpgradeableProxy proxy_ = new TransparentUpgradeableProxy(logic, msg.sender, "");
         return (address(proxy_));
     }
 
-    function _preDeployPolygonZkEVMBridgeV2()
-        internal
-        returns (address implementation)
-    {
+    function _preDeployPolygonZkEVMBridgeV2() internal returns (address implementation) {
         string[] memory exe = new string[](5);
         exe[0] = "forge";
         exe[1] = "inspect";
         exe[2] = "PolygonZkEVMBridgeV2";
         exe[3] = "bytecode";
-        exe[
-            4
-        ] = "--contracts=contracts-ignored-originals/PolygonZkEVMBridgeV2.sol";
+        exe[4] = "--contracts=contracts-ignored-originals/PolygonZkEVMBridgeV2.sol";
 
         bytes memory creationCode = vm.ffi(exe);
         implementation = makeAddr("PolygonZkEVMBridgeV2");
@@ -1721,11 +1386,11 @@ contract PolygonZkEVMBridgeV2Test is
         vm.etch(implementation, runtimeBytecode);
     }
 
-    function _computeGlobalIndex(
-        uint256 indexMainnet,
-        uint256 indexRollup,
-        bool isMainnet
-    ) internal pure returns (uint256) {
+    function _computeGlobalIndex(uint256 indexMainnet, uint256 indexRollup, bool isMainnet)
+        internal
+        pure
+        returns (uint256)
+    {
         if (isMainnet) {
             return indexMainnet + _GLOBAL_INDEX_MAINNET_FLAG;
         } else {

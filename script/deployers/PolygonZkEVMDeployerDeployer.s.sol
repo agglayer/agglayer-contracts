@@ -10,16 +10,11 @@ import "forge-std/Script.sol";
 import "contracts/deployment/PolygonZkEVMDeployer.sol";
 
 abstract contract PolygonZkEVMDeployerDeployer is Script {
-    function deployPolygonZkEVMDeployerImplementation(
-        address _owner
-    ) internal returns (address implementation) {
+    function deployPolygonZkEVMDeployerImplementation(address _owner) internal returns (address implementation) {
         bytes32 salt = keccak256(abi.encode(0));
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         implementation = address(new PolygonZkEVMDeployer{salt: salt}(_owner));
         vm.stopBroadcast();
-        require(
-            implementation != address(0),
-            "Contract deployment failed with CREATE2"
-        );
+        require(implementation != address(0), "Contract deployment failed with CREATE2");
     }
 }

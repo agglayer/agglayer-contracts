@@ -17,11 +17,7 @@ import "../interfaces/IPolygonZkEVMErrors.sol";
  * The aggregators will be able to verify the sequenced state with zkProofs and therefore make available the withdrawals from L2 network.
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  */
-contract PolygonZkEVM is
-    OwnableUpgradeable,
-    EmergencyManager,
-    IPolygonZkEVMErrors
-{
+contract PolygonZkEVM is OwnableUpgradeable, EmergencyManager, IPolygonZkEVMErrors {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
@@ -102,7 +98,7 @@ contract PolygonZkEVM is
 
     // Modulus zkSNARK
     uint256 internal constant _RFIELD =
-        21888242871839275222246405745257275088548364400416034343698204186575808495617;
+        21_888_242_871_839_275_222_246_405_745_257_275_088_548_364_400_416_034_343_698_204_186_575_808_495_617;
 
     // Max transactions bytes that can be added in a single batch
     // Max keccaks circuit = (2**23 / 155286) * 44 = 2376
@@ -116,7 +112,7 @@ contract PolygonZkEVM is
     // https://github.com/ethereum/go-ethereum/blob/master/core/txpool/txpool.go#L54
     // We will limit this length to be compliant with the geth restrictions since our node will use it
     // We let 8kb as a sanity margin
-    uint256 internal constant _MAX_TRANSACTIONS_BYTE_LENGTH = 120000;
+    uint256 internal constant _MAX_TRANSACTIONS_BYTE_LENGTH = 120_000;
 
     // Max force batch transaction length
     // This is used to avoid huge calldata attacks, where the attacker call force batches from another contract
@@ -250,12 +246,7 @@ contract PolygonZkEVM is
     /**
      * @dev Emitted when a batch is forced
      */
-    event ForceBatch(
-        uint64 indexed forceBatchNum,
-        bytes32 lastGlobalExitRoot,
-        address sequencer,
-        bytes transactions
-    );
+    event ForceBatch(uint64 indexed forceBatchNum, bytes32 lastGlobalExitRoot, address sequencer, bytes transactions);
 
     /**
      * @dev Emitted when forced batches are sequenced by not the trusted sequencer
@@ -265,29 +256,17 @@ contract PolygonZkEVM is
     /**
      * @dev Emitted when a aggregator verifies batches
      */
-    event VerifyBatches(
-        uint64 indexed numBatch,
-        bytes32 stateRoot,
-        address indexed aggregator
-    );
+    event VerifyBatches(uint64 indexed numBatch, bytes32 stateRoot, address indexed aggregator);
 
     /**
      * @dev Emitted when the trusted aggregator verifies batches
      */
-    event VerifyBatchesTrustedAggregator(
-        uint64 indexed numBatch,
-        bytes32 stateRoot,
-        address indexed aggregator
-    );
+    event VerifyBatchesTrustedAggregator(uint64 indexed numBatch, bytes32 stateRoot, address indexed aggregator);
 
     /**
      * @dev Emitted when pending state is consolidated
      */
-    event ConsolidatePendingState(
-        uint64 indexed numBatch,
-        bytes32 stateRoot,
-        uint64 indexed pendingStateNum
-    );
+    event ConsolidatePendingState(uint64 indexed numBatch, bytes32 stateRoot, uint64 indexed pendingStateNum);
 
     /**
      * @dev Emitted when the admin updates the trusted sequencer address
@@ -347,19 +326,12 @@ contract PolygonZkEVM is
     /**
      * @dev Emitted when is proved a different state given the same batches
      */
-    event ProveNonDeterministicPendingState(
-        bytes32 storedStateRoot,
-        bytes32 provedStateRoot
-    );
+    event ProveNonDeterministicPendingState(bytes32 storedStateRoot, bytes32 provedStateRoot);
 
     /**
      * @dev Emitted when the trusted aggregator overrides pending state
      */
-    event OverridePendingState(
-        uint64 indexed numBatch,
-        bytes32 stateRoot,
-        address indexed aggregator
-    );
+    event OverridePendingState(uint64 indexed numBatch, bytes32 stateRoot, address indexed aggregator);
 
     /**
      * @dev Emitted everytime the forkID is updated, this includes the first initialization of the contract
@@ -412,23 +384,16 @@ contract PolygonZkEVM is
         networkName = _networkName;
 
         // Check initialize parameters
-        if (
-            initializePackedParameters.pendingStateTimeout >
-            _HALT_AGGREGATION_TIMEOUT
-        ) {
+        if (initializePackedParameters.pendingStateTimeout > _HALT_AGGREGATION_TIMEOUT) {
             revert PendingStateTimeoutExceedHaltAggregationTimeout();
         }
         pendingStateTimeout = initializePackedParameters.pendingStateTimeout;
 
-        if (
-            initializePackedParameters.trustedAggregatorTimeout >
-            _HALT_AGGREGATION_TIMEOUT
-        ) {
+        if (initializePackedParameters.trustedAggregatorTimeout > _HALT_AGGREGATION_TIMEOUT) {
             revert TrustedAggregatorTimeoutExceedHaltAggregationTimeout();
         }
 
-        trustedAggregatorTimeout = initializePackedParameters
-            .trustedAggregatorTimeout;
+        trustedAggregatorTimeout = initializePackedParameters.trustedAggregatorTimeout;
 
         // Constant deployment variables
         batchFee = 0.1 ether; // 0.1 Matic
@@ -481,10 +446,11 @@ contract PolygonZkEVM is
      * @param batches Struct array which holds the necessary data to append new batches to the sequence
      * @param l2Coinbase Address that will receive the fees from L2
      */
-    function sequenceBatches(
-        BatchData[] calldata batches,
-        address l2Coinbase
-    ) external ifNotEmergencyState onlyTrustedSequencer {
+    function sequenceBatches(BatchData[] calldata batches, address l2Coinbase)
+        external
+        ifNotEmergencyState
+        onlyTrustedSequencer
+    {
         uint256 batchesNum = batches.length;
         if (batchesNum == 0) {
             revert SequenceZeroBatches();
@@ -498,8 +464,7 @@ contract PolygonZkEVM is
         uint64 currentTimestamp = lastTimestamp;
         uint64 currentBatchSequenced = lastBatchSequenced;
         uint64 currentLastForceBatchSequenced = lastForceBatchSequenced;
-        bytes32 currentAccInputHash = sequencedBatches[currentBatchSequenced]
-            .accInputHash;
+        bytes32 currentAccInputHash = sequencedBatches[currentBatchSequenced].accInputHash;
 
         // Store in a temporal variable, for avoid access again the storage slot
         uint64 initLastForceBatchSequenced = currentLastForceBatchSequenced;
@@ -509,9 +474,7 @@ contract PolygonZkEVM is
             BatchData memory currentBatch = batches[i];
 
             // Store the current transactions hash since can be used more than once for gas saving
-            bytes32 currentTransactionsHash = keccak256(
-                currentBatch.transactions
-            );
+            bytes32 currentTransactionsHash = keccak256(currentBatch.transactions);
 
             // Check if it's a forced batch
             if (currentBatch.minForcedTimestamp > 0) {
@@ -520,16 +483,11 @@ contract PolygonZkEVM is
                 // Check forced data matches
                 bytes32 hashedForcedBatchData = keccak256(
                     abi.encodePacked(
-                        currentTransactionsHash,
-                        currentBatch.globalExitRoot,
-                        currentBatch.minForcedTimestamp
+                        currentTransactionsHash, currentBatch.globalExitRoot, currentBatch.minForcedTimestamp
                     )
                 );
 
-                if (
-                    hashedForcedBatchData !=
-                    forcedBatches[currentLastForceBatchSequenced]
-                ) {
+                if (hashedForcedBatchData != forcedBatches[currentLastForceBatchSequenced]) {
                     revert ForcedDataDoesNotMatch();
                 }
 
@@ -544,28 +502,19 @@ contract PolygonZkEVM is
                 // Check global exit root exists with proper batch length. These checks are already done in the forceBatches call
                 // Note that the sequencer can skip setting a global exit root putting zeros
                 if (
-                    currentBatch.globalExitRoot != bytes32(0) &&
-                    globalExitRootManager.globalExitRootMap(
-                        currentBatch.globalExitRoot
-                    ) ==
-                    0
+                    currentBatch.globalExitRoot != bytes32(0)
+                        && globalExitRootManager.globalExitRootMap(currentBatch.globalExitRoot) == 0
                 ) {
                     revert GlobalExitRootNotExist();
                 }
 
-                if (
-                    currentBatch.transactions.length >
-                    _MAX_TRANSACTIONS_BYTE_LENGTH
-                ) {
+                if (currentBatch.transactions.length > _MAX_TRANSACTIONS_BYTE_LENGTH) {
                     revert TransactionsLengthAboveMax();
                 }
             }
 
             // Check Batch timestamps are correct
-            if (
-                currentBatch.timestamp < currentTimestamp ||
-                currentBatch.timestamp > block.timestamp
-            ) {
+            if (currentBatch.timestamp < currentTimestamp || currentBatch.timestamp > block.timestamp) {
                 revert SequencedTimestampInvalid();
             }
 
@@ -591,8 +540,7 @@ contract PolygonZkEVM is
             revert ForceBatchesOverflow();
         }
 
-        uint256 nonForcedBatchesSequenced = batchesNum -
-            (currentLastForceBatchSequenced - initLastForceBatchSequenced);
+        uint256 nonForcedBatchesSequenced = batchesNum - (currentLastForceBatchSequenced - initLastForceBatchSequenced);
 
         // Update sequencedBatches mapping
         sequencedBatches[currentBatchSequenced] = SequencedBatchData({
@@ -605,15 +553,12 @@ contract PolygonZkEVM is
         lastTimestamp = currentTimestamp;
         lastBatchSequenced = currentBatchSequenced;
 
-        if (currentLastForceBatchSequenced != initLastForceBatchSequenced)
+        if (currentLastForceBatchSequenced != initLastForceBatchSequenced) {
             lastForceBatchSequenced = currentLastForceBatchSequenced;
+        }
 
         // Pay collateral for every non-forced batch submitted
-        matic.safeTransferFrom(
-            msg.sender,
-            address(this),
-            batchFee * nonForcedBatchesSequenced
-        );
+        matic.safeTransferFrom(msg.sender, address(this), batchFee * nonForcedBatchesSequenced);
 
         // Consolidate pending state if possible
         _tryConsolidatePendingState();
@@ -643,11 +588,7 @@ contract PolygonZkEVM is
     ) external ifNotEmergencyState {
         // Check if the trusted aggregator timeout expired,
         // Note that the sequencedBatches struct must exists for this finalNewBatch, if not newAccInputHash will be 0
-        if (
-            sequencedBatches[finalNewBatch].sequencedTimestamp +
-                trustedAggregatorTimeout >
-            block.timestamp
-        ) {
+        if (sequencedBatches[finalNewBatch].sequencedTimestamp + trustedAggregatorTimeout > block.timestamp) {
             revert TrustedAggregatorTimeoutNotExpired();
         }
 
@@ -655,14 +596,7 @@ contract PolygonZkEVM is
             revert ExceedMaxVerifyBatches();
         }
 
-        _verifyAndRewardBatches(
-            pendingStateNum,
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            newStateRoot,
-            proof
-        );
+        _verifyAndRewardBatches(pendingStateNum, initNumBatch, finalNewBatch, newLocalExitRoot, newStateRoot, proof);
 
         // Update batch fees
         _updateBatchFee(finalNewBatch);
@@ -714,14 +648,7 @@ contract PolygonZkEVM is
         bytes32 newStateRoot,
         bytes32[24] calldata proof
     ) external onlyTrustedAggregator {
-        _verifyAndRewardBatches(
-            pendingStateNum,
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            newStateRoot,
-            proof
-        );
+        _verifyAndRewardBatches(pendingStateNum, initNumBatch, finalNewBatch, newLocalExitRoot, newStateRoot, proof);
 
         // Consolidate state
         lastVerifiedBatch = finalNewBatch;
@@ -736,11 +663,7 @@ contract PolygonZkEVM is
         // Interact with globalExitRootManager
         globalExitRootManager.updateExitRoot(newLocalExitRoot);
 
-        emit VerifyBatchesTrustedAggregator(
-            finalNewBatch,
-            newStateRoot,
-            msg.sender
-        );
+        emit VerifyBatchesTrustedAggregator(finalNewBatch, newStateRoot, msg.sender);
     }
 
     /**
@@ -772,9 +695,7 @@ contract PolygonZkEVM is
             }
 
             // Check choosen pending state
-            PendingState storage currentPendingState = pendingStateTransitions[
-                pendingStateNum
-            ];
+            PendingState storage currentPendingState = pendingStateTransitions[pendingStateNum];
 
             // Get oldStateRoot from pending batch
             oldStateRoot = currentPendingState.stateRoot;
@@ -803,13 +724,8 @@ contract PolygonZkEVM is
         }
 
         // Get snark bytes
-        bytes memory snarkHashBytes = getInputSnarkBytes(
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            oldStateRoot,
-            newStateRoot
-        );
+        bytes memory snarkHashBytes =
+            getInputSnarkBytes(initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot);
 
         // Calulate the snark input
         uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
@@ -819,11 +735,7 @@ contract PolygonZkEVM is
         }
 
         // Get MATIC reward
-        matic.safeTransfer(
-            msg.sender,
-            calculateRewardPerBatch() *
-                (finalNewBatch - currentLastVerifiedBatch)
-        );
+        matic.safeTransfer(msg.sender, calculateRewardPerBatch() * (finalNewBatch - currentLastVerifiedBatch));
     }
 
     /**
@@ -837,9 +749,7 @@ contract PolygonZkEVM is
             uint64 nextPendingState = lastPendingStateConsolidated + 1;
             if (isPendingStateConsolidable(nextPendingState)) {
                 // Check middle pending state ( binary search of 1 step)
-                uint64 middlePendingState = nextPendingState +
-                    (lastPendingState - nextPendingState) /
-                    2;
+                uint64 middlePendingState = nextPendingState + (lastPendingState - nextPendingState) / 2;
 
                 // Try to consolidate it, and if not, consolidate the nextPendingState
                 if (isPendingStateConsolidable(middlePendingState)) {
@@ -879,22 +789,16 @@ contract PolygonZkEVM is
         // Check if pendingStateNum is in correct range
         // - not consolidated (implicity checks that is not 0)
         // - exist ( has been added)
-        if (
-            pendingStateNum <= lastPendingStateConsolidated ||
-            pendingStateNum > lastPendingState
-        ) {
+        if (pendingStateNum <= lastPendingStateConsolidated || pendingStateNum > lastPendingState) {
             revert PendingStateInvalid();
         }
 
-        PendingState storage currentPendingState = pendingStateTransitions[
-            pendingStateNum
-        ];
+        PendingState storage currentPendingState = pendingStateTransitions[pendingStateNum];
 
         // Update state
         uint64 newLastVerifiedBatch = currentPendingState.lastVerifiedBatch;
         lastVerifiedBatch = newLastVerifiedBatch;
-        batchNumToStateRoot[newLastVerifiedBatch] = currentPendingState
-            .stateRoot;
+        batchNumToStateRoot[newLastVerifiedBatch] = currentPendingState.stateRoot;
 
         // Update pending state
         lastPendingStateConsolidated = pendingStateNum;
@@ -902,11 +806,7 @@ contract PolygonZkEVM is
         // Interact with globalExitRootManager
         globalExitRootManager.updateExitRoot(currentPendingState.exitRoot);
 
-        emit ConsolidatePendingState(
-            newLastVerifiedBatch,
-            currentPendingState.stateRoot,
-            pendingStateNum
-        );
+        emit ConsolidatePendingState(newLastVerifiedBatch, currentPendingState.stateRoot, pendingStateNum);
     }
 
     /**
@@ -919,36 +819,26 @@ contract PolygonZkEVM is
         uint64 currentBatch = newLastVerifiedBatch;
 
         uint256 totalBatchesAboveTarget;
-        uint256 newBatchesVerified = newLastVerifiedBatch -
-            currentLastVerifiedBatch;
+        uint256 newBatchesVerified = newLastVerifiedBatch - currentLastVerifiedBatch;
 
         uint256 targetTimestamp = block.timestamp - verifyBatchTimeTarget;
 
         while (currentBatch != currentLastVerifiedBatch) {
             // Load sequenced batchdata
-            SequencedBatchData
-                storage currentSequencedBatchData = sequencedBatches[
-                    currentBatch
-                ];
+            SequencedBatchData storage currentSequencedBatchData = sequencedBatches[currentBatch];
 
             // Check if timestamp is below the verifyBatchTimeTarget
-            if (
-                targetTimestamp < currentSequencedBatchData.sequencedTimestamp
-            ) {
+            if (targetTimestamp < currentSequencedBatchData.sequencedTimestamp) {
                 // update currentBatch
-                currentBatch = currentSequencedBatchData
-                    .previousLastBatchSequenced;
+                currentBatch = currentSequencedBatchData.previousLastBatchSequenced;
             } else {
                 // The rest of batches will be above
-                totalBatchesAboveTarget =
-                    currentBatch -
-                    currentLastVerifiedBatch;
+                totalBatchesAboveTarget = currentBatch - currentLastVerifiedBatch;
                 break;
             }
         }
 
-        uint256 totalBatchesBelowTarget = newBatchesVerified -
-            totalBatchesAboveTarget;
+        uint256 totalBatchesBelowTarget = newBatchesVerified - totalBatchesAboveTarget;
 
         // _MAX_BATCH_FEE --> (< 70 bits)
         // multiplierBatchFee --> (< 10 bits)
@@ -961,30 +851,21 @@ contract PolygonZkEVM is
         unchecked {
             if (totalBatchesBelowTarget < totalBatchesAboveTarget) {
                 // There are more batches above target, fee is multiplied
-                uint256 diffBatches = totalBatchesAboveTarget -
-                    totalBatchesBelowTarget;
+                uint256 diffBatches = totalBatchesAboveTarget - totalBatchesBelowTarget;
 
-                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER
-                    ? _MAX_BATCH_MULTIPLIER
-                    : diffBatches;
+                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER ? _MAX_BATCH_MULTIPLIER : diffBatches;
 
                 // For every multiplierBatchFee multiplication we must shift 3 zeroes since we have 3 decimals
-                batchFee =
-                    (batchFee * (uint256(multiplierBatchFee) ** diffBatches)) /
-                    (uint256(1000) ** diffBatches);
+                batchFee = (batchFee * (uint256(multiplierBatchFee) ** diffBatches)) / (uint256(1000) ** diffBatches);
             } else {
                 // There are more batches below target, fee is divided
-                uint256 diffBatches = totalBatchesBelowTarget -
-                    totalBatchesAboveTarget;
+                uint256 diffBatches = totalBatchesBelowTarget - totalBatchesAboveTarget;
 
-                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER
-                    ? _MAX_BATCH_MULTIPLIER
-                    : diffBatches;
+                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER ? _MAX_BATCH_MULTIPLIER : diffBatches;
 
                 // For every multiplierBatchFee multiplication we must shift 3 zeroes since we have 3 decimals
-                uint256 accDivisor = (uint256(1 ether) *
-                    (uint256(multiplierBatchFee) ** diffBatches)) /
-                    (uint256(1000) ** diffBatches);
+                uint256 accDivisor =
+                    (uint256(1 ether) * (uint256(multiplierBatchFee) ** diffBatches)) / (uint256(1000) ** diffBatches);
 
                 // multiplyFactor = multiplierBatchFee ** diffBatches / 10 ** (diffBatches * 3)
                 // accDivisor = 1E18 * multiplyFactor
@@ -1015,10 +896,11 @@ contract PolygonZkEVM is
      * @param transactions L2 ethereum transactions EIP-155 or pre-EIP-155 with signature:
      * @param maticAmount Max amount of MATIC tokens that the sender is willing to pay
      */
-    function forceBatch(
-        bytes calldata transactions,
-        uint256 maticAmount
-    ) public isForceBatchAllowed ifNotEmergencyState {
+    function forceBatch(bytes calldata transactions, uint256 maticAmount)
+        public
+        isForceBatchAllowed
+        ifNotEmergencyState
+    {
         // Calculate matic collateral
         uint256 maticFee = getForcedBatchFee();
 
@@ -1033,19 +915,13 @@ contract PolygonZkEVM is
         matic.safeTransferFrom(msg.sender, address(this), maticFee);
 
         // Get globalExitRoot global exit root
-        bytes32 lastGlobalExitRoot = globalExitRootManager
-            .getLastGlobalExitRoot();
+        bytes32 lastGlobalExitRoot = globalExitRootManager.getLastGlobalExitRoot();
 
         // Update forcedBatches mapping
         lastForceBatch++;
 
-        forcedBatches[lastForceBatch] = keccak256(
-            abi.encodePacked(
-                keccak256(transactions),
-                lastGlobalExitRoot,
-                uint64(block.timestamp)
-            )
-        );
+        forcedBatches[lastForceBatch] =
+            keccak256(abi.encodePacked(keccak256(transactions), lastGlobalExitRoot, uint64(block.timestamp)));
 
         if (msg.sender == tx.origin) {
             // Getting the calldata from an EOA is easy so no need to put the `transactions` in the event
@@ -1053,12 +929,7 @@ contract PolygonZkEVM is
         } else {
             // Getting internal transaction calldata is complicated (because it requires an archive node)
             // Therefore it's worth it to put the `transactions` in the event, which is easy to query
-            emit ForceBatch(
-                lastForceBatch,
-                lastGlobalExitRoot,
-                msg.sender,
-                transactions
-            );
+            emit ForceBatch(lastForceBatch, lastGlobalExitRoot, msg.sender, transactions);
         }
     }
 
@@ -1066,9 +937,11 @@ contract PolygonZkEVM is
      * @notice Allows anyone to sequence forced Batches if the trusted sequencer has not done so in the timeout period
      * @param batches Struct array which holds the necessary data to append force batches
      */
-    function sequenceForceBatches(
-        ForcedBatchData[] calldata batches
-    ) external isForceBatchAllowed ifNotEmergencyState {
+    function sequenceForceBatches(ForcedBatchData[] calldata batches)
+        external
+        isForceBatchAllowed
+        ifNotEmergencyState
+    {
         uint256 batchesNum = batches.length;
 
         if (batchesNum == 0) {
@@ -1079,18 +952,14 @@ contract PolygonZkEVM is
             revert ExceedMaxVerifyBatches();
         }
 
-        if (
-            uint256(lastForceBatchSequenced) + batchesNum >
-            uint256(lastForceBatch)
-        ) {
+        if (uint256(lastForceBatchSequenced) + batchesNum > uint256(lastForceBatch)) {
             revert ForceBatchesOverflow();
         }
 
         // Store storage variables in memory, to save gas, because will be overrided multiple times
         uint64 currentBatchSequenced = lastBatchSequenced;
         uint64 currentLastForceBatchSequenced = lastForceBatchSequenced;
-        bytes32 currentAccInputHash = sequencedBatches[currentBatchSequenced]
-            .accInputHash;
+        bytes32 currentAccInputHash = sequencedBatches[currentBatchSequenced].accInputHash;
 
         // Sequence force batches
         for (uint256 i = 0; i < batchesNum; i++) {
@@ -1099,23 +968,14 @@ contract PolygonZkEVM is
             currentLastForceBatchSequenced++;
 
             // Store the current transactions hash since it's used more than once for gas saving
-            bytes32 currentTransactionsHash = keccak256(
-                currentBatch.transactions
-            );
+            bytes32 currentTransactionsHash = keccak256(currentBatch.transactions);
 
             // Check forced data matches
             bytes32 hashedForcedBatchData = keccak256(
-                abi.encodePacked(
-                    currentTransactionsHash,
-                    currentBatch.globalExitRoot,
-                    currentBatch.minForcedTimestamp
-                )
+                abi.encodePacked(currentTransactionsHash, currentBatch.globalExitRoot, currentBatch.minForcedTimestamp)
             );
 
-            if (
-                hashedForcedBatchData !=
-                forcedBatches[currentLastForceBatchSequenced]
-            ) {
+            if (hashedForcedBatchData != forcedBatches[currentLastForceBatchSequenced]) {
                 revert ForcedDataDoesNotMatch();
             }
 
@@ -1124,10 +984,7 @@ contract PolygonZkEVM is
 
             if (i == (batchesNum - 1)) {
                 // The last batch will have the most restrictive timestamp
-                if (
-                    currentBatch.minForcedTimestamp + forceBatchTimeout >
-                    block.timestamp
-                ) {
+                if (currentBatch.minForcedTimestamp + forceBatchTimeout > block.timestamp) {
                     revert ForceBatchTimeoutNotExpired();
                 }
             }
@@ -1167,9 +1024,7 @@ contract PolygonZkEVM is
      * @notice Allow the admin to set a new trusted sequencer
      * @param newTrustedSequencer Address of the new trusted sequencer
      */
-    function setTrustedSequencer(
-        address newTrustedSequencer
-    ) external onlyAdmin {
+    function setTrustedSequencer(address newTrustedSequencer) external onlyAdmin {
         trustedSequencer = newTrustedSequencer;
 
         emit SetTrustedSequencer(newTrustedSequencer);
@@ -1179,9 +1034,7 @@ contract PolygonZkEVM is
      * @notice Allow the admin to set the trusted sequencer URL
      * @param newTrustedSequencerURL URL of trusted sequencer
      */
-    function setTrustedSequencerURL(
-        string memory newTrustedSequencerURL
-    ) external onlyAdmin {
+    function setTrustedSequencerURL(string memory newTrustedSequencerURL) external onlyAdmin {
         trustedSequencerURL = newTrustedSequencerURL;
 
         emit SetTrustedSequencerURL(newTrustedSequencerURL);
@@ -1191,9 +1044,7 @@ contract PolygonZkEVM is
      * @notice Allow the admin to set a new trusted aggregator address
      * @param newTrustedAggregator Address of the new trusted aggregator
      */
-    function setTrustedAggregator(
-        address newTrustedAggregator
-    ) external onlyAdmin {
+    function setTrustedAggregator(address newTrustedAggregator) external onlyAdmin {
         trustedAggregator = newTrustedAggregator;
 
         emit SetTrustedAggregator(newTrustedAggregator);
@@ -1204,9 +1055,7 @@ contract PolygonZkEVM is
      * The timeout can only be lowered, except if emergency state is active
      * @param newTrustedAggregatorTimeout Trusted aggregator timeout
      */
-    function setTrustedAggregatorTimeout(
-        uint64 newTrustedAggregatorTimeout
-    ) external onlyAdmin {
+    function setTrustedAggregatorTimeout(uint64 newTrustedAggregatorTimeout) external onlyAdmin {
         if (newTrustedAggregatorTimeout > _HALT_AGGREGATION_TIMEOUT) {
             revert TrustedAggregatorTimeoutExceedHaltAggregationTimeout();
         }
@@ -1226,9 +1075,7 @@ contract PolygonZkEVM is
      * The timeout can only be lowered, except if emergency state is active
      * @param newPendingStateTimeout Trusted aggregator timeout
      */
-    function setPendingStateTimeout(
-        uint64 newPendingStateTimeout
-    ) external onlyAdmin {
+    function setPendingStateTimeout(uint64 newPendingStateTimeout) external onlyAdmin {
         if (newPendingStateTimeout > _HALT_AGGREGATION_TIMEOUT) {
             revert PendingStateTimeoutExceedHaltAggregationTimeout();
         }
@@ -1247,9 +1094,7 @@ contract PolygonZkEVM is
      * @notice Allow the admin to set a new multiplier batch fee
      * @param newMultiplierBatchFee multiplier batch fee
      */
-    function setMultiplierBatchFee(
-        uint16 newMultiplierBatchFee
-    ) external onlyAdmin {
+    function setMultiplierBatchFee(uint16 newMultiplierBatchFee) external onlyAdmin {
         if (newMultiplierBatchFee < 1000 || newMultiplierBatchFee > 1023) {
             revert InvalidRangeMultiplierBatchFee();
         }
@@ -1264,9 +1109,7 @@ contract PolygonZkEVM is
      * the trustedAggregatorTimeout should be zero or very close to zero
      * @param newVerifyBatchTimeTarget Verify batch time target
      */
-    function setVerifyBatchTimeTarget(
-        uint64 newVerifyBatchTimeTarget
-    ) external onlyAdmin {
+    function setVerifyBatchTimeTarget(uint64 newVerifyBatchTimeTarget) external onlyAdmin {
         if (newVerifyBatchTimeTarget > 1 days) {
             revert InvalidRangeBatchTimeTarget();
         }
@@ -1279,9 +1122,7 @@ contract PolygonZkEVM is
      * The new value can only be lower, except if emergency state is active
      * @param newforceBatchTimeout New force batch timeout
      */
-    function setForceBatchTimeout(
-        uint64 newforceBatchTimeout
-    ) external onlyAdmin {
+    function setForceBatchTimeout(uint64 newforceBatchTimeout) external onlyAdmin {
         if (newforceBatchTimeout > _HALT_AGGREGATION_TIMEOUT) {
             revert InvalidRangeForceBatchTimeout();
         }
@@ -1412,10 +1253,7 @@ contract PolygonZkEVM is
             proof
         );
 
-        emit ProveNonDeterministicPendingState(
-            batchNumToStateRoot[finalNewBatch],
-            newStateRoot
-        );
+        emit ProveNonDeterministicPendingState(batchNumToStateRoot[finalNewBatch], newStateRoot);
 
         // Activate emergency state
         _activateEmergencyState();
@@ -1451,9 +1289,7 @@ contract PolygonZkEVM is
             }
 
             // Check choosen pending state
-            PendingState storage initPendingState = pendingStateTransitions[
-                initPendingStateNum
-            ];
+            PendingState storage initPendingState = pendingStateTransitions[initPendingStateNum];
 
             // Get oldStateRoot from init pending state
             oldStateRoot = initPendingState.stateRoot;
@@ -1480,29 +1316,20 @@ contract PolygonZkEVM is
         // - bigger than the initPendingstate
         // - not consolidated
         if (
-            finalPendingStateNum > lastPendingState ||
-            finalPendingStateNum <= initPendingStateNum ||
-            finalPendingStateNum <= lastPendingStateConsolidated
+            finalPendingStateNum > lastPendingState || finalPendingStateNum <= initPendingStateNum
+                || finalPendingStateNum <= lastPendingStateConsolidated
         ) {
             revert FinalPendingStateNumInvalid();
         }
 
         // Check final num batch
-        if (
-            finalNewBatch !=
-            pendingStateTransitions[finalPendingStateNum].lastVerifiedBatch
-        ) {
+        if (finalNewBatch != pendingStateTransitions[finalPendingStateNum].lastVerifiedBatch) {
             revert FinalNumBatchDoesNotMatchPendingState();
         }
 
         // Get snark bytes
-        bytes memory snarkHashBytes = getInputSnarkBytes(
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            oldStateRoot,
-            newStateRoot
-        );
+        bytes memory snarkHashBytes =
+            getInputSnarkBytes(initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot);
 
         // Calulate the snark input
         uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
@@ -1512,10 +1339,7 @@ contract PolygonZkEVM is
             revert InvalidProof();
         }
 
-        if (
-            pendingStateTransitions[finalPendingStateNum].stateRoot ==
-            newStateRoot
-        ) {
+        if (pendingStateTransitions[finalPendingStateNum].stateRoot == newStateRoot) {
             revert StoredRootMustBeDifferentThanNewRoot();
         }
     }
@@ -1536,19 +1360,12 @@ contract PolygonZkEVM is
             }
 
             // Check that the batch has been sequenced and this was the end of a sequence
-            if (
-                sequencedBatchNum > lastBatchSequenced ||
-                sequencedBatches[sequencedBatchNum].sequencedTimestamp == 0
-            ) {
+            if (sequencedBatchNum > lastBatchSequenced || sequencedBatches[sequencedBatchNum].sequencedTimestamp == 0) {
                 revert BatchNotSequencedOrNotSequenceEnd();
             }
 
             // Check that has been passed _HALT_AGGREGATION_TIMEOUT since it was sequenced
-            if (
-                sequencedBatches[sequencedBatchNum].sequencedTimestamp +
-                    _HALT_AGGREGATION_TIMEOUT >
-                block.timestamp
-            ) {
+            if (sequencedBatches[sequencedBatchNum].sequencedTimestamp + _HALT_AGGREGATION_TIMEOUT > block.timestamp) {
                 revert HaltTimeoutNotExpired();
             }
         }
@@ -1603,12 +1420,8 @@ contract PolygonZkEVM is
      * @notice Returns a boolean that indicates if the pendingStateNum is or not consolidable
      * Note that his function does not check if the pending state currently exists, or if it's consolidated already
      */
-    function isPendingStateConsolidable(
-        uint64 pendingStateNum
-    ) public view returns (bool) {
-        return (pendingStateTransitions[pendingStateNum].timestamp +
-            pendingStateTimeout <=
-            block.timestamp);
+    function isPendingStateConsolidable(uint64 pendingStateNum) public view returns (bool) {
+        return (pendingStateTransitions[pendingStateNum].timestamp + pendingStateTimeout <= block.timestamp);
     }
 
     /**
@@ -1619,9 +1432,8 @@ contract PolygonZkEVM is
 
         // Total Sequenced Batches = forcedBatches to be sequenced (total forced Batches - sequenced Batches) + sequencedBatches
         // Total Batches to be verified = Total Sequenced Batches - verified Batches
-        uint256 totalBatchesToVerify = ((lastForceBatch -
-            lastForceBatchSequenced) + lastBatchSequenced) -
-            getLastVerifiedBatch();
+        uint256 totalBatchesToVerify =
+            ((lastForceBatch - lastForceBatchSequenced) + lastBatchSequenced) - getLastVerifiedBatch();
 
         if (totalBatchesToVerify == 0) return 0;
         return currentBalance / totalBatchesToVerify;
@@ -1659,30 +1471,26 @@ contract PolygonZkEVM is
             revert NewStateRootNotInsidePrime();
         }
 
-        return
-            abi.encodePacked(
-                msg.sender,
-                oldStateRoot,
-                oldAccInputHash,
-                initNumBatch,
-                chainID,
-                forkID,
-                newStateRoot,
-                newAccInputHash,
-                newLocalExitRoot,
-                finalNewBatch
-            );
+        return abi.encodePacked(
+            msg.sender,
+            oldStateRoot,
+            oldAccInputHash,
+            initNumBatch,
+            chainID,
+            forkID,
+            newStateRoot,
+            newAccInputHash,
+            newLocalExitRoot,
+            finalNewBatch
+        );
     }
 
-    function checkStateRootInsidePrime(
-        uint256 newStateRoot
-    ) public pure returns (bool) {
+    function checkStateRootInsidePrime(uint256 newStateRoot) public pure returns (bool) {
         if (
-            ((newStateRoot & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD) &&
-            (((newStateRoot >> 64) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD) &&
-            (((newStateRoot >> 128) & _MAX_UINT_64) <
-                _GOLDILOCKS_PRIME_FIELD) &&
-            ((newStateRoot >> 192) < _GOLDILOCKS_PRIME_FIELD)
+            ((newStateRoot & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD)
+                && (((newStateRoot >> 64) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD)
+                && (((newStateRoot >> 128) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD)
+                && ((newStateRoot >> 192) < _GOLDILOCKS_PRIME_FIELD)
         ) {
             return true;
         } else {

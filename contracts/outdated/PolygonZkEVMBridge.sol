@@ -16,11 +16,7 @@ import "../lib/GlobalExitRootLib.sol";
  * PolygonZkEVMBridge that will be deployed on both networks Ethereum and Polygon zkEVM
  * Contract responsible to manage the token interactions with other networks
  */
-contract PolygonZkEVMBridge is
-    DepositContract,
-    EmergencyManager,
-    IPolygonZkEVMBridge
-{
+contract PolygonZkEVMBridge is DepositContract, EmergencyManager, IPolygonZkEVMBridge {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Wrapped Token information struct
@@ -113,21 +109,14 @@ contract PolygonZkEVMBridge is
      * @dev Emitted when a claim is done from another network
      */
     event ClaimEvent(
-        uint32 index,
-        uint32 originNetwork,
-        address originAddress,
-        address destinationAddress,
-        uint256 amount
+        uint32 index, uint32 originNetwork, address originAddress, address destinationAddress, uint256 amount
     );
 
     /**
      * @dev Emitted when a new wrapped token is created
      */
     event NewWrappedToken(
-        uint32 originNetwork,
-        address originTokenAddress,
-        address wrappedTokenAddress,
-        bytes metadata
+        uint32 originNetwork, address originTokenAddress, address wrappedTokenAddress, bytes metadata
     );
 
     /**
@@ -151,10 +140,7 @@ contract PolygonZkEVMBridge is
         bool forceUpdateGlobalExitRoot,
         bytes calldata permitData
     ) public payable virtual ifNotEmergencyState nonReentrant {
-        if (
-            destinationNetwork == networkID ||
-            destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS
-        ) {
+        if (destinationNetwork == networkID || destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS) {
             revert DestinationNetworkInvalid();
         }
 
@@ -194,17 +180,9 @@ contract PolygonZkEVMBridge is
                 }
 
                 // In order to support fee tokens check the amount received, not the transferred
-                uint256 balanceBefore = IERC20Upgradeable(token).balanceOf(
-                    address(this)
-                );
-                IERC20Upgradeable(token).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    amount
-                );
-                uint256 balanceAfter = IERC20Upgradeable(token).balanceOf(
-                    address(this)
-                );
+                uint256 balanceBefore = IERC20Upgradeable(token).balanceOf(address(this));
+                IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), amount);
+                uint256 balanceAfter = IERC20Upgradeable(token).balanceOf(address(this));
 
                 // Override leafAmount with the received amount
                 leafAmount = balanceAfter - balanceBefore;
@@ -213,11 +191,7 @@ contract PolygonZkEVMBridge is
                 originNetwork = networkID;
 
                 // Encode metadata
-                metadata = abi.encode(
-                    _safeName(token),
-                    _safeSymbol(token),
-                    _safeDecimals(token)
-                );
+                metadata = abi.encode(_safeName(token), _safeSymbol(token), _safeDecimals(token));
             }
         }
 
@@ -263,10 +237,7 @@ contract PolygonZkEVMBridge is
         bool forceUpdateGlobalExitRoot,
         bytes calldata metadata
     ) external payable ifNotEmergencyState {
-        if (
-            destinationNetwork == networkID ||
-            destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS
-        ) {
+        if (destinationNetwork == networkID || destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS) {
             revert DestinationNetworkInvalid();
         }
 
@@ -343,9 +314,7 @@ contract PolygonZkEVMBridge is
         if (originTokenAddress == address(0)) {
             // Transfer ether
             /* solhint-disable avoid-low-level-calls */
-            (bool success, ) = destinationAddress.call{value: amount}(
-                new bytes(0)
-            );
+            (bool success,) = destinationAddress.call{value: amount}(new bytes(0));
             if (!success) {
                 revert EtherTransferFailed();
             }
@@ -353,49 +322,31 @@ contract PolygonZkEVMBridge is
             // Transfer tokens
             if (originNetwork == networkID) {
                 // The token is an ERC20 from this network
-                IERC20Upgradeable(originTokenAddress).safeTransfer(
-                    destinationAddress,
-                    amount
-                );
+                IERC20Upgradeable(originTokenAddress).safeTransfer(destinationAddress, amount);
             } else {
                 // The tokens is not from this network
                 // Create a wrapper for the token if not exist yet
-                bytes32 tokenInfoHash = keccak256(
-                    abi.encodePacked(originNetwork, originTokenAddress)
-                );
+                bytes32 tokenInfoHash = keccak256(abi.encodePacked(originNetwork, originTokenAddress));
                 address wrappedToken = tokenInfoToWrappedToken[tokenInfoHash];
 
                 if (wrappedToken == address(0)) {
                     // Get ERC20 metadata
-                    (
-                        string memory name,
-                        string memory symbol,
-                        uint8 decimals
-                    ) = abi.decode(metadata, (string, string, uint8));
+                    (string memory name, string memory symbol, uint8 decimals) =
+                        abi.decode(metadata, (string, string, uint8));
 
                     // Create a new wrapped erc20 using create2
-                    TokenWrapped newWrappedToken = (new TokenWrapped){
-                        salt: tokenInfoHash
-                    }(name, symbol, decimals);
+                    TokenWrapped newWrappedToken = (new TokenWrapped){salt: tokenInfoHash}(name, symbol, decimals);
 
                     // Mint tokens for the destination address
                     newWrappedToken.mint(destinationAddress, amount);
 
                     // Create mappings
-                    tokenInfoToWrappedToken[tokenInfoHash] = address(
-                        newWrappedToken
-                    );
+                    tokenInfoToWrappedToken[tokenInfoHash] = address(newWrappedToken);
 
-                    wrappedTokenToTokenInfo[
-                        address(newWrappedToken)
-                    ] = TokenInformation(originNetwork, originTokenAddress);
+                    wrappedTokenToTokenInfo[address(newWrappedToken)] =
+                        TokenInformation(originNetwork, originTokenAddress);
 
-                    emit NewWrappedToken(
-                        originNetwork,
-                        originTokenAddress,
-                        address(newWrappedToken),
-                        metadata
-                    );
+                    emit NewWrappedToken(originNetwork, originTokenAddress, address(newWrappedToken), metadata);
                 } else {
                     // Use the existing wrapped erc20
                     TokenWrapped(wrappedToken).mint(destinationAddress, amount);
@@ -403,13 +354,7 @@ contract PolygonZkEVMBridge is
             }
         }
 
-        emit ClaimEvent(
-            index,
-            originNetwork,
-            originTokenAddress,
-            destinationAddress,
-            amount
-        );
+        emit ClaimEvent(index, originNetwork, originTokenAddress, destinationAddress, amount);
     }
 
     /**
@@ -458,23 +403,14 @@ contract PolygonZkEVMBridge is
         // Execute message
         // Transfer ether
         /* solhint-disable avoid-low-level-calls */
-        (bool success, ) = destinationAddress.call{value: amount}(
-            abi.encodeCall(
-                IBridgeMessageReceiver.onMessageReceived,
-                (originAddress, originNetwork, metadata)
-            )
+        (bool success,) = destinationAddress.call{value: amount}(
+            abi.encodeCall(IBridgeMessageReceiver.onMessageReceived, (originAddress, originNetwork, metadata))
         );
         if (!success) {
             revert MessageFailed();
         }
 
-        emit ClaimEvent(
-            index,
-            originNetwork,
-            originAddress,
-            destinationAddress,
-            amount
-        );
+        emit ClaimEvent(index, originNetwork, originAddress, destinationAddress, amount);
     }
 
     /**
@@ -495,21 +431,14 @@ contract PolygonZkEVMBridge is
         string calldata symbol,
         uint8 decimals
     ) external view returns (address) {
-        bytes32 salt = keccak256(
-            abi.encodePacked(originNetwork, originTokenAddress)
-        );
+        bytes32 salt = keccak256(abi.encodePacked(originNetwork, originTokenAddress));
 
         bytes32 hashCreate2 = keccak256(
             abi.encodePacked(
                 bytes1(0xff),
                 address(this),
                 salt,
-                keccak256(
-                    abi.encodePacked(
-                        type(TokenWrapped).creationCode,
-                        abi.encode(name, symbol, decimals)
-                    )
-                )
+                keccak256(abi.encodePacked(type(TokenWrapped).creationCode, abi.encode(name, symbol, decimals)))
             )
         );
 
@@ -522,19 +451,13 @@ contract PolygonZkEVMBridge is
      * @param originNetwork Origin network
      * @param originTokenAddress Origin token address, 0 address is reserved for gas token address. If WETH address is zero, means this gas token is ether, else means is a custom erc20 gas token
      */
-    function getTokenWrappedAddress(
-        uint32 originNetwork,
-        address originTokenAddress
-    ) external view returns (address) {
-        return
-            tokenInfoToWrappedToken[
-                keccak256(abi.encodePacked(originNetwork, originTokenAddress))
-            ];
+    function getTokenWrappedAddress(uint32 originNetwork, address originTokenAddress) external view returns (address) {
+        return tokenInfoToWrappedToken[keccak256(abi.encodePacked(originNetwork, originTokenAddress))];
     }
 
     /**
      * @notice Function to activate the emergency state
-     " Only can be called by the Polygon ZK-EVM in extreme situations
+     *  " Only can be called by the Polygon ZK-EVM in extreme situations
      */
     function activateEmergencyState() external onlyPolygonZkEVM {
         _activateEmergencyState();
@@ -542,7 +465,7 @@ contract PolygonZkEVMBridge is
 
     /**
      * @notice Function to deactivate the emergency state
-     " Only can be called by the Polygon ZK-EVM
+     *  " Only can be called by the Polygon ZK-EVM
      */
     function deactivateEmergencyState() external onlyPolygonZkEVM {
         _deactivateEmergencyState();
@@ -579,13 +502,9 @@ contract PolygonZkEVMBridge is
         _setAndCheckClaimed(index);
 
         // Check timestamp where the global exit root was set
-        uint256 timestampGlobalExitRoot = globalExitRootManager
-            .globalExitRootMap(
-                GlobalExitRootLib.calculateGlobalExitRoot(
-                    mainnetExitRoot,
-                    rollupExitRoot
-                )
-            );
+        uint256 timestampGlobalExitRoot = globalExitRootManager.globalExitRootMap(
+            GlobalExitRootLib.calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot)
+        );
 
         if (timestampGlobalExitRoot == 0) {
             revert GlobalExitRootInvalid();
@@ -668,46 +587,22 @@ contract PolygonZkEVMBridge is
      * @notice Function decode an index into a wordPos and bitPos
      * @param index Index
      */
-    function _bitmapPositions(
-        uint256 index
-    ) private pure returns (uint256 wordPos, uint256 bitPos) {
+    function _bitmapPositions(uint256 index) private pure returns (uint256 wordPos, uint256 bitPos) {
         wordPos = uint248(index >> 8);
         bitPos = uint8(index);
     }
 
     /**
      * @notice Function to call token permit method of extended ERC20
-     + @param token ERC20 token address
+     *  + @param token ERC20 token address
      * @param amount Quantity that is expected to be allowed
      * @param permitData Raw data of the call `permit` of the token
      */
-    function _permit(
-        address token,
-        uint256 amount,
-        bytes calldata permitData
-    ) internal {
+    function _permit(address token, uint256 amount, bytes calldata permitData) internal {
         bytes4 sig = bytes4(permitData[:4]);
         if (sig == _PERMIT_SIGNATURE) {
-            (
-                address owner,
-                address spender,
-                uint256 value,
-                uint256 deadline,
-                uint8 v,
-                bytes32 r,
-                bytes32 s
-            ) = abi.decode(
-                    permitData[4:],
-                    (
-                        address,
-                        address,
-                        uint256,
-                        uint256,
-                        uint8,
-                        bytes32,
-                        bytes32
-                    )
-                );
+            (address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) =
+                abi.decode(permitData[4:], (address, address, uint256, uint256, uint8, bytes32, bytes32));
             if (owner != msg.sender) {
                 revert NotValidOwner();
             }
@@ -723,18 +618,7 @@ contract PolygonZkEVMBridge is
             // the following transferFrom should be fail. This prevents DoS attacks from using a signature
             // before the smartcontract call
             /* solhint-disable avoid-low-level-calls */
-            address(token).call(
-                abi.encodeWithSelector(
-                    _PERMIT_SIGNATURE,
-                    owner,
-                    spender,
-                    value,
-                    deadline,
-                    v,
-                    r,
-                    s
-                )
-            );
+            address(token).call(abi.encodeWithSelector(_PERMIT_SIGNATURE, owner, spender, value, deadline, v, r, s));
         } else {
             if (sig != _PERMIT_SIGNATURE_DAI) {
                 revert NotValidSignature();
@@ -749,19 +633,7 @@ contract PolygonZkEVMBridge is
                 uint8 v,
                 bytes32 r,
                 bytes32 s
-            ) = abi.decode(
-                    permitData[4:],
-                    (
-                        address,
-                        address,
-                        uint256,
-                        uint256,
-                        bool,
-                        uint8,
-                        bytes32,
-                        bytes32
-                    )
-                );
+            ) = abi.decode(permitData[4:], (address, address, uint256, uint256, bool, uint8, bytes32, bytes32));
 
             if (holder != msg.sender) {
                 revert NotValidOwner();
@@ -776,17 +648,7 @@ contract PolygonZkEVMBridge is
             // before the smartcontract call
             /* solhint-disable avoid-low-level-calls */
             address(token).call(
-                abi.encodeWithSelector(
-                    _PERMIT_SIGNATURE_DAI,
-                    holder,
-                    spender,
-                    nonce,
-                    expiry,
-                    allowed,
-                    v,
-                    r,
-                    s
-                )
+                abi.encodeWithSelector(_PERMIT_SIGNATURE_DAI, holder, spender, nonce, expiry, allowed, v, r, s)
             );
         }
     }
@@ -798,9 +660,8 @@ contract PolygonZkEVMBridge is
      * @param token The address of the ERC-20 token contract
      */
     function _safeSymbol(address token) internal view returns (string memory) {
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeCall(IERC20MetadataUpgradeable.symbol, ())
-        );
+        (bool success, bytes memory data) =
+            address(token).staticcall(abi.encodeCall(IERC20MetadataUpgradeable.symbol, ()));
         return success ? _returnDataToString(data) : "NO_SYMBOL";
     }
 
@@ -809,9 +670,8 @@ contract PolygonZkEVMBridge is
      * @param token The address of the ERC-20 token contract.
      */
     function _safeName(address token) internal view returns (string memory) {
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeCall(IERC20MetadataUpgradeable.name, ())
-        );
+        (bool success, bytes memory data) =
+            address(token).staticcall(abi.encodeCall(IERC20MetadataUpgradeable.name, ()));
         return success ? _returnDataToString(data) : "NO_NAME";
     }
 
@@ -821,9 +681,8 @@ contract PolygonZkEVMBridge is
      * @param token The address of the ERC-20 token contract
      */
     function _safeDecimals(address token) internal view returns (uint8) {
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeCall(IERC20MetadataUpgradeable.decimals, ())
-        );
+        (bool success, bytes memory data) =
+            address(token).staticcall(abi.encodeCall(IERC20MetadataUpgradeable.decimals, ()));
         return success && data.length == 32 ? abi.decode(data, (uint8)) : 18;
     }
 
@@ -832,9 +691,7 @@ contract PolygonZkEVMBridge is
      * returns 'NOT_VALID_ENCODING' as fallback value.
      * @param data returned data
      */
-    function _returnDataToString(
-        bytes memory data
-    ) internal pure returns (string memory) {
+    function _returnDataToString(bytes memory data) internal pure returns (string memory) {
         if (data.length >= 64) {
             return abi.decode(data, (string));
         } else if (data.length == 32) {

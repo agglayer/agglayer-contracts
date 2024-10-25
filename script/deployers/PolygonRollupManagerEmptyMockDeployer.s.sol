@@ -9,16 +9,17 @@ import "forge-std/Script.sol";
 
 import "contracts/mocks/PolygonRollupManagerEmptyMock.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts5/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract PolygonRollupManagerEmptyMockDeployer is Script {
     PolygonRollupManagerEmptyMock internal polygonRollupManagerEmptyMock;
     ProxyAdmin internal polygonRollupManagerEmptyMockProxyAdmin;
     address internal polygonRollupManagerEmptyMockImplementation;
 
-    function deployPolygonRollupManagerEmptyMockTransparent(
-        address proxyAdminOwner
-    )
+    function deployPolygonRollupManagerEmptyMockTransparent(address proxyAdminOwner)
         internal
         returns (address implementation, address proxyAdmin, address proxy)
     {
@@ -26,16 +27,10 @@ abstract contract PolygonRollupManagerEmptyMockDeployer is Script {
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        polygonRollupManagerEmptyMockImplementation = address(
-            new PolygonRollupManagerEmptyMock()
-        );
+        polygonRollupManagerEmptyMockImplementation = address(new PolygonRollupManagerEmptyMock());
         polygonRollupManagerEmptyMock = PolygonRollupManagerEmptyMock(
             address(
-                new TransparentUpgradeableProxy(
-                    polygonRollupManagerEmptyMockImplementation,
-                    proxyAdminOwner,
-                    initData
-                )
+                new TransparentUpgradeableProxy(polygonRollupManagerEmptyMockImplementation, proxyAdminOwner, initData)
             )
         );
 
@@ -61,10 +56,7 @@ abstract contract PolygonRollupManagerEmptyMockDeployer is Script {
         );
     }
 
-    function deployPolygonRollupManagerEmptyMockImplementation()
-        internal
-        returns (address implementation)
-    {
+    function deployPolygonRollupManagerEmptyMockImplementation() internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         implementation = address(new PolygonRollupManagerEmptyMock());
         vm.stopBroadcast();

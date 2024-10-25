@@ -16,10 +16,7 @@ contract PolygonRollupManagerEmptyMock is EmergencyManager {
         acceptSequenceBatches = newAcceptSequenceBatches;
     }
 
-    function onSequenceBatches(
-        uint64 newSequencedBatches,
-        bytes32 newAccInputHash
-    ) external returns (uint64) {
+    function onSequenceBatches(uint64 newSequencedBatches, bytes32 newAccInputHash) external returns (uint64) {
         if (!acceptSequenceBatches) {
             revert();
         }
@@ -27,11 +24,10 @@ contract PolygonRollupManagerEmptyMock is EmergencyManager {
         return uint64(currentSequenceBatches);
     }
 
-    function onVerifyBatches(
-        uint64 finalNewBatch,
-        bytes32 newStateRoot,
-        IPolygonRollupBase rollup
-    ) external returns (uint64) {
+    function onVerifyBatches(uint64 finalNewBatch, bytes32 newStateRoot, IPolygonRollupBase rollup)
+        external
+        returns (uint64)
+    {
         rollup.onVerifyBatches(finalNewBatch, newStateRoot, msg.sender);
     }
 
@@ -54,10 +50,7 @@ contract PolygonRollupManagerEmptyMock is EmergencyManager {
     /**
      * @notice Function to deactivate emergency state on both PolygonZkEVM and PolygonZkEVMBridge contracts
      */
-    function lastDeactivatedEmergencyStateTimestamp()
-        external
-        returns (uint256)
-    {
+    function lastDeactivatedEmergencyStateTimestamp() external returns (uint256) {
         return 0;
     }
 

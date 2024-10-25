@@ -17,9 +17,7 @@ abstract contract ERC20PermitMockDeployer is Script {
         uint256 initialBalance
     ) internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        implementation = address(
-            new ERC20PermitMock(name, symbol, initialAccount, initialBalance)
-        );
+        implementation = address(new ERC20PermitMock(name, symbol, initialAccount, initialBalance));
         vm.stopBroadcast();
     }
 }

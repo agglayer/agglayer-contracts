@@ -9,16 +9,17 @@ import "forge-std/Script.sol";
 
 import "contracts/mocks/VerifierRollupHelperMock.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract VerifierRollupHelperMockDeployer is Script {
     VerifierRollupHelperMock internal verifierRollupHelperMock;
     ProxyAdmin internal verifierRollupHelperMockProxyAdmin;
     address internal verifierRollupHelperMockImplementation;
 
-    function deployVerifierRollupHelperMockTransparent(
-        address proxyAdminOwner
-    )
+    function deployVerifierRollupHelperMockTransparent(address proxyAdminOwner)
         internal
         returns (address implementation, address proxyAdmin, address proxy)
     {
@@ -26,17 +27,9 @@ abstract contract VerifierRollupHelperMockDeployer is Script {
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        verifierRollupHelperMockImplementation = address(
-            new VerifierRollupHelperMock()
-        );
+        verifierRollupHelperMockImplementation = address(new VerifierRollupHelperMock());
         verifierRollupHelperMock = VerifierRollupHelperMock(
-            address(
-                new TransparentUpgradeableProxy(
-                    verifierRollupHelperMockImplementation,
-                    proxyAdminOwner,
-                    initData
-                )
-            )
+            address(new TransparentUpgradeableProxy(verifierRollupHelperMockImplementation, proxyAdminOwner, initData))
         );
 
         vm.stopBroadcast();
@@ -61,10 +54,7 @@ abstract contract VerifierRollupHelperMockDeployer is Script {
         );
     }
 
-    function deployVerifierRollupHelperMockImplementation()
-        internal
-        returns (address implementation)
-    {
+    function deployVerifierRollupHelperMockImplementation() internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         implementation = address(new VerifierRollupHelperMock());
         vm.stopBroadcast();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
+
 import "./IBasePolygonZkEVMGlobalExitRoot.sol";
 
 interface IPolygonZkEVMBridgeV2 {
@@ -89,9 +90,7 @@ interface IPolygonZkEVMBridgeV2 {
      */
     error FailedTokenWrappedDeployment();
 
-    function wrappedTokenToTokenInfo(
-        address destinationAddress
-    ) external view returns (uint32, address);
+    function wrappedTokenToTokenInfo(address destinationAddress) external view returns (uint32, address);
 
     function updateGlobalExitRoot() external;
 
@@ -160,7 +159,5 @@ interface IPolygonZkEVMBridgeV2 {
         bytes memory _gasTokenMetadata
     ) external;
 
-    function getTokenMetadata(
-        address token
-    ) external view returns (bytes memory);
+    function getTokenMetadata(address token) external view returns (bytes memory);
 }

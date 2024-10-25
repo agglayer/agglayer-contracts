@@ -11,12 +11,7 @@ contract Deploy is Script, ERC20PermitMockDeployer {
         address _initialAccount = makeAddr("initialAccount");
         uint256 _initialBalance = 20_000_000;
 
-        address implementation = deployERC20PermitMockImplementation(
-            _name,
-            _symbol,
-            _initialAccount,
-            _initialBalance
-        );
+        address implementation = deployERC20PermitMockImplementation(_name, _symbol, _initialAccount, _initialBalance);
         console.log("ERC20PermitMock deployed at: ", implementation);
     }
 }

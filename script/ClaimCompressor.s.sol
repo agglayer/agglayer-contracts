@@ -9,10 +9,7 @@ contract Deploy is Script, ClaimCompressorDeployer {
         address _bridgeAddress = makeAddr("bridgeAddress");
         uint32 _networkID = 1;
 
-        address implementation = deployClaimCompressorImplementation(
-            _bridgeAddress,
-            _networkID
-        );
+        address implementation = deployClaimCompressorImplementation(_bridgeAddress, _networkID);
         console.log("ClaimCompressor deployed at: ", implementation);
     }
 }

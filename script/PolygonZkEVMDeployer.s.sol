@@ -8,9 +8,7 @@ contract Deploy is Script, PolygonZkEVMDeployerDeployer {
     function run() public {
         address _owner = vm.addr(vm.envUint("PRIVATE_KEY"));
 
-        address implementation = deployPolygonZkEVMDeployerImplementation(
-            _owner
-        );
+        address implementation = deployPolygonZkEVMDeployerImplementation(_owner);
         console.log("PolygonZkEVMDeployer deployed at: ", implementation);
     }
 }

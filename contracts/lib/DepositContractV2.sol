@@ -28,17 +28,10 @@ contract DepositContractV2 is ReentrancyGuardUpgradeable, DepositContractBase {
         uint256 amount,
         bytes32 metadataHash
     ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    leafType,
-                    originNetwork,
-                    originAddress,
-                    destinationNetwork,
-                    destinationAddress,
-                    amount,
-                    metadataHash
-                )
-            );
+        return keccak256(
+            abi.encodePacked(
+                leafType, originNetwork, originAddress, destinationNetwork, destinationAddress, amount, metadataHash
+            )
+        );
     }
 }

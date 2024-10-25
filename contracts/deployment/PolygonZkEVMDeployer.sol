@@ -32,11 +32,7 @@ contract PolygonZkEVMDeployer is Ownable {
      * @param salt Salt used in create2
      * @param initBytecode Init bytecode that will be use in create2
      */
-    function deployDeterministic(
-        uint256 amount,
-        bytes32 salt,
-        bytes memory initBytecode
-    ) public payable onlyOwner {
+    function deployDeterministic(uint256 amount, bytes32 salt, bytes memory initBytecode) public payable onlyOwner {
         address newContractAddress = Create2.deploy(amount, salt, initBytecode);
         emit NewDeterministicDeployment(newContractAddress);
     }
@@ -48,12 +44,11 @@ contract PolygonZkEVMDeployer is Ownable {
      * @param initBytecode Init bytecode that will be use in create2
      * @param dataCall Data used in the call after deploying the smart contract
      */
-    function deployDeterministicAndCall(
-        uint256 amount,
-        bytes32 salt,
-        bytes memory initBytecode,
-        bytes memory dataCall
-    ) public payable onlyOwner {
+    function deployDeterministicAndCall(uint256 amount, bytes32 salt, bytes memory initBytecode, bytes memory dataCall)
+        public
+        payable
+        onlyOwner
+    {
         address newContractAddress = Create2.deploy(amount, salt, initBytecode);
         Address.functionCall(newContractAddress, dataCall);
 
@@ -65,11 +60,7 @@ contract PolygonZkEVMDeployer is Ownable {
      * @param dataCall Data used to call the target smart contract
      * @param amount Data used to call the target smart contract
      */
-    function functionCall(
-        address targetAddress,
-        bytes memory dataCall,
-        uint256 amount
-    ) public payable onlyOwner {
+    function functionCall(address targetAddress, bytes memory dataCall, uint256 amount) public payable onlyOwner {
         Address.functionCallWithValue(targetAddress, dataCall, amount);
 
         emit FunctionCall();
@@ -79,10 +70,7 @@ contract PolygonZkEVMDeployer is Ownable {
      * @param salt Salt used in create2
      * @param bytecodeHash Init bytecode hashed, it contains the constructor parameters
      */
-    function predictDeterministicAddress(
-        bytes32 salt,
-        bytes32 bytecodeHash
-    ) public view returns (address) {
+    function predictDeterministicAddress(bytes32 salt, bytes32 bytecodeHash) public view returns (address) {
         return Create2.computeAddress(salt, bytecodeHash);
     }
 }

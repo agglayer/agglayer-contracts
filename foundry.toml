@@ -23,7 +23,7 @@ runs = 10000
 max_test_rejects = 999999
 
 [fmt]
-line_length = 160
+line_length = 120
 number_underscore = "thousands"
 
 [rpc_endpoints]

@@ -8,7 +8,10 @@ pragma solidity ^0.8.0;
 import "forge-std/Script.sol";
 
 import "contracts/PolygonRollupManager.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract PolygonRollupManagerDeployer is Script {
     function deployPolygonRollupManagerImplementation(
@@ -17,13 +20,7 @@ abstract contract PolygonRollupManagerDeployer is Script {
         IPolygonZkEVMBridge _bridgeAddress
     ) internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        implementation = address(
-            new PolygonRollupManager(
-                _globalExitRootManager,
-                _pol,
-                _bridgeAddress
-            )
-        );
+        implementation = address(new PolygonRollupManager(_globalExitRootManager, _pol, _bridgeAddress));
         vm.stopBroadcast();
     }
 }

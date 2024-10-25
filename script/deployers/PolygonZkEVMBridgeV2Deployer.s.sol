@@ -9,7 +9,10 @@ import "forge-std/Script.sol";
 
 import "contracts-ignored-originals/PolygonZkEVMBridgeV2.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract PolygonZkEVMBridgeV2Deployer is Script {
     PolygonZkEVMBridgeV2 internal polygonZkEVMBridgeV2;
@@ -24,10 +27,7 @@ abstract contract PolygonZkEVMBridgeV2Deployer is Script {
         IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata
-    )
-        internal
-        returns (address implementation, address proxyAdmin, address proxy)
-    {
+    ) internal returns (address implementation, address proxyAdmin, address proxy) {
         bytes memory initData = abi.encodeCall(
             PolygonZkEVMBridgeV2.initialize,
             (
@@ -42,17 +42,9 @@ abstract contract PolygonZkEVMBridgeV2Deployer is Script {
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        polygonZkEVMBridgeV2Implementation = address(
-            new PolygonZkEVMBridgeV2()
-        );
+        polygonZkEVMBridgeV2Implementation = address(new PolygonZkEVMBridgeV2());
         polygonZkEVMBridgeV2 = PolygonZkEVMBridgeV2(
-            address(
-                new TransparentUpgradeableProxy(
-                    polygonZkEVMBridgeV2Implementation,
-                    proxyAdminOwner,
-                    initData
-                )
-            )
+            address(new TransparentUpgradeableProxy(polygonZkEVMBridgeV2Implementation, proxyAdminOwner, initData))
         );
 
         vm.stopBroadcast();
@@ -70,17 +62,11 @@ abstract contract PolygonZkEVMBridgeV2Deployer is Script {
             )
         );
 
-        return (
-            polygonZkEVMBridgeV2Implementation,
-            address(polygonZkEVMBridgeV2ProxyAdmin),
-            address(polygonZkEVMBridgeV2)
-        );
+        return
+            (polygonZkEVMBridgeV2Implementation, address(polygonZkEVMBridgeV2ProxyAdmin), address(polygonZkEVMBridgeV2));
     }
 
-    function deployPolygonZkEVMBridgeV2Implementation()
-        internal
-        returns (address implementation)
-    {
+    function deployPolygonZkEVMBridgeV2Implementation() internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         implementation = address(new PolygonZkEVMBridgeV2());
         vm.stopBroadcast();

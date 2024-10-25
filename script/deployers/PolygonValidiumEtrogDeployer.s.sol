@@ -9,7 +9,10 @@ import "forge-std/Script.sol";
 
 import "contracts/consensus/validium/PolygonValidiumEtrog.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract PolygonValidiumEtrogDeployer is Script {
     PolygonValidiumEtrog internal polygonValidiumEtrog;
@@ -28,10 +31,7 @@ abstract contract PolygonValidiumEtrogDeployer is Script {
         address _gasTokenAddress,
         string memory sequencerURL,
         string memory _networkName
-    )
-        internal
-        returns (address implementation, address proxyAdmin, address proxy)
-    {
+    ) internal returns (address implementation, address proxyAdmin, address proxy) {
         bytes memory initData = abi.encodeWithSignature(
             "initialize(address,address,uint32,address,string,string)",
             _admin,
@@ -43,26 +43,14 @@ abstract contract PolygonValidiumEtrogDeployer is Script {
         );
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        polygonValidiumEtrogImplementation = address(
-            new PolygonValidiumEtrog(
-                _globalExitRootManager,
-                _pol,
-                _bridgeAddress,
-                _rollupManager
-            )
-        );
+        polygonValidiumEtrogImplementation =
+            address(new PolygonValidiumEtrog(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager));
         vm.stopBroadcast();
 
         // two step deployment as rollupManager is required for initialization
         vm.startBroadcast(address(_rollupManager));
         polygonValidiumEtrog = PolygonValidiumEtrog(
-            address(
-                new TransparentUpgradeableProxy(
-                    polygonValidiumEtrogImplementation,
-                    proxyAdminOwner,
-                    initData
-                )
-            )
+            address(new TransparentUpgradeableProxy(polygonValidiumEtrogImplementation, proxyAdminOwner, initData))
         );
         vm.stopBroadcast();
 
@@ -79,11 +67,8 @@ abstract contract PolygonValidiumEtrogDeployer is Script {
             )
         );
 
-        return (
-            polygonValidiumEtrogImplementation,
-            address(polygonValidiumEtrogProxyAdmin),
-            address(polygonValidiumEtrog)
-        );
+        return
+            (polygonValidiumEtrogImplementation, address(polygonValidiumEtrogProxyAdmin), address(polygonValidiumEtrog));
     }
 
     function deployPolygonValidiumEtrogImplementation(
@@ -93,14 +78,7 @@ abstract contract PolygonValidiumEtrogDeployer is Script {
         PolygonRollupManager _rollupManager
     ) internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        implementation = address(
-            new PolygonValidiumEtrog(
-                _globalExitRootManager,
-                _pol,
-                _bridgeAddress,
-                _rollupManager
-            )
-        );
+        implementation = address(new PolygonValidiumEtrog(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager));
         vm.stopBroadcast();
     }
 }

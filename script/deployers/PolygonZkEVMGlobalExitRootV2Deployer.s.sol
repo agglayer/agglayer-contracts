@@ -9,7 +9,10 @@ import "forge-std/Script.sol";
 
 import "contracts/PolygonZkEVMGlobalExitRootV2.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract PolygonZkEVMGlobalExitRootV2Deployer is Script {
     PolygonZkEVMGlobalExitRootV2 internal polygonZkEVMGlobalExitRootV2;
@@ -20,27 +23,16 @@ abstract contract PolygonZkEVMGlobalExitRootV2Deployer is Script {
         address proxyAdminOwner,
         address _rollupManager,
         address _bridgeAddress
-    )
-        internal
-        returns (address implementation, address proxyAdmin, address proxy)
-    {
-        bytes memory initData = abi.encodeCall(
-            PolygonZkEVMGlobalExitRootV2.initialize,
-            ()
-        );
+    ) internal returns (address implementation, address proxyAdmin, address proxy) {
+        bytes memory initData = abi.encodeCall(PolygonZkEVMGlobalExitRootV2.initialize, ());
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        polygonZkEVMGlobalExitRootV2Implementation = address(
-            new PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress)
-        );
+        polygonZkEVMGlobalExitRootV2Implementation =
+            address(new PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress));
         polygonZkEVMGlobalExitRootV2 = PolygonZkEVMGlobalExitRootV2(
             address(
-                new TransparentUpgradeableProxy(
-                    polygonZkEVMGlobalExitRootV2Implementation,
-                    proxyAdminOwner,
-                    initData
-                )
+                new TransparentUpgradeableProxy(polygonZkEVMGlobalExitRootV2Implementation, proxyAdminOwner, initData)
             )
         );
 
@@ -66,14 +58,12 @@ abstract contract PolygonZkEVMGlobalExitRootV2Deployer is Script {
         );
     }
 
-    function deployPolygonZkEVMGlobalExitRootV2Implementation(
-        address _rollupManager,
-        address _bridgeAddress
-    ) internal returns (address implementation) {
+    function deployPolygonZkEVMGlobalExitRootV2Implementation(address _rollupManager, address _bridgeAddress)
+        internal
+        returns (address implementation)
+    {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        implementation = address(
-            new PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress)
-        );
+        implementation = address(new PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress));
         vm.stopBroadcast();
     }
 }

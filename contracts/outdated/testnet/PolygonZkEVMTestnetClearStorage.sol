@@ -25,16 +25,7 @@ contract PolygonZkEVMTestnetClearStorage is PolygonZkEVM {
         IPolygonZkEVMBridge _bridgeAddress,
         uint64 _chainID,
         uint64 _forkID
-    )
-        PolygonZkEVM(
-            _globalExitRootManager,
-            _matic,
-            _rollupVerifier,
-            _bridgeAddress,
-            _chainID,
-            _forkID
-        )
-    {}
+    ) PolygonZkEVM(_globalExitRootManager, _matic, _rollupVerifier, _bridgeAddress, _chainID, _forkID) {}
 
     /**
      * @dev Thrown when try to update version when it's already updated

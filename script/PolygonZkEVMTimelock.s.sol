@@ -12,13 +12,8 @@ contract Deploy is Script, PolygonZkEVMTimelockDeployer {
         address admin = makeAddr("admin");
         PolygonZkEVM _polygonZkEVM = PolygonZkEVM(makeAddr("polygonZkEVM"));
 
-        address implementation = deployPolygonZkEVMTimelockImplementation(
-            minDelay,
-            proposers,
-            executors,
-            admin,
-            _polygonZkEVM
-        );
+        address implementation =
+            deployPolygonZkEVMTimelockImplementation(minDelay, proposers, executors, admin, _polygonZkEVM);
         console.log("PolygonZkEVMTimelock deployed at: ", implementation);
     }
 }

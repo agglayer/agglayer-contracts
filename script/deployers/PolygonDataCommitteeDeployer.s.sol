@@ -9,37 +9,27 @@ import "forge-std/Script.sol";
 
 import "contracts/consensus/validium/PolygonDataCommittee.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 abstract contract PolygonDataCommitteeDeployer is Script {
     PolygonDataCommittee internal polygonDataCommittee;
     ProxyAdmin internal polygonDataCommitteeProxyAdmin;
     address internal polygonDataCommitteeImplementation;
 
-    function deployPolygonDataCommitteeTransparent(
-        address proxyAdminOwner
-    )
+    function deployPolygonDataCommitteeTransparent(address proxyAdminOwner)
         internal
         returns (address implementation, address proxyAdmin, address proxy)
     {
-        bytes memory initData = abi.encodeCall(
-            PolygonDataCommittee.initialize,
-            ()
-        );
+        bytes memory initData = abi.encodeCall(PolygonDataCommittee.initialize, ());
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        polygonDataCommitteeImplementation = address(
-            new PolygonDataCommittee()
-        );
+        polygonDataCommitteeImplementation = address(new PolygonDataCommittee());
         polygonDataCommittee = PolygonDataCommittee(
-            address(
-                new TransparentUpgradeableProxy(
-                    polygonDataCommitteeImplementation,
-                    proxyAdminOwner,
-                    initData
-                )
-            )
+            address(new TransparentUpgradeableProxy(polygonDataCommitteeImplementation, proxyAdminOwner, initData))
         );
 
         vm.stopBroadcast();
@@ -57,17 +47,11 @@ abstract contract PolygonDataCommitteeDeployer is Script {
             )
         );
 
-        return (
-            polygonDataCommitteeImplementation,
-            address(polygonDataCommitteeProxyAdmin),
-            address(polygonDataCommittee)
-        );
+        return
+            (polygonDataCommitteeImplementation, address(polygonDataCommitteeProxyAdmin), address(polygonDataCommittee));
     }
 
-    function deployPolygonDataCommitteeImplementation()
-        internal
-        returns (address implementation)
-    {
+    function deployPolygonDataCommitteeImplementation() internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         implementation = address(new PolygonDataCommittee());
         vm.stopBroadcast();

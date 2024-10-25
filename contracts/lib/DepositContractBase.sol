@@ -17,8 +17,7 @@ contract DepositContractBase {
     uint256 internal constant _DEPOSIT_CONTRACT_TREE_DEPTH = 32;
 
     // This ensures `depositCount` will fit into 32-bits
-    uint256 internal constant _MAX_DEPOSIT_COUNT =
-        2 ** _DEPOSIT_CONTRACT_TREE_DEPTH - 1;
+    uint256 internal constant _MAX_DEPOSIT_COUNT = 2 ** _DEPOSIT_CONTRACT_TREE_DEPTH - 1;
 
     // Branch array which contains the necessary sibilings to compute the next root when a new
     // leaf is inserted
@@ -72,11 +71,7 @@ contract DepositContractBase {
 
         // Add deposit data root to Merkle tree (update a single `_branch` node)
         uint256 size = ++depositCount;
-        for (
-            uint256 height = 0;
-            height < _DEPOSIT_CONTRACT_TREE_DEPTH;
-            height++
-        ) {
+        for (uint256 height = 0; height < _DEPOSIT_CONTRACT_TREE_DEPTH; height++) {
             if (((size >> height) & 1) == 1) {
                 _branch[height] = node;
                 return;
@@ -110,11 +105,11 @@ contract DepositContractBase {
      * @param smtProof Smt proof
      * @param index Index of the leaf
      */
-    function calculateRoot(
-        bytes32 leafHash,
-        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
-        uint32 index
-    ) public pure returns (bytes32) {
+    function calculateRoot(bytes32 leafHash, bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof, uint32 index)
+        public
+        pure
+        returns (bytes32)
+    {
         bytes32 node = leafHash;
 
         // Compute root

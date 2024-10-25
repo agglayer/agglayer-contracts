@@ -18,15 +18,7 @@ abstract contract PolygonZkEVMTimelockDeployer is Script {
         PolygonZkEVM _polygonZkEVM
     ) internal returns (address implementation) {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        implementation = address(
-            new PolygonZkEVMTimelock(
-                minDelay,
-                proposers,
-                executors,
-                admin,
-                _polygonZkEVM
-            )
-        );
+        implementation = address(new PolygonZkEVMTimelock(minDelay, proposers, executors, admin, _polygonZkEVM));
         vm.stopBroadcast();
     }
 }

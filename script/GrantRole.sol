@@ -31,11 +31,7 @@ contract GrantRole is Script {
 
     function run() public {
         readInput();
-        (
-            bytes memory scheduleBatchPayload,
-            bytes memory executeBatchPayload,
-            bytes32 payloadId
-        ) = makePayload(roleHash);
+        (bytes memory scheduleBatchPayload, bytes memory executeBatchPayload, bytes32 payloadId) = makePayload(roleHash);
 
         console.log("\n----------------------\n");
 
@@ -60,56 +56,33 @@ contract GrantRole is Script {
 
         role = input.readString(".roleName");
         accountToGrantRole = input.readAddress(".accountToGrantRole");
-        polygonRollupManager = input.readAddress(
-            ".polygonRollupManagerAddress"
-        );
+        polygonRollupManager = input.readAddress(".polygonRollupManagerAddress");
         timelockDelay = input.readUint(".timelockDelay");
-        polygonZkEVMTimelock = PolygonZkEVMTimelock(
-            payable(input.readAddress(".polygonZkEVMTimelockAddress"))
-        );
+        polygonZkEVMTimelock = PolygonZkEVMTimelock(payable(input.readAddress(".polygonZkEVMTimelockAddress")));
 
         _verifyRole(role);
         console.log("Role name:", role);
         console.log("Account to grant role to:", accountToGrantRole);
         console.log("PolygonRollupManager Address:", polygonRollupManager);
         console.log("Timelock delay:", timelockDelay);
-        console.log(
-            "PolygonZkEVMTimelock Address:",
-            address(polygonZkEVMTimelock)
-        );
+        console.log("PolygonZkEVMTimelock Address:", address(polygonZkEVMTimelock));
     }
 
-    function makePayload(
-        bytes32 _roleHash
-    )
+    function makePayload(bytes32 _roleHash)
         public
         view
-        returns (
-            bytes memory scheduleBatchPayload,
-            bytes memory executeBatchPayload,
-            bytes32 payloadId
-        )
+        returns (bytes memory scheduleBatchPayload, bytes memory executeBatchPayload, bytes32 payloadId)
     {
-        bytes memory payload = abi.encodeCall(
-            polygonZkEVMTimelock.grantRole,
-            (_roleHash, accountToGrantRole)
-        );
+        bytes memory payload = abi.encodeCall(polygonZkEVMTimelock.grantRole, (_roleHash, accountToGrantRole));
 
-        scheduleBatchPayload = abi.encodeCall(
-            polygonZkEVMTimelock.schedule,
-            (polygonRollupManager, 0, payload, "", "", timelockDelay)
-        );
+        scheduleBatchPayload =
+            abi.encodeCall(polygonZkEVMTimelock.schedule, (polygonRollupManager, 0, payload, "", "", timelockDelay));
 
-        executeBatchPayload = abi.encodeCall(
-            polygonZkEVMTimelock.execute,
-            (polygonRollupManager, 0, payload, "", "")
-        );
+        executeBatchPayload = abi.encodeCall(polygonZkEVMTimelock.execute, (polygonRollupManager, 0, payload, "", ""));
 
         // TODO: check why the polygonZkEVMTimelock.hashOperation() function is not working
         // Error: script failed: <empty revert data>
-        payloadId = keccak256(
-            abi.encode(polygonRollupManager, 0, payload, "", "")
-        );
+        payloadId = keccak256(abi.encode(polygonRollupManager, 0, payload, "", ""));
     }
 
     function _verifyRole(string memory roleInput) internal {

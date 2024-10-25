@@ -15,10 +15,7 @@ import "../interfaces/IPolygonValidium.sol";
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  * It is advised to use timelocks for the admin address in case of Validium since if can change the dataAvailabilityProtocol
  */
-contract PolygonValidiumEtrogPrevious is
-    PolygonRollupBaseEtrogPrevious,
-    IPolygonValidium
-{
+contract PolygonValidiumEtrogPrevious is PolygonRollupBaseEtrogPrevious, IPolygonValidium {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
@@ -65,14 +62,7 @@ contract PolygonValidiumEtrogPrevious is
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManager _rollupManager
-    )
-        PolygonRollupBaseEtrogPrevious(
-            _globalExitRootManager,
-            _pol,
-            _bridgeAddress,
-            _rollupManager
-        )
-    {}
+    ) PolygonRollupBaseEtrogPrevious(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager) {}
 
     /////////////////////////////////////
     // Sequence/Verify batches functions
@@ -108,9 +98,7 @@ contract PolygonValidiumEtrogPrevious is
         }
 
         // Check max sequence timestamp inside of range
-        if (
-            uint256(maxSequenceTimestamp) > (block.timestamp + TIMESTAMP_RANGE)
-        ) {
+        if (uint256(maxSequenceTimestamp) > (block.timestamp + TIMESTAMP_RANGE)) {
             revert MaxTimestampSequenceInvalid();
         }
 
@@ -148,10 +136,7 @@ contract PolygonValidiumEtrogPrevious is
                     )
                 );
 
-                if (
-                    hashedForcedBatchData !=
-                    forcedBatches[currentLastForceBatchSequenced]
-                ) {
+                if (hashedForcedBatchData != forcedBatches[currentLastForceBatchSequenced]) {
                     revert ForcedDataDoesNotMatch();
                 }
 
@@ -171,12 +156,8 @@ contract PolygonValidiumEtrogPrevious is
                 delete forcedBatches[currentLastForceBatchSequenced];
             } else {
                 // Accumulate non forced transactions hash
-                accumulatedNonForcedTransactionsHash = keccak256(
-                    abi.encodePacked(
-                        accumulatedNonForcedTransactionsHash,
-                        currentBatch.transactionsHash
-                    )
-                );
+                accumulatedNonForcedTransactionsHash =
+                    keccak256(abi.encodePacked(accumulatedNonForcedTransactionsHash, currentBatch.transactionsHash));
 
                 // Note that forcedGlobalExitRoot and forcedBlockHashL1 remain unused and unchecked in this path
                 // The synchronizer should be aware of that
@@ -207,16 +188,12 @@ contract PolygonValidiumEtrogPrevious is
 
         // Check if there has been forced batches
         if (currentLastForceBatchSequenced != initLastForceBatchSequenced) {
-            uint64 forcedBatchesSequenced = currentLastForceBatchSequenced -
-                initLastForceBatchSequenced;
+            uint64 forcedBatchesSequenced = currentLastForceBatchSequenced - initLastForceBatchSequenced;
             // substract forced batches
             nonForcedBatchesSequenced -= forcedBatchesSequenced;
 
             // Transfer pol for every forced batch submitted
-            pol.safeTransfer(
-                address(rollupManager),
-                calculatePolPerForceBatch() * (forcedBatchesSequenced)
-            );
+            pol.safeTransfer(address(rollupManager), calculatePolPerForceBatch() * (forcedBatchesSequenced));
 
             // Store new last force batch sequenced
             lastForceBatchSequenced = currentLastForceBatchSequenced;
@@ -225,28 +202,18 @@ contract PolygonValidiumEtrogPrevious is
         // Pay collateral for every non-forced batch submitted
         if (nonForcedBatchesSequenced != 0) {
             pol.safeTransferFrom(
-                msg.sender,
-                address(rollupManager),
-                rollupManager.getBatchFee() * nonForcedBatchesSequenced
+                msg.sender, address(rollupManager), rollupManager.getBatchFee() * nonForcedBatchesSequenced
             );
 
             // Validate that the data availability protocol accepts the dataAvailabilityMessage
             // note This is a view function, so there's not much risk even if this contract was vulnerable to reentrant attacks
-            dataAvailabilityProtocol.verifyMessage(
-                accumulatedNonForcedTransactionsHash,
-                dataAvailabilityMessage
-            );
+            dataAvailabilityProtocol.verifyMessage(accumulatedNonForcedTransactionsHash, dataAvailabilityMessage);
         }
 
-        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(
-            uint64(batchesNum),
-            currentAccInputHash
-        );
+        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(uint64(batchesNum), currentAccInputHash);
 
         // Check init sequenced batch
-        if (
-            initSequencedBatch != (currentBatchSequenced - uint64(batchesNum))
-        ) {
+        if (initSequencedBatch != (currentBatchSequenced - uint64(batchesNum))) {
             revert InitSequencedBatchDoesNotMatch();
         }
 
@@ -272,12 +239,7 @@ contract PolygonValidiumEtrogPrevious is
         if (!isSequenceWithDataAvailabilityAllowed) {
             revert SequenceWithDataAvailabilityNotAllowed();
         }
-        super.sequenceBatches(
-            batches,
-            maxSequenceTimestamp,
-            initSequencedBatch,
-            l2Coinbase
-        );
+        super.sequenceBatches(batches, maxSequenceTimestamp, initSequencedBatch, l2Coinbase);
     }
 
     //////////////////
@@ -288,9 +250,7 @@ contract PolygonValidiumEtrogPrevious is
      * @notice Allow the admin to set a new data availability protocol
      * @param newDataAvailabilityProtocol Address of the new data availability protocol
      */
-    function setDataAvailabilityProtocol(
-        IDataAvailabilityProtocol newDataAvailabilityProtocol
-    ) external onlyAdmin {
+    function setDataAvailabilityProtocol(IDataAvailabilityProtocol newDataAvailabilityProtocol) external onlyAdmin {
         dataAvailabilityProtocol = newDataAvailabilityProtocol;
 
         emit SetDataAvailabilityProtocol(address(newDataAvailabilityProtocol));
@@ -300,13 +260,8 @@ contract PolygonValidiumEtrogPrevious is
      * @notice Allow the admin to switch the sequence with data availability
      * @param newIsSequenceWithDataAvailabilityAllowed Boolean to switch
      */
-    function switchSequenceWithDataAvailability(
-        bool newIsSequenceWithDataAvailabilityAllowed
-    ) external onlyAdmin {
-        if (
-            newIsSequenceWithDataAvailabilityAllowed ==
-            isSequenceWithDataAvailabilityAllowed
-        ) {
+    function switchSequenceWithDataAvailability(bool newIsSequenceWithDataAvailabilityAllowed) external onlyAdmin {
+        if (newIsSequenceWithDataAvailabilityAllowed == isSequenceWithDataAvailabilityAllowed) {
             revert SwitchToSameValue();
         }
         isSequenceWithDataAvailabilityAllowed = newIsSequenceWithDataAvailabilityAllowed;

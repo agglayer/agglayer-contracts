@@ -12,11 +12,7 @@ interface IPolygonRollupBasePrevious {
         string memory _networkName
     ) external;
 
-    function onVerifyBatches(
-        uint64 lastVerifiedBatch,
-        bytes32 newStateRoot,
-        address aggregator
-    ) external;
+    function onVerifyBatches(uint64 lastVerifiedBatch, bytes32 newStateRoot, address aggregator) external;
 
     function admin() external returns (address);
 }

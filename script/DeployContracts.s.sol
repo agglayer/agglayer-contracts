@@ -23,23 +23,17 @@ contract DeployContracts is Script {
 
     bytes32 constant DEFAULT_ADMIN_ROLE = bytes32(0);
     bytes32 constant ADD_ROLLUP_TYPE_ROLE = keccak256("ADD_ROLLUP_TYPE_ROLE");
-    bytes32 constant OBSOLETE_ROLLUP_TYPE_ROLE =
-        keccak256("OBSOLETE_ROLLUP_TYPE_ROLE");
+    bytes32 constant OBSOLETE_ROLLUP_TYPE_ROLE = keccak256("OBSOLETE_ROLLUP_TYPE_ROLE");
     bytes32 constant CREATE_ROLLUP_ROLE = keccak256("CREATE_ROLLUP_ROLE");
-    bytes32 constant ADD_EXISTING_ROLLUP_ROLE =
-        keccak256("ADD_EXISTING_ROLLUP_ROLE");
+    bytes32 constant ADD_EXISTING_ROLLUP_ROLE = keccak256("ADD_EXISTING_ROLLUP_ROLE");
     bytes32 constant UPDATE_ROLLUP_ROLE = keccak256("UPDATE_ROLLUP_ROLE");
-    bytes32 constant TRUSTED_AGGREGATOR_ROLE =
-        keccak256("TRUSTED_AGGREGATOR_ROLE");
-    bytes32 constant TRUSTED_AGGREGATOR_ROLE_ADMIN =
-        keccak256("TRUSTED_AGGREGATOR_ROLE_ADMIN");
+    bytes32 constant TRUSTED_AGGREGATOR_ROLE = keccak256("TRUSTED_AGGREGATOR_ROLE");
+    bytes32 constant TRUSTED_AGGREGATOR_ROLE_ADMIN = keccak256("TRUSTED_AGGREGATOR_ROLE_ADMIN");
     bytes32 constant TWEAK_PARAMETERS_ROLE = keccak256("TWEAK_PARAMETERS_ROLE");
     bytes32 constant SET_FEE_ROLE = keccak256("SET_FEE_ROLE");
     bytes32 constant STOP_EMERGENCY_ROLE = keccak256("STOP_EMERGENCY_ROLE");
-    bytes32 constant EMERGENCY_COUNCIL_ROLE =
-        keccak256("EMERGENCY_COUNCIL_ROLE");
-    bytes32 constant EMERGENCY_COUNCIL_ADMIN =
-        keccak256("EMERGENCY_COUNCIL_ADMIN");
+    bytes32 constant EMERGENCY_COUNCIL_ROLE = keccak256("EMERGENCY_COUNCIL_ROLE");
+    bytes32 constant EMERGENCY_COUNCIL_ADMIN = keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     address constant GAS_TOKEN_ADDR_MAINNET = address(0);
     uint256 constant NETWORK_ID_MAINNET = 0;
@@ -75,22 +69,12 @@ contract DeployContracts is Script {
         _deployTimelock(proxyAdminAddr, computedRollupManagerAddress);
 
         address bridgeProxy = _deployBridgeProxy(
-            bridgeImplementation,
-            computedGlobalExitRootManagerAddress,
-            computedRollupManagerAddress,
-            proxyAdminAddr
+            bridgeImplementation, computedGlobalExitRootManagerAddress, computedRollupManagerAddress, proxyAdminAddr
         );
 
-        address globalExitRootManager = _deployGlobalExitRootManager(
-            computedRollupManagerAddress,
-            bridgeProxy,
-            proxyAdminAddr
-        );
-        address rolluplManagerAddr = _deployRollupManager(
-            globalExitRootManager,
-            bridgeProxy,
-            proxyAdminAddr
-        );
+        address globalExitRootManager =
+            _deployGlobalExitRootManager(computedRollupManagerAddress, bridgeProxy, proxyAdminAddr);
+        address rolluplManagerAddr = _deployRollupManager(globalExitRootManager, bridgeProxy, proxyAdminAddr);
         _verifyRollupManager(rolluplManagerAddr, bridgeProxy);
     }
 
@@ -117,24 +101,12 @@ contract DeployContracts is Script {
         zkevmDeployer = PolygonZkEVMDeployer(zkEVMDeployerAddress);
 
         console.log("Admin Address: %s", address(admin));
-        console.log(
-            "Emergency Council Address: %s",
-            address(emergencyCouncilAddress)
-        );
+        console.log("Emergency Council Address: %s", address(emergencyCouncilAddress));
         console.log("Gas Token Address: %s", address(gasTokenAddress));
         console.log("Pol Token Address: %s", address(polTokenAddress));
-        console.log(
-            "Timelock Admin Address: %s",
-            address(timelockAdminAddress)
-        );
-        console.log(
-            "Trusted Aggregator Address: %s",
-            address(trustedAggregator)
-        );
-        console.log(
-            "ZkEVM Deployer Address: %s",
-            address(zkEVMDeployerAddress)
-        );
+        console.log("Timelock Admin Address: %s", address(timelockAdminAddress));
+        console.log("Trusted Aggregator Address: %s", address(trustedAggregator));
+        console.log("ZkEVM Deployer Address: %s", address(zkEVMDeployerAddress));
         console.log("Deployer Private Key: %s", deployerPvtKey);
         console.log("Gas Token Network: %s", gasTokenNetwork);
         console.log("Min Delay Timelock: %s", minDelayTimelock);
@@ -145,27 +117,18 @@ contract DeployContracts is Script {
 
     function _deployProxyAdmin() internal returns (address) {
         bytes memory bytecode = type(ProxyAdmin).creationCode;
-        address proxyAdminAddr = vm.computeCreate2Address(
-            salt,
-            keccak256(bytecode),
-            address(zkevmDeployer)
-        );
+        address proxyAdminAddr = vm.computeCreate2Address(salt, keccak256(bytecode), address(zkevmDeployer));
 
         // check if there is already a ProxyAdmin deployed at the address
         if (proxyAdminAddr.code.length > 0) {
             console.log("\n----------------------\n");
-            console.log(
-                "ProxyAdmin already deployed at address: %s",
-                proxyAdminAddr
-            );
+            console.log("ProxyAdmin already deployed at address: %s", proxyAdminAddr);
             return proxyAdminAddr;
         }
 
         // if not, deploy ProxyAdmin and transfer ownership to deployer
-        bytes memory callData = abi.encodeWithSelector(
-            ProxyAdmin(proxyAdminAddr).transferOwnership.selector,
-            vm.addr(deployerPvtKey)
-        );
+        bytes memory callData =
+            abi.encodeWithSelector(ProxyAdmin(proxyAdminAddr).transferOwnership.selector, vm.addr(deployerPvtKey));
         vm.startBroadcast(deployerPvtKey);
         zkevmDeployer.deployDeterministicAndCall(0, salt, bytecode, callData);
         vm.stopBroadcast();
@@ -173,27 +136,18 @@ contract DeployContracts is Script {
         console.log("\n----------------------\n");
         console.log("ProxyAdmin deployed and ownership transferred!");
         console.log("Proxy Admin Address: %s", proxyAdminAddr);
-        console.log(
-            "Proxy Admin Owner Address: %s",
-            ProxyAdmin(proxyAdminAddr).owner()
-        );
+        console.log("Proxy Admin Owner Address: %s", ProxyAdmin(proxyAdminAddr).owner());
         return proxyAdminAddr;
     }
 
     function _deployBridgeImplementation() internal returns (address) {
         bytes memory bytecode = type(PolygonZkEVMBridgeV2).creationCode;
-        address bridgeAddress = zkevmDeployer.predictDeterministicAddress(
-            salt,
-            keccak256(bytecode)
-        );
+        address bridgeAddress = zkevmDeployer.predictDeterministicAddress(salt, keccak256(bytecode));
 
         // check if there is already a Bridge implementation deployed at the address
         if (bridgeAddress.code.length > 0) {
             console.log("\n----------------------\n");
-            console.log(
-                "Bridge implementation already deployed at address: %s",
-                bridgeAddress
-            );
+            console.log("Bridge implementation already deployed at address: %s", bridgeAddress);
             return bridgeAddress;
         }
 
@@ -208,10 +162,7 @@ contract DeployContracts is Script {
         return bridgeAddress;
     }
 
-    function _deployTimelock(
-        address proxyAdminAddr,
-        address polygonRollupManagerAddr
-    ) internal {
+    function _deployTimelock(address proxyAdminAddr, address polygonRollupManagerAddr) internal {
         vm.startBroadcast(deployerPvtKey);
         address[] memory adminAddresses = new address[](1);
         adminAddresses[0] = timelockAdminAddress;
@@ -228,10 +179,7 @@ contract DeployContracts is Script {
         console.log("\n----------------------\n");
         console.log("Timelock deployed and ProxyAdmin ownership transferred!");
         console.log("Timelock Address: %s", address(timelock));
-        console.log(
-            "Proxy Admin Owner Address: %s",
-            ProxyAdmin(proxyAdminAddr).owner()
-        );
+        console.log("Proxy Admin Owner Address: %s", ProxyAdmin(proxyAdminAddr).owner());
     }
 
     function _deployBridgeProxy(
@@ -244,18 +192,12 @@ contract DeployContracts is Script {
             type(TransparentUpgradeableProxy).creationCode,
             abi.encode(bridgeImplementationAddr, proxyAdminAddr, bytes(""))
         );
-        address bridgeProxyAddress = zkevmDeployer.predictDeterministicAddress(
-            salt,
-            keccak256(bytecode)
-        );
+        address bridgeProxyAddress = zkevmDeployer.predictDeterministicAddress(salt, keccak256(bytecode));
 
         // check if there is already a Bridge proxy deployed at the address
         if (bridgeProxyAddress.code.length > 0) {
             console.log("\n----------------------\n");
-            console.log(
-                "Bridge proxy already deployed at address: %s",
-                bridgeProxyAddress
-            );
+            console.log("Bridge proxy already deployed at address: %s", bridgeProxyAddress);
             return bridgeProxyAddress;
         }
 
@@ -279,47 +221,33 @@ contract DeployContracts is Script {
         return bridgeProxyAddress;
     }
 
-    function _deployGlobalExitRootManager(
-        address rollupManagerAddr,
-        address bridgeAddr,
-        address proxyAdminAddr
-    ) internal returns (address) {
+    function _deployGlobalExitRootManager(address rollupManagerAddr, address bridgeAddr, address proxyAdminAddr)
+        internal
+        returns (address)
+    {
         vm.startBroadcast(deployerPvtKey);
-        PolygonZkEVMGlobalExitRootV2 globalExitRootManager = new PolygonZkEVMGlobalExitRootV2(
-                rollupManagerAddr,
-                bridgeAddr
-            );
-        address globalExitRootManagerProxy = _proxify(
-            address(globalExitRootManager),
-            proxyAdminAddr,
-            ""
-        );
+        PolygonZkEVMGlobalExitRootV2 globalExitRootManager =
+            new PolygonZkEVMGlobalExitRootV2(rollupManagerAddr, bridgeAddr);
+        address globalExitRootManagerProxy = _proxify(address(globalExitRootManager), proxyAdminAddr, "");
         vm.stopBroadcast();
 
         console.log("\n----------------------\n");
         console.log("Global Exit Root Manager deployed!");
-        console.log(
-            "Global Exit Root Manager implementation address: %s",
-            address(globalExitRootManager)
-        );
-        console.log(
-            "Global Exit Root Manager Address: %s",
-            globalExitRootManagerProxy
-        );
+        console.log("Global Exit Root Manager implementation address: %s", address(globalExitRootManager));
+        console.log("Global Exit Root Manager Address: %s", globalExitRootManagerProxy);
         return globalExitRootManagerProxy;
     }
 
-    function _deployRollupManager(
-        address globalExitRootManagerAddr,
-        address bridgeAddr,
-        address proxyAdminAddr
-    ) internal returns (address) {
+    function _deployRollupManager(address globalExitRootManagerAddr, address bridgeAddr, address proxyAdminAddr)
+        internal
+        returns (address)
+    {
         vm.startBroadcast(deployerPvtKey);
         PolygonRollupManagerNotUpgraded rollupManager = new PolygonRollupManagerNotUpgraded(
-                IPolygonZkEVMGlobalExitRootV2(globalExitRootManagerAddr),
-                IERC20Upgradeable(polTokenAddress),
-                IPolygonZkEVMBridge(bridgeAddr)
-            );
+            IPolygonZkEVMGlobalExitRootV2(globalExitRootManagerAddr),
+            IERC20Upgradeable(polTokenAddress),
+            IPolygonZkEVMBridge(bridgeAddr)
+        );
         address rollupManagerProxy = _proxify(
             address(rollupManager),
             proxyAdminAddr,
@@ -341,89 +269,44 @@ contract DeployContracts is Script {
 
         console.log("\n----------------------\n");
         console.log("Rollup Manager deployed!");
-        console.log(
-            "Rollup Manager implementation address: %s",
-            address(rollupManager)
-        );
+        console.log("Rollup Manager implementation address: %s", address(rollupManager));
         console.log("Rollup Manager Address: %s", rollupManagerProxy);
         return rollupManagerProxy;
     }
 
-    function _verifyRollupManager(
-        address rolluplManagerAddr,
-        address bridgeProxyAddr
-    ) internal view {
-        PolygonRollupManagerNotUpgraded rollupManager = PolygonRollupManagerNotUpgraded(
-                rolluplManagerAddr
-            );
-        assert(
-            address(rollupManager.globalExitRootManager()) ==
-                computedGlobalExitRootManagerAddress
-        );
+    function _verifyRollupManager(address rolluplManagerAddr, address bridgeProxyAddr) internal view {
+        PolygonRollupManagerNotUpgraded rollupManager = PolygonRollupManagerNotUpgraded(rolluplManagerAddr);
+        assert(address(rollupManager.globalExitRootManager()) == computedGlobalExitRootManagerAddress);
         assert(address(rollupManager.bridgeAddress()) == bridgeProxyAddr);
         assert(address(rollupManager.pol()) == polTokenAddress);
 
         assert(rollupManager.hasRole(DEFAULT_ADMIN_ROLE, timelockAdminAddress));
-        assert(
-            rollupManager.hasRole(ADD_ROLLUP_TYPE_ROLE, timelockAdminAddress)
-        );
-        assert(
-            rollupManager.hasRole(
-                ADD_EXISTING_ROLLUP_ROLE,
-                timelockAdminAddress
-            )
-        );
+        assert(rollupManager.hasRole(ADD_ROLLUP_TYPE_ROLE, timelockAdminAddress));
+        assert(rollupManager.hasRole(ADD_EXISTING_ROLLUP_ROLE, timelockAdminAddress));
         assert(rollupManager.hasRole(UPDATE_ROLLUP_ROLE, timelockAdminAddress));
         assert(rollupManager.hasRole(OBSOLETE_ROLLUP_TYPE_ROLE, admin));
         assert(rollupManager.hasRole(CREATE_ROLLUP_ROLE, admin));
         assert(rollupManager.hasRole(STOP_EMERGENCY_ROLE, admin));
         assert(rollupManager.hasRole(TWEAK_PARAMETERS_ROLE, admin));
-        assert(
-            rollupManager.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator)
-        );
+        assert(rollupManager.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator));
         assert(rollupManager.hasRole(TRUSTED_AGGREGATOR_ROLE_ADMIN, admin));
         assert(rollupManager.hasRole(SET_FEE_ROLE, admin));
-        assert(
-            rollupManager.hasRole(
-                EMERGENCY_COUNCIL_ROLE,
-                emergencyCouncilAddress
-            )
-        );
-        assert(
-            rollupManager.hasRole(
-                EMERGENCY_COUNCIL_ADMIN,
-                emergencyCouncilAddress
-            )
-        );
+        assert(rollupManager.hasRole(EMERGENCY_COUNCIL_ROLE, emergencyCouncilAddress));
+        assert(rollupManager.hasRole(EMERGENCY_COUNCIL_ADMIN, emergencyCouncilAddress));
     }
 
     function _computeDeployAddresses() internal {
-        uint256 nonceProxyGlobalExitRootManager = vm.getNonce(
-            vm.addr(deployerPvtKey)
-        ) + 6;
+        uint256 nonceProxyGlobalExitRootManager = vm.getNonce(vm.addr(deployerPvtKey)) + 6;
         uint256 nonceProxyRollupManager = nonceProxyGlobalExitRootManager + 2;
 
-        computedGlobalExitRootManagerAddress = vm.computeCreateAddress(
-            vm.addr(deployerPvtKey),
-            nonceProxyGlobalExitRootManager
-        );
+        computedGlobalExitRootManagerAddress =
+            vm.computeCreateAddress(vm.addr(deployerPvtKey), nonceProxyGlobalExitRootManager);
 
-        computedRollupManagerAddress = vm.computeCreateAddress(
-            vm.addr(deployerPvtKey),
-            nonceProxyRollupManager
-        );
+        computedRollupManagerAddress = vm.computeCreateAddress(vm.addr(deployerPvtKey), nonceProxyRollupManager);
     }
 
-    function _proxify(
-        address logic,
-        address adminAddr,
-        bytes memory data
-    ) internal returns (address proxy) {
-        TransparentUpgradeableProxy proxy_ = new TransparentUpgradeableProxy(
-            logic,
-            adminAddr,
-            data
-        );
+    function _proxify(address logic, address adminAddr, bytes memory data) internal returns (address proxy) {
+        TransparentUpgradeableProxy proxy_ = new TransparentUpgradeableProxy(logic, adminAddr, data);
         return (address(proxy_));
     }
 }

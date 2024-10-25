@@ -24,16 +24,7 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         IPolygonZkEVMBridge _bridgeAddress,
         uint64 _chainID,
         uint64 _forkID
-    )
-        PolygonZkEVM(
-            _globalExitRootManager,
-            _matic,
-            _rollupVerifier,
-            _bridgeAddress,
-            _chainID,
-            _forkID
-        )
-    {}
+    ) PolygonZkEVM(_globalExitRootManager, _matic, _rollupVerifier, _bridgeAddress, _chainID, _forkID) {}
 
     /**
      * @notice calculate accumulate input hash from parameters
@@ -50,16 +41,9 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         uint64 timestamp,
         address sequencerAddress
     ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    currentAccInputHash,
-                    keccak256(transactions),
-                    globalExitRoot,
-                    timestamp,
-                    sequencerAddress
-                )
-            );
+        return keccak256(
+            abi.encodePacked(currentAccInputHash, keccak256(transactions), globalExitRoot, timestamp, sequencerAddress)
+        );
     }
 
     /**
@@ -90,9 +74,7 @@ contract PolygonZkEVMMock is PolygonZkEVM {
             );
 
             // Check choosen pending state
-            PendingState storage currentPendingState = pendingStateTransitions[
-                pendingStateNum
-            ];
+            PendingState storage currentPendingState = pendingStateTransitions[pendingStateNum];
 
             // Get oldStateRoot from pending batch
             oldStateRoot = currentPendingState.stateRoot;
@@ -105,10 +87,7 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         } else {
             // Use consolidated state
             oldStateRoot = batchNumToStateRoot[initNumBatch];
-            require(
-                oldStateRoot != bytes32(0),
-                "PolygonZkEVM::verifyBatches: initNumBatch state root does not exist"
-            );
+            require(oldStateRoot != bytes32(0), "PolygonZkEVM::verifyBatches: initNumBatch state root does not exist");
 
             // Check initNumBatch is inside the range
             require(
@@ -124,13 +103,8 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         );
 
         // Get snark bytes
-        bytes memory snarkHashBytes = getInputSnarkBytes(
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            oldStateRoot,
-            newStateRoot
-        );
+        bytes memory snarkHashBytes =
+            getInputSnarkBytes(initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot);
         // Calulate the snark input
         uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
 
@@ -141,10 +115,7 @@ contract PolygonZkEVMMock is PolygonZkEVM {
      * @notice Set state root
      * @param newStateRoot New State root ¡
      */
-    function setStateRoot(
-        bytes32 newStateRoot,
-        uint64 batchNum
-    ) public onlyOwner {
+    function setStateRoot(bytes32 newStateRoot, uint64 batchNum) public onlyOwner {
         batchNumToStateRoot[batchNum] = newStateRoot;
     }
 
@@ -231,9 +202,7 @@ contract PolygonZkEVMMock is PolygonZkEVM {
             );
 
             // Check choosen pending state
-            PendingState storage currentPendingState = pendingStateTransitions[
-                pendingStateNum
-            ];
+            PendingState storage currentPendingState = pendingStateTransitions[pendingStateNum];
 
             // Get oldStateRoot from pending batch
             oldStateRoot = currentPendingState.stateRoot;
@@ -246,10 +215,7 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         } else {
             // Use consolidated state
             oldStateRoot = batchNumToStateRoot[initNumBatch];
-            require(
-                oldStateRoot != bytes32(0),
-                "PolygonZkEVM::verifyBatches: initNumBatch state root does not exist"
-            );
+            require(oldStateRoot != bytes32(0), "PolygonZkEVM::verifyBatches: initNumBatch state root does not exist");
 
             // Check initNumBatch is inside the range
             require(
@@ -265,13 +231,8 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         );
 
         // Get snark bytes
-        bytes memory snarkHashBytes = getInputSnarkBytes(
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            oldStateRoot,
-            newStateRoot
-        );
+        bytes memory snarkHashBytes =
+            getInputSnarkBytes(initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot);
 
         // // Calulate the snark input
         // uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
@@ -302,10 +263,6 @@ contract PolygonZkEVMMock is PolygonZkEVM {
         // Interact with globalExitRootManager
         globalExitRootManager.updateExitRoot(newLocalExitRoot);
 
-        emit VerifyBatchesTrustedAggregator(
-            finalNewBatch,
-            newStateRoot,
-            msg.sender
-        );
+        emit VerifyBatchesTrustedAggregator(finalNewBatch, newStateRoot, msg.sender);
     }
 }

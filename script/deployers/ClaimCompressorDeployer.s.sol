@@ -10,14 +10,12 @@ import "forge-std/Script.sol";
 import {ClaimCompressor} from "contracts/utils/ClaimCompressor.sol";
 
 abstract contract ClaimCompressorDeployer is Script {
-    function deployClaimCompressorImplementation(
-        address __bridgeAddress,
-        uint32 __networkID
-    ) internal returns (address implementation) {
+    function deployClaimCompressorImplementation(address __bridgeAddress, uint32 __networkID)
+        internal
+        returns (address implementation)
+    {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-        implementation = address(
-            new ClaimCompressor(__bridgeAddress, __networkID)
-        );
+        implementation = address(new ClaimCompressor(__bridgeAddress, __networkID));
         vm.stopBroadcast();
     }
 }
