@@ -14,6 +14,7 @@ import "./lib/LegacyZKEVMStateVariables.sol";
 import "./consensus/zkEVM/PolygonZkEVMExistentEtrog.sol";
 import "./lib/PolygonConstantsBase.sol";
 import "./interfaces/IPolygonPessimisticConsensus.sol";
+import "./interfaces/IPolygonPessimisticConsensusV2.sol";
 import "./interfaces/ISP1Verifier.sol";
 import "./interfaces/IPolygonRollupManager.sol";
 
@@ -98,6 +99,10 @@ contract PolygonRollupManager is
         VerifierType rollupVerifierType;
         bytes32 lastPessimisticRoot;
         bytes32 programVKey;
+        // new data related to FepBridge chains
+        bytes32 lastStateRoot;
+        uint128 timestamp;
+        uint128 l2BlockNumber;
     }
 
     /**
@@ -1104,6 +1109,84 @@ contract PolygonRollupManager is
         );
     }
 
+    /**
+     * @notice Allows a trusted aggregator to verify pessimistic proof
+     * @param rollupID Rollup identifier
+     * @param l1InfoTreeLeafCount Count of the L1InfoTree leaf that will be used to verify imported bridge exits
+     * @param newLocalExitRoot New local exit root
+     * @param newPessimisticRoot New pessimistic information, Hash(localBalanceTreeRoot, nullifierTreeRoot)
+     * @param customChainData Specififc custom data to verify chain proof
+     * @param proof SP1 proof (Plonk)
+     */
+    function verifyPPV2(
+        uint32 rollupID,
+        uint32 l1InfoTreeLeafCount,
+        bytes32 newLocalExitRoot,
+        bytes32 newPessimisticRoot,
+        bytes memory customChainData,
+        bytes calldata proof
+    ) external onlyRole(_TRUSTED_AGGREGATOR_ROLE) {
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+
+        // Only for pessimistic verifiers
+        if (rollup.rollupVerifierType != VerifierType.Pessimistic) {
+            revert OnlyChainsWithPessimisticProofs();
+        }
+
+        // Check l1InfoTreeLeafCount has a valid l1InfoTreeRoot
+        bytes32 l1InfoRoot = globalExitRootManager.l1InfoRootMap(
+            l1InfoTreeLeafCount
+        );
+
+        if (l1InfoRoot == bytes32(0)) {
+            revert L1InfoTreeLeafCountInvalid();
+        }
+
+        bytes memory inputPessimisticBytes = _getInputPessimisticBytesV2(
+            rollupID,
+            rollup,
+            l1InfoRoot,
+            newLocalExitRoot,
+            newPessimisticRoot,
+            customChainData
+        );
+
+        // Verify proof
+        ISP1Verifier(rollup.verifier).verifyProof(
+            rollup.programVKey,
+            inputPessimisticBytes,
+            proof
+        );
+        // TODO: Since there are no batches we could have either:
+        // A pool of POL for pessimistic, or make the fee system offchain, since there are already a
+        // dependency with the trusted aggregator ( or pessimistic aggregator)
+
+        // Update aggregation parameters
+        lastAggregationTimestamp = uint64(block.timestamp);
+
+        // Consolidate state
+        rollup.lastLocalExitRoot = newLocalExitRoot;
+        rollup.lastPessimisticRoot = newPessimisticRoot;
+
+        // allow chains to manage customData
+        // Callback to the rollup address
+
+        IPolygonPessimisticConsensusV2(address(rollup.rollupContract))
+            .onCustomChainData(customChainData);
+
+        // Interact with globalExitRootManager
+        globalExitRootManager.updateExitRoot(getRollupExitRoot());
+
+        // Same event as verifyBatches to support current bridge service to synchronize everything
+        emit VerifyBatchesTrustedAggregator(
+            rollupID,
+            0, // final batch: does not apply in pessimistic
+            bytes32(0), // new state root: does not apply in pessimistic
+            newLocalExitRoot,
+            msg.sender
+        );
+    }
+
     ////////////////////////
     // Emergency state functions
     ////////////////////////
@@ -1319,6 +1402,32 @@ contract PolygonRollupManager is
     }
 
     /**
+     * @notice Function to calculate the pessimistic input bytes
+     * @param rollupID Rollup id used to calculate the input snark bytes
+     * @param l1InfoTreeRoot L1 Info tree root to proof imported bridges
+     * @param newLocalExitRoot New local exit root
+     * @param newPessimisticRoot New pessimistic information, Hash(localBalanceTreeRoot, nullifierTreeRoot)
+     * @param customDataConsensus Custom Consensus data
+     */
+    function getInputPessimisticBytesV2(
+        uint32 rollupID,
+        bytes32 l1InfoTreeRoot,
+        bytes32 newLocalExitRoot,
+        bytes32 newPessimisticRoot,
+        bytes memory customDataConsensus
+    ) external view returns (bytes memory) {
+        return
+            _getInputPessimisticBytesV2(
+                rollupID,
+                _rollupIDToRollupData[rollupID],
+                l1InfoTreeRoot,
+                newLocalExitRoot,
+                newPessimisticRoot,
+                customDataConsensus
+            );
+    }
+
+    /**
      * @notice Function to calculate the input snark bytes
      * @param rollupID Rollup identifier
      * @param rollup Rollup data storage pointer
@@ -1333,10 +1442,43 @@ contract PolygonRollupManager is
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot
     ) internal view returns (bytes memory) {
-        // Get consensus information from the consensus contract
         bytes32 consensusHash = IPolygonPessimisticConsensus(
             address(rollup.rollupContract)
         ).getConsensusHash();
+
+        return
+            abi.encodePacked(
+                rollup.lastLocalExitRoot,
+                rollup.lastPessimisticRoot,
+                l1InfoTreeRoot,
+                rollupID,
+                consensusHash,
+                newLocalExitRoot,
+                newPessimisticRoot
+            );
+    }
+
+    /**
+     * @notice Function to calculate the input snark bytes
+     * @param rollupID Rollup identifier
+     * @param rollup Rollup data storage pointer
+     * @param l1InfoTreeRoot L1 Info tree root to proof imported bridges
+     * @param newLocalExitRoot New local exit root
+     * @param newPessimisticRoot New pessimistic information, Hash(localBalanceTreeRoot, nullifierTreeRoot)
+     * @param customDataConsensus Custom Consensus data
+     */
+    function _getInputPessimisticBytesV2(
+        uint32 rollupID,
+        RollupData storage rollup,
+        bytes32 l1InfoTreeRoot,
+        bytes32 newLocalExitRoot,
+        bytes32 newPessimisticRoot,
+        bytes memory customDataConsensus
+    ) internal view returns (bytes memory) {
+        // Get consensus information from the consensus contract
+        bytes32 consensusHash = IPolygonPessimisticConsensusV2(
+            address(rollup.rollupContract)
+        ).getConsensusHash(customDataConsensus);
 
         return
             abi.encodePacked(
