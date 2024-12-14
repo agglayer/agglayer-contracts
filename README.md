@@ -1,6 +1,6 @@
 # zkevm-contracts
 
-Smart contract implementation which will be used by the polygon zkevm
+Smart contract implementation which will be used by the Polygon zkEVM
 
 [![Main CI](https://github.com/0xPolygonHermez/zkevm-contracts/actions/workflows/main.yml/badge.svg)](https://github.com/0xPolygonHermez/zkevm-contracts/actions/workflows/main.yml)
 
@@ -75,9 +75,9 @@ In order to test, the following private keys are being used. These keys are not 
 
 To verify that the smartcontracts of this repository are the same deployed on mainnet, you could follow the instructions described [document](verifyMainnetDeployment/verifyDeployment.md)
 
-The smartcontract used to verify a proof, it's a generated contract from zkEVM Rom and Pil (constraints). To verify the deployment of this smartcontract you could follow the instructions described in this [document](verifyMainnetDeployment/verifyMainnetProofVerifier.md)
+The smartcontract used to verify a proof, it's a generated contract from zkEVM ROM and PIL (constraints). To verify the deployment of this smartcontract you could follow the instructions described in this [document](verifyMainnetDeployment/verifyMainnetProofVerifier.md)
 
-## Activate github hook
+## Activate GitHub hook
 
 ```
 git config --local core.hooksPath .githooks/
