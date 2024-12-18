@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import {ISP1Verifier} from "./ISP1Verifier.sol";
 
+// imported from: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
+
 /// @dev A struct containing the address of a verifier and whether the verifier is frozen. A
 /// frozen verifier cannot be routed to.
 struct VerifierRoute {
@@ -22,6 +24,7 @@ interface ISP1VerifierGatewayEvents {
     event RouteFrozen(bytes4 selector, address verifier);
 }
 
+/// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 interface ISP1VerifierGatewayErrors {
     /// @notice Thrown when the verifier route is not found.
     /// @param selector The verifier selector that was specified.
@@ -38,16 +41,32 @@ interface ISP1VerifierGatewayErrors {
     /// @notice Thrown when adding a verifier route and the selector returned by the verifier is
     /// zero.
     error SelectorCannotBeZero();
+
+    /// @notice Thrown when the caller is not the admin
+    error OnlyAdmin();
+
+    //// @notice Thrown when the caller is not the pending admin
+    error OnlyPendingAdmin();
 }
 
 /// @title SP1 Verifier Gateway Interface
 /// @author Succinct Labs
 /// @notice This contract is the interface for the SP1 Verifier Gateway.
+/// @notice Extended version of https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 interface ISP1VerifierGateway is
     ISP1VerifierGatewayEvents,
-    ISP1VerifierGatewayErrors,
-    ISP1Verifier
+    ISP1VerifierGatewayErrors
 {
+    /// @notice Verifies a pessimsitic proof with given public values and proof.
+    /// @dev It is expected that the first 4 bytes of proofBytes must match the first 4 bytes of
+    /// target verifier's VERIFIER_HASH.
+    /// @param publicValues The public values encoded as bytes.
+    /// @param proofBytes The proof of the program execution the SP1 zkVM encoded as bytes.
+    function verifyPessimisticProof(
+        bytes calldata publicValues,
+        bytes calldata proofBytes
+    ) external view;
+
     /// @notice Mapping of 4-byte verifier selectors to verifier routes.
     /// @dev Only one verifier route can be added for each selector.
     /// @param selector The verifier selector, which is both the first 4 bytes of the VERIFIER_HASH

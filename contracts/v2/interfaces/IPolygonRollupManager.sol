@@ -310,7 +310,7 @@ interface IPolygonRollupManager {
     enum VerifierType {
         StateTransition,
         Pessimistic,
-        StateTransistion_And_Pessimistic
+        ALGateway
     }
 
     function addNewRollupType(

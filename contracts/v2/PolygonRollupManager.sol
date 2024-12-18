@@ -167,6 +167,22 @@ contract PolygonRollupManager is
         bytes32 programVKey;
     }
 
+    /**
+     * @notice Struct to store the chain data
+     * @param chainContract Chains consensus contract which manages chain's state
+     * @param chainID Chain ID
+     * @param lastLocalExitRoot Last exit root verified, used for compute the rollupExitRoot
+     * @param lastPessimisticRoot Pessimistic info, currently contains the local balance tree, nullifier tree and local exit root last leaf index writen
+     * @param proofHeight Number of pessimistic proofs verified
+     */
+    struct ALChainData {
+        address chainContract;
+        uint64 chainID;
+        bytes32 lastLocalExitRoot;
+        bytes32 lastPessimisticRoot;
+        uint32 proofHeight;
+    }
+
     // Modulus zkSNARK
     uint256 internal constant _RFIELD =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -237,7 +253,7 @@ contract PolygonRollupManager is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Current rollup manager version
-    string public constant ROLLUP_MANAGER_VERSION = "pessimistic";
+    string public constant ROLLUP_MANAGER_VERSION = "pessimistic v0.3.0";
 
     // Global Exit Root address
     IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
@@ -302,6 +318,9 @@ contract PolygonRollupManager is
 
     // Timestamp when the last emergency state was deactivated
     uint64 public lastDeactivatedEmergencyStateTimestamp;
+
+    // AggLayer Gatewauy address
+    address public aggLayerGateway;
 
     /**
      * @dev Emitted when a new rollup type is added
@@ -416,13 +435,24 @@ contract PolygonRollupManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(3) {
+    function initialize(
+        address _aggLayerGateway
+    ) external virtual reinitializer(4) {
+        // TODO: We can create here the very last rollupType
+        // store the last rollupType number and do not allow to create more rollups
+
+        // Also just set a new verififer version
+        aggLayerGateway = _aggLayerGateway;
         emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
     ///////////////////////////////////////
     // Rollups management functions
     ///////////////////////////////////////
+
+    ////////////////
+    // Rollups Types
+    ////////////////
 
     /**
      * @notice Add a new rollup type
@@ -497,6 +527,74 @@ contract PolygonRollupManager is
 
         emit ObsoleteRollupType(rollupTypeID);
     }
+
+    ///////////
+    // Chains
+    ///////////
+
+    function addChainToAL(
+        address chainContract,
+        uint64 chainID,
+        bytes memory initializeBytes // TODO: Custom bytes to initialize the chain's contract
+    ) external onlyRole(_CREATE_ROLLUP_ROLE) {
+        // check chainID max value
+        // Currently we have this limitation by the circuit, might be removed in a future
+        if (chainID > type(uint32).max) {
+            revert ChainIDOutOfRange();
+        }
+
+        // Check chainID nullifier
+        if (chainIDToRollupID[chainID] != 0) {
+            revert ChainIDAlreadyExist();
+        }
+
+        // Create a new Rollup, using a transparent proxy pattern
+        // Consensus will be the implementation, and this contract the admin
+        uint32 rollupID = ++rollupCount;
+        // address rollupAddress = address(
+        //     new PolygonTransparentProxy(
+        //         rollupType.consensusImplementation,
+        //         address(this),
+        //         new bytes(0)
+        //     )
+        // );
+
+        // Set chainID nullifier
+        chainIDToRollupID[chainID] = rollupID;
+
+        // Store rollup data
+        rollupAddressToID[chainContract] = rollupID;
+
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+
+        rollup.rollupContract = IPolygonRollupBase(chainContract);
+        rollup.verifier = aggLayerGateway;
+        rollup.chainID = chainID;
+        rollup.rollupTypeID = type(uint32).max; // TODO: max rollupType since it will not exist anymore
+        rollup.rollupVerifierType = VerifierType.ALGateway;
+
+        emit CreateNewRollup(
+            rollupID,
+            type(uint32).max, // TODO: Defined as 64 bits, but event is 32
+            chainContract,
+            chainID,
+            address(0)
+        );
+
+        // // Initialize new rollup
+        // IPolygonRollupBase(rollupAddress).initialize(
+        //     admin,
+        //     sequencer,
+        //     rollupID,
+        //     gasTokenAddress,
+        //     sequencerURL,
+        //     networkName
+        // );
+    }
+
+    ///////////
+    // Rollups
+    ///////////
 
     /**
      * @notice Create a new rollup
