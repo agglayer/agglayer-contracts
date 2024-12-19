@@ -254,7 +254,7 @@ Emitted when forced batches are sequenced by not the trusted sequencer
   )
 ```
 
-Emitted when a aggregator verifies batches
+Emitted when an aggregator verifies batches
 
 ### SetTrustedSequencer
 ```solidity
