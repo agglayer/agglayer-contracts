@@ -37,7 +37,7 @@ To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart cont
   ) external
 ```
 note This initializer will be called instead of the PolygonRollupBase
-This is a especial initializer since the zkEVM it's an already created network
+This is an especial initializer since the zkEVM it's an already created network
 
 
 #### Parameters:
