@@ -135,7 +135,7 @@ interface IPolygonZkEVMErrors {
     error NewPendingStateTimeoutMustBeLower();
 
     /**
-     * @dev Thrown when attempting to set a new multiplier batch fee in a invalid range of values
+     * @dev Thrown when attempting to set a new multiplier batch fee in an invalid range of values
      */
     error InvalidRangeMultiplierBatchFee();
 
