@@ -56,5 +56,5 @@ This is an especial initializer since the zkEVM it's an already created network
   )
 ```
 
-Emitted when the system is updated to a etrog using this contract, contain the set up etrog transaction
+Emitted when the system is updated to an etrog using this contract, contain the set up etrog transaction
 
