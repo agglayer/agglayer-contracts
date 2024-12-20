@@ -3,18 +3,37 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
 
-import {HardhatUserConfig} from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/config";
 
 const DEFAULT_MNEMONIC = "test test test test test test test test test test test junk";
+const INFURA_URL = `https://{network}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`;
+const MNEMONIC = process.env.MNEMONIC || DEFAULT_MNEMONIC;
+const ACCOUNTS_CONFIG = {
+    mnemonic: MNEMONIC,
+    path: "m/44'/60'/0'/0",
+    initialIndex: 0,
+    count: 20,
+};
 
-/*
- * You need to export an object to set up your config
- * Go to https://hardhat.org/config/ to learn more
- */
+const COMPILER_SETTINGS = {
+    optimizer: {
+        enabled: true,
+        runs: 999999,
+    },
+};
 
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
+const COMPILER_VERSIONS = [
+    "0.8.17",
+    "0.8.20",
+    "0.6.11",
+    "0.5.12",
+    "0.5.16"
+];
+
+const createNetworkConfig = (network: string, providerUrl?: string) => ({
+    url: process.env[`${network.toUpperCase()}_PROVIDER`] || providerUrl.replace("{network}", network),
+    accounts: ACCOUNTS_CONFIG,
+});
 
 const config: HardhatUserConfig = {
     dependencyCompiler: {
@@ -22,225 +41,83 @@ const config: HardhatUserConfig = {
             "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol",
             "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol",
             "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
-        ], // ,
-        // keep: true
+        ],
     },
     solidity: {
-        compilers: [
-            {
-                version: "0.8.17",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
-                },
-            },
-            {
-                version: "0.8.20",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
-                    evmVersion: "shanghai",
-                },
-            },
-            {
-                version: "0.6.11",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
-                },
-            },
-            {
-                version: "0.5.12",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
-                },
-            },
-            {
-                version: "0.5.16",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
-                },
-            },
-        ],
+        compilers: COMPILER_VERSIONS.map(version => ({
+            version,
+            settings: COMPILER_SETTINGS,
+        })),
         overrides: {
             "contracts/v2/PolygonRollupManager.sol": {
                 version: "0.8.20",
                 settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 500,
-                    },
+                    ...COMPILER_SETTINGS,
+                    runs: 500,
                     evmVersion: "shanghai",
-                }, // try yul optimizer
+                },
             },
             "contracts/v2/PolygonZkEVMBridgeV2.sol": {
                 version: "0.8.20",
                 settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999,
-                    },
+                    ...COMPILER_SETTINGS,
+                    runs: 999,
                     evmVersion: "shanghai",
                 },
             },
             "contracts/v2/newDeployments/PolygonRollupManagerNotUpgraded.sol": {
                 version: "0.8.20",
                 settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 500,
-                    },
+                    ...COMPILER_SETTINGS,
+                    runs: 500,
                     evmVersion: "shanghai",
-                }, // try yul optimizer
+                },
             },
             "contracts/v2/mocks/PolygonRollupManagerMock.sol": {
                 version: "0.8.20",
                 settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 10,
-                    },
+                    optimizer: { enabled: true, runs: 10 },
                     evmVersion: "shanghai",
-                }, // try yul optimizer
+                },
             },
-            // Should have the same optimizations than the RollupManager to verify
             "contracts/v2/lib/PolygonTransparentProxy.sol": {
                 version: "0.8.20",
                 settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 500,
-                    },
+                    ...COMPILER_SETTINGS,
+                    runs: 500,
                     evmVersion: "shanghai",
-                }, // try yul optimizer
+                },
             },
             "contracts/v2/utils/ClaimCompressor.sol": {
                 version: "0.8.20",
                 settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
+                    ...COMPILER_SETTINGS,
                     evmVersion: "shanghai",
-                    //viaIR: true,
                 },
             },
         },
     },
     networks: {
-        mainnet: {
-            url: process.env.MAINNET_PROVIDER
-                ? process.env.MAINNET_PROVIDER
-                : `https://mainnet.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
-        ropsten: {
-            url: process.env.ROPSTEN_PROVIDER
-                ? process.env.ROPSTEN_PROVIDER
-                : `https://ropsten.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
-        goerli: {
-            url: process.env.GOERLI_PROVIDER
-                ? process.env.GOERLI_PROVIDER
-                : `https://goerli.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
-        rinkeby: {
-            url: process.env.RINKEBY_PROVIDER
-                ? process.env.RINKEBY_PROVIDER
-                : `https://rinkeby.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
-        sepolia: {
-            url: process.env.SEPOLIA_PROVIDER
-                ? process.env.SEPOLIA_PROVIDER
-                : `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
+        mainnet: createNetworkConfig('mainnet', INFURA_URL),
+        ropsten: createNetworkConfig('ropsten', INFURA_URL),
+        goerli: createNetworkConfig('goerli', INFURA_URL),
+        rinkeby: createNetworkConfig('rinkeby', INFURA_URL),
+        sepolia: createNetworkConfig('sepolia', INFURA_URL),
         localhost: {
             url: "http://127.0.0.1:8545",
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
+            accounts: ACCOUNTS_CONFIG,
         },
         hardhat: {
             initialDate: "0",
             allowUnlimitedContractSize: true,
             initialBaseFeePerGas: 0,
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
+            accounts: ACCOUNTS_CONFIG,
         },
-        polygonZKEVMTestnet: {
-            url: "https://rpc.cardona.zkevm-rpc.com",
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
-        polygonZKEVMMainnet: {
-            url: "https://zkevm-rpc.com",
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
+        polygonZKEVMTestnet: createNetworkConfig('polygonZKEVMTestnet', "https://rpc.cardona.zkevm-rpc.com"),
+        polygonZKEVMMainnet: createNetworkConfig('polygonZKEVMMainnet', "https://zkevm-rpc.com"),
         zkevmDevnet: {
             url: "http://123:123:123:123:123",
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
+            accounts: ACCOUNTS_CONFIG,
         },
     },
     gasReporter: {
@@ -250,12 +127,12 @@ const config: HardhatUserConfig = {
     },
     etherscan: {
         apiKey: {
-            polygonZKEVMTestnet: `${process.env.ETHERSCAN_ZKEVM_API_KEY}`,
-            polygonZKEVMMainnet: `${process.env.ETHERSCAN_ZKEVM_API_KEY}`,
-            goerli: `${process.env.ETHERSCAN_API_KEY}`,
-            sepolia: `${process.env.ETHERSCAN_API_KEY}`,
-            mainnet: `${process.env.ETHERSCAN_API_KEY}`,
-            zkevmDevnet: `${process.env.ETHERSCAN_API_KEY}`,
+            polygonZKEVMTestnet: process.env.ETHERSCAN_ZKEVM_API_KEY,
+            polygonZKEVMMainnet: process.env.ETHERSCAN_ZKEVM_API_KEY,
+            goerli: process.env.ETHERSCAN_API_KEY,
+            sepolia: process.env.ETHERSCAN_API_KEY,
+            mainnet: process.env.ETHERSCAN_API_KEY,
+            zkevmDevnet: process.env.ETHERSCAN_API_KEY,
         },
         customChains: [
             {
