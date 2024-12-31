@@ -1,9 +1,21 @@
+/**
+ * Test suite for PolygonZkEVMBridge contract focusing on token metadata handling
+ * Tests various edge cases with unusual/malformed token metadata
+ */
+
 const { expect } = require('chai');
 const { ethers, upgrades } = require('hardhat');
 const MerkleTreeBridge = require('@0xpolygonhermez/zkevm-commonjs').MTBridge;
 const {
     getLeafValue,
 } = require('@0xpolygonhermez/zkevm-commonjs').mtBridgeUtils;
+
+/**
+ * Test constants
+ * networkIDMainnet: ID representing the mainnet network (0)
+ * networkIDRollup: ID representing the rollup network (1)
+ * LEAF_TYPE_ASSET: Identifier for asset type leaves in the Merkle tree (0)
+ */
 
 describe('PolygonZkEVMBridge Contract werid metadata', () => {
     let deployer;
@@ -50,6 +62,11 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         await tokenContract.mint(deployer.address, tokenInitialBalance);
     });
 
+    /**
+     * Test case 1: Bridge transfer with non-standard token metadata
+     * Uses a custom ERC20 token that returns metadata in bytes32/bytes format
+     * Verifies bridge handles unusual but valid metadata correctly
+     */
     it('should PolygonZkEVMBridge with weird token metadata', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
@@ -107,6 +124,11 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         expect(await polygonZkEVMBridgeContract.getDepositRoot()).to.be.equal(rootJSMainnet);
     });
 
+    /**
+     * Test case 2: Bridge transfer with invalid/reverting metadata
+     * Tests bridge behavior when token contract reverts on metadata calls
+     * Ensures bridge can handle failing metadata calls gracefully
+     */
     it('should PolygonZkEVMBridge with weird token metadata with reverts', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
@@ -173,6 +195,11 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         expect(await polygonZkEVMBridgeContract.getDepositRoot()).to.be.equal(rootJSMainnet);
     });
 
+    /**
+     * Test case 3: Bridge transfer with empty metadata
+     * Tests bridge behavior with empty strings and edge case values
+     * Verifies handling of empty/invalid metadata encoding
+     */
     it('should PolygonZkEVMBridge with weird token metadata with empty data', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
