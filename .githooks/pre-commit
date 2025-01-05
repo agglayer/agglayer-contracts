@@ -43,8 +43,9 @@ if npm run lint; then
     git add compiled-contracts
 
     forge build
-    
     forge selectors ls > docs/foundry/selectors.txt
+
+    git add docs/foundry/selectors.txt
 
     exit 0
 else
