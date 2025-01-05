@@ -41,6 +41,11 @@ if npm run lint; then
     cp artifacts/contracts/v2/utils/ClaimCompressor.sol/ClaimCompressor.json compiled-contracts/
 
     git add compiled-contracts
+
+    forge build
+    
+    forge selectors ls > docs/foundry/selectors.txt
+
     exit 0
 else
     exit 1
