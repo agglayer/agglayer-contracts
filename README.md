@@ -82,3 +82,32 @@ The smartcontract used to verify a proof, it's a generated contract from zkEVM R
 ```
 git config --local core.hooksPath .githooks/
 ```
+
+## Contributing
+
+We welcome contributions to zkevm-contracts! Here's how you can help:
+
+1. Fork the repository
+2. Create a new branch for your feature:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. Make your changes and commit them:
+   ```bash
+   git commit -m "Add your commit message"
+   ```
+4. Push to your fork:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. Open a Pull Request
+
+Before submitting your PR:
+- Ensure all tests pass (`npm run test`)
+- Update documentation if needed
+- Follow existing code style
+- Add tests for new features
+
+For bug fixes:
+- Describe the issue clearly in the PR description
+- Add steps to reproduce if applicable
