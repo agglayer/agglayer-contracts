@@ -520,9 +520,14 @@ contract ClaimCompressor {
                     revert(0, 0)
                 }
 
-                // SHould i limit the gas TODO of the call
+                // Calculate dynamic gas limit based on remaining gas
+                let gasLimit := div(gas(), 2) // Use half of remaining gas, but not more than 2M
+                if gt(gasLimit, 2000000) {
+                    gasLimit := 2000000
+                }
+
                 let success := call(
-                    2000000, // gas // TODO gas Limited to 2M, could be better to check if it's created the token or not and limit later
+                    gasLimit, // Dynamic gas limit instead of fixed 2M
                     bridgeAddress, // address
                     0, // value
                     0, // args offset
