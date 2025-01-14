@@ -107,8 +107,8 @@ abstract contract ALBaseConsensus is IALConsensusBase, Initializable {
     //////////////////
 
     /**
-     * @notice Allow the admin to set a new trusted sequencer
-     * @param newConsensusVKey Address of the new trusted sequencer
+     * @notice Allow the admin to set a new consensus vkey
+     * @param newConsensusVKey bytes32, new consensus verification key
      */
     function setConsensusVKey(bytes32 newConsensusVKey) external onlyAdmin {
         consensusVKey = newConsensusVKey;
