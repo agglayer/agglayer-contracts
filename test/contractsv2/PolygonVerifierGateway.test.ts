@@ -12,6 +12,7 @@ describe("PolygonVerifierGateway tests", () => {
 
     let polygonVerifierGatewayContract: PolygonVerifierGateway;
     let verifierContract: SP1Verifier;
+    let verifierContractHash0: SP1Verifier_hash0;
 
     let deployer: any;
     let admin: any;
@@ -55,11 +56,14 @@ describe("PolygonVerifierGateway tests", () => {
             "OnlyAdmin"
         );
 
-        // controled error?
-        // await expect(polygonVerifierGatewayContract.connect(admin).addRoute(deployer.address)).to.be.revertedWithCustomError(
-        //     polygonVerifierGatewayContract,
-        //     "SelectorCannotBeZero"
-        // );
+        // deploy SP1 verifier
+        const SP1VerifierHash0Factory = await ethers.getContractFactory("SP1Verifier_hash0");
+        verifierContractHash0 = await SP1VerifierHash0Factory.deploy();
+
+        await expect(polygonVerifierGatewayContract.connect(admin).addRoute(verifierContractHash0.target)).to.be.revertedWithCustomError(
+            polygonVerifierGatewayContract,
+            "SelectorCannotBeZero"
+        );
 
         await expect(polygonVerifierGatewayContract.connect(admin).addRoute(verifierContract.target))
             .to.emit(polygonVerifierGatewayContract, "RouteAdded")

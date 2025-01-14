@@ -59,7 +59,7 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     }
 
     /**
-     * @notice  Initializer function to set new rollup manager version
+     * @notice  Initializer function to set admin address and pessimistic vkey
      * @param _admin The address of the admin
      * @param _pessimisticVKey The pessimistic program verification key
      */
@@ -78,7 +78,9 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         _;
     }
 
-    /// @inheritdoc ISP1VerifierGateway
+    /// @notice Verifies a proof with given public values and proofBytes.
+    /// @param publicValues The public values encoded as bytes.
+    /// @param proofBytes The proof of the program execution the SP1 zkVM encoded as bytes.
     function verifyPessimisticProof(
         bytes calldata publicValues,
         bytes calldata proofBytes
@@ -102,7 +104,8 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     // admin functions
     //////////////////
 
-    /// @inheritdoc ISP1VerifierGateway
+    /// @notice Add route to verifier
+    /// @param verifier Verifier address
     function addRoute(address verifier) external onlyAdmin {
         bytes4 selector = bytes4(
             ISP1VerifierWithHash(verifier).VERIFIER_HASH()
@@ -121,7 +124,8 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         emit RouteAdded(selector, verifier);
     }
 
-    /// @inheritdoc ISP1VerifierGateway
+    /// @notice Function to freeze route
+    /// @param selector Verifier selector
     function freezeRoute(bytes4 selector) external onlyAdmin {
         VerifierRoute storage route = routes[selector];
         if (route.verifier == address(0)) {
