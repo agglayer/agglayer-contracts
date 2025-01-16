@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.20;
 
-import "../../interfaces/IALConsensus.sol";
-import "../../lib/ALBaseConsensus.sol";
+import "../interfaces/IALConsensus.sol";
+import "../lib/ALBaseConsensus.sol";
 
-contract ConsensusEcdsa is ALBaseConsensus, IALConsensus {
+contract AuthECDSA is ALBaseConsensus, IALConsensus {
     //////////
     // Events
     /////////
@@ -42,4 +42,17 @@ contract ConsensusEcdsa is ALBaseConsensus, IALConsensus {
         // just throw an event
         emit OnVerifyPessimistic();
     }
+
+    function OnChnageSp1VerifierVersion() {
+        // just throw an event
+        emit OnChnageSp1VerifierVersion();
+        // change consensusVKey
+    }
+
+    // /**
+    //  * @notice Allow the admin to set a new trusted sequencer
+    //  * @param newConsensusVKey Address of the new trusted sequencer
+    //  */
+    // function setConsensusVKey(bytes32 newConsensusVKey) override external onlyAdmin {
+    // }
 }

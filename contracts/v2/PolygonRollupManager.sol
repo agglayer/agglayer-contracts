@@ -44,16 +44,20 @@ contract PolygonRollupManager is
      * @param programVKey Hashed program that will be executed in case of using a "general purpose ZK verifier" e.g SP1
      */
     struct RollupType {
-        address consensusImplementation;
-        address verifier;
-        uint64 forkID;
+        address consensusImplementation; // not used
+        address verifier; // gateway
+        uint64 forkID; // not used
         /// @custom:oz-renamed-from rollupCompatibilityID
         /// @custom:oz-retyped-from uint8
-        VerifierType rollupVerifierType;
-        bool obsolete;
-        bytes32 genesis;
-        bytes32 programVKey;
+        VerifierType rollupVerifierType; // el nou
+        bool obsolete; // false
+        bytes32 genesis; // not used
+        bytes32 programVKey; // not used
     }
+
+    // RollupTypeID = 4 --> vKey_V3
+    // --> upgrade rollupType vKey
+    // RollupTypeID = 4 --> vKey_V4
 
     /**
      * @notice Struct which to store the rollup data of each chain
@@ -99,10 +103,16 @@ contract PolygonRollupManager is
         VerifierType rollupVerifierType;
         bytes32 lastPessimisticRoot;
         bytes32 programVKey;
-        // new data related to FepBridge chains
-        bytes32 lastStateRoot;
-        uint128 timestamp;
-        uint128 l2BlockNumber;
+    }
+
+    struct ChainData {
+        IPolygonRollupBase rollupContract;
+        uint64 chainID;
+        address verifier;
+        bytes32 lastLocalExitRoot;
+        uint64 rollupTypeID; // to delete in future versions
+        VerifierType rollupVerifierType; // to delete in future versions
+        bytes32 lastPessimisticRoot;
     }
 
     /**
@@ -533,10 +543,16 @@ contract PolygonRollupManager is
     ///////////
 
     function addChainToAL(
-        address chainContract,
+        address chainContractImplementation,
         uint64 chainID,
         bytes memory initializeBytes // TODO: Custom bytes to initialize the chain's contract
     ) external onlyRole(_CREATE_ROLLUP_ROLE) {
+        // check chainContractImplementation exist
+        whitelist[chainContractImplementation] == true
+        continue;
+
+        // deploy proxy bla bla bla
+
         // check chainID max value
         // Currently we have this limitation by the circuit, might be removed in a future
         if (chainID > type(uint32).max) {
@@ -643,7 +659,7 @@ contract PolygonRollupManager is
         uint32 rollupID = ++rollupCount;
         address rollupAddress = address(
             new PolygonTransparentProxy(
-                rollupType.consensusImplementation,
+                rollupType.consensusImplementation, // pots posar el que tu vulguis
                 address(this),
                 new bytes(0)
             )
@@ -682,6 +698,86 @@ contract PolygonRollupManager is
             gasTokenAddress,
             sequencerURL,
             networkName
+        );
+    }
+
+    /**
+     * @notice Create a new rollup
+     * @param rollupTypeID Rollup type to deploy
+     * @param chainID ChainID of the rollup, must be a new one, can not have more than 32 bits
+     * @param admin Admin of the new created rollup
+     * @param sequencer Sequencer of the new created rollup
+     * @param gasTokenAddress Indicates the token address that will be used to pay gas fees in the new rollup
+     * Note if a wrapped token of the bridge is used, the original network and address of this wrapped will be used instead
+     * @param sequencerURL Sequencer URL of the new created rollup
+     * @param networkName Network name of the new created rollup
+     */
+    function createNewChain(
+        uint32 rollupTypeID,
+        uint64 chainID,
+        bytes memory initializeBytesCustomChain
+    ) external onlyRole(_CREATE_ROLLUP_ROLE) {
+        // Check that rollup type exists
+        if (rollupTypeID == 0 || rollupTypeID > rollupTypeCount) {
+            revert RollupTypeDoesNotExist();
+        }
+
+        // Check rollup type is not obsolete
+        RollupType storage rollupType = rollupTypeMap[rollupTypeID];
+        if (rollupType.obsolete) {
+            revert RollupTypeObsolete();
+        }
+
+        // check chainID max value
+        // Currently we have this limitation by the circuit, might be removed in a future
+        if (chainID > type(uint32).max) {
+            revert ChainIDOutOfRange();
+        }
+
+        // Check chainID nullifier
+        if (chainIDToRollupID[chainID] != 0) {
+            revert ChainIDAlreadyExist();
+        }
+
+        // Create a new Rollup, using a transparent proxy pattern
+        // Consensus will be the implementation, and this contract the admin
+        uint32 rollupID = ++rollupCount;
+        address rollupAddress = address(
+            new PolygonTransparentProxy(
+                rollupType.consensusImplementation, // pots posar el que tu vulguis
+                address(this),
+                new bytes(0)
+            )
+        );
+
+        // Set chainID nullifier
+        chainIDToRollupID[chainID] = rollupID;
+
+        // Store rollup data
+        rollupAddressToID[rollupAddress] = rollupID;
+
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+
+        rollup.rollupContract = IPolygonRollupBase(rollupAddress);
+        rollup.forkID = rollupType.forkID;
+        rollup.verifier = rollupType.verifier;
+        rollup.chainID = chainID;
+        rollup.batchNumToStateRoot[0] = rollupType.genesis;
+        rollup.rollupTypeID = rollupTypeID;
+        rollup.rollupVerifierType = rollupType.rollupVerifierType;
+        rollup.programVKey = rollupType.programVKey;
+
+        emit CreateNewRollup(
+            rollupID,
+            rollupTypeID,
+            rollupAddress,
+            chainID,
+            gasTokenAddress
+        );
+
+        // Initialize new rollup
+        IPolygonRollupBase(rollupAddress).initialize(
+            initializeBytesCustomChain
         );
     }
 
@@ -1151,7 +1247,9 @@ contract PolygonRollupManager is
         uint32 l1InfoTreeLeafCount,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes calldata proof
+        bytes calldata proof,
+        bytes calldata upgrade,
+        bytes customDatachain
     ) external onlyRole(_TRUSTED_AGGREGATOR_ROLE) {
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
 
@@ -1205,6 +1303,8 @@ contract PolygonRollupManager is
             newLocalExitRoot,
             msg.sender
         );
+
+        // callback to each chain
     }
 
     /**
@@ -1547,12 +1647,12 @@ contract PolygonRollupManager is
         return
             abi.encodePacked(
                 rollup.lastLocalExitRoot,
-                rollup.lastPessimisticRoot,
+                rollup.lastPessimisticRoot, // AL --> Discussion
                 l1InfoTreeRoot,
                 rollupID,
                 consensusHash,
                 newLocalExitRoot,
-                newPessimisticRoot
+                newPessimisticRoot // AL
             );
     }
 

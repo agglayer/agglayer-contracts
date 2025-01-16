@@ -25,6 +25,9 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     // pessimitic program verification key
     bytes32 public pessimisticVKey;
 
+    // pessimitic program verification key
+    bytes32 public SP1_VERSION;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
