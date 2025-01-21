@@ -7,8 +7,8 @@ import "../PolygonVerifierGateway.sol";
 
 contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
     // Set the vKeyType of the authenticator
-    ISP1VerifierGateway.VKeyTypes public vKeyType =
-        ISP1VerifierGateway.VKeyTypes.ECDSA;
+    ISP1VerifierGateway.AuthenticatorVKeyTypes public authenticatorVKeyType =
+        ISP1VerifierGateway.AuthenticatorVKeyTypes.ECDSA;
     //////////
     // Events
     /////////
@@ -47,20 +47,22 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
      * authConfig = keccak256(abi.encodePacked(trusted_sequencer))
      */
     function getAuthenticatorHash(
+        bytes4 selector,
         bytes memory
     ) external view returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
- 
-                    _getAuthenticatorVKey(vKeyType),
+                    _getAuthenticatorVKey(authenticatorVKeyType, selector),
                     keccak256(abi.encodePacked(trustedSequencer))
                 )
             );
     }
 
-    function getAuthenticatorVKey() external view returns (bytes32) {
-        return _getAuthenticatorVKey(vKeyType);
+    function getAuthenticatorVKey(
+        bytes4 selector
+    ) external view returns (bytes32) {
+        return _getAuthenticatorVKey(authenticatorVKeyType, selector);
     }
 
     // function to save the customData

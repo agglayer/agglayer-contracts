@@ -156,7 +156,8 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
     }
 
     function _getAuthenticatorVKey(
-        PolygonVerifierGateway.VKeyTypes vKeyType
+        PolygonVerifierGateway.AuthenticatorVKeyTypes authenticatorVKeyType,
+        bytes4 selector
     ) internal view returns (bytes32) {
         if (_authenticatorVKey != 0) {
             return _authenticatorVKey;
@@ -165,6 +166,6 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
         PolygonVerifierGateway polygonVerifierGatewayAddress = PolygonRollupManager(
                 rollupManager
             ).polygonVerifierGateway();
-        return polygonVerifierGatewayAddress.getVKey(vKeyType);
+        return polygonVerifierGatewayAddress.getAuthenticatorVKey(authenticatorVKeyType, selector);
     }
 }

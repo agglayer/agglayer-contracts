@@ -13,10 +13,13 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 /// selector contained in the first 4 bytes of the proof. It additionally checks that to see that
 /// the verifier route is not frozen.
 contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
-    mapping(VKeyTypes => bytes32) public availableVKeys;
+    mapping(bytes32 => bytes32) public storedAuthenticatorVKeys;
 
     /// @inheritdoc ISP1VerifierGateway
     mapping(bytes4 => VerifierRoute) public routes;
+
+    // Mapping for whitelisted Authenticator addresses
+    mapping(address => bool) public whitelistedAuthenticators;
 
     // admin
     address public admin;
@@ -24,8 +27,8 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     // This account will be able to accept the admin role
     address public pendingAdmin;
 
-    // Mapping for whitelisted Authenticator addresses
-    mapping(address => bool) public whitelistedAuthenticators;
+    // pessimistic program verification key
+    bytes32 public pessimisticVKey;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -40,7 +43,13 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     /**
      * @dev Emitted when the admin updates the pessimistic program verification key
      */
-    event UpdateVKey(VKeyTypes vKeyType, bytes32 newVKey);
+    event SetPessimisticVKey(bytes32 newPessimisticVKey);
+
+    event UpdateVKey(
+        AuthenticatorVKeyTypes vKeyType,
+        bytes4 selector,
+        bytes32 newVKey
+    );
 
     /**
      * @dev Emitted when the admin starts the two-step transfer role setting a new pending admin
@@ -88,7 +97,7 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
             revert RouteIsFrozen(selector);
         }
         ISP1Verifier(route.verifier).verifyProof(
-            availableVKeys[VKeyTypes.PESSIMISTIC],
+            pessimisticVKey,
             publicValues,
             proofBytes
         );
@@ -133,19 +142,43 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     }
 
     /**
-     * @notice Function to update a verification key
-     * @param vKeyType Type of the verification key
-     * @param newVKey New pessimistic program verification key
+     * @notice Function to update the pessimistic program verification key
+     * @param newPessimisticVKey New pessimistic program verification key
      */
-    function addVKey(VKeyTypes vKeyType, bytes32 newVKey) external onlyAdmin {
-        // Add the new VKey to the mapping
-        availableVKeys[vKeyType] = newVKey;
+    function setPessimisticVKey(bytes32 newPessimisticVKey) external onlyAdmin {
+        pessimisticVKey = newPessimisticVKey;
 
-        emit UpdateVKey(vKeyType, newVKey);
+        emit SetPessimisticVKey(newPessimisticVKey);
     }
 
-    function getVKey(VKeyTypes vKeyType) external view returns (bytes32) {
-        return availableVKeys[vKeyType];
+    /**
+     * @notice Function to update a verification key
+     * @param authenticatorVKeyType Type of the verification key
+     * @param selector Selector of the SP1 verifier route
+     * @param newAuthenticatorVKey New pessimistic program verification key
+     */
+    function addAuthenticatorVKey(
+        AuthenticatorVKeyTypes authenticatorVKeyType,
+        bytes4 selector,
+        bytes32 newAuthenticatorVKey
+    ) external onlyAdmin {
+        bytes32 key = keccak256(
+            abi.encodePacked(authenticatorVKeyType, selector)
+        );
+        // Add the new VKey to the mapping
+        storedAuthenticatorVKeys[key] = newAuthenticatorVKey;
+
+        emit UpdateVKey(authenticatorVKeyType, selector, newAuthenticatorVKey);
+    }
+
+    function getAuthenticatorVKey(
+        AuthenticatorVKeyTypes authenticatorVKeyType,
+        bytes4 selector
+    ) external view returns (bytes32) {
+        bytes32 key = keccak256(
+            abi.encodePacked(authenticatorVKeyType, selector)
+        );
+        return storedAuthenticatorVKeys[key];
     }
 
     /**

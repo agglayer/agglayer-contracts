@@ -57,16 +57,14 @@ interface ISP1VerifierGateway is
     ISP1VerifierGatewayEvents,
     ISP1VerifierGatewayErrors
 {
-    // TODO: separate pessimistic, more security assumptions
-    enum VKeyTypes { // authVKeys
-        PESSIMISTIC,
+    enum AuthenticatorVKeyTypes { // authVKeys
         ECDSA,
         FEP
     }
     /**
      * @notice returns the current authenticator verification key, used to verify chain's FEP
      */
-    function getVKey(VKeyTypes vKeyType) external view returns (bytes32);
+    function getAuthenticatorVKey(AuthenticatorVKeyTypes authenticatorVKeyType, bytes4 selector) external view returns (bytes32);
 
     /// @notice Verifies a pessimistic proof with given public values and proof.
     /// @dev It is expected that the first 4 bytes of proofBytes must match the first 4 bytes of

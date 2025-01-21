@@ -1223,14 +1223,15 @@ contract PolygonRollupManager is
         if (l1InfoRoot == bytes32(0)) {
             revert L1InfoTreeLeafCountInvalid();
         }
-
+        bytes4 selector = bytes4(proof[:4]);
         bytes memory inputPessimisticBytes = _getInputPessimisticBytesV3(
             rollupID,
             rollup,
             l1InfoRoot,
             newLocalExitRoot,
             newPessimisticRoot,
-            customChainData
+            customChainData,
+            selector
         );
 
         // Verify proof
@@ -1496,7 +1497,8 @@ contract PolygonRollupManager is
         bytes32 l1InfoTreeRoot,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes memory customDataConsensus
+        bytes memory customDataConsensus,
+        bytes4 selector
     ) external view returns (bytes memory) {
         return
             _getInputPessimisticBytesV3(
@@ -1505,7 +1507,8 @@ contract PolygonRollupManager is
                 l1InfoTreeRoot,
                 newLocalExitRoot,
                 newPessimisticRoot,
-                customDataConsensus
+                customDataConsensus,
+                selector
             );
     }
 
@@ -1555,13 +1558,14 @@ contract PolygonRollupManager is
         bytes32 l1InfoTreeRoot,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes memory customDataConsensus
+        bytes memory customDataConsensus,
+        bytes4 selector
     ) internal view returns (bytes memory) {
         // Get consensus information from the consensus contract
         bytes32 consensusHash;
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
             consensusHash = IALAuthenticator(address(rollup.chainContract))
-                .getAuthenticatorHash(customDataConsensus);
+                .getAuthenticatorHash(selector, customDataConsensus);
         } else {
             consensusHash = IPolygonPessimisticConsensusV2(
                 address(rollup.rollupContract)

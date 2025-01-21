@@ -56,5 +56,5 @@ interface IALAuthenticatorBase is
 
     function admin() external returns (address);
 
-    function getAuthenticatorVKey() external returns (bytes32);
+    function getAuthenticatorVKey(bytes4 selector) external returns (bytes32);
 }

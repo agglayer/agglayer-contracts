@@ -7,8 +7,8 @@ import "../PolygonVerifierGateway.sol";
 
 contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
     // Set the vKeyType of the authenticator
-    ISP1VerifierGateway.VKeyTypes public vKeyType =
-        ISP1VerifierGateway.VKeyTypes.FEP;
+    ISP1VerifierGateway.AuthenticatorVKeyTypes public authenticatorVKeyType =
+        ISP1VerifierGateway.AuthenticatorVKeyTypes.FEP;
 
     // final vKey to verify final FEP aggregation
     bytes32 public aggregationVkey;
@@ -91,6 +91,7 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
      * @param configParams TODO
      */
     function getAuthenticatorHash(
+        bytes4 selector,
         bytes memory configParams
     ) external view returns (bytes32) {
         (
@@ -115,7 +116,7 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
             keccak256(
                 abi.encodePacked(
                     AUTH_TYPE,
-                    _getAuthenticatorVKey(vKeyType),
+                    _getAuthenticatorVKey(authenticatorVKeyType, selector),
                     chainConfigHash,
                     rangeVkeyCommitment,
                     authConfig
@@ -123,8 +124,8 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
             );
     }
 
-    function getAuthenticatorVKey() external view returns (bytes32) {
-        return _getAuthenticatorVKey(vKeyType);
+    function getAuthenticatorVKey(bytes4 selector) external view returns (bytes32) {
+        return _getAuthenticatorVKey(authenticatorVKeyType, selector);
     }
 
     /**

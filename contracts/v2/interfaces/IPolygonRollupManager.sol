@@ -434,7 +434,8 @@ interface IPolygonRollupManager {
         bytes32 selectedGlobalExitRoot,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes memory customDataConsensus
+        bytes memory customDataConsensus,
+        bytes4 selector
     ) external returns (bytes memory);
 
     function getInputSnarkBytes(
