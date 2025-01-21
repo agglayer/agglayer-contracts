@@ -22,7 +22,7 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
 
     // Address that will be able to adjust contract parameters
     address public admin;
-
+    // Question: clean this vars?
     // This account will be able to accept the admin role
     address public pendingAdmin;
 
@@ -155,7 +155,9 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
         emit SetAuthenticatorVKey(newAuthenticatorVKey);
     }
 
-    function _getAuthenticatorVKey() internal view returns (bytes32) {
+    function _getAuthenticatorVKey(
+        PolygonVerifierGateway.VKeyTypes vKeyType
+    ) internal view returns (bytes32) {
         if (_authenticatorVKey != 0) {
             return _authenticatorVKey;
         }
@@ -163,6 +165,6 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
         PolygonVerifierGateway polygonVerifierGatewayAddress = PolygonRollupManager(
                 rollupManager
             ).polygonVerifierGateway();
-        return polygonVerifierGatewayAddress.authenticatorVKey();
+        return polygonVerifierGatewayAddress.getVKey(vKeyType);
     }
 }

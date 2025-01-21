@@ -13,6 +13,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 /// selector contained in the first 4 bytes of the proof. It additionally checks that to see that
 /// the verifier route is not frozen.
 contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
+    mapping(VKeyTypes => bytes32) public availableVKeys;
+
     /// @inheritdoc ISP1VerifierGateway
     mapping(bytes4 => VerifierRoute) public routes;
 
@@ -21,12 +23,6 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
 
     // This account will be able to accept the admin role
     address public pendingAdmin;
-
-    // pessimistic program verification key
-    bytes32 public pessimisticVKey;
-
-    // authenticator verification key
-    bytes32 public authenticatorVKey;
 
     // Mapping for whitelisted Authenticator addresses
     mapping(address => bool) public whitelistedAuthenticators;
@@ -44,12 +40,7 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     /**
      * @dev Emitted when the admin updates the pessimistic program verification key
      */
-    event SetPessimisticVKey(bytes32 newPessimisticVKey);
-
-    /**
-     * @dev Emitted when the admin updates the authenticator verification key
-     */
-    event SetAuthenticatorVKey(bytes32 newAuthenticatorVKey);
+    event UpdateVKey(VKeyTypes vKeyType, bytes32 newVKey);
 
     /**
      * @dev Emitted when the admin starts the two-step transfer role setting a new pending admin
@@ -72,17 +63,9 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     /**
      * @notice  Initializer function to set new rollup manager version
      * @param _admin The address of the admin
-     * @param _pessimisticVKey The pessimistic program verification key
-     * @param _authenticatorVKey The authenticator verification key. This key is the one used to verify the fep-stack + bridge of fep chains managed by PolygonVerifierGateway
      */
-    function initialize(
-        address _admin,
-        bytes32 _pessimisticVKey,
-        bytes32 _authenticatorVKey
-    ) external virtual initializer {
+    function initialize(address _admin) external virtual initializer {
         admin = _admin;
-        pessimisticVKey = _pessimisticVKey;
-        authenticatorVKey = _authenticatorVKey;
     }
 
     modifier onlyAdmin() {
@@ -104,9 +87,8 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         } else if (route.frozen) {
             revert RouteIsFrozen(selector);
         }
-
         ISP1Verifier(route.verifier).verifyProof(
-            pessimisticVKey,
+            availableVKeys[VKeyTypes.PESSIMISTIC],
             publicValues,
             proofBytes
         );
@@ -151,25 +133,19 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     }
 
     /**
-     * @notice Function to update the pessimistic program verification key
-     * @param newPessimisticVKey New pessimistic program verification key
+     * @notice Function to update a verification key
+     * @param vKeyType Type of the verification key
+     * @param newVKey New pessimistic program verification key
      */
-    function setPessimisticVKey(bytes32 newPessimisticVKey) external onlyAdmin {
-        pessimisticVKey = newPessimisticVKey;
+    function addVKey(VKeyTypes vKeyType, bytes32 newVKey) external onlyAdmin {
+        // Add the new VKey to the mapping
+        availableVKeys[vKeyType] = newVKey;
 
-        emit SetPessimisticVKey(newPessimisticVKey);
+        emit UpdateVKey(vKeyType, newVKey);
     }
 
-    /**
-     * @notice Function to update the authenticator verification key
-     * @param newAuthenticatorVKey New authenticator verification key
-     */
-    function setAuthenticatorVKey(
-        bytes32 newAuthenticatorVKey
-    ) external onlyAdmin {
-        authenticatorVKey = newAuthenticatorVKey;
-
-        emit SetAuthenticatorVKey(newAuthenticatorVKey);
+    function getVKey(VKeyTypes vKeyType) external view returns (bytes32) {
+        return availableVKeys[vKeyType];
     }
 
     /**
@@ -194,10 +170,6 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         emit AcceptAdminRole(pendingAdmin);
     }
 
-    function getAuthenticatorVKey() external view returns (bytes32) {
-        return authenticatorVKey;
-    }
-
     /**
      * @notice Function to set the whitelisted authenticator
      * @param authenticator Address of the authenticator
@@ -208,5 +180,6 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         bool whitelisted
     ) external onlyAdmin {
         whitelistedAuthenticators[authenticator] = whitelisted;
+        // TODO: Create event
     }
 }

@@ -1199,6 +1199,7 @@ contract PolygonRollupManager is
      * @param customChainData Specific custom data to verify chain proof
      * @param proof SP1 proof (Plonk)
      */
+     // TODO: join with the other function
     function verifyPessimisticTrustedAggregatorV3(
         uint32 rollupID,
         uint32 l1InfoTreeLeafCount,

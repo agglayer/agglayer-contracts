@@ -6,6 +6,10 @@ import "../interfaces/IALAuthenticator.sol";
 import "../PolygonVerifierGateway.sol";
 
 contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
+    // Set the vKeyType of the authenticator
+    ISP1VerifierGateway.VKeyTypes public vKeyType =
+        ISP1VerifierGateway.VKeyTypes.FEP;
+
     // final vKey to verify final FEP aggregation
     bytes32 public aggregationVkey;
     bytes32 public chainConfigHash;
@@ -22,12 +26,6 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
     //////////
     // Events
     /////////
-
-    event OnStoreCustomChainData(
-        bytes32 lastStateRoot,
-        uint128 timestamp,
-        uint128 l2BlockNumber
-    );
 
     event OnVerifyPessimistic(
         bytes32 initStateRoot,
@@ -117,7 +115,7 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
             keccak256(
                 abi.encodePacked(
                     AUTH_TYPE,
-                    _getAuthenticatorVKey(),
+                    _getAuthenticatorVKey(vKeyType),
                     chainConfigHash,
                     rangeVkeyCommitment,
                     authConfig
@@ -126,22 +124,7 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
     }
 
     function getAuthenticatorVKey() external view returns (bytes32) {
-        return _getAuthenticatorVKey();
-    }
-
-    // function to store the customData
-    function storeCustomChainData(
-        bytes memory consensusData
-    ) external onlyRollupManager {
-        // custom parsing of the consensusData
-        (bytes32 lastStateRoot, uint128 timestamp, uint128 l2BlockNumber) = abi
-            .decode(consensusData, (bytes32, uint128, uint128));
-
-        // store the chain data
-        chainData.push(ChainData(lastStateRoot, timestamp, l2BlockNumber));
-
-        // Emit event
-        emit OnStoreCustomChainData(lastStateRoot, timestamp, l2BlockNumber);
+        return _getAuthenticatorVKey(vKeyType);
     }
 
     /**
