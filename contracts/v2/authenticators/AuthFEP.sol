@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.20;
 
-import "../lib/PolygonConsensusBase.sol";
-import "../interfaces/IPolygonPessimisticConsensusV2.sol";
+import "../lib/ALAuthenticatorBase.sol";
+import "../interfaces/IALAuthenticator.sol";
+import "../PolygonVerifierGateway.sol";
 
-contract AuthFEP is PolygonConsensusBase, IPolygonPessimisticConsensusV2 {
-    uint32 public constant CONSENSUS_TYPE = 1;
-    bytes32 public fepVKey;
+contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
+    // final vKey to verify final FEP aggregation
+    bytes32 public aggregationVkey;
     bytes32 public chainConfigHash;
     bytes32 public rangeVkeyCommitment;
 
@@ -18,92 +19,129 @@ contract AuthFEP is PolygonConsensusBase, IPolygonPessimisticConsensusV2 {
 
     ChainData[] public chainData;
 
-    /**
-     * @param _globalExitRootManager Global exit root manager address
-     * @param _pol POL token address
-     * @param _bridgeAddress Bridge address
-     * @param _rollupManager Global exit root manager address
-     * @param _fepVKey verification key of the FepBridge program
-     */
-    constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
-        IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager,
-        bytes32 _fepVKey,
-        bytes32 _chainConfigHash,
-        bytes32 _rangeVkeyCommitment
-    )
-        PolygonConsensusBase(
-            _globalExitRootManager,
-            _pol,
-            _bridgeAddress,
-            _rollupManager
-        )
-    {
-        fepVKey = _fepVKey;
-        chainConfigHash = _chainConfigHash;
-        rangeVkeyCommitment = _rangeVkeyCommitment;
-    }
+    //////////
+    // Events
+    /////////
+
+    event OnStoreCustomChainData(
+        bytes32 lastStateRoot,
+        uint128 timestamp,
+        uint128 l2BlockNumber
+    );
+
+    event OnVerifyPessimistic(
+        bytes32 initStateRoot,
+        uint128 initTimestamp,
+        uint128 initL2BlockNumber
+    );
 
     /**
-     * @param _admin Admin address
-     * @param sequencer Trusted sequencer address
-     * @param _gasTokenAddress Indicates the token address in mainnet that will be used as a gas token
-     * Note if a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
-     * @param sequencerURL Trusted sequencer URL
-     * @param _networkName L2 network name
+     * @param _rollupManager TODO
+     */
+    constructor(
+        PolygonRollupManager _rollupManager
+    ) ALAuthenticatorBase(_rollupManager) {}
+
+    /**
+     * @param initializeBytesCustomChain  Encoded params to initialize the chain
      */
     function initialize(
         bytes memory initializeBytesCustomChain
     ) external override onlyRollupManager initializer {
         // custom parsing of the initializeBytesCustomChain
-        (bytes32 initStateRoot, uint128 initTimestamp, uint128 initL2BlockNumber, address _admin) = abi
-            .decode(initializeBytesCustomChain, (bytes32, uint128, uint128, address));
+        (
+            bytes32 initStateRoot,
+            uint128 initTimestamp,
+            uint128 initL2BlockNumber,
+            address _admin,
+            bytes32 __authenticatorVKey,
+            bytes32 _aggregationVkey,
+            bytes32 _chainConfigHash,
+            bytes32 _rangeVkeyCommitment
+        ) = abi.decode(
+                initializeBytesCustomChain,
+                (
+                    bytes32,
+                    uint128,
+                    uint128,
+                    address,
+                    bytes32,
+                    bytes32,
+                    bytes32,
+                    bytes32
+                )
+            );
 
         // set the admin
         admin = _admin;
-
-
-        // storage chaindata dtruct
-        chainData.push(ChainData(initStateRoot, initTimestamp, initL2BlockNumber));
+        _authenticatorVKey = __authenticatorVKey;
+        aggregationVkey = _aggregationVkey;
+        chainConfigHash = _chainConfigHash;
+        rangeVkeyCommitment = _rangeVkeyCommitment;
+        // storage chainData struct
+        chainData.push(
+            ChainData(initStateRoot, initTimestamp, initL2BlockNumber)
+        );
     }
 
     /**
-     * Note Return the necessary consensus information for the proof hashed
-     * ConsensusHash:
-     * Field:           | CONSENSUS_TYPE | fepVKey   | chainConfigHash | rangeVkeyCommitment | consensusData  |
-     * Source:          | Consensus      | Consensus | Consensus       | Consensus           | rollup manager |
-     * length (bits):   |    32          | 256       | 256             | 256                 | variable       |
+     * Note Return the necessary authenticator information for the proof hashed
+     * AuthenticatorHash:
+     * Field:           | AUTH_TYPE | authenticatorVKey   | authConfig |
+     * length (bits):   |    32     |       256           | 256       |
+     * uint256 auth_config = keccak256(abi.encodePacked(l1Head, l2PreRoot, claimRoot, claimBlockNum, rollupConfigHash, rangeVkeyCommitment, aggregationVkey))
+     * @param configParams TODO
      */
-    function getConsensusHash(
-        bytes memory consensusData
+    function getAuthenticatorHash(
+        bytes memory configParams
     ) external view returns (bytes32) {
+        (
+            bytes32 l1Head,
+            bytes32 l2PreRoot,
+            bytes32 claimRoot,
+            uint256 claimBlockNum
+        ) = abi.decode(configParams, (bytes32, bytes32, bytes32, uint256));
+        bytes32 authConfig = keccak256(
+            abi.encodePacked(
+                l1Head,
+                l2PreRoot,
+                claimRoot,
+                claimBlockNum,
+                chainConfigHash,
+                rangeVkeyCommitment,
+                aggregationVkey
+            )
+        );
+
         return
             keccak256(
                 abi.encodePacked(
-                    CONSENSUS_TYPE,
-                    fepVKey,
+                    AUTH_TYPE,
+                    _getAuthenticatorVKey(),
                     chainConfigHash,
                     rangeVkeyCommitment,
-                    consensusData // add prevuious state root, timestamp, l2BlockNumber
+                    authConfig
                 )
             );
     }
 
-    // function to save the customData
-    function onCustomChainData(bytes memory consensusData) external {
-        // only calllable by the rollup manager
-        if (msg.sender != address(rollupManager)) {
-            revert("Invalid caller");
-        }
+    function getAuthenticatorVKey() external view returns (bytes32) {
+        return _getAuthenticatorVKey();
+    }
 
+    // function to store the customData
+    function storeCustomChainData(
+        bytes memory consensusData
+    ) external onlyRollupManager {
         // custom parsing of the consensusData
         (bytes32 lastStateRoot, uint128 timestamp, uint128 l2BlockNumber) = abi
             .decode(consensusData, (bytes32, uint128, uint128));
 
         // store the chain data
         chainData.push(ChainData(lastStateRoot, timestamp, l2BlockNumber));
+
+        // Emit event
+        emit OnStoreCustomChainData(lastStateRoot, timestamp, l2BlockNumber);
     }
 
     /**
@@ -111,13 +149,34 @@ contract AuthFEP is PolygonConsensusBase, IPolygonPessimisticConsensusV2 {
      * TODO: add a timelock delay to avoid invalidate proofs
      * TODO: Same for trusted sequencer
      */
-    function setFepVKey(bytes32 _fepVKey) external onlyAdmin {
-        fepVKey = _fepVKey;
+    function setAggregationVKey(bytes32 _aggregationVkey) external onlyAdmin {
+        aggregationVkey = _aggregationVkey;
+    }
+
+    // function to save the customData
+    function onVerifyPessimistic(
+        bytes memory customData
+    ) external onlyRollupManager {
+        (
+            bytes32 initStateRoot,
+            uint128 initTimestamp,
+            uint128 initL2BlockNumber
+        ) = abi.decode(customData, (bytes32, uint128, uint128));
+        // storage chainData struct
+        chainData.push(
+            ChainData(initStateRoot, initTimestamp, initL2BlockNumber)
+        );
+
+        emit OnVerifyPessimistic(
+            initStateRoot,
+            initTimestamp,
+            initL2BlockNumber
+        );
     }
 }
 
 // another approach is to get the data from the rollupManager contract
-// if the netowrkID is known, then:
+// if the networkID is known, then:
 // rollup.lastStateRoot --> call
 // newStateRoot --> calldata first context (cannot be read unless it is forwarded)
 // newL2BlockNumber --> calldata first context (cannot be read unless it is forwarded)

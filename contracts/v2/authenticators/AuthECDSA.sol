@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.20;
 
-import "../interfaces/IALConsensus.sol";
-import "../lib/ALBaseConsensus.sol";
+import "../interfaces/IALAuthenticator.sol";
+import "../lib/ALAuthenticatorBase.sol";
+import "../PolygonVerifierGateway.sol";
 
-contract AuthECDSA is ALBaseConsensus, IALConsensus {
+contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
+
     //////////
     // Events
     /////////
@@ -14,45 +16,56 @@ contract AuthECDSA is ALBaseConsensus, IALConsensus {
     /**
      * @param _rollupManager Rollup manager address
      */
-    constructor(address _rollupManager) ALBaseConsensus(_rollupManager) {}
+    constructor(
+        PolygonRollupManager _rollupManager
+    ) ALAuthenticatorBase(_rollupManager) {}
 
     /**
-     * Note Return the necessary consensus information for the proof hashed
-     * ConsensusHash:
-     * Field:           | CONSENSUS_TYPE | consensusVKey  | consensusConfig  |
-     * length (bits):   |       32       |      256       |       256        |
+     * @param initializeBytesCustomChain Encoded params to initialize the chain
      */
-    function getConsensusHash(
-        bytes memory // consensusData
+    function initialize(
+        bytes memory initializeBytesCustomChain
+    ) external override onlyRollupManager initializer {
+        // custom parsing of the initializeBytesCustomChain
+        (address _trustedSequencer, bytes32 __authenticatorVKey) = abi.decode(
+            initializeBytesCustomChain,
+            (address, bytes32)
+        );
+
+        // set chain variables
+        trustedSequencer = _trustedSequencer;
+        _authenticatorVKey = __authenticatorVKey;
+    }
+
+    /**
+     * Note Return the necessary authenticator information for the proof hashed
+     * AuthenticatorHash:
+     * Field:           | AUTH_TYPE | authenticatorVKey   | authConfig |
+     * length (bits):   |    32     |       256           | 256       |
+     * authConfig = keccak256(abi.encodePacked(trusted_sequencer))
+     */
+    function getAuthenticatorHash(
+        bytes memory
     ) external view returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
-                    CONSENSUS_TYPE,
-                    consensusVKey,
+                    AUTH_TYPE,
+                    _getAuthenticatorVKey(),
                     keccak256(abi.encodePacked(trustedSequencer))
                 )
             );
     }
 
+    function getAuthenticatorVKey() external view returns (bytes32) {
+        return _getAuthenticatorVKey();
+    }
+
     // function to save the customData
     function onVerifyPessimistic(
-        bytes memory // consensusData
-    ) external {
+        bytes memory // customData
+    ) external onlyRollupManager {
         // just throw an event
         emit OnVerifyPessimistic();
     }
-
-    function OnChnageSp1VerifierVersion() {
-        // just throw an event
-        emit OnChnageSp1VerifierVersion();
-        // change consensusVKey
-    }
-
-    // /**
-    //  * @notice Allow the admin to set a new trusted sequencer
-    //  * @param newConsensusVKey Address of the new trusted sequencer
-    //  */
-    // function setConsensusVKey(bytes32 newConsensusVKey) override external onlyAdmin {
-    // }
 }

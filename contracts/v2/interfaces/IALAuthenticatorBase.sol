@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-interface IALConsensusBaseEvents {
+interface IALAuthenticatorBaseEvents {
     /**
      * @dev Emitted when the admin updates the trusted sequencer address
      */
@@ -24,12 +24,12 @@ interface IALConsensusBaseEvents {
     event AcceptAdminRole(address newAdmin);
 
     /**
-     * @dev Emitted when the admin updates the consensu verification key
+     * @dev Emitted when the admin updates the authenticator verification key
      */
-    event SetConsensusVKey(bytes32 newConsensusVKey);
+    event SetAuthenticatorVKey(bytes32 newAuthenticatorVKey);
 }
 
-interface IALConsensusBaseErrors {
+interface IALAuthenticatorBaseErrors {
     /**
      * @dev Thrown when the caller is not the admin
      */
@@ -46,15 +46,15 @@ interface IALConsensusBaseErrors {
     error OnlyRollupManager();
 }
 
-interface IALConsensusBase is IALConsensusBaseErrors, IALConsensusBaseEvents {
+interface IALAuthenticatorBase is
+    IALAuthenticatorBaseErrors,
+    IALAuthenticatorBaseEvents
+{
     function initialize(
-        bytes32 _consensusVKey,
-        address _admin,
-        address sequencer,
-        address _gasTokenAddress,
-        string memory sequencerURL,
-        string memory _networkName
+        bytes calldata initializeBytesCustomChain
     ) external;
 
     function admin() external returns (address);
+
+    function getAuthenticatorVKey() external returns (bytes32);
 }

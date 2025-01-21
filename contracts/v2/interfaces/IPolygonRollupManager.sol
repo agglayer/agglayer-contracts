@@ -298,6 +298,11 @@ interface IPolygonRollupManager {
     error OnlyChainsWithPessimisticProofs();
 
     /**
+     * @dev Only Chains with PessimisticV3
+     */
+    error OnlyChainsWithPessimisticV3();
+
+    /**
      * @dev Invalid Pessimistic proof
      */
     error InvalidPessimisticProof();
@@ -306,6 +311,11 @@ interface IPolygonRollupManager {
      * @dev Invalid Verifier Type when getting rollup data
      */
     error InvalidVerifierType();
+
+    /**
+     * @dev Invalid Authenticator Address, is not whitelisted for new chain creation
+     */
+    error AuthenticatorAddressNotWhitelisted();
 
     enum VerifierType {
         StateTransition,
@@ -385,6 +395,15 @@ interface IPolygonRollupManager {
         bytes calldata proof
     ) external;
 
+    function verifyPessimisticTrustedAggregatorV3(
+        uint32 rollupID,
+        uint32 l1InfoTreeLeafCount,
+        bytes32 newLocalExitRoot,
+        bytes32 newPessimisticRoot,
+        bytes memory customChainData,
+        bytes calldata proof
+    ) external;
+
     function activateEmergencyState() external;
 
     function deactivateEmergencyState() external;
@@ -410,7 +429,7 @@ interface IPolygonRollupManager {
         bytes32 newPessimisticRoot
     ) external view returns (bytes memory);
 
-    function getInputPessimisticBytesV2(
+    function getInputPessimisticBytesV3(
         uint32 rollupID,
         bytes32 selectedGlobalExitRoot,
         bytes32 newLocalExitRoot,

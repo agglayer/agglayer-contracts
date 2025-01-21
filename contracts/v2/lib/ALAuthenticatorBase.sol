@@ -2,7 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../interfaces/IALConsensusBase.sol";
+import "../interfaces/IALAuthenticatorBase.sol";
+import "../PolygonRollupManager.sol";
 
 /**
  * Contract responsible for managing the states and the updates of L2 network.
@@ -12,15 +13,12 @@ import "../interfaces/IALConsensusBase.sol";
  * The aggregators will be able to verify the sequenced state with zkProofs and therefore make available the withdrawals from L2 network.
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  */
-abstract contract ALBaseConsensus is IALConsensusBase, Initializable {
+abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
     // Rollup manager
-    address public immutable rollupManager;
+    PolygonRollupManager public immutable rollupManager;
 
     // Consensus type that support generic consensus
-    uint32 public constant CONSENSUS_TYPE = 1;
-
-    // consensusVKey
-    bytes32 public consensusVKey;
+    uint32 public constant AUTH_TYPE = 1;
 
     // Address that will be able to adjust contract parameters
     address public admin;
@@ -43,6 +41,9 @@ abstract contract ALBaseConsensus is IALConsensusBase, Initializable {
     // Native network of the token address of the gas token address. This variable it's just for read purposes
     uint32 public gasTokenNetwork;
 
+    // authenticatorVKey
+    bytes32 internal _authenticatorVKey;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -51,41 +52,36 @@ abstract contract ALBaseConsensus is IALConsensusBase, Initializable {
 
     // General parameters that will have in common all networks that deploys rollup manager
     /**
-     * @dev Disable initalizers on the implementation following the best practices
+     * @dev Disable initializers on the implementation following the best practices
      * @param _rollupManager Global exit root manager address
      */
-    constructor(address _rollupManager) {
+    constructor(PolygonRollupManager _rollupManager) {
         rollupManager = _rollupManager;
-        // Disable initalizers on the implementation following the best practices
+        // Disable initializers on the implementation following the best practices
         _disableInitializers();
     }
 
     /**
-     * @param _admin Admin address
-     * @param sequencer Trusted sequencer address
-     * @param _gasTokenAddress Indicates the token address in mainnet that will be used as a gas token
-     * Note if a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
-     * @param sequencerURL Trusted sequencer URL
-     * @param _networkName L2 network name
+     * @param initializeBytesCustomChain TODO
      */
     function initialize(
-        bytes32 _consensusVKey,
-        address _admin,
-        address sequencer,
-        address _gasTokenAddress,
-        string memory sequencerURL,
-        string memory _networkName
+        bytes calldata initializeBytesCustomChain
     ) external virtual onlyRollupManager initializer {
-        // Set initialize variables
-        consensusVKey = _consensusVKey;
-
+        (
+            address _admin,
+            address _trustedSequencer,
+            address _gasTokenAddress,
+            string memory _sequencerURL,
+            string memory _networkName
+        ) = abi.decode(
+                initializeBytesCustomChain,
+                (address, address, address, string, string)
+            );
         admin = _admin;
-        trustedSequencer = sequencer;
-
-        trustedSequencerURL = sequencerURL;
-        networkName = _networkName;
-
+        trustedSequencer = _trustedSequencer;
         gasTokenAddress = _gasTokenAddress;
+        trustedSequencerURL = _sequencerURL;
+        networkName = _networkName;
     }
 
     modifier onlyAdmin() {
@@ -105,16 +101,6 @@ abstract contract ALBaseConsensus is IALConsensusBase, Initializable {
     //////////////////
     // admin functions
     //////////////////
-
-    /**
-     * @notice Allow the admin to set a new trusted sequencer
-     * @param newConsensusVKey Address of the new trusted sequencer
-     */
-    function setConsensusVKey(bytes32 newConsensusVKey) external onlyAdmin {
-        consensusVKey = newConsensusVKey;
-
-        emit SetConsensusVKey(newConsensusVKey);
-    }
 
     /**
      * @notice Allow the admin to set a new trusted sequencer
@@ -160,5 +146,23 @@ abstract contract ALBaseConsensus is IALConsensusBase, Initializable {
 
         admin = pendingAdmin;
         emit AcceptAdminRole(pendingAdmin);
+    }
+
+    function setAuthenticatorVKey(
+        bytes32 newAuthenticatorVKey
+    ) external onlyAdmin {
+        _authenticatorVKey = newAuthenticatorVKey;
+        emit SetAuthenticatorVKey(newAuthenticatorVKey);
+    }
+
+    function _getAuthenticatorVKey() internal view returns (bytes32) {
+        if (_authenticatorVKey != 0) {
+            return _authenticatorVKey;
+        }
+        // Retrieve authenticator key from VerifierGateway
+        PolygonVerifierGateway polygonVerifierGatewayAddress = PolygonRollupManager(
+                rollupManager
+            ).polygonVerifierGateway();
+        return polygonVerifierGatewayAddress.authenticatorVKey();
     }
 }

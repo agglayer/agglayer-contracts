@@ -57,7 +57,13 @@ interface ISP1VerifierGateway is
     ISP1VerifierGatewayEvents,
     ISP1VerifierGatewayErrors
 {
-    /// @notice Verifies a pessimsitic proof with given public values and proof.
+
+    /**
+    * @notice returns the current authenticator verification key, used to verify chain's FEP
+     */
+    function getAuthenticatorVKey() external view returns (bytes32);
+
+    /// @notice Verifies a pessimistic proof with given public values and proof.
     /// @dev It is expected that the first 4 bytes of proofBytes must match the first 4 bytes of
     /// target verifier's VERIFIER_HASH.
     /// @param publicValues The public values encoded as bytes.
