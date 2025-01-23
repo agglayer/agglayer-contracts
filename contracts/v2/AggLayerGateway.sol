@@ -18,9 +18,6 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     /// @inheritdoc ISP1VerifierGateway
     mapping(bytes4 => VerifierRoute) public routes;
 
-    // Mapping for whitelisted Authenticator addresses
-    mapping(address => bool) public whitelistedAuthenticators;
-
     // admin
     address public admin;
 
@@ -260,16 +257,4 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
         emit AcceptAdminRole(pendingAdmin);
     }
 
-    /**
-     * @notice Function to set the whitelisted authenticator
-     * @param authenticator Address of the authenticator
-     * @param whitelisted Boolean value to set the authenticator as whitelisted or not
-     */
-    function setWhitelistedAuthenticator(
-        address authenticator,
-        bool whitelisted
-    ) external onlyAdmin {
-        whitelistedAuthenticators[authenticator] = whitelisted;
-        emit UpdateWhitelistedAuthenticator(authenticator, whitelisted);
-    }
 }

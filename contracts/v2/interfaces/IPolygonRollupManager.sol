@@ -342,7 +342,8 @@ interface IPolygonRollupManager {
         address sequencer,
         address gasTokenAddress,
         string memory sequencerURL,
-        string memory networkName
+        string memory networkName,
+        bytes memory initializeBytesCustomChain
     ) external;
 
     function addExistingRollup(

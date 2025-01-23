@@ -244,8 +244,6 @@ contract PolygonRollupManager is
     // Current rollup manager version
     string public constant ROLLUP_MANAGER_VERSION = "pessimistic v0.3.0";
 
-    uint32 internal constant _LAST_ROLLUP_TYPE_ID = type(uint32).max;
-
     // Global Exit Root address
     IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
 
@@ -430,19 +428,7 @@ contract PolygonRollupManager is
     function initialize(
         address _aggLayerGateway
     ) external virtual reinitializer(4) {
-        // Create the last rollup type to support AggLayer V3 and be more backwards compatible
-        rollupTypeMap[_LAST_ROLLUP_TYPE_ID] = RollupType({
-            consensusImplementation: address(0),
-            verifier: address(aggLayerGateway),
-            forkID: 0,
-            rollupVerifierType: VerifierType.ALGateway,
-            obsolete: false,
-            genesis: bytes32(0),
-            programVKey: bytes32(0)
-        });
-        aggLayerGateway = AggLayerGateway(
-            _aggLayerGateway
-        );
+        aggLayerGateway = AggLayerGateway(_aggLayerGateway);
         emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
@@ -478,9 +464,21 @@ contract PolygonRollupManager is
         if (rollupVerifierType == VerifierType.Pessimistic) {
             // No genesis on pessimistic rollups
             if (genesis != bytes32(0)) revert InvalidRollupType();
-        } else {
+        } else if (rollupVerifierType == VerifierType.ALGateway) {
+            // Those params should be zero for ALGateway rollup types
+            if (
+                verifier != address(0) ||
+                forkID != 0 ||
+                genesis != bytes32(0) ||
+                programVKey != bytes32(0)
+            ) revert InvalidRollupType();
+            // Set ALGateway verifier
+            verifier = address(aggLayerGateway);
+        } else if (rollupVerifierType == VerifierType.StateTransition) {
             // No programVKey on state transition rollups
             if (programVKey != bytes32(0)) revert InvalidRollupType();
+        } else {
+            revert InvalidRollupType();
         }
 
         rollupTypeMap[rollupTypeID] = RollupType({
@@ -546,7 +544,8 @@ contract PolygonRollupManager is
         address sequencer,
         address gasTokenAddress,
         string memory sequencerURL,
-        string memory networkName
+        string memory networkName,
+        bytes memory initializeBytesCustomChain
     ) external onlyRole(_CREATE_ROLLUP_ROLE) {
         // Check that rollup type exists
         if (rollupTypeID == 0 || rollupTypeID > rollupTypeCount) {
@@ -606,85 +605,21 @@ contract PolygonRollupManager is
             gasTokenAddress
         );
 
-        // Initialize new rollup
-        IPolygonRollupBase(rollupAddress).initialize(
-            admin,
-            sequencer,
-            rollupID,
-            gasTokenAddress,
-            sequencerURL,
-            networkName
-        );
-    }
-
-    /**
-     * @notice Create a new chain
-     * @param authenticatorAddress TODO
-     * @param chainID TODO
-     * @param initializeBytesCustomChain TODO
-     */
-    function createNewChain(
-        address authenticatorAddress,
-        uint64 chainID,
-        bytes memory initializeBytesCustomChain
-    ) external onlyRole(_CREATE_ROLLUP_ROLE) {
-        // Check authenticatorAddress is in the whitelisted addresses
-        if (
-            !aggLayerGateway.whitelistedAuthenticators(
-                authenticatorAddress
-            )
-        ) {
-            revert AuthenticatorAddressNotWhitelisted();
+        if (rollupType.rollupVerifierType == VerifierType.ALGateway) {
+            IALAuthenticatorBase(rollupAddress).initialize(
+                initializeBytesCustomChain
+            );
+        } else {
+            // Initialize new rollup
+            IPolygonRollupBase(rollupAddress).initialize(
+                admin,
+                sequencer,
+                rollupID,
+                gasTokenAddress,
+                sequencerURL,
+                networkName
+            );
         }
-
-        RollupType storage rollupType = rollupTypeMap[_LAST_ROLLUP_TYPE_ID];
-        if (rollupType.obsolete) {
-            revert RollupTypeObsolete();
-        }
-        // check chainID max value
-        // Currently we have this limitation by the circuit, might be removed in a future
-        if (chainID > type(uint32).max) {
-            revert ChainIDOutOfRange();
-        }
-
-        // Check chainID nullifier
-        if (chainIDToRollupID[chainID] != 0) {
-            revert ChainIDAlreadyExist();
-        }
-
-        // Create a new chain, using a transparent proxy pattern
-        // Auth will be the implementation, and this contract the admin
-        uint32 rollupID = ++rollupCount;
-        address rollupAddress = address(
-            new PolygonTransparentProxy(
-                authenticatorAddress,
-                address(this),
-                new bytes(0)
-            )
-        );
-
-        // Set chainID nullifier
-        chainIDToRollupID[chainID] = rollupID;
-
-        // Store rollup/chain data
-        rollupAddressToID[rollupAddress] = rollupID;
-        RollupData storage rollup = _rollupIDToRollupData[rollupID];
-        rollup.rollupContract = rollupAddress;
-        rollup.verifier = rollupType.verifier;
-        rollup.chainID = chainID;
-        rollup.rollupVerifierType = rollupType.rollupVerifierType;
-
-        // Initialize chain
-        IALAuthenticatorBase(rollupAddress).initialize(
-            initializeBytesCustomChain
-        );
-        emit CreateNewRollup(
-            rollupID,
-            0,
-            rollupAddress,
-            chainID,
-            address(0) // No need to publish gas token address?
-        );
     }
 
     /**
@@ -813,7 +748,6 @@ contract PolygonRollupManager is
      * @param upgradeData Upgrade data
      */
     function _updateRollup(
-        // TODO: update rollup from pessimistic to gateway, new func upgradePessimisticToAggL copy state from pessimistic to gateway, auth contract as input
         ITransparentUpgradeableProxy rollupContract,
         uint32 newRollupTypeID,
         bytes memory upgradeData
@@ -823,7 +757,7 @@ contract PolygonRollupManager is
             revert RollupTypeDoesNotExist();
         }
         // TODO: Check types pessimistic -> gateway
-        // - update rollupdata
+        // - update rollupData
         // Check the rollup exists
         uint32 rollupID = rollupAddressToID[address(rollupContract)];
         if (rollupID == 0) {
@@ -844,8 +778,12 @@ contract PolygonRollupManager is
             revert RollupTypeObsolete();
         }
 
-        // Check rollup types
-        if (rollup.rollupVerifierType != newRollupType.rollupVerifierType) {
+        uint64 lastVerifiedBatch = getLastVerifiedBatch(rollupID);
+        // Only if upgrading to ALGateway upgrading to a different verifier type is supported
+        if (
+            newRollupType.rollupVerifierType != VerifierType.ALGateway &&
+            rollup.rollupVerifierType != newRollupType.rollupVerifierType
+        ) {
             revert UpdateNotCompatible();
         }
 
@@ -855,15 +793,12 @@ contract PolygonRollupManager is
         rollup.programVKey = newRollupType.programVKey;
         rollup.rollupTypeID = newRollupTypeID;
 
-        uint64 lastVerifiedBatch = getLastVerifiedBatch(rollupID);
         rollup.lastVerifiedBatchBeforeUpgrade = lastVerifiedBatch;
-
         // Upgrade rollup
         rollupContract.upgradeToAndCall(
             newRollupType.consensusImplementation,
             upgradeData
         );
-
         emit UpdateRollup(rollupID, newRollupTypeID, lastVerifiedBatch);
     }
 
