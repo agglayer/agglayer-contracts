@@ -22,10 +22,8 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
 
     // Address that will be able to adjust contract parameters
     address public admin;
-    // Question: clean this vars?
     // This account will be able to accept the admin role
     address public pendingAdmin;
-
     // Trusted sequencer address
     address public trustedSequencer;
 
@@ -37,6 +35,12 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
 
     // Token address that will be used to pay gas fees in this chain. This variable it's just for read purposes
     address public gasTokenAddress;
+
+    // Network/Rollup identifier
+    uint32 public networkID;
+
+    // Chain identifier
+    uint64 public chainID;
 
     // Native network of the token address of the gas token address. This variable it's just for read purposes
     uint32 public gasTokenNetwork;
@@ -71,15 +75,20 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
             address _admin,
             address _trustedSequencer,
             address _gasTokenAddress,
+            uint32 _networkID,
+            uint64 _chainID,
             string memory _sequencerURL,
             string memory _networkName
-        ) = abi.decode(
+        ) =
+            abi.decode(
                 initializeBytesCustomChain,
-                (address, address, address, string, string)
+                (address, address, address, uint32, uint64, string, string)
             );
         admin = _admin;
         trustedSequencer = _trustedSequencer;
         gasTokenAddress = _gasTokenAddress;
+        networkID = _networkID;
+        chainID = _chainID;
         trustedSequencerURL = _sequencerURL;
         networkName = _networkName;
     }
@@ -156,16 +165,20 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
     }
 
     function _getAuthenticatorVKey(
-        PolygonVerifierGateway.AuthenticatorVKeyTypes authenticatorVKeyType,
+        AggLayerGateway.AuthenticatorVKeyTypes authenticatorVKeyType,
         bytes4 selector
     ) internal view returns (bytes32) {
         if (_authenticatorVKey != 0) {
             return _authenticatorVKey;
         }
         // Retrieve authenticator key from VerifierGateway
-        PolygonVerifierGateway polygonVerifierGatewayAddress = PolygonRollupManager(
+        AggLayerGateway aggLayerGatewayAddress = PolygonRollupManager(
                 rollupManager
-            ).polygonVerifierGateway();
-        return polygonVerifierGatewayAddress.getAuthenticatorVKey(authenticatorVKeyType, selector);
+            ).aggLayerGateway();
+        return
+            aggLayerGatewayAddress.getAuthenticatorVKey(
+                authenticatorVKeyType,
+                selector
+            );
     }
 }

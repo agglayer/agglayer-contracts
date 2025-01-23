@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 /// @notice This contract verifies proofs by routing to the correct verifier based on the verifier
 /// selector contained in the first 4 bytes of the proof. It additionally checks that to see that
 /// the verifier route is not frozen.
-contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
+contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     mapping(bytes32 => bytes32) public storedAuthenticatorVKeys;
 
     /// @inheritdoc ISP1VerifierGateway
@@ -27,9 +27,6 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     // This account will be able to accept the admin role
     address public pendingAdmin;
 
-    // pessimistic program verification key
-    bytes32 public pessimisticVKey;
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -43,9 +40,19 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     /**
      * @dev Emitted when the admin updates the pessimistic program verification key
      */
-    event SetPessimisticVKey(bytes32 newPessimisticVKey);
+    event UpdatePessimisticVKey(
+        bytes4 selector,
+        address verifier,
+        bytes32 newPessimisticVKey
+    );
 
-    event UpdateVKey(
+    event AddAuthenticatorVKey(
+        AuthenticatorVKeyTypes vKeyType,
+        bytes4 selector,
+        bytes32 newVKey
+    );
+
+    event UpdateAuthenticatorVKey(
         AuthenticatorVKeyTypes vKeyType,
         bytes4 selector,
         bytes32 newVKey
@@ -61,6 +68,13 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
      */
     event AcceptAdminRole(address newAdmin);
 
+    /**
+     * @dev Emitted when a whitelisted authenticator is added or updated
+     */
+    event UpdateWhitelistedAuthenticator(
+        address authenticator,
+        bool whitelisted
+    );
     /**
      * @dev Disable initializers on the implementation following the best practices
      */
@@ -97,7 +111,7 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
             revert RouteIsFrozen(selector);
         }
         ISP1Verifier(route.verifier).verifyProof(
-            pessimisticVKey,
+            route.pessimisticVKey,
             publicValues,
             proofBytes
         );
@@ -108,7 +122,10 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     //////////////////
 
     /// @inheritdoc ISP1VerifierGateway
-    function addRoute(address verifier) external onlyAdmin {
+    function addRoute(
+        address verifier,
+        bytes32 pessimisticVKey
+    ) external onlyAdmin {
         bytes4 selector = bytes4(
             ISP1VerifierWithHash(verifier).VERIFIER_HASH()
         );
@@ -122,8 +139,28 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         }
 
         route.verifier = verifier;
+        route.pessimisticVKey = pessimisticVKey;
+        emit RouteAdded(selector, verifier, pessimisticVKey);
+    }
 
-        emit RouteAdded(selector, verifier);
+    function updatePessimisticVKeyFromRoute(
+        bytes4 selector,
+        bytes32 newPessimisticVKey
+    ) external onlyAdmin {
+        VerifierRoute storage route = routes[selector];
+        if (route.verifier == address(0)) {
+            revert RouteNotFound(selector);
+        } else if (route.frozen) {
+            revert RouteIsFrozen(selector);
+        }
+
+        route.pessimisticVKey = newPessimisticVKey;
+
+        emit UpdatePessimisticVKey(
+            selector,
+            route.verifier,
+            newPessimisticVKey
+        );
     }
 
     /// @inheritdoc ISP1VerifierGateway
@@ -142,17 +179,7 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
     }
 
     /**
-     * @notice Function to update the pessimistic program verification key
-     * @param newPessimisticVKey New pessimistic program verification key
-     */
-    function setPessimisticVKey(bytes32 newPessimisticVKey) external onlyAdmin {
-        pessimisticVKey = newPessimisticVKey;
-
-        emit SetPessimisticVKey(newPessimisticVKey);
-    }
-
-    /**
-     * @notice Function to update a verification key
+     * @notice Function to add an authenticator verification key
      * @param authenticatorVKeyType Type of the verification key
      * @param selector Selector of the SP1 verifier route
      * @param newAuthenticatorVKey New pessimistic program verification key
@@ -163,12 +190,42 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         bytes32 newAuthenticatorVKey
     ) external onlyAdmin {
         bytes32 key = keccak256(
-            abi.encodePacked(authenticatorVKeyType, selector)
+            abi.encodePacked(selector, authenticatorVKeyType)
         );
+        // Check already exists
+        if (storedAuthenticatorVKeys[key] != bytes32(0)) {
+            revert AuthenticatorVKeyAlreadyExists();
+        }
         // Add the new VKey to the mapping
         storedAuthenticatorVKeys[key] = newAuthenticatorVKey;
 
-        emit UpdateVKey(authenticatorVKeyType, selector, newAuthenticatorVKey);
+        emit AddAuthenticatorVKey(
+            authenticatorVKeyType,
+            selector,
+            newAuthenticatorVKey
+        );
+    }
+
+    function updateAuthenticatorVKey(
+        AuthenticatorVKeyTypes authenticatorVKeyType,
+        bytes4 selector,
+        bytes32 newAuthenticatorVKey
+    ) external onlyAdmin {
+        bytes32 key = keccak256(
+            abi.encodePacked(selector, authenticatorVKeyType)
+        );
+        // Check if the key exists
+        if (storedAuthenticatorVKeys[key] == bytes32(0)) {
+            revert AuthenticatorVKeyNotFound();
+        }
+        // Update the VKey
+        storedAuthenticatorVKeys[key] = newAuthenticatorVKey;
+
+        emit UpdateAuthenticatorVKey(
+            authenticatorVKeyType,
+            selector,
+            newAuthenticatorVKey
+        );
     }
 
     function getAuthenticatorVKey(
@@ -213,6 +270,6 @@ contract PolygonVerifierGateway is ISP1VerifierGateway, Initializable {
         bool whitelisted
     ) external onlyAdmin {
         whitelistedAuthenticators[authenticator] = whitelisted;
-        // TODO: Create event
+        emit UpdateWhitelistedAuthenticator(authenticator, whitelisted);
     }
 }

@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "../interfaces/IALAuthenticator.sol";
 import "../lib/ALAuthenticatorBase.sol";
-import "../PolygonVerifierGateway.sol";
+import "../AggLayerGateway.sol";
 
 contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
     // Set the vKeyType of the authenticator
@@ -47,9 +47,18 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
      * authConfig = keccak256(abi.encodePacked(trusted_sequencer))
      */
     function getAuthenticatorHash(
-        bytes4 selector,
+        bytes calldata aggLayerVerifyParameters,
         bytes memory
     ) external view returns (bytes32) {
+        (, , , , , bytes memory proof) = abi.decode(
+            aggLayerVerifyParameters,
+            (uint32, bytes32, bytes32, bytes32, bytes, bytes)
+        );
+        // we need to use assembly to load the first 4 bytes of a non dynamic calldata array
+        bytes4 selector;
+        assembly {
+            selector := mload(add(proof, 32)) // load first 4 byes of proof
+        }
         return
             keccak256(
                 abi.encodePacked(

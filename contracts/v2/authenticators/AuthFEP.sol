@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "../lib/ALAuthenticatorBase.sol";
 import "../interfaces/IALAuthenticator.sol";
-import "../PolygonVerifierGateway.sol";
+import "../AggLayerGateway.sol";
 
 contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
     // Set the vKeyType of the authenticator
@@ -88,18 +88,18 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
      * Field:           | AUTH_TYPE | authenticatorVKey   | authConfig |
      * length (bits):   |    32     |       256           | 256       |
      * uint256 auth_config = keccak256(abi.encodePacked(l1Head, l2PreRoot, claimRoot, claimBlockNum, rollupConfigHash, rangeVkeyCommitment, aggregationVkey))
-     * @param configParams TODO
+     * @param customChainData TODO
      */
     function getAuthenticatorHash(
-        bytes4 selector,
-        bytes memory configParams
+        bytes memory aggLayerVerifyParameters,
+        bytes memory customChainData
     ) external view returns (bytes32) {
         (
             bytes32 l1Head,
             bytes32 l2PreRoot,
             bytes32 claimRoot,
             uint256 claimBlockNum
-        ) = abi.decode(configParams, (bytes32, bytes32, bytes32, uint256));
+        ) = abi.decode(customChainData, (bytes32, bytes32, bytes32, uint256));
         bytes32 authConfig = keccak256(
             abi.encodePacked(
                 l1Head,
@@ -111,7 +111,16 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
                 aggregationVkey
             )
         );
-
+        // get selector from aggLayerVerifyParameters
+        (, , , , , bytes memory proof) = abi.decode(
+            aggLayerVerifyParameters,
+            (uint32, bytes32, bytes32, bytes32, bytes, bytes)
+        );
+        // we need to use assembly to load the first 4 bytes of a non dynamic calldata array
+        bytes4 selector;
+        assembly {
+            selector := mload(add(proof, 32)) // load first 4 byes of proof
+        }
         return
             keccak256(
                 abi.encodePacked(

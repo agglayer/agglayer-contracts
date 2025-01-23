@@ -346,7 +346,7 @@ interface IPolygonRollupManager {
     ) external;
 
     function addExistingRollup(
-        IPolygonRollupBase rollupAddress,
+        address rollupAddress,
         address verifier,
         uint64 forkID,
         uint64 chainID,
@@ -435,7 +435,7 @@ interface IPolygonRollupManager {
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
         bytes memory customDataConsensus,
-        bytes4 selector
+        bytes calldata proof
     ) external returns (bytes memory);
 
     function getInputSnarkBytes(
