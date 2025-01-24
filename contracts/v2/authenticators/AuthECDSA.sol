@@ -6,9 +6,6 @@ import "../lib/ALAuthenticatorBase.sol";
 import "../AggLayerGateway.sol";
 
 contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
-    // Set the vKeyType of the authenticator
-    ISP1VerifierGateway.AuthenticatorVKeyTypes public authenticatorVKeyType =
-        ISP1VerifierGateway.AuthenticatorVKeyTypes.ECDSA;
     //////////
     // Events
     /////////
@@ -36,7 +33,6 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
 
         // set chain variables
         trustedSequencer = _trustedSequencer;
-        _authenticatorVKey = __authenticatorVKey;
     }
 
     /**
@@ -47,22 +43,13 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
      * authConfig = keccak256(abi.encodePacked(trusted_sequencer))
      */
     function getAuthenticatorHash(
-        bytes calldata aggLayerVerifyParameters,
-        bytes memory
+        bytes memory customChainData
     ) external view returns (bytes32) {
-        (, , , , , bytes memory proof) = abi.decode(
-            aggLayerVerifyParameters,
-            (uint32, bytes32, bytes32, bytes32, bytes, bytes)
-        );
-        // we need to use assembly to load the first 4 bytes of a non dynamic calldata array
-        bytes4 selector;
-        assembly {
-            selector := mload(add(proof, 32)) // load first 4 byes of proof
-        }
+        bytes4 selector = abi.decode(customChainData, (bytes4));
         return
             keccak256(
                 abi.encodePacked(
-                    _getAuthenticatorVKey(authenticatorVKeyType, selector),
+                    _getAuthenticatorVKey(selector),
                     keccak256(abi.encodePacked(trustedSequencer))
                 )
             );
@@ -71,7 +58,7 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
     function getAuthenticatorVKey(
         bytes4 selector
     ) external view returns (bytes32) {
-        return _getAuthenticatorVKey(authenticatorVKeyType, selector);
+        return _getAuthenticatorVKey(selector);
     }
 
     // function to save the customData

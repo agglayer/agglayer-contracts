@@ -7,7 +7,6 @@ interface IALAuthenticator {
     /// @dev Each chain should properly manage its own consensus hash.
     /// @param customChainData Custom chain data to build the consensus hash.
     function getAuthenticatorHash(
-        bytes memory aggLayerVerifyParameters,
         bytes memory customChainData
     ) external view returns (bytes32);
 

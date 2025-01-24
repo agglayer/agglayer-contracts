@@ -6,10 +6,6 @@ import "../interfaces/IALAuthenticator.sol";
 import "../AggLayerGateway.sol";
 
 contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
-    // Set the vKeyType of the authenticator
-    ISP1VerifierGateway.AuthenticatorVKeyTypes public authenticatorVKeyType =
-        ISP1VerifierGateway.AuthenticatorVKeyTypes.FEP;
-
     // final vKey to verify final FEP aggregation
     bytes32 public aggregationVkey;
     bytes32 public chainConfigHash;
@@ -52,27 +48,16 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
             uint128 initTimestamp,
             uint128 initL2BlockNumber,
             address _admin,
-            bytes32 __authenticatorVKey,
             bytes32 _aggregationVkey,
             bytes32 _chainConfigHash,
             bytes32 _rangeVkeyCommitment
         ) = abi.decode(
                 initializeBytesCustomChain,
-                (
-                    bytes32,
-                    uint128,
-                    uint128,
-                    address,
-                    bytes32,
-                    bytes32,
-                    bytes32,
-                    bytes32
-                )
+                (bytes32, uint128, uint128, address, bytes32, bytes32, bytes32)
             );
 
         // set the admin
         admin = _admin;
-        _authenticatorVKey = __authenticatorVKey;
         aggregationVkey = _aggregationVkey;
         chainConfigHash = _chainConfigHash;
         rangeVkeyCommitment = _rangeVkeyCommitment;
@@ -91,15 +76,18 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
      * @param customChainData TODO
      */
     function getAuthenticatorHash(
-        bytes memory aggLayerVerifyParameters,
         bytes memory customChainData
     ) external view returns (bytes32) {
         (
+            bytes4 selector,
             bytes32 l1Head,
             bytes32 l2PreRoot,
             bytes32 claimRoot,
             uint256 claimBlockNum
-        ) = abi.decode(customChainData, (bytes32, bytes32, bytes32, uint256));
+        ) = abi.decode(
+                customChainData,
+                (bytes4, bytes32, bytes32, bytes32, uint256)
+            );
         bytes32 authConfig = keccak256(
             abi.encodePacked(
                 l1Head,
@@ -111,21 +99,12 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
                 aggregationVkey
             )
         );
-        // get selector from aggLayerVerifyParameters
-        (, , , , , bytes memory proof) = abi.decode(
-            aggLayerVerifyParameters,
-            (uint32, bytes32, bytes32, bytes32, bytes, bytes)
-        );
-        // we need to use assembly to load the first 4 bytes of a non dynamic calldata array
-        bytes4 selector;
-        assembly {
-            selector := mload(add(proof, 32)) // load first 4 byes of proof
-        }
+
         return
             keccak256(
                 abi.encodePacked(
                     AUTH_TYPE,
-                    _getAuthenticatorVKey(authenticatorVKeyType, selector),
+                    _getAuthenticatorVKey(selector),
                     chainConfigHash,
                     rangeVkeyCommitment,
                     authConfig
@@ -133,8 +112,10 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
             );
     }
 
-    function getAuthenticatorVKey(bytes4 selector) external view returns (bytes32) {
-        return _getAuthenticatorVKey(authenticatorVKeyType, selector);
+    function getAuthenticatorVKey(
+        bytes4 selector
+    ) external view returns (bytes32) {
+        return _getAuthenticatorVKey(selector);
     }
 
     /**

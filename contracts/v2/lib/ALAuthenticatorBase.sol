@@ -14,6 +14,12 @@ import "../PolygonRollupManager.sol";
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  */
 abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
+    struct AuthRoute {
+        bytes plonkVKey;
+        bytes32 authVKey;
+        bool frozen;
+    }
+
     // Rollup manager
     PolygonRollupManager public immutable rollupManager;
 
@@ -45,8 +51,11 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
     // Native network of the token address of the gas token address. This variable it's just for read purposes
     uint32 public gasTokenNetwork;
 
-    // authenticatorVKey
-    bytes32 internal _authenticatorVKey;
+    // Flag to enable/disable the use of the custom chain gateway to handle the authenticator keys. In case  of false (default), the keys are managed by the aggregation layer gateway
+    bool public useCustomChainGateway;
+
+    // authenticatorVKeys mapping
+    mapping(bytes4 => AuthRoute) public authRoutes;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -79,8 +88,7 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
             uint64 _chainID,
             string memory _sequencerURL,
             string memory _networkName
-        ) =
-            abi.decode(
+        ) = abi.decode(
                 initializeBytesCustomChain,
                 (address, address, address, uint32, uint64, string, string)
             );
@@ -157,27 +165,57 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
         emit AcceptAdminRole(pendingAdmin);
     }
 
-    function setAuthenticatorVKey(
-        bytes32 newAuthenticatorVKey
+    function switchCustomChainGatewayFlag() external onlyAdmin {
+        useCustomChainGateway = !useCustomChainGateway;
+        // Emit event
+        emit UpdateUseCustomChainGatewayFlag(useCustomChainGateway);
+    }
+
+    function addAuthenticatorRoute(
+        bytes4 selector,
+        bytes32 authVKey,
+        bytes calldata plonkVKey
     ) external onlyAdmin {
-        _authenticatorVKey = newAuthenticatorVKey;
-        emit SetAuthenticatorVKey(newAuthenticatorVKey);
+        if (authVKey == bytes32(0)) {
+            revert InvalidAuthVKey();
+        }
+        AuthRoute storage authRoute = authRoutes[selector];
+        // Check already added
+        if (authRoute.authVKey != bytes32(0)) {
+            revert AuthRouteAlreadyAdded();
+        }
+        authRoute.authVKey = authVKey;
+        authRoute.plonkVKey = plonkVKey;
+        emit AddAuthenticatorVKey(selector, authVKey);
+    }
+
+    function updateAuthenticatorRoute(
+        bytes4 selector,
+        bytes32 updatedAuthVKey,
+        bytes calldata updatedPlonkVKey
+    ) external onlyAdmin {
+        AuthRoute storage authRoute = authRoutes[selector];
+        // Check already added
+        if (authRoute.authVKey != bytes32(0)) {
+            revert AuthRouteNotFound();
+        }
+        authRoute.authVKey = updatedAuthVKey;
+        authRoute.plonkVKey = updatedPlonkVKey;
+        emit UpdateAuthenticatorVKey(selector, updatedAuthVKey);
     }
 
     function _getAuthenticatorVKey(
-        AggLayerGateway.AuthenticatorVKeyTypes authenticatorVKeyType,
         bytes4 selector
     ) internal view returns (bytes32) {
-        if (_authenticatorVKey != 0) {
-            return _authenticatorVKey;
+        if (useCustomChainGateway) {
+            return authRoutes[selector].authVKey;
         }
         // Retrieve authenticator key from VerifierGateway
         AggLayerGateway aggLayerGatewayAddress = PolygonRollupManager(
-                rollupManager
-            ).aggLayerGateway();
+            rollupManager
+        ).aggLayerGateway();
         return
             aggLayerGatewayAddress.getAuthenticatorVKey(
-                authenticatorVKeyType,
                 selector
             );
     }

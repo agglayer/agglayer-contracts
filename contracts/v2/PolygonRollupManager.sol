@@ -1189,8 +1189,7 @@ contract PolygonRollupManager is
             l1InfoRoot,
             newLocalExitRoot,
             newPessimisticRoot,
-            customChainData,
-            proof
+            customChainData
         );
 
         // Verify proof
@@ -1467,8 +1466,7 @@ contract PolygonRollupManager is
                 l1InfoTreeRoot,
                 newLocalExitRoot,
                 newPessimisticRoot,
-                customDataAuthenticator,
-                proof
+                customDataAuthenticator
             );
     }
 
@@ -1518,22 +1516,14 @@ contract PolygonRollupManager is
         bytes32 l1InfoTreeRoot,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes memory customDataAuthenticator, // TODO change name
-        bytes calldata proof
+        bytes memory customDataAuthenticator // TODO change name
     ) internal view returns (bytes memory) {
-        bytes memory aggLayerVerifyParameters = abi.encodePacked(
-            rollupID,
-            l1InfoTreeRoot,
-            newLocalExitRoot,
-            newPessimisticRoot,
-            proof
-        );
+
         // Get consensus information from the consensus contract
         bytes32 consensusHash;
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
             consensusHash = IALAuthenticator(rollup.rollupContract)
                 .getAuthenticatorHash(
-                    aggLayerVerifyParameters,
                     customDataAuthenticator
                 );
         } else {

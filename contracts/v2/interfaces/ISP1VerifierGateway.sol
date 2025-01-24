@@ -64,14 +64,10 @@ interface ISP1VerifierGateway is
     ISP1VerifierGatewayEvents,
     ISP1VerifierGatewayErrors
 {
-    enum AuthenticatorVKeyTypes { 
-        ECDSA,
-        FEP
-    }
     /**
      * @notice returns the current authenticator verification key, used to verify chain's FEP
      */
-    function getAuthenticatorVKey(AuthenticatorVKeyTypes authenticatorVKeyType, bytes4 selector) external view returns (bytes32);
+    function getAuthenticatorVKey(bytes4 selector) external view returns (bytes32);
 
     /// @notice Verifies a pessimistic proof with given public values and proof.
     /// @dev It is expected that the first 4 bytes of proofBytes must match the first 4 bytes of
@@ -101,7 +97,7 @@ interface ISP1VerifierGateway is
     /// @param verifier The address of the verifier contract. This verifier MUST implement the
     /// ISP1VerifierWithHash interface.
     /// @param pessimisticVKey The verification key to be used for verifying pessimistic proofs.
-    function addRoute(address verifier, bytes32 pessimisticVKey) external;
+    function addRoute(bytes4 selector, address verifier, bytes32 pessimisticVKey) external;
 
     /// @notice Freezes a verifier route. This prevents proofs from being routed to this verifier.
     /// @dev Only callable by the owner. Once a route to a verifier is frozen, it cannot be

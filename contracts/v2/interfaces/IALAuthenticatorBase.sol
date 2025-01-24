@@ -26,7 +26,11 @@ interface IALAuthenticatorBaseEvents {
     /**
      * @dev Emitted when the admin updates the authenticator verification key
      */
-    event SetAuthenticatorVKey(bytes32 newAuthenticatorVKey);
+    event AddAuthenticatorVKey(bytes4 selector, bytes32 newAuthenticatorVKey);
+
+    event UpdateAuthenticatorVKey(bytes4 selector, bytes32 newAuthenticatorVKey);
+
+    event UpdateUseCustomChainGatewayFlag(bool useCustomChainGateway);
 }
 
 interface IALAuthenticatorBaseErrors {
@@ -44,17 +48,23 @@ interface IALAuthenticatorBaseErrors {
      * @dev Thrown when the caller is not the trusted sequencer
      */
     error OnlyRollupManager();
+
+    error InvalidAuthVKey();
+
+    error AuthRouteAlreadyAdded();
+
+    error AuthRouteNotFound();
 }
 
 interface IALAuthenticatorBase is
     IALAuthenticatorBaseErrors,
     IALAuthenticatorBaseEvents
 {
-    function initialize(
-        bytes calldata initializeBytesCustomChain
-    ) external;
+    function initialize(bytes calldata initializeBytesCustomChain) external;
 
     function admin() external returns (address);
 
-    function getAuthenticatorVKey(bytes4 selector) external returns (bytes32);
+    function getAuthenticatorVKey(
+        bytes4 selector
+    ) external returns (bytes32);
 }

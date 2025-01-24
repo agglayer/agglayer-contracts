@@ -13,9 +13,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 /// selector contained in the first 4 bytes of the proof. It additionally checks that to see that
 /// the verifier route is not frozen.
 contract AggLayerGateway is ISP1VerifierGateway, Initializable {
-    mapping(bytes32 => bytes32) public storedAuthenticatorVKeys;
+    mapping(bytes4 => bytes32) public storedAuthenticatorVKeys;
 
-    /// @inheritdoc ISP1VerifierGateway
     mapping(bytes4 => VerifierRoute) public routes;
 
     // admin
@@ -44,13 +43,11 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     );
 
     event AddAuthenticatorVKey(
-        AuthenticatorVKeyTypes vKeyType,
         bytes4 selector,
         bytes32 newVKey
     );
 
     event UpdateAuthenticatorVKey(
-        AuthenticatorVKeyTypes vKeyType,
         bytes4 selector,
         bytes32 newVKey
     );
@@ -120,12 +117,10 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
 
     /// @inheritdoc ISP1VerifierGateway
     function addRoute(
+        bytes4 selector,
         address verifier,
         bytes32 pessimisticVKey
     ) external onlyAdmin {
-        bytes4 selector = bytes4(
-            ISP1VerifierWithHash(verifier).VERIFIER_HASH()
-        );
         if (selector == bytes4(0)) {
             revert SelectorCannotBeZero();
         }
@@ -177,62 +172,47 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
 
     /**
      * @notice Function to add an authenticator verification key
-     * @param authenticatorVKeyType Type of the verification key
      * @param selector Selector of the SP1 verifier route
      * @param newAuthenticatorVKey New pessimistic program verification key
      */
     function addAuthenticatorVKey(
-        AuthenticatorVKeyTypes authenticatorVKeyType,
         bytes4 selector,
         bytes32 newAuthenticatorVKey
     ) external onlyAdmin {
-        bytes32 key = keccak256(
-            abi.encodePacked(selector, authenticatorVKeyType)
-        );
         // Check already exists
-        if (storedAuthenticatorVKeys[key] != bytes32(0)) {
+        if (storedAuthenticatorVKeys[selector] != bytes32(0)) {
             revert AuthenticatorVKeyAlreadyExists();
         }
         // Add the new VKey to the mapping
-        storedAuthenticatorVKeys[key] = newAuthenticatorVKey;
+        storedAuthenticatorVKeys[selector] = newAuthenticatorVKey;
 
         emit AddAuthenticatorVKey(
-            authenticatorVKeyType,
             selector,
             newAuthenticatorVKey
         );
     }
 
     function updateAuthenticatorVKey(
-        AuthenticatorVKeyTypes authenticatorVKeyType,
         bytes4 selector,
         bytes32 newAuthenticatorVKey
     ) external onlyAdmin {
-        bytes32 key = keccak256(
-            abi.encodePacked(selector, authenticatorVKeyType)
-        );
         // Check if the key exists
-        if (storedAuthenticatorVKeys[key] == bytes32(0)) {
+        if (storedAuthenticatorVKeys[selector] == bytes32(0)) {
             revert AuthenticatorVKeyNotFound();
         }
         // Update the VKey
-        storedAuthenticatorVKeys[key] = newAuthenticatorVKey;
+        storedAuthenticatorVKeys[selector] = newAuthenticatorVKey;
 
         emit UpdateAuthenticatorVKey(
-            authenticatorVKeyType,
             selector,
             newAuthenticatorVKey
         );
     }
 
     function getAuthenticatorVKey(
-        AuthenticatorVKeyTypes authenticatorVKeyType,
         bytes4 selector
     ) external view returns (bytes32) {
-        bytes32 key = keccak256(
-            abi.encodePacked(authenticatorVKeyType, selector)
-        );
-        return storedAuthenticatorVKeys[key];
+        return storedAuthenticatorVKeys[selector];
     }
 
     /**
@@ -256,5 +236,4 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
         admin = pendingAdmin;
         emit AcceptAdminRole(pendingAdmin);
     }
-
 }
