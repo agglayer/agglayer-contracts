@@ -170,6 +170,9 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
         emit RouteFrozen(selector, route.verifier);
     }
 
+    function getPessimisticVKey(bytes4 selector) public view returns (bytes32) {
+        return routes[selector].pessimisticVKey;
+    }
     /**
      * @notice Function to add an authenticator verification key
      * @param selector Selector of the SP1 verifier route

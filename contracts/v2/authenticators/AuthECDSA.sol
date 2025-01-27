@@ -26,9 +26,9 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
         bytes memory initializeBytesCustomChain
     ) external override onlyRollupManager initializer {
         // custom parsing of the initializeBytesCustomChain
-        (address _trustedSequencer, bytes32 __authenticatorVKey) = abi.decode(
+        address _trustedSequencer = abi.decode(
             initializeBytesCustomChain,
-            (address, bytes32)
+            (address)
         );
 
         // set chain variables

@@ -298,11 +298,6 @@ interface IPolygonRollupManager {
     error OnlyChainsWithPessimisticProofs();
 
     /**
-     * @dev Only Chains with PessimisticV3
-     */
-    error OnlyChainsWithPessimisticV3();
-
-    /**
      * @dev Invalid Pessimistic proof
      */
     error InvalidPessimisticProof();
@@ -393,16 +388,9 @@ interface IPolygonRollupManager {
         uint32 l1InfoTreeLeafCount,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes calldata proof
-    ) external;
-
-    function verifyPessimisticTrustedAggregatorV3(
-        uint32 rollupID,
-        uint32 l1InfoTreeLeafCount,
-        bytes32 newLocalExitRoot,
-        bytes32 newPessimisticRoot,
-        bytes memory customChainData,
-        bytes calldata proof
+        bytes calldata proof,
+        bytes4 selector,
+        bytes memory customChainData
     ) external;
 
     function activateEmergencyState() external;
@@ -430,13 +418,12 @@ interface IPolygonRollupManager {
         bytes32 newPessimisticRoot
     ) external view returns (bytes memory);
 
-    function getInputPessimisticBytesV3(
+    function getInputPessimisticBytesAL(
         uint32 rollupID,
         bytes32 selectedGlobalExitRoot,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes memory customDataConsensus,
-        bytes calldata proof
+        bytes memory customChainData
     ) external returns (bytes memory);
 
     function getInputSnarkBytes(

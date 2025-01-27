@@ -8,7 +8,7 @@ import {ISP1Verifier} from "./ISP1Verifier.sol";
 /// @dev A struct containing the address of a verifier and whether the verifier is frozen. A
 /// frozen verifier cannot be routed to.
 struct VerifierRoute {
-    address verifier;
+    address verifier; // SP1 Verifier. It contains sanity check SP1 version with the 4 first bytes of the proof. proof[4:]
     bytes32 pessimisticVKey;
     bool frozen;
 }
