@@ -126,7 +126,7 @@ abstract contract PolygonConsensusBase is
         bridgeAddress = _bridgeAddress;
         rollupManager = _rollupManager;
 
-        // Disable initalizers on the implementation following the best practices
+        // Disable initializers on the implementation following the best practices
         _disableInitializers();
     }
 

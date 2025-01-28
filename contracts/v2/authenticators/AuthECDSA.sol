@@ -16,7 +16,7 @@ contract AuthECDSA is ALAuthenticatorBase, IALAuthenticator {
      * @param _rollupManager Rollup manager address
      */
     constructor(
-        PolygonRollupManager _rollupManager
+        address _rollupManager
     ) ALAuthenticatorBase(_rollupManager) {}
 
     /**

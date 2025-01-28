@@ -43,11 +43,11 @@ interface ISP1VerifierGatewayErrors {
     /// zero.
     error SelectorCannotBeZero();
 
-    /// @notice Thrown when the caller is not the admin
-    error OnlyAdmin();
+    /// @notice Thrown when the caller is not the AggLayerAdmin
+    error OnlyAggLayerAdmin();
 
-    //// @notice Thrown when the caller is not the pending admin
-    error OnlyPendingAdmin();
+    //// @notice Thrown when the caller is not the pending AggLayerAdmin
+    error OnlyPendingAggLayerAdmin();
 
     /// @notice Thrown when trying to add an authenticator verification key that already exists
     error AuthenticatorVKeyAlreadyExists();

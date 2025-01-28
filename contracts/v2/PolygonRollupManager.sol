@@ -745,8 +745,7 @@ contract PolygonRollupManager is
         if (newRollupTypeID == 0 || newRollupTypeID > rollupTypeCount) {
             revert RollupTypeDoesNotExist();
         }
-        // TODO: Check types pessimistic -> gateway
-        // - update rollupData
+
         // Check the rollup exists
         uint32 rollupID = rollupAddressToID[address(rollupContract)];
         if (rollupID == 0) {

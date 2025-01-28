@@ -18,10 +18,10 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     mapping(bytes4 => VerifierRoute) public routes;
 
     // admin
-    address public admin;
+    address public aggLayerAdmin;
 
     // This account will be able to accept the admin role
-    address public pendingAdmin;
+    address public pendingAggLayerAdmin;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -34,7 +34,7 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     //////////
 
     /**
-     * @dev Emitted when the admin updates the pessimistic program verification key
+     * @dev Emitted when the aggLayerAdmin updates the pessimistic program verification key
      */
     event UpdatePessimisticVKey(
         bytes4 selector,
@@ -55,12 +55,12 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     /**
      * @dev Emitted when the admin starts the two-step transfer role setting a new pending admin
      */
-    event TransferAdminRole(address newPendingAdmin);
+    event TransferAggLayerAdminRole(address newPendingAggLayerAdmin);
 
     /**
      * @dev Emitted when the pending admin accepts the admin role
      */
-    event AcceptAdminRole(address newAdmin);
+    event AcceptAggLayerAdminRole(address newAggLayerAdmin);
 
     /**
      * @dev Emitted when a whitelisted authenticator is added or updated
@@ -79,15 +79,15 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
 
     /**
      * @notice  Initializer function to set new rollup manager version
-     * @param _admin The address of the admin
+     * @param _aggLayerAdmin The address of the admin
      */
-    function initialize(address _admin) external virtual initializer {
-        admin = _admin;
+    function initialize(address _aggLayerAdmin) external virtual initializer {
+        aggLayerAdmin = _aggLayerAdmin;
     }
 
-    modifier onlyAdmin() {
-        if (admin != msg.sender) {
-            revert OnlyAdmin();
+    modifier onlyAggLayerAdmin() {
+        if (aggLayerAdmin != msg.sender) {
+            revert OnlyAggLayerAdmin();
         }
         _;
     }
@@ -120,7 +120,7 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
         bytes4 selector,
         address verifier,
         bytes32 pessimisticVKey
-    ) external onlyAdmin {
+    ) external onlyAggLayerAdmin {
         if (selector == bytes4(0)) {
             revert SelectorCannotBeZero();
         }
@@ -138,7 +138,7 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     function updatePessimisticVKeyFromRoute(
         bytes4 selector,
         bytes32 newPessimisticVKey
-    ) external onlyAdmin {
+    ) external onlyAggLayerAdmin {
         VerifierRoute storage route = routes[selector];
         if (route.verifier == address(0)) {
             revert RouteNotFound(selector);
@@ -156,7 +156,7 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     }
 
     /// @inheritdoc ISP1VerifierGateway
-    function freezeRoute(bytes4 selector) external onlyAdmin {
+    function freezeRoute(bytes4 selector) external onlyAggLayerAdmin {
         VerifierRoute storage route = routes[selector];
         if (route.verifier == address(0)) {
             revert RouteNotFound(selector);
@@ -181,7 +181,7 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     function addAuthenticatorVKey(
         bytes4 selector,
         bytes32 newAuthenticatorVKey
-    ) external onlyAdmin {
+    ) external onlyAggLayerAdmin {
         // Check already exists
         if (storedAuthenticatorVKeys[selector] != bytes32(0)) {
             revert AuthenticatorVKeyAlreadyExists();
@@ -198,7 +198,7 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     function updateAuthenticatorVKey(
         bytes4 selector,
         bytes32 newAuthenticatorVKey
-    ) external onlyAdmin {
+    ) external onlyAggLayerAdmin {
         // Check if the key exists
         if (storedAuthenticatorVKeys[selector] == bytes32(0)) {
             revert AuthenticatorVKeyNotFound();
@@ -221,22 +221,22 @@ contract AggLayerGateway is ISP1VerifierGateway, Initializable {
     /**
      * @notice Starts the admin role transfer
      * This is a two step process, the pending admin must accepted to finalize the process
-     * @param newPendingAdmin Address of the new pending admin
+     * @param newPendingAggLayerAdmin Address of the new pending admin
      */
-    function transferAdminRole(address newPendingAdmin) external onlyAdmin {
-        pendingAdmin = newPendingAdmin;
-        emit TransferAdminRole(newPendingAdmin);
+    function transferAdminRole(address newPendingAggLayerAdmin) external onlyAggLayerAdmin {
+        pendingAggLayerAdmin = newPendingAggLayerAdmin;
+        emit TransferAggLayerAdminRole(newPendingAggLayerAdmin);
     }
 
     /**
-     * @notice Allow the current pending admin to accept the admin role
+     * @notice Allow the current pending AggLayerAdmin to accept the admin role
      */
-    function acceptAdminRole() external {
-        if (pendingAdmin != msg.sender) {
-            revert OnlyPendingAdmin();
+    function acceptAggLayerAdminRole() external {
+        if (pendingAggLayerAdmin != msg.sender) {
+            revert OnlyPendingAggLayerAdmin();
         }
 
-        admin = pendingAdmin;
-        emit AcceptAdminRole(pendingAdmin);
+        aggLayerAdmin = pendingAggLayerAdmin;
+        emit AcceptAggLayerAdminRole(pendingAggLayerAdmin);
     }
 }

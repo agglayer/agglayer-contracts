@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../interfaces/IALAuthenticatorBase.sol";
 import "../PolygonRollupManager.sol";
+import "./PolygonConsensusBase.sol";
 
 /**
  * Contract responsible for managing the states and the updates of L2 network.
@@ -13,43 +14,24 @@ import "../PolygonRollupManager.sol";
  * The aggregators will be able to verify the sequenced state with zkProofs and therefore make available the withdrawals from L2 network.
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  */
-abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
+abstract contract ALAuthenticatorBase is
+    PolygonConsensusBase,
+    IALAuthenticatorBase
+{
     struct AuthRoute {
         bytes plonkVKey;
         bytes32 authVKey;
         bool frozen;
     }
 
-    // Rollup manager
-    PolygonRollupManager public immutable rollupManager;
-
     // Consensus type that support generic consensus
     uint32 public constant AUTH_TYPE = 1;
-
-    // Address that will be able to adjust contract parameters
-    address public admin;
-    // This account will be able to accept the admin role
-    address public pendingAdmin;
-    // Trusted sequencer address
-    address public trustedSequencer;
-
-    // Trusted sequencer URL
-    string public trustedSequencerURL;
-
-    // L2 network name
-    string public networkName;
-
-    // Token address that will be used to pay gas fees in this chain. This variable it's just for read purposes
-    address public gasTokenAddress;
 
     // Network/Rollup identifier
     uint32 public networkID;
 
     // Chain identifier
     uint64 public chainID;
-
-    // Native network of the token address of the gas token address. This variable it's just for read purposes
-    uint32 public gasTokenNetwork;
 
     // Flag to enable/disable the use of the custom chain gateway to handle the authenticator keys. In case  of false (default), the keys are managed by the aggregation layer gateway
     bool public useCustomChainGateway;
@@ -63,23 +45,23 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
      */
     uint256[50] private _gap;
 
-    // General parameters that will have in common all networks that deploys rollup manager
-    /**
-     * @dev Disable initializers on the implementation following the best practices
-     * @param _rollupManager Global exit root manager address
-     */
-    constructor(PolygonRollupManager _rollupManager) {
-        rollupManager = _rollupManager;
-        // Disable initializers on the implementation following the best practices
-        _disableInitializers();
-    }
+    constructor(
+        address _rollupManager
+    )
+        PolygonConsensusBase(
+            IPolygonZkEVMGlobalExitRootV2(address(0)),
+            IERC20Upgradeable(address(0)),
+            IPolygonZkEVMBridgeV2(address(0)),
+            PolygonRollupManager(_rollupManager)
+        )
+    {}
 
     /**
      * @param initializeBytesCustomChain TODO
      */
     function initialize(
         bytes calldata initializeBytesCustomChain
-    ) external virtual onlyRollupManager initializer {
+    ) external virtual override onlyRollupManager initializer {
         (
             address _admin,
             address _trustedSequencer,
@@ -101,69 +83,9 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
         networkName = _networkName;
     }
 
-    modifier onlyAdmin() {
-        if (admin != msg.sender) {
-            revert OnlyAdmin();
-        }
-        _;
-    }
-
-    modifier onlyRollupManager() {
-        if (address(rollupManager) != msg.sender) {
-            revert OnlyRollupManager();
-        }
-        _;
-    }
-
     //////////////////
     // admin functions
     //////////////////
-
-    /**
-     * @notice Allow the admin to set a new trusted sequencer
-     * @param newTrustedSequencer Address of the new trusted sequencer
-     */
-    function setTrustedSequencer(
-        address newTrustedSequencer
-    ) external onlyAdmin {
-        trustedSequencer = newTrustedSequencer;
-
-        emit SetTrustedSequencer(newTrustedSequencer);
-    }
-
-    /**
-     * @notice Allow the admin to set the trusted sequencer URL
-     * @param newTrustedSequencerURL URL of trusted sequencer
-     */
-    function setTrustedSequencerURL(
-        string memory newTrustedSequencerURL
-    ) external onlyAdmin {
-        trustedSequencerURL = newTrustedSequencerURL;
-
-        emit SetTrustedSequencerURL(newTrustedSequencerURL);
-    }
-
-    /**
-     * @notice Starts the admin role transfer
-     * This is a two step process, the pending admin must accepted to finalize the process
-     * @param newPendingAdmin Address of the new pending admin
-     */
-    function transferAdminRole(address newPendingAdmin) external onlyAdmin {
-        pendingAdmin = newPendingAdmin;
-        emit TransferAdminRole(newPendingAdmin);
-    }
-
-    /**
-     * @notice Allow the current pending admin to accept the admin role
-     */
-    function acceptAdminRole() external {
-        if (pendingAdmin != msg.sender) {
-            revert OnlyPendingAdmin();
-        }
-
-        admin = pendingAdmin;
-        emit AcceptAdminRole(pendingAdmin);
-    }
 
     function switchCustomChainGatewayFlag() external onlyAdmin {
         useCustomChainGateway = !useCustomChainGateway;
@@ -214,9 +136,6 @@ abstract contract ALAuthenticatorBase is IALAuthenticatorBase, Initializable {
         AggLayerGateway aggLayerGatewayAddress = PolygonRollupManager(
             rollupManager
         ).aggLayerGateway();
-        return
-            aggLayerGatewayAddress.getAuthenticatorVKey(
-                selector
-            );
+        return aggLayerGatewayAddress.getAuthenticatorVKey(selector);
     }
 }

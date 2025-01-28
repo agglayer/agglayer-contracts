@@ -33,7 +33,7 @@ contract AuthFEP is ALAuthenticatorBase, IALAuthenticator {
      * @param _rollupManager TODO
      */
     constructor(
-        PolygonRollupManager _rollupManager
+        address _rollupManager
     ) ALAuthenticatorBase(_rollupManager) {}
 
     /**
