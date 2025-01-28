@@ -243,11 +243,6 @@ interface IPolygonRollupManager {
     error EmptyVerifySequencesData();
 
     /**
-     * @dev Update to old rollup ID
-     */
-    error UpdateToOldRollupTypeID();
-
-    /**
      * @dev All batches must be verified before the upgrade
      */
     error AllBatchesMustBeVerified();

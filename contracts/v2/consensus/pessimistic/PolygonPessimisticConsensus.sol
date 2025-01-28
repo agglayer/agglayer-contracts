@@ -34,6 +34,6 @@ contract PolygonPessimisticConsensus is
      * Note Return the necessary consensus information for the proof hashed
      */
     function getConsensusHash() public view returns (bytes32) {
-        return keccak256(abi.encodePacked(trustedSequencer));
+        return keccak256(abi.encodePacked(CONSENSUS_TYPE, trustedSequencer));
     }
 }

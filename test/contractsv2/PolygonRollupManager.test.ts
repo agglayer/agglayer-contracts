@@ -391,7 +391,8 @@ describe("Polygon Rollup Manager", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -404,7 +405,8 @@ describe("Polygon Rollup Manager", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDOutOfRange");
 
@@ -419,7 +421,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeDoesNotExist");
 
@@ -439,7 +442,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeObsolete");
         await snapshot2.restore();
@@ -463,7 +467,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         )
             .to.emit(rollupManagerContract, "CreateNewRollup")
@@ -497,7 +502,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDAlreadyExist");
 
@@ -1399,7 +1405,8 @@ describe("Polygon Rollup Manager", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -1412,7 +1419,8 @@ describe("Polygon Rollup Manager", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDOutOfRange");
 
@@ -1427,7 +1435,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeDoesNotExist");
 
@@ -1447,7 +1456,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeObsolete");
         await snapshot2.restore();
@@ -1471,7 +1481,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         )
             .to.emit(rollupManagerContract, "CreateNewRollup")
@@ -1501,7 +1512,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDAlreadyExist");
 
@@ -2030,7 +2042,8 @@ describe("Polygon Rollup Manager", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -2043,7 +2056,8 @@ describe("Polygon Rollup Manager", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDOutOfRange");
 
@@ -2058,7 +2072,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeDoesNotExist");
 
@@ -2078,7 +2093,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeObsolete");
         await snapshot2.restore();
@@ -2102,7 +2118,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         )
             .to.emit(rollupManagerContract, "CreateNewRollup")
@@ -2132,7 +2149,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDAlreadyExist");
 
@@ -2622,10 +2640,6 @@ describe("Polygon Rollup Manager", () => {
             rollupManagerContract.connect(timelock).updateRollupByRollupAdmin(newZKEVMAddress, etrogRollupType)
         ).to.be.revertedWithCustomError(rollupManagerContract, "OnlyRollupAdmin");
 
-        await expect(
-            rollupManagerContract.connect(admin).updateRollupByRollupAdmin(newZKEVMAddress, 0)
-        ).to.be.revertedWithCustomError(rollupManagerContract, "UpdateToOldRollupTypeID");
-
         // Try update same type
         await expect(
             rollupManagerContract.connect(timelock).updateRollup(newZKEVMAddress, 1, "0x")
@@ -2807,7 +2821,8 @@ describe("Polygon Rollup Manager", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         )
             .to.emit(rollupManagerContract, "CreateNewRollup")

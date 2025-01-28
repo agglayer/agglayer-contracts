@@ -431,7 +431,8 @@ describe("Polygon Rollup manager upgraded", () => {
                 trustedSequencer.address,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
+                networkName,
+                "0x" // initializeBytesCustomChain
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -446,7 +447,8 @@ describe("Polygon Rollup manager upgraded", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeDoesNotExist");
 
@@ -466,7 +468,8 @@ describe("Polygon Rollup manager upgraded", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "RollupTypeObsolete");
         await snapshot2.restore();
@@ -490,7 +493,8 @@ describe("Polygon Rollup manager upgraded", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         )
             .to.emit(rollupManagerContract, "CreateNewRollup")
@@ -520,7 +524,8 @@ describe("Polygon Rollup manager upgraded", () => {
                     trustedSequencer.address,
                     gasTokenAddress,
                     urlSequencer,
-                    networkName
+                    networkName,
+                    "0x" // initializeBytesCustomChain
                 )
         ).to.be.revertedWithCustomError(rollupManagerContract, "ChainIDAlreadyExist");
 
