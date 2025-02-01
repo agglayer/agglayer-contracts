@@ -1,32 +1,44 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import {ISP1Verifier} from "./ISP1Verifier.sol";
 
-// imported from: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
+// based on: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 
 /// @dev A struct containing the address of a verifier and whether the verifier is frozen. A
 /// frozen verifier cannot be routed to.
-struct VerifierRoute {
-    address verifier; // SP1 Verifier. It contains sanity check SP1 version with the 4 first bytes of the proof. proof[4:]
-    bytes32 pessimisticVKey;
-    bool frozen;
-}
 
-interface ISP1VerifierGatewayEvents {
+interface IAggLayerGatewayEvents {
     /// @notice Emitted when a verifier route is added.
     /// @param selector The verifier selector that was added.
     /// @param verifier The address of the verifier contract.
-    event RouteAdded(bytes4 selector, address verifier, bytes32 pessimisticVKey);
+    event RouteAdded(
+        bytes4 selector,
+        address verifier,
+        bytes32 pessimisticVKey
+    );
 
     /// @notice Emitted when a verifier route is frozen.
     /// @param selector The verifier selector that was frozen.
     /// @param verifier The address of the verifier contract.
     event RouteFrozen(bytes4 selector, address verifier);
+
+    /**
+     * @notice Emitted when the aggLayerAdmin updates the pessimistic program verification key
+     */
+    event UpdatePessimisticVKey(
+        bytes4 selector,
+        address verifier,
+        bytes32 newPessimisticVKey
+    );
+
+    event AddDefaultAggchainVKey(bytes4 selector, bytes32 newVKey);
+
+    event UpdateDefaultAggchainVKey(bytes4 selector, bytes32 newVKey);
 }
 
 /// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface ISP1VerifierGatewayErrors {
+interface IAggLayerGatewayErrors {
     /// @notice Thrown when the verifier route is not found.
     /// @param selector The verifier selector that was specified.
     error RouteNotFound(bytes4 selector);
@@ -49,25 +61,32 @@ interface ISP1VerifierGatewayErrors {
     //// @notice Thrown when the caller is not the pending AggLayerAdmin
     error OnlyPendingAggLayerAdmin();
 
-    /// @notice Thrown when trying to add an authenticator verification key that already exists
-    error AuthenticatorVKeyAlreadyExists();
+    /// @notice Thrown when trying to add an aggchain verification key that already exists
+    error AggchainVKeyAlreadyExists();
 
-    /// @notice Thrown when trying to update an authenticator verification key that doesn't exists
-    error AuthenticatorVKeyNotFound();
+    /// @notice Thrown when trying to update an aggchain verification key that doesn't exists
+    error AggchainVKeyNotFound();
 }
 
 /// @title SP1 Verifier Gateway Interface
 /// @author Succinct Labs
 /// @notice This contract is the interface for the SP1 Verifier Gateway.
-/// @notice Extended version of https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface ISP1VerifierGateway is
-    ISP1VerifierGatewayEvents,
-    ISP1VerifierGatewayErrors
-{
+/// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
+interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors {
+    struct AggLayerVerifierRoute {
+        address verifier; // SP1 Verifier. It contains sanity check SP1 version with the 4 first bytes of the proof. proof[4:]
+        bytes32 pessimisticVKey;
+        bool frozen;
+    }
+
     /**
-     * @notice returns the current authenticator verification key, used to verify chain's FEP
+     * @notice returns the current aggchain verification key, used to verify chain's FEP
+     * @dev This function is necessary to query the map from an external function. In solidity maps are not
+     * directly accessible from external functions like other state variables
      */
-    function getAuthenticatorVKey(bytes4 selector) external view returns (bytes32);
+    function getDefaultAggchainVKey(
+        bytes4 defaultAggchainSelector
+    ) external view returns (bytes32);
 
     /// @notice Verifies a pessimistic proof with given public values and proof.
     /// @dev It is expected that the first 4 bytes of proofBytes must match the first 4 bytes of
@@ -79,17 +98,6 @@ interface ISP1VerifierGateway is
         bytes calldata proofBytes
     ) external view;
 
-    /// @notice Mapping of 4-byte verifier selectors to verifier routes.
-    /// @dev Only one verifier route can be added for each selector.
-    /// @param selector The verifier selector, which is both the first 4 bytes of the VERIFIER_HASH
-    /// and the first 4 bytes of the proofs designed for that verifier.
-    /// @return verifier The address of the verifier contract.
-    /// @return pessimisticVKey The pessimistic verification key to use for the chosen selector/route.
-    /// @return frozen Whether the verifier is frozen.
-    function routes(
-        bytes4 selector
-    ) external view returns (address verifier, bytes32 pessimisticVKey, bool frozen);
-
     /// @notice Adds a verifier route. This enable proofs to be routed to this verifier.
     /// @dev Only callable by the owner. The owner is responsible for ensuring that the specified
     /// verifier is correct with a valid VERIFIER_HASH. Once a route to a verifier is added, it
@@ -97,11 +105,17 @@ interface ISP1VerifierGateway is
     /// @param verifier The address of the verifier contract. This verifier MUST implement the
     /// ISP1VerifierWithHash interface.
     /// @param pessimisticVKey The verification key to be used for verifying pessimistic proofs.
-    function addRoute(bytes4 selector, address verifier, bytes32 pessimisticVKey) external;
+    function addPessimisticVKeyRoute(
+        bytes4 pessimisticVKeySelector,
+        address verifier,
+        bytes32 pessimisticVKey
+    ) external;
 
     /// @notice Freezes a verifier route. This prevents proofs from being routed to this verifier.
     /// @dev Only callable by the owner. Once a route to a verifier is frozen, it cannot be
     /// unfrozen.
-    /// @param selector The verifier selector to freeze.
-    function freezeRoute(bytes4 selector) external;
+    /// @param pessimisticVKeySelector The verifier selector to freeze.
+    function freezePessimisticVKeyRoute(
+        bytes4 pessimisticVKeySelector
+    ) external;
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 // imported from: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1Verifier.sol
 

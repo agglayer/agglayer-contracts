@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import "../../interfaces/IVerifierRollup.sol";
 import "./IPolygonRollupBase.sol";
@@ -243,6 +243,11 @@ interface IPolygonRollupManager {
     error EmptyVerifySequencesData();
 
     /**
+     * @dev Update to old rollup ID
+     */
+    error UpdateToOldRollupTypeID();
+
+    /**
      * @dev All batches must be verified before the upgrade
      */
     error AllBatchesMustBeVerified();
@@ -302,11 +307,6 @@ interface IPolygonRollupManager {
      */
     error InvalidVerifierType();
 
-    /**
-     * @dev Invalid Authenticator Address, is not whitelisted for new chain creation
-     */
-    error AuthenticatorAddressNotWhitelisted();
-
     enum VerifierType {
         StateTransition,
         Pessimistic,
@@ -343,7 +343,8 @@ interface IPolygonRollupManager {
         uint64 chainID,
         bytes32 initRoot,
         VerifierType rollupVerifierType,
-        bytes32 programVKey
+        bytes32 programVKey,
+        bytes32 initPessimisticRoot
     ) external;
 
     function updateRollupByRollupAdmin(
@@ -384,7 +385,6 @@ interface IPolygonRollupManager {
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
         bytes calldata proof,
-        bytes4 selector,
         bytes memory customChainData
     ) external;
 
@@ -407,13 +407,6 @@ interface IPolygonRollupManager {
     function getForcedBatchFee() external view returns (uint256);
 
     function getInputPessimisticBytes(
-        uint32 rollupID,
-        bytes32 selectedGlobalExitRoot,
-        bytes32 newLocalExitRoot,
-        bytes32 newPessimisticRoot
-    ) external view returns (bytes memory);
-
-    function getInputPessimisticBytesAL(
         uint32 rollupID,
         bytes32 selectedGlobalExitRoot,
         bytes32 newLocalExitRoot,

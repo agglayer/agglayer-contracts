@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.20;
+pragma solidity 0.8.28;
 import "../PolygonRollupManager.sol";
 
 /**
@@ -14,8 +14,16 @@ contract PolygonRollupManagerNotUpgraded is PolygonRollupManager {
     constructor(
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridge _bridgeAddress
-    ) PolygonRollupManager(_globalExitRootManager, _pol, _bridgeAddress) {}
+        IPolygonZkEVMBridge _bridgeAddress,
+        AggLayerGateway _aggLayerGateway
+    )
+        PolygonRollupManager(
+            _globalExitRootManager,
+            _pol,
+            _bridgeAddress,
+            _aggLayerGateway
+        )
+    {}
 
     function initialize(
         address trustedAggregator,
@@ -23,7 +31,6 @@ contract PolygonRollupManagerNotUpgraded is PolygonRollupManager {
         address timelock,
         address emergencyCouncil
     ) external reinitializer(2) {
-
         // Constant deployment variables
         _batchFee = 0.1 ether; // 0.1 Matic
 

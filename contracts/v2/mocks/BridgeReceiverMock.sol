@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 import "../PolygonZkEVMBridgeV2.sol";
-pragma solidity 0.8.20;
+pragma solidity 0.8.28;
 
 /**
  * Contract for compressing and decompressing claim data
