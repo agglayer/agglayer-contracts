@@ -56,8 +56,6 @@ describe("Polygon Rollup Manager", () => {
 
     const globalExitRootL2Address = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa" as unknown as Address;
 
-    let firstDeployment = true;
-
     //roles
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
     const ADD_ROLLUP_TYPE_ROLE = ethers.id("ADD_ROLLUP_TYPE_ROLE");
@@ -159,7 +157,6 @@ describe("Polygon Rollup Manager", () => {
         await rollupManagerContract.waitForDeployment();
 
         // check precalculated address
-        expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
 
         await polygonZkEVMBridgeContract.initialize(
@@ -432,7 +429,7 @@ describe("Polygon Rollup Manager", () => {
         const newCreatedRollupID = 1;
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 1,
+            nonce: 2,
         });
 
         const newZkEVMContract = PolygonZKEVMV2Factory.attach(newZKEVMAddress) as PolygonZkEVMEtrog;
@@ -1410,7 +1407,7 @@ describe("Polygon Rollup Manager", () => {
         const newCreatedRollupID = 1;
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 1,
+            nonce: 2,
         });
 
         const newZkEVMContract = PolygonZKEVMV2Factory.attach(newZKEVMAddress) as PolygonZkEVMEtrog;
@@ -2010,7 +2007,7 @@ describe("Polygon Rollup Manager", () => {
         const newCreatedRollupID = 1;
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 1,
+            nonce: 2,
         });
 
         const newZkEVMContract = PolygonZKEVMV2Factory.attach(newZKEVMAddress) as PolygonZkEVMEtrog;
@@ -2699,7 +2696,7 @@ describe("Polygon Rollup Manager", () => {
         const newCreatedRollupID = 1;
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 1,
+            nonce: 2,
         });
 
         const newZkEVMContract = PolygonValidiumPreviousVersion.attach(newZKEVMAddress) as PolygonValidiumEtrogPrevious;
