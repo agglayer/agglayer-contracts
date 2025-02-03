@@ -70,7 +70,7 @@ describe("PolygonZkEVMBridge Gas tokens tests", () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor"],
+            unsafeAllow: ["constructor","missing-initializer"],
         })) as unknown as PolygonZkEVMBridgeV2;
 
         // deploy global exit root manager
@@ -140,7 +140,7 @@ describe("PolygonZkEVMBridge Gas tokens tests", () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
         const bridge = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor"],
+            unsafeAllow: ["constructor", "missing-initializer"],
         });
 
         await expect(

@@ -68,7 +68,7 @@ describe("SovereignChainBridge Gas tokens tests", () => {
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor"],
+            unsafeAllow: ["constructor","missing-initializer","missing-initializer-call"],
         })) as unknown as BridgeL2SovereignChain;
 
         // deploy global exit root manager

@@ -60,19 +60,11 @@ describe("PolygonValidiumEtrog", () => {
     const networkIDRollup = 1;
 
     const LEAF_TYPE_ASSET = 0;
-    const LEAF_TYPE_MESSAGE = 1;
 
     const globalExitRootL2Address = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa" as unknown as Address;
 
-    let firstDeployment = true;
-
     const urlSequencer = "http://zkevm-json-rpc:8123";
-    const chainID = 1000;
     const networkName = "zkevm";
-    const forkID = 0;
-    const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
-    const rollupCompatibilityID = 0;
-    const descirption = "zkevm test";
     const networkID = 1;
 
     // Native token will be ether
@@ -102,54 +94,24 @@ describe("PolygonValidiumEtrog", () => {
             polTokenInitialBalance
         );
 
-        /*
-         * deploy global exit root manager
-         * In order to not have trouble with nonce deploy first proxy admin
-         */
-        await upgrades.deployProxyAdmin();
-
-        if ((await upgrades.admin.getInstance()).target !== "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0") {
-            firstDeployment = false;
-        }
-        const nonceProxyBridge =
-            Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
-
-        const nonceProxyZkevm = nonceProxyBridge + 1; // Always have to redeploy impl since the polygonZkEVMGlobalExitRoot address changes
-
-        const precalculateBridgeAddress = ethers.getCreateAddress({
-            from: deployer.address,
-            nonce: nonceProxyBridge,
-        });
-        const precalculateRollupManagerAddress = ethers.getCreateAddress({
-            from: deployer.address,
-            nonce: nonceProxyZkevm,
-        });
-        firstDeployment = false;
-
-        // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2");
-        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
-            constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
-        });
-
         // deploy PolygonZkEVMBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor"],
+            unsafeAllow: ["constructor", "missing-initializer"],
         });
 
-        // deploy mock verifier
+        // deploy rollup manager
         const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManagerEmptyMock");
-
         rollupManagerContract = await PolygonRollupManagerFactory.deploy();
-
         await rollupManagerContract.waitForDeployment();
 
-        // check precalculated address
-        expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
-        expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
+        // deploy globalExitRoot
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2");
+        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
+            constructorArgs: [rollupManagerContract.target, polygonZkEVMBridgeContract.target],
+            unsafeAllow: ["constructor", "state-variable-immutable"],
+        });
 
         await polygonZkEVMBridgeContract.initialize(
             networkIDMainnet,
