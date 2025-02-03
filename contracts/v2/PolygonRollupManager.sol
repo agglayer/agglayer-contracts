@@ -8,7 +8,8 @@ import "./interfaces/IPolygonRollupBase.sol";
 import "../interfaces/IVerifierRollup.sol";
 import "../lib/EmergencyManager.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+// @dev For ReentrancyGuardTransient there is no difference between upgradable and not upgradable contracts
+import "@openzeppelin/contracts5/utils/ReentrancyGuardTransient.sol";
 import "./lib/PolygonTransparentProxy.sol";
 import "./lib/PolygonAccessControlUpgradeable.sol";
 import "./lib/LegacyZKEVMStateVariables.sol";
@@ -31,7 +32,7 @@ contract PolygonRollupManager is
     LegacyZKEVMStateVariables,
     PolygonConstantsBase,
     IPolygonRollupManager,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardTransient
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -424,8 +425,6 @@ contract PolygonRollupManager is
      */
     function initialize() external virtual reinitializer(4) {
         emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
-        // Initialize OZ reentrancy guard upgradeable contract
-        __ReentrancyGuard_init();
     }
 
     ///////////////////////////////////////

@@ -12,6 +12,9 @@ import "../lib/AggchainBase.sol";
  * That address is the trustedSequencer and is set during the chain initialization.
  */
 contract AggchainECDSA is AggchainBase, IAggchain {
+
+    // Aggchain type selector, hardcoded value used to force the first 2 byes of aggchain selector to retrieve  the aggchain verification key
+    bytes2 constant AGGCHAIN_TYPE_SELECTOR = 0;
     /**
      * @dev Emitted when Pessimistic proof is verified.
      */
@@ -43,7 +46,7 @@ contract AggchainECDSA is AggchainBase, IAggchain {
      */
     function initialize(
         bytes memory initializeBytesCustomChain
-    ) external override onlyRollupManager initializer {
+    ) external onlyRollupManager initializer {
         // custom parsing of the initializeBytesCustomChain
         (
             address _admin,
@@ -76,7 +79,7 @@ contract AggchainECDSA is AggchainBase, IAggchain {
     ) external view returns (bytes32) {
         bytes2 aggchainSelector = abi.decode(customChainData, (bytes2));
         bytes4 finalAggchainSelector = _getAggchainSelectorFromType(
-            AggchainType.ECDSA,
+            AGGCHAIN_TYPE_SELECTOR,
             aggchainSelector
         );
         return

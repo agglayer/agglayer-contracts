@@ -10,7 +10,7 @@ interface IAggchainBaseEvents {
 
     event UpdateAggchainVKey(bytes4 selector, bytes32 newAggchainVKey);
 
-    event UpdateUseOwnedGatewayFlag(bool useOwnedGateway);
+    event UpdateUseDefaultGatewayFlag(bool useDefaultGateway);
 }
 
 interface IAggchainBaseErrors {
@@ -25,7 +25,7 @@ interface IAggchainBaseErrors {
      */
     error InvalidInitializeFunction();
 
-    error useOwnedGatewayAlreadySet();
+    error UseDefaultGatewayAlreadySet();
 }
 
 interface IAggchainBase is IAggchainBaseErrors, IAggchainBaseEvents {

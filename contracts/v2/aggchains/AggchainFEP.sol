@@ -11,6 +11,10 @@ import "../AggLayerGateway.sol";
  * This proof, along with bridge checks, constitutes the final FEP proof.
  */
 contract AggchainFEP is AggchainBase, IAggchain {
+
+    // Aggchain type selector, hardcoded value used to force the first 2 byes of aggchain selector to retrieve  the aggchain verification key
+    bytes2 constant AGGCHAIN_TYPE_SELECTOR = 0;
+
     // fep-stack parameters
     bytes32 public aggregationVkey;
     bytes32 public chainConfigHash;
@@ -194,7 +198,7 @@ contract AggchainFEP is AggchainBase, IAggchain {
             )
         );
         bytes4 finalAggchainSelector = _getAggchainSelectorFromType(
-            AggchainType.ECDSA,
+            AGGCHAIN_TYPE_SELECTOR,
             aggchainSelector
         );
         return

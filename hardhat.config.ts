@@ -103,7 +103,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 500, // Should have the same optimizations as PolygonTransparentProxy
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: "cancun",
                 }, // try yul optimizer
             },
             "contracts/v2/PolygonZkEVMBridgeV2.sol": {
@@ -123,7 +123,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 500, // Should have the same optimizations as PolygonTransparentProxy
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: "cancun",
                 }, // try yul optimizer
             },
             "contracts/v2/mocks/PolygonRollupManagerMock.sol": {
@@ -133,7 +133,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 500, // Should have the same optimizations as PolygonTransparentProxy
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: "cancun",
                 }, // try yul optimizer
             },
             // Should have the same optimizations than the RollupManager to verify
