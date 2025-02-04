@@ -56,7 +56,6 @@ contract PolygonRollupManager is
         bool obsolete;
         bytes32 genesis;
         bytes32 programVKey;
-        // TODO: RollupManager ROLES
     }
 
     /**

@@ -4,23 +4,21 @@ pragma solidity 0.8.28;
 import {ISP1Verifier, ISP1VerifierWithHash} from "./interfaces/ISP1Verifier.sol";
 import {IAggLayerGateway} from "./interfaces/IAggLayerGateway.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts5/access/AccessControl.sol";
 
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
 /// @title AggLayerGateway
-contract AggLayerGateway is IAggLayerGateway, Initializable {
-    // TODO: Implement roles
+contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
+    // Roles
+    // Be able to add a new rollup type
+    bytes32 internal constant AGGLAYER_ADMIN_ROLE = keccak256("AGGLAYER_ADMIN_ROLE");
+    bytes32 internal constant AGGCHAIN_ADMIN_ROLE = keccak256("AGGCHAIN_ADMIN_ROLE");
+
     mapping(bytes4 defaultAggchainSelector => bytes32 defaultAggchainVKey)
         public defaultAggchainVKeys;
     mapping(bytes4 pessimisticVKeySelector => AggLayerVerifierRoute)
         public pessimisticVKeyRoutes;
-
-    // admin
-    // todo: Comment admin features/timelock
-    address public aggLayerAdmin;
-
-    // This account will be able to accept the admin role
-    address public pendingAggLayerAdmin;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -42,23 +40,18 @@ contract AggLayerGateway is IAggLayerGateway, Initializable {
      * @dev Disable initializers on the implementation following the best practices
      */
     constructor() {
-        // disable initializers
+        // disable initializers for implementation contract
         _disableInitializers();
     }
 
     /**
-     * @notice  Initializer function to set new rollup manager version
-     * @param _aggLayerAdmin The address of the admin
+     * @notice  Initializer function to set new rollup manager version.
+     * @param timelock The address of the default admin. Highly recommended to use a timelock contract for security reasons.
+     * @param aggLayerAdmin The address of the admin.
      */
-    function initialize(address _aggLayerAdmin) external virtual initializer {
-        aggLayerAdmin = _aggLayerAdmin;
-    }
-
-    modifier onlyAggLayerAdmin() {
-        if (aggLayerAdmin != msg.sender) {
-            revert OnlyAggLayerAdmin();
-        }
-        _;
+    function initialize(address timelock, address aggLayerAdmin) external virtual initializer {
+        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
+        _grantRole(AGGLAYER_ADMIN_ROLE, aggLayerAdmin);
     }
 
     /**
@@ -96,7 +89,7 @@ contract AggLayerGateway is IAggLayerGateway, Initializable {
         bytes4 pessimisticVKeySelector,
         address verifier,
         bytes32 pessimisticVKey
-    ) external onlyAggLayerAdmin {
+    ) external onlyRole(AGGLAYER_ADMIN_ROLE) {
         if (pessimisticVKeySelector == bytes4(0)) {
             revert SelectorCannotBeZero();
         }
@@ -115,7 +108,7 @@ contract AggLayerGateway is IAggLayerGateway, Initializable {
 
     function freezePessimisticVKeyRoute(
         bytes4 pessimisticVKeySelector
-    ) external onlyAggLayerAdmin {
+    ) external onlyRole(AGGLAYER_ADMIN_ROLE) {
         AggLayerVerifierRoute storage route = pessimisticVKeyRoutes[
             pessimisticVKeySelector
         ];
@@ -143,7 +136,7 @@ contract AggLayerGateway is IAggLayerGateway, Initializable {
     function addDefaultAggchainVKey(
         bytes4 defaultAggchainSelector,
         bytes32 newAggchainVKey
-    ) external onlyAggLayerAdmin {
+    ) external onlyRole(AGGCHAIN_ADMIN_ROLE) {
         // Check already exists
         if (defaultAggchainVKeys[defaultAggchainSelector] != bytes32(0)) {
             revert AggchainVKeyAlreadyExists();
@@ -156,7 +149,7 @@ contract AggLayerGateway is IAggLayerGateway, Initializable {
     function updateDefaultAggchainVKey(
         bytes4 defaultAggchainSelector,
         bytes32 newAggchainVKey
-    ) external onlyAggLayerAdmin {
+    ) external onlyRole(AGGCHAIN_ADMIN_ROLE) {
         // Check if the key exists
         if (defaultAggchainVKeys[defaultAggchainSelector] == bytes32(0)) {
             revert AggchainVKeyNotFound();
@@ -174,29 +167,5 @@ contract AggLayerGateway is IAggLayerGateway, Initializable {
         bytes4 defaultAggchainSelector
     ) external view returns (bytes32) {
         return defaultAggchainVKeys[defaultAggchainSelector];
-    }
-
-    /**
-     * @notice Starts the admin role transfer
-     * This is a two step process, the pending admin must accepted to finalize the process
-     * @param newPendingAggLayerAdmin Address of the new pending admin
-     */
-    function transferAggLayerAdminRole(
-        address newPendingAggLayerAdmin
-    ) external onlyAggLayerAdmin {
-        pendingAggLayerAdmin = newPendingAggLayerAdmin;
-        emit TransferAggLayerAdminRole(newPendingAggLayerAdmin);
-    }
-
-    /**
-     * @notice Allow the current pending AggLayerAdmin to accept the admin role
-     */
-    function acceptAggLayerAdminRole() external {
-        if (pendingAggLayerAdmin != msg.sender) {
-            revert OnlyPendingAggLayerAdmin();
-        }
-
-        aggLayerAdmin = pendingAggLayerAdmin;
-        emit AcceptAggLayerAdminRole(pendingAggLayerAdmin);
     }
 }
