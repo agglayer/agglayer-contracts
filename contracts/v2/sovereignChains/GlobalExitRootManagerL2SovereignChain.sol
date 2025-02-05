@@ -18,18 +18,27 @@ contract GlobalExitRootManagerL2SovereignChain is
     // In case of initializing a chain with Full execution proofs, this address should be set to zero, otherwise, some malicious sequencer could insert invalid global exit roots, claim, go back and the execution would be correctly proved.
     address public globalExitRootRemover;
 
-    // Inserted GER counter
-    uint256 public insertedGERCount;
+    // Value of the global exit roots hash chain after last insertion
+    bytes32 public currentHashChainValue;
+
+    // Value of the removed global exit roots hash chain after last removal
+    bytes32 public currentRemovalHashChainValue;
 
     /**
-     * @dev Emitted when a new global exit root is inserted
+     * @dev Emitted when a new global exit root is inserted and added to the hash chain
      */
-    event InsertGlobalExitRoot(bytes32 indexed newGlobalExitRoot);
+    event InsertGlobalExitRoot(
+        bytes32 indexed newGlobalExitRoot,
+        bytes32 indexed newHashChainValue
+    );
 
     /**
-     * @dev Emitted when the last global exit root is removed
+     * @dev Emitted when the global exit root is removed and added to the removal hash chain
      */
-    event RemoveLastGlobalExitRoot(bytes32 indexed removedGlobalExitRoot);
+    event RemoveGlobalExitRoot(
+        bytes32 indexed removedGlobalExitRoot,
+        bytes32 indexed newRemovalHashChainValue
+    );
 
     /**
      * @dev Emitted when the globalExitRootUpdater is set
@@ -88,6 +97,8 @@ contract GlobalExitRootManagerL2SovereignChain is
     }
     /**
      * @notice Insert a new global exit root
+     * @dev After inserting the new global exit root, the hash chain value is updated.
+     *      A hash chain is being used to make optimized proof generations of GERs.
      * @param _newRoot new global exit root to insert
      */
     function insertGlobalExitRoot(
@@ -95,8 +106,12 @@ contract GlobalExitRootManagerL2SovereignChain is
     ) external onlyGlobalExitRootUpdater {
         // do not insert GER if already set
         if (globalExitRootMap[_newRoot] == 0) {
-            globalExitRootMap[_newRoot] = ++insertedGERCount;
-            emit InsertGlobalExitRoot(_newRoot);
+            globalExitRootMap[_newRoot] = block.timestamp;
+            // Update hash chain value
+            currentHashChainValue = keccak256(
+                abi.encodePacked(currentHashChainValue, _newRoot)
+            );
+            emit InsertGlobalExitRoot(_newRoot, currentHashChainValue);
         } else {
             revert GlobalExitRootAlreadySet();
         }
@@ -104,38 +119,38 @@ contract GlobalExitRootManagerL2SovereignChain is
 
     /**
      * @notice Remove last global exit roots
-     * @param gersToRemove Array of gers to remove in inserted order where first element of the array is the last inserted
+     * @dev After removing a global exit root, the removal hash chain value is updated.
+     *      A hash chain is being used to make optimized proof generations of removed GERs.
+     * @param gersToRemove Array of gers to remove
      */
-    function removeLastGlobalExitRoots(
+    function removeGlobalExitRoots(
         bytes32[] calldata gersToRemove
     ) external onlyGlobalExitRootRemover {
-        uint256 insertedGERCountCache = insertedGERCount;
-        // Can't remove if not enough roots have been inserted
-        if (gersToRemove.length > insertedGERCountCache) {
-            revert NotEnoughGlobalExitRootsInserted();
-        }
-        // Iterate through the array of roots to remove them one by one
+        // @dev A memory variable is used to reduce sload/sstore operations while the loop
+        bytes32 nextRemovalHashChainValue = currentRemovalHashChainValue;
         for (uint256 i = 0; i < gersToRemove.length; i++) {
-            bytes32 rootToRemove = gersToRemove[i];
-
-            // Check that the root to remove is the last inserted
-            uint256 lastInsertedIndex = globalExitRootMap[rootToRemove];
-            if (lastInsertedIndex != insertedGERCountCache) {
-                revert NotLastInsertedGlobalExitRoot();
+            // Check if the GER exists
+            bytes32 gerToRemove = gersToRemove[i];
+            if (globalExitRootMap[gerToRemove] == 0) {
+                revert GlobalExitRootNotFound();
             }
+            // Encode new removed GERs to generate the nextRemovalHashChainValue
+            nextRemovalHashChainValue = keccak256(
+                abi.encodePacked(nextRemovalHashChainValue, gerToRemove)
+            );
 
-            // Remove from the mapping
-            delete globalExitRootMap[rootToRemove];
-            // Decrement the counter
-            insertedGERCountCache--;
+            // Remove the GER from the map
+            delete globalExitRootMap[gerToRemove];
 
             // Emit the removal event
-            emit RemoveLastGlobalExitRoot(rootToRemove);
+            emit RemoveGlobalExitRoot(
+                gerToRemove,
+                nextRemovalHashChainValue
+            );
         }
-        // Update the counter
-        insertedGERCount = insertedGERCountCache;
+        // Update the currentRemovalHashChainValue
+        currentRemovalHashChainValue = nextRemovalHashChainValue;
     }
-
     /**
      * @notice Set the globalExitRootUpdater
      * @param _globalExitRootUpdater new globalExitRootUpdater address

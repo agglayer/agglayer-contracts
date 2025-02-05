@@ -20,8 +20,8 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
 
     function initializeMock(
         address trustedAggregator,
-        uint64 _pendingStateTimeout,
-        uint64 _trustedAggregatorTimeout,
+        // uint64 _pendingStateTimeout,
+        // uint64 _trustedAggregatorTimeout,
         address admin,
         address timelock,
         address emergencyCouncil

@@ -15,7 +15,6 @@ import {
 } from "../../typechain-types";
 import {takeSnapshot, time} from "@nomicfoundation/hardhat-network-helpers";
 import {processorUtils, contractUtils, MTBridge, mtBridgeUtils, utils} from "@0xpolygonhermez/zkevm-commonjs";
-const {calculateSnarkInput, calculateAccInputHash, calculateBatchHashData} = contractUtils;
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
@@ -45,12 +44,10 @@ describe("Polygon Rollup Manager", () => {
     const polTokenSymbol = "POL";
     const polTokenInitialBalance = ethers.parseEther("20000000");
 
-    const pendingStateTimeoutDefault = 100;
-    const trustedAggregatorTimeout = 100;
     const FORCE_BATCH_TIMEOUT = 60 * 60 * 24 * 5; // 5 days
     const HALT_AGGREGATION_TIMEOUT = 60 * 60 * 24 * 7; // 7 days
 
-    // BRidge constants
+    // Bridge constants
     const networkIDMainnet = 0;
     const networkIDRollup = 1;
 
@@ -115,7 +112,7 @@ describe("Polygon Rollup Manager", () => {
             unsafeAllow: ["constructor", "state-variable-immutable"],
         });
 
-        // deploy mock verifier
+        // deploy PolygonRollupManager
         const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManagerMock");
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
@@ -146,8 +143,6 @@ describe("Polygon Rollup Manager", () => {
         // Initialize Mock
         await rollupManagerContract.initializeMock(
             trustedAggregator.address,
-            pendingStateTimeoutDefault,
-            trustedAggregatorTimeout,
             admin.address,
             timelock.address,
             emergencyCouncil.address

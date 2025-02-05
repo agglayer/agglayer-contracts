@@ -499,32 +499,30 @@ describe("BridgeL2SovereignChain Contract", () => {
             sovereignChainGlobalExitRootContract.connect(acc1).insertGlobalExitRoot(computedGlobalExitRoot)
         ).to.be.revertedWithCustomError(sovereignChainGlobalExitRootContract, "OnlyGlobalExitRootUpdater");
 
+        // Compute next hash chain value
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
-        expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.be.eq(1);
+        const lastBlock = (await ethers.provider.getBlock("latest")) as any;
+        expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.be.eq(
+            lastBlock.timestamp
+        );
 
-        expect(await sovereignChainGlobalExitRootContract.insertedGERCount()).to.be.eq(1);
-
-        // Trigger NotEnoughGlobalExitRootsInserted
+        // Trigger GlobalExitRootNotFound
         await expect(
-            sovereignChainGlobalExitRootContract.removeLastGlobalExitRoots([
-                computedGlobalExitRoot,
-                computedGlobalExitRoot,
-            ])
-        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, "NotEnoughGlobalExitRootsInserted");
-
-        // Trigger NotLastInsertedGlobalExitRoot
-        await expect(
-            sovereignChainGlobalExitRootContract.removeLastGlobalExitRoots([metadataHash])
-        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, "NotLastInsertedGlobalExitRoot");
+            sovereignChainGlobalExitRootContract.removeGlobalExitRoots([computedGlobalExitRoot, computedGlobalExitRoot])
+        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, "GlobalExitRootNotFound");
 
         // Trigger OnlyGlobalExitRootRemover
         await expect(
-            sovereignChainGlobalExitRootContract.connect(rollupManager).removeLastGlobalExitRoots([metadataHash])
+            sovereignChainGlobalExitRootContract.connect(rollupManager).removeGlobalExitRoots([metadataHash])
         ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, "OnlyGlobalExitRootRemover");
 
         // Update globalExitRootRemover
@@ -533,38 +531,55 @@ describe("BridgeL2SovereignChain Contract", () => {
         await sovereignChainGlobalExitRootContract.setGlobalExitRootUpdater(deployer.address);
 
         // Remove global exit root
-        expect(await sovereignChainGlobalExitRootContract.removeLastGlobalExitRoots([computedGlobalExitRoot]))
+        let removalHashChainValue = ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [ethers.ZeroHash, computedGlobalExitRoot]);
+        await expect(sovereignChainGlobalExitRootContract.removeGlobalExitRoots([computedGlobalExitRoot]))
             .to.emit(sovereignChainGlobalExitRootContract, "RemoveGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, removalHashChainValue);
 
         // Test to remove more than one global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [hashChainValue, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
         const computedGlobalExitRoot2 = "0x5946741ff5ff7732e1c7614ae327543a1d9f5870fcb8afbf146bd5ea75d6d519"; // Random 32 bytes
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2))
+        hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [hashChainValue, computedGlobalExitRoot2]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot2);
-        expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot2)).to.be.eq(2);
-
-        expect(
-            await sovereignChainGlobalExitRootContract.removeLastGlobalExitRoots([
+            .withArgs(computedGlobalExitRoot2, hashChainValue);
+        const lastBlock2 = (await ethers.provider.getBlock("latest")) as any;
+        expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot2)).to.be.eq(
+            lastBlock2.timestamp
+        );
+        removalHashChainValue = ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [removalHashChainValue, computedGlobalExitRoot2]);
+        const removalHashChainValue2 = ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [removalHashChainValue, computedGlobalExitRoot]);
+        await expect(
+            sovereignChainGlobalExitRootContract.removeGlobalExitRoots([
                 computedGlobalExitRoot2,
                 computedGlobalExitRoot,
             ])
         )
             .to.emit(sovereignChainGlobalExitRootContract, "RemoveGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot2, removalHashChainValue)
+            .to.emit(sovereignChainGlobalExitRootContract, "RemoveGlobalExitRoot")
+            .withArgs(computedGlobalExitRoot, removalHashChainValue2);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.be.eq(0);
 
-        expect(await sovereignChainGlobalExitRootContract.insertedGERCount()).to.be.eq(0);
-
         // Insert global exit root again
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [hashChainValue, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -748,9 +763,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -885,9 +904,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -957,9 +980,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -1039,9 +1066,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -1143,9 +1174,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -1282,9 +1317,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -1526,9 +1565,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot2 = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2))
+        hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [hashChainValue, computedGlobalExitRoot2]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot2, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot2)).to.not.be.eq(0);
@@ -1617,9 +1660,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -1843,9 +1890,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -2000,9 +2051,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
@@ -2156,9 +2211,13 @@ describe("BridgeL2SovereignChain Contract", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        expect(await sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
+        let hashChainValue = ethers.solidityPackedKeccak256(
+            ["bytes32", "bytes32"],
+            [ethers.ZeroHash, computedGlobalExitRoot]
+        );
+        await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
             .to.emit(sovereignChainGlobalExitRootContract, "InsertGlobalExitRoot")
-            .withArgs(computedGlobalExitRoot);
+            .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);

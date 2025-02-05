@@ -36,9 +36,6 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
     const polTokenSymbol = "POL";
     const polTokenInitialBalance = ethers.parseEther("20000000");
 
-    const pendingStateTimeoutDefault = 100;
-    const trustedAggregatorTimeout = 100;
-
     // BRidge constants
     const networkIDMainnet = 0;
 
@@ -126,8 +123,6 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         // Initialize Mock
         await rollupManagerContract.initializeMock(
             trustedAggregator.address,
-            pendingStateTimeoutDefault,
-            trustedAggregatorTimeout,
             admin.address,
             timelock.address,
             emergencyCouncil.address
