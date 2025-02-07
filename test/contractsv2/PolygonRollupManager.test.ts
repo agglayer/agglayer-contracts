@@ -152,7 +152,7 @@ describe("Polygon Rollup Manager", () => {
         await polTokenContract.transfer(trustedSequencer.address, ethers.parseEther("1000"));
     });
 
-    it("should check the initalized parameters", async () => {
+    it("should check the initialized parameters", async () => {
         expect(await rollupManagerContract.globalExitRootManager()).to.be.equal(polygonZkEVMGlobalExitRoot.target);
         expect(await rollupManagerContract.pol()).to.be.equal(polTokenContract.target);
         expect(await rollupManagerContract.bridgeAddress()).to.be.equal(polygonZkEVMBridgeContract.target);

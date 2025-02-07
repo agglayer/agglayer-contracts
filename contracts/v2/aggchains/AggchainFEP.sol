@@ -152,6 +152,8 @@ contract AggchainFEP is AggchainBase, IAggchain {
             // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased
             revert InvalidInitializer();
         }
+        // By default, the gateway is used to manage the aggchain keys
+        useDefaultGateway = true;
     }
 
     //////////////////

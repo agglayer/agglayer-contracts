@@ -3,6 +3,7 @@ const ethers = require('ethers');
 const VerifierType = {
     StateTransition: 0,
     Pessimistic: 1,
+    ALGateway: 2,
 };
 
 const ConsensusTypes = {
@@ -14,6 +15,15 @@ const ConsensusContracts = {
     PolygonValidiumEtrog: 'PolygonValidiumEtrog',
     PolygonPessimisticConsensus: 'PolygonPessimisticConsensus',
 
+};
+const AggchainSelector = {
+    ECDSA: '0000',
+    FEP: '0001',
+};
+
+const AggchainType = {
+    LEGACY: 0,
+    GENERIC: 1,
 };
 /**
  * Compute input for SNARK circuit: sha256(
@@ -61,10 +71,17 @@ function computeConsensusHashEcdsa(address) {
     return ethers.solidityPackedKeccak256(['uint32', 'address'], [ConsensusTypes.Ecdsa, address]);
 }
 
+function computeRandomBytes(length) {
+    return `0x${Buffer.from(ethers.randomBytes(length)).toString('hex')}`;
+}
+
 module.exports = {
     VerifierType,
     ConsensusTypes,
     computeInputPessimisticBytes,
     computeConsensusHashEcdsa,
     ConsensusContracts,
+    AggchainSelector,
+    AggchainType,
+    computeRandomBytes,
 };

@@ -1002,6 +1002,6 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
                 proofPP,
                 "0x" // customChainData
             )
-        ).to.be.revertedWithCustomError(rollupManagerContract, "OnlyChainsWithPessimisticProofs");
+        ).to.be.revertedWithCustomError(rollupManagerContract, "StateTransitionChainsNotAllowed");
     });
 });
