@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../interfaces/IAggchainBase.sol";
 import "./PolygonConsensusBase.sol";
 import "../interfaces/IAggLayerGateway.sol";
+import "../interfaces/IAggchainBase.sol";
 
 /**
  * @title AggchainBase
@@ -16,22 +16,17 @@ import "../interfaces/IAggLayerGateway.sol";
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  */
 abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
-    struct AggchainVKeyRoute {
-        bytes32 aggchainVKey;
-        bool frozen;
-    }
-
     // Aggchain type that support generic aggchain hash
     uint32 public constant AGGCHAIN_TYPE = 1;
-
+    // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
     IAggLayerGateway public immutable aggLayerGateway;
 
     // Flag to enable/disable the use of the custom chain gateway to handle the aggchain keys. In case  of true (default), the keys are managed by the aggregation layer gateway
     bool public useDefaultGateway;
 
-    // AggchainVKeyRoutes mapping
-    mapping(bytes4 aggchainVKeySelector => AggchainVKeyRoute)
-        public aggchainVKeyRoutes;
+    // AggchainVKeys mapping
+    mapping(bytes4 aggchainVKeySelector => bytes32 ownedAggchainVKey)
+        public ownedAggchainVKeys;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -39,6 +34,13 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
      */
     uint256[50] private _gap;
 
+    /**
+     * @param _globalExitRootManager Global exit root manager address.
+     * @param _pol POL token address.
+     * @param _bridgeAddress Bridge address.
+     * @param _rollupManager Rollup manager address.
+     * @param _aggLayerGateway AggLayerGateway address.
+     */
     constructor(
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
@@ -76,6 +78,9 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
     // admin functions
     //////////////////
 
+    /**
+     * @notice Enable the use of the default gateway to manage the aggchain keys.
+     */
     function enableUseDefaultGatewayFlag() external onlyAdmin {
         if (!useDefaultGateway) {
             revert UseDefaultGatewayAlreadySet();
@@ -85,6 +90,9 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
         emit UpdateUseDefaultGatewayFlag(useDefaultGateway);
     }
 
+    /**
+     * @notice Disable the use of the default gateway to manage the aggchain keys. After disable, the keys are handled by the aggchain contract.
+     */
     function disableUseDefaultGatewayFlag() external onlyAdmin {
         if (useDefaultGateway) {
             revert UseDefaultGatewayAlreadySet();
@@ -94,36 +102,41 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
         emit UpdateUseDefaultGatewayFlag(useDefaultGateway);
     }
 
-    function addAggchainRoute(
+    /**
+     * @notice Add a new aggchain verification key to the aggchain contract.
+     * @param aggchainSelector The selector for the verification key query. This selector identifies the aggchain key
+     * @param newAggchainVKey The new aggchain verification key to be added.
+     */
+    function addOwnedAggchainVKey(
         bytes4 aggchainSelector,
-        bytes32 aggchainVKey
+        bytes32 newAggchainVKey
     ) external onlyAdmin {
-        if (aggchainVKey == bytes32(0)) {
+        if (newAggchainVKey == bytes32(0)) {
             revert InvalidAggchainVKey();
         }
-        AggchainVKeyRoute storage aggchainVKeyRoute = aggchainVKeyRoutes[
-            aggchainSelector
-        ];
+
         // Check already added
-        if (aggchainVKeyRoute.aggchainVKey != bytes32(0)) {
-            revert AggchainRouteAlreadyAdded();
+        if (ownedAggchainVKeys[aggchainSelector] != bytes32(0)) {
+            revert OwnedAggchainVKeyAlreadyAdded();
         }
-        aggchainVKeyRoute.aggchainVKey = aggchainVKey;
-        emit AddAggchainVKey(aggchainSelector, aggchainVKey);
+        ownedAggchainVKeys[aggchainSelector] = newAggchainVKey;
+        emit AddAggchainVKey(aggchainSelector, newAggchainVKey);
     }
 
-    function updateAggchainRoute(
+    /**
+     * @notice Update the aggchain verification key in the aggchain contract.
+     * @param aggchainSelector The selector for the verification key query. This selector identifies the aggchain key
+     * @param updatedAggchainVKey The updated aggchain verification key value.
+     */
+    function updateOwnedAggchainVKey(
         bytes4 aggchainSelector,
         bytes32 updatedAggchainVKey
     ) external onlyAdmin {
-        AggchainVKeyRoute storage aggchainVKeyRoute = aggchainVKeyRoutes[
-            aggchainSelector
-        ];
         // Check already added
-        if (aggchainVKeyRoute.aggchainVKey == bytes32(0)) {
-            revert AggchainRouteNotFound();
+        if (ownedAggchainVKeys[aggchainSelector] == bytes32(0)) {
+            revert OwnedAggchainVKeyNotFound();
         }
-        aggchainVKeyRoute.aggchainVKey = updatedAggchainVKey;
+        ownedAggchainVKeys[aggchainSelector] = updatedAggchainVKey;
         emit UpdateAggchainVKey(aggchainSelector, updatedAggchainVKey);
     }
 
@@ -135,7 +148,7 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
         bytes4 aggchainSelector
     ) public view returns (bytes32 aggchainVKey) {
         if (!useDefaultGateway) {
-            aggchainVKey = aggchainVKeyRoutes[aggchainSelector].aggchainVKey;
+            aggchainVKey = ownedAggchainVKeys[aggchainSelector];
         } else {
             // Retrieve aggchain key from AggLayerGateway
             aggchainVKey = aggLayerGateway.getDefaultAggchainVKey(

@@ -11,12 +11,20 @@ import "hardhat/console.sol";
 /// @title AggLayerGateway
 contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
     // Roles
-    // Be able to add a new rollup type
-    bytes32 internal constant AGGLAYER_ADMIN_ROLE = keccak256("AGGLAYER_ADMIN_ROLE");
-    bytes32 internal constant AGGCHAIN_ADMIN_ROLE = keccak256("AGGCHAIN_ADMIN_ROLE");
+    // Default admin role, can grant roles to addresses
+    bytes32 internal constant AGGCHAIN_ADMIN_ROLE =
+        keccak256("AGGCHAIN_ADMIN_ROLE");
+    // Can add a route to a pessimistic verification key.
+    bytes32 internal constant AGGLAYER_ADD_ROUTE_ROLE =
+        keccak256("AGGLAYER_ADD_ROUTE_ROLE");
+    // Can freeze a route to a pessimistic verification key.
+    bytes32 internal constant AGGLAYER_FREEZE_ROUTE_ROLE =
+        keccak256("AGGLAYER_FREEZE_ROUTE_ROLE");
 
+    // Mapping with the default aggchain verification keys
     mapping(bytes4 defaultAggchainSelector => bytes32 defaultAggchainVKey)
         public defaultAggchainVKeys;
+    // Mapping with the pessimistic verification key routes
     mapping(bytes4 pessimisticVKeySelector => AggLayerVerifierRoute)
         public pessimisticVKeyRoutes;
 
@@ -37,7 +45,7 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
     event AcceptAggLayerAdminRole(address newAggLayerAdmin);
 
     /**
-     * @dev Disable initializers on the implementation following the best practices
+     * @dev Disable initializers on the implementation following the best practices.
      */
     constructor() {
         // disable initializers for implementation contract
@@ -46,19 +54,17 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
 
     /**
      * @notice  Initializer function to set new rollup manager version.
-     * @param admin The address of the default admin. Highly recommended to use a timelock contract for security reasons.
-     * @param aggLayerTimelock The address of the admin.
+     * @param admin The address of the default admin. Can grant role to addresses.
      */
-    function initialize(address admin, address aggLayerTimelock) external virtual initializer {
+    function initialize(address admin) external virtual initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(AGGLAYER_ADMIN_ROLE, aggLayerTimelock);
     }
 
     /**
-     * @notice Function to verify the pessimistic proof
-     * @param publicValues Public values of the proof
-     * @param proofBytes Proof for the pessimistic verification
-     * @dev First 4 bytes of the pessimistic proof are the pp selector
+     * @notice Function to verify the pessimistic proof.
+     * @param publicValues Public values of the proof.
+     * @param proofBytes Proof for the pessimistic verification.
+     * @dev First 4 bytes of the pessimistic proof are the pp selector.
      * proof[0:4]: 4 bytes selector pp
      * proof[4:8]: 4 bytes selector SP1 verifier
      * proof[8:]: proof
@@ -82,13 +88,19 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
     }
 
     //////////////////
-    // admin functions
+    // AggLayer functions
     //////////////////
+    /**
+     * @notice Function to add a pessimistic verification key route
+     * @param pessimisticVKeySelector The 4 bytes selector to add to the pessimistic verification keys.
+     * @param verifier The address of the verifier contract.
+     * @param pessimisticVKey New pessimistic program verification key
+     */
     function addPessimisticVKeyRoute(
         bytes4 pessimisticVKeySelector,
         address verifier,
         bytes32 pessimisticVKey
-    ) external onlyRole(AGGLAYER_ADMIN_ROLE) {
+    ) external onlyRole(AGGLAYER_ADD_ROUTE_ROLE) {
         if (pessimisticVKeySelector == bytes4(0)) {
             revert SelectorCannotBeZero();
         }
@@ -105,9 +117,13 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
         emit RouteAdded(pessimisticVKeySelector, verifier, pessimisticVKey);
     }
 
+    /**
+     * @notice Function to freeze a pessimistic verification key route
+     * @param pessimisticVKeySelector The 4 bytes selector to freeze the pessimistic verification key route.
+     */
     function freezePessimisticVKeyRoute(
         bytes4 pessimisticVKeySelector
-    ) external onlyRole(AGGLAYER_ADMIN_ROLE) {
+    ) external onlyRole(AGGLAYER_FREEZE_ROUTE_ROLE) {
         AggLayerVerifierRoute storage route = pessimisticVKeyRoutes[
             pessimisticVKeySelector
         ];
@@ -145,23 +161,34 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
 
         emit AddDefaultAggchainVKey(defaultAggchainSelector, newAggchainVKey);
     }
+
+    /**
+     * @notice Function to update a default aggchain verification key from the mapping
+     * @param defaultAggchainSelector The 4 bytes selector to update the default aggchain verification keys.
+     * @param newDefaultAggchainVKey New pessimistic program verification key
+     */
     function updateDefaultAggchainVKey(
         bytes4 defaultAggchainSelector,
-        bytes32 newAggchainVKey
+        bytes32 newDefaultAggchainVKey
     ) external onlyRole(AGGCHAIN_ADMIN_ROLE) {
         // Check if the key exists
         if (defaultAggchainVKeys[defaultAggchainSelector] == bytes32(0)) {
             revert AggchainVKeyNotFound();
         }
         // Update the VKey
-        defaultAggchainVKeys[defaultAggchainSelector] = newAggchainVKey;
+        defaultAggchainVKeys[defaultAggchainSelector] = newDefaultAggchainVKey;
 
         emit UpdateDefaultAggchainVKey(
             defaultAggchainSelector,
-            newAggchainVKey
+            newDefaultAggchainVKey
         );
     }
 
+    /**
+     * @notice function to retrieve the default aggchain verification key.
+     * @param defaultAggchainSelector The default aggchain selector for the verification key.
+     * @dev First 2 bytes are the aggchain type, the last 2 bytes are the 'verification key identifier'.
+     */
     function getDefaultAggchainVKey(
         bytes4 defaultAggchainSelector
     ) external view returns (bytes32) {

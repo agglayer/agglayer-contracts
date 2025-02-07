@@ -18,7 +18,6 @@ import "./interfaces/IPolygonPessimisticConsensus.sol";
 import "./interfaces/ISP1Verifier.sol";
 import "./interfaces/IPolygonRollupManager.sol";
 import "./interfaces/IAggchainBase.sol";
-import "./interfaces/IAggchain.sol";
 import "./AggLayerGateway.sol";
 /**
  * Contract responsible for managing rollups and the verification of their batches.
@@ -236,7 +235,7 @@ contract PolygonRollupManager is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Current rollup manager version
-    string public constant ROLLUP_MANAGER_VERSION = "pessimistic v0.3.0";
+    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.0";
 
     // Global Exit Root address
     IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
@@ -803,6 +802,7 @@ contract PolygonRollupManager is
         rollup.forkID = newRollupType.forkID;
         rollup.programVKey = newRollupType.programVKey;
         rollup.rollupTypeID = newRollupTypeID;
+        rollup.rollupVerifierType = newRollupType.rollupVerifierType;
 
         uint64 lastVerifiedBatch = getLastVerifiedBatch(rollupID);
         rollup.lastVerifiedBatchBeforeUpgrade = lastVerifiedBatch;
@@ -1169,7 +1169,7 @@ contract PolygonRollupManager is
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
             // Allow chains to manage customData
             // Callback to the rollup address
-            IAggchain(rollup.rollupContract).onVerifyPessimistic(
+            IAggchainBase(rollup.rollupContract).onVerifyPessimistic(
                 customChainData
             );
         }
@@ -1410,7 +1410,7 @@ contract PolygonRollupManager is
     ) internal view returns (bytes memory inputPessimisticBytes) {
         // Different consensusHash and encoding if the rollup is ALGateway or pessimistic
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
-            bytes32 aggchainHash = IAggchain(rollup.rollupContract)
+            bytes32 aggchainHash = IAggchainBase(rollup.rollupContract)
                 .getAggchainHash(customChainData);
 
             inputPessimisticBytes = abi.encodePacked(
