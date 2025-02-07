@@ -1110,8 +1110,8 @@ contract PolygonRollupManager is
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
 
         // Only for pessimistic verifiers
-        if (rollup.rollupVerifierType != VerifierType.Pessimistic) {
-            revert OnlyChainsWithPessimisticProofs();
+        if (rollup.rollupVerifierType == VerifierType.StateTransition) {
+            revert StateTransitionChainsNotAllowed();
         }
 
         // Check l1InfoTreeLeafCount has a valid l1InfoTreeRoot
@@ -1122,7 +1122,6 @@ contract PolygonRollupManager is
         if (l1InfoRoot == bytes32(0)) {
             revert L1InfoTreeLeafCountInvalid();
         }
-
         bytes memory inputPessimisticBytes = _getInputPessimisticBytes(
             rollupID,
             rollup,

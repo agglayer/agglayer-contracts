@@ -10,7 +10,7 @@ interface IAggchainErrors {
 interface IAggchain is IAggchainErrors {
     /**
      * @notice Gets aggchain hash.
-     * @dev Each chain should properly manage its own consensus hash.
+     * @dev Each chain should properly manage its own aggchain hash.
      * @param customChainData Custom chain data to build the consensus hash.
      */
     function getAggchainHash(

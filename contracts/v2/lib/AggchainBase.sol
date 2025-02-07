@@ -21,13 +21,13 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
         bool frozen;
     }
 
-    // Consensus type that support generic consensus
+    // Aggchain type that support generic aggchain hash
     uint32 public constant AGGCHAIN_TYPE = 1;
 
     IAggLayerGateway public immutable aggLayerGateway;
 
     // Flag to enable/disable the use of the custom chain gateway to handle the aggchain keys. In case  of true (default), the keys are managed by the aggregation layer gateway
-    bool public useDefaultGateway = true;
+    bool public useDefaultGateway;
 
     // AggchainVKeyRoutes mapping
     mapping(bytes4 aggchainVKeySelector => AggchainVKeyRoute)

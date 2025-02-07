@@ -5,7 +5,7 @@ import {ISP1Verifier, ISP1VerifierWithHash} from "./interfaces/ISP1Verifier.sol"
 import {IAggLayerGateway} from "./interfaces/IAggLayerGateway.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts5/access/AccessControl.sol";
-
+import "hardhat/console.sol";
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
 /// @title AggLayerGateway
@@ -46,12 +46,12 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
 
     /**
      * @notice  Initializer function to set new rollup manager version.
-     * @param timelock The address of the default admin. Highly recommended to use a timelock contract for security reasons.
-     * @param aggLayerAdmin The address of the admin.
+     * @param admin The address of the default admin. Highly recommended to use a timelock contract for security reasons.
+     * @param aggLayerTimelock The address of the admin.
      */
-    function initialize(address timelock, address aggLayerAdmin) external virtual initializer {
-        _grantRole(DEFAULT_ADMIN_ROLE, timelock);
-        _grantRole(AGGLAYER_ADMIN_ROLE, aggLayerAdmin);
+    function initialize(address admin, address aggLayerTimelock) external virtual initializer {
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(AGGLAYER_ADMIN_ROLE, aggLayerTimelock);
     }
 
     /**
@@ -74,7 +74,6 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
         } else if (route.frozen) {
             revert RouteIsFrozen(ppSelector);
         }
-
         ISP1Verifier(route.verifier).verifyProof(
             route.pessimisticVKey,
             publicValues,

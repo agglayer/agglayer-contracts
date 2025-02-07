@@ -12,7 +12,6 @@ import "../lib/AggchainBase.sol";
  * That address is the trustedSequencer and is set during the chain initialization.
  */
 contract AggchainECDSA is AggchainBase, IAggchain {
-
     // Aggchain type selector, hardcoded value used to force the first 2 byes of aggchain selector to retrieve  the aggchain verification key
     bytes2 constant AGGCHAIN_TYPE_SELECTOR = 0;
     /**
@@ -64,6 +63,8 @@ contract AggchainECDSA is AggchainBase, IAggchain {
         trustedSequencer = _trustedSequencer;
         trustedSequencerURL = _trustedSequencerURL;
         networkName = _networkName;
+        // By default, the gateway is used to manage the aggchain keys
+        useDefaultGateway = true;
     }
 
     /**
@@ -77,16 +78,21 @@ contract AggchainECDSA is AggchainBase, IAggchain {
     function getAggchainHash(
         bytes memory customChainData
     ) external view returns (bytes32) {
-        bytes2 aggchainSelector = abi.decode(customChainData, (bytes2));
+        // The second param is the new state root used at onVerifyPessimistic callback but now only aggchainSelector is required
+        (bytes2 aggchainSelector, ) = abi.decode(
+            customChainData,
+            (bytes2, bytes32)
+        );
         bytes4 finalAggchainSelector = _getAggchainSelectorFromType(
             AGGCHAIN_TYPE_SELECTOR,
             aggchainSelector
         );
+
         return
             keccak256(
                 abi.encodePacked(
                     AGGCHAIN_TYPE,
-                    getAggchainVKey(finalAggchainSelector),
+                    getAggchainVKey(finalAggchainSelector), // question: what is this key for?
                     keccak256(abi.encodePacked(trustedSequencer))
                 )
             );
@@ -99,7 +105,10 @@ contract AggchainECDSA is AggchainBase, IAggchain {
     function onVerifyPessimistic(
         bytes calldata customChainData
     ) external onlyRollupManager {
-        bytes32 newStateRoot = abi.decode(customChainData, (bytes32));
+        (, bytes32 newStateRoot) = abi.decode(
+            customChainData,
+            (bytes2, bytes32)
+        );
         // Emit event
         emit OnVerifyPessimistic(newStateRoot);
     }
