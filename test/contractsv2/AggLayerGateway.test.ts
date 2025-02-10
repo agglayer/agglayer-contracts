@@ -20,9 +20,9 @@ describe("AggLayerGateway tests", () => {
     let aggLayerAdmin: any;
 
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
-    const AGGCHAIN_ADMIN_ROLE = ethers.keccak256(ethers.toUtf8Bytes("AGGCHAIN_ADMIN_ROLE"));
-    const AGGLAYER_ADD_ROUTE_ROLE = ethers.keccak256(ethers.toUtf8Bytes("AGGLAYER_ADD_ROUTE_ROLE"));
-    const AGGLAYER_FREEZE_ROUTE_ROLE = ethers.keccak256(ethers.toUtf8Bytes("AGGLAYER_FREEZE_ROUTE_ROLE"));
+    const AGGCHAIN_ADMIN_ROLE = ethers.id("AGGCHAIN_ADMIN_ROLE");
+    const AGGLAYER_ADD_ROUTE_ROLE = ethers.id("AGGLAYER_ADD_ROUTE_ROLE");
+    const AGGLAYER_FREEZE_ROUTE_ROLE = ethers.id("AGGLAYER_FREEZE_ROUTE_ROLE");
 
     const selector = input["proof"].slice(0, 10);
     const pessimisticVKey = input["vkey"];
@@ -242,8 +242,11 @@ describe("AggLayerGateway tests", () => {
         );
 
         // check getDefaultAggchainVKey --> ethers.ZeroHash
-        expect(await aggLayerGatewayContract.getDefaultAggchainVKey(selector))
-        .to.be.equal(ethers.ZeroHash);
+        await expect(aggLayerGatewayContract.getDefaultAggchainVKey(selector))
+        .to.be.revertedWithCustomError(
+            aggLayerGatewayContract,
+            "AggchainVKeyNotFound"
+        );
 
         // check AddDefaultAggchainVKey
         await expect(aggLayerGatewayContract.connect(aggLayerAdmin).addDefaultAggchainVKey(
@@ -256,6 +259,17 @@ describe("AggLayerGateway tests", () => {
         // check getDefaultAggchainVKey --> pessimisticVKey
         expect(await aggLayerGatewayContract.getDefaultAggchainVKey(selector))
         .to.be.equal(pessimisticVKey);
+
+        // check onlyRole
+        await expect(aggLayerGatewayContract.updateDefaultAggchainVKey(
+            selector,
+            pessimisticVKey
+        ))
+        .to.be.revertedWithCustomError(
+            aggLayerGatewayContract,
+            "AccessControlUnauthorizedAccount"
+        )
+        .withArgs(deployer.address, AGGCHAIN_ADMIN_ROLE);
 
         // check UpdateDefaultAggchainVKey
         await expect(aggLayerGatewayContract.connect(aggLayerAdmin).updateDefaultAggchainVKey(
