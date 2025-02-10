@@ -157,6 +157,12 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
         }
     }
 
+    /**
+     * @notice Computes the selector for the aggchain verification key from the aggchain type and the aggchain selector.
+     * @dev It joins two bytes2 values into a bytes4 value.
+     * @param aggchainType The aggchain type, hardcoded in the aggchain contract.
+     * @param aggchainSelector The aggchain selector, used to identify the aggchain key.
+     */
     function _getAggchainSelectorFromType(
         bytes2 aggchainType,
         bytes2 aggchainSelector

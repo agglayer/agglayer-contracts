@@ -146,6 +146,15 @@ describe("Polygon rollup manager aggregation layer v3", () => {
             rollupManagerContract.target,
             aggLayerGatewayContract.target
         );
+
+        // Deploy pessimistic consensus contract
+        const ppConsensusFactory = await ethers.getContractFactory("PolygonPessimisticConsensus");
+        PolygonPPConsensusContract = await ppConsensusFactory.deploy(
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            rollupManagerContract.target
+        );
     });
 
     it("should check initializers and deploy parameters", async () => {
@@ -228,7 +237,7 @@ describe("Polygon rollup manager aggregation layer v3", () => {
 
         // Create ECDSA aggchain
         const rollupTypeIdECDSA = await createECDSARollupType();
-        const [,aggchainECDSAAddress] = await createECDSARollup(rollupTypeIdECDSA);
+        const [, aggchainECDSAAddress] = await createECDSARollup(rollupTypeIdECDSA);
 
         // Get aggchain hash
         const precomputedAggchainHash = ethers.solidityPackedKeccak256(
@@ -247,7 +256,7 @@ describe("Polygon rollup manager aggregation layer v3", () => {
     it("should verify a pessimistic proof for a ECDSA aggchain", async () => {
         // Create ECDSA aggchain
         const rollupTypeIdECDSA = await createECDSARollupType();
-        const [aggchainECDSAId,] = await createECDSARollup(rollupTypeIdECDSA);
+        const [aggchainECDSAId] = await createECDSARollup(rollupTypeIdECDSA);
 
         // Create a bridge to update the GER
         await expect(
@@ -295,43 +304,9 @@ describe("Polygon rollup manager aggregation layer v3", () => {
     it("should create a rollup with pessimistic consensus and upgrade it to aggchainECDSA", async () => {
         // Deploy pessimistic consensus contract
         const ppConsensusFactory = await ethers.getContractFactory("PolygonPessimisticConsensus");
-        PolygonPPConsensusContract = await ppConsensusFactory.deploy(
-            polygonZkEVMGlobalExitRoot.target,
-            polTokenContract.target,
-            polygonZkEVMBridgeContract.target,
-            rollupManagerContract.target
-        );
 
         // Create new rollup type with pessimistic consensus
-        const programVKey = computeRandomBytes(32);
-        const pessimisticRollupTypeID = 1; // Already aggchainECDSA rollup type created
-        const forkID = 11;
-        const genesis = ethers.ZeroHash;
-        const description = "new pessimistic consensus";
-        await expect(
-            rollupManagerContract
-                .connect(timelock)
-                .addNewRollupType(
-                    PolygonPPConsensusContract.target,
-                    verifierContract.target,
-                    forkID,
-                    VerifierType.Pessimistic,
-                    genesis,
-                    description,
-                    programVKey
-                )
-        )
-            .to.emit(rollupManagerContract, "AddNewRollupType")
-            .withArgs(
-                pessimisticRollupTypeID,
-                PolygonPPConsensusContract.target,
-                verifierContract.target,
-                forkID,
-                VerifierType.Pessimistic,
-                genesis,
-                description,
-                programVKey
-            );
+        const pessimisticRollupTypeID = await createPessimisticRollupType();
 
         // Create new rollup with pessimistic consensus
         const precomputedRollupAddress = ethers.getCreateAddress({
@@ -417,17 +392,8 @@ describe("Polygon rollup manager aggregation layer v3", () => {
 
         // Try update rollup by rollupAdmin but trigger UpdateToOldRollupTypeID
         // Create a new pessimistic rollup type
-        rollupManagerContract
-            .connect(timelock)
-            .addNewRollupType(
-                PolygonPPConsensusContract.target,
-                verifierContract.target,
-                forkID,
-                VerifierType.Pessimistic,
-                genesis,
-                description,
-                programVKey
-            );
+        await createPessimisticRollupType();
+
         // Check new rollup data
         const resRollupData = await rollupManagerContract.rollupIDToRollupDataDeserialized(pessimisticRollupID);
         const expectedRollupData = [
@@ -515,8 +481,97 @@ describe("Polygon rollup manager aggregation layer v3", () => {
                 initPessimisticRoot
             );
     });
+
+    it("should throw reverts UpdateToOldRollupTypeID and  UpdateNotCompatible", async () => {
+        // create two pessimistic rollup types
+        const pessimisticRollupTypeID1 = await createPessimisticRollupType();
+        const pessimisticRollupTypeID2 = await createPessimisticRollupType();
+
+        const rollupManagerNonce = await ethers.provider.getTransactionCount(rollupManagerContract.target);
+        const pessimisticRollupAddress = ethers.getCreateAddress({
+            from: rollupManagerContract.target as string,
+            nonce: rollupManagerNonce,
+        });
+        // Create pessimistic rollup
+        await rollupManagerContract.connect(admin).createNewRollup(
+            pessimisticRollupTypeID2,
+            2, // chainID
+            admin.address,
+            trustedSequencer.address,
+            ethers.ZeroAddress, // gas token address
+            "", // sequencer url
+            "", // network name
+            "0x" // initializeBytesCustomChain
+        );
+        expect(await rollupManagerContract.rollupAddressToID(pessimisticRollupAddress)).to.be.equal(1);
+
+        // Try to upgrade from rollupType1 to rollupType2 should revert (lowest rollup typed id)
+        await expect(
+            rollupManagerContract
+                .connect(admin)
+                .updateRollupByRollupAdmin(pessimisticRollupAddress, pessimisticRollupTypeID1)
+        ).to.be.revertedWithCustomError(rollupManagerContract, "UpdateToOldRollupTypeID");
+
+        // Try to upgrade to a rollup type with different verifier type, should revert
+        const ecdsaRollupType = await createECDSARollupType();
+        await expect(
+            rollupManagerContract
+                .connect(admin)
+                .updateRollupByRollupAdmin(pessimisticRollupAddress, ecdsaRollupType)
+        ).to.be.revertedWithCustomError(rollupManagerContract, "UpdateNotCompatible");
+
+        // Try to upgrade to a pessimistic from an ecdsa rollup type, should revert
+        const [, ecdsaRollupAddress] = await createECDSARollup(ecdsaRollupType);
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(ecdsaRollupAddress as string, pessimisticRollupTypeID1, "0x")
+        ).to.be.revertedWithCustomError(rollupManagerContract, "UpdateNotCompatible");
+
+        // Try to update rollup type from ecdsa to pessimistic from admin function, should revert
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(pessimisticRollupAddress as string, pessimisticRollupTypeID1, "0x")
+        ).to.be.revertedWithCustomError(rollupManagerContract, "UpdateNotCompatible");
+
+        // Trigger OnlyStateTransitionChains from onSequenceBatches
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .onSequenceBatches(3, computeRandomBytes(32))
+        ).to.be.revertedWithCustomError(rollupManagerContract, "OnlyStateTransitionChains");
+    });
 });
 
+async function createPessimisticRollupType() {
+    // Create rollup type for pessimistic
+    const lastRollupTypeID = await rollupManagerContract.rollupTypeCount();
+    await expect(
+        rollupManagerContract.connect(timelock).addNewRollupType(
+            PolygonPPConsensusContract.target,
+            verifierContract.target,
+            0, // fork id
+            VerifierType.Pessimistic,
+            ethers.ZeroHash, // genesis
+            "", // description
+            ethers.ZeroHash // programVKey
+        )
+    )
+        .to.emit(rollupManagerContract, "AddNewRollupType")
+        .withArgs(
+            Number(lastRollupTypeID) + 1 /*rollupTypeID*/,
+            PolygonPPConsensusContract.target,
+            verifierContract.target,
+            0, // fork id
+            VerifierType.Pessimistic,
+            ethers.ZeroHash, // genesis
+            "", // description
+            ethers.ZeroHash // programVKey
+        );
+
+    return Number(lastRollupTypeID) + 1;
+}
 async function createECDSARollupType() {
     // Create rollup type for  ECDSA
     const lastRollupTypeID = await rollupManagerContract.rollupTypeCount();
