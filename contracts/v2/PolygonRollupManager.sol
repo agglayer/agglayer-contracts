@@ -17,7 +17,7 @@ import "./lib/PolygonConstantsBase.sol";
 import "./interfaces/IPolygonPessimisticConsensus.sol";
 import "./interfaces/ISP1Verifier.sol";
 import "./interfaces/IPolygonRollupManager.sol";
-import "./interfaces/IAggchainBase.sol";
+import "./interfaces/IAggchain.sol";
 import "./AggLayerGateway.sol";
 /**
  * Contract responsible for managing rollups and the verification of their batches.
@@ -597,7 +597,7 @@ contract PolygonRollupManager is
         );
 
         if (rollupType.rollupVerifierType == VerifierType.ALGateway) {
-            IAggchainBase(rollupAddress).initialize(initializeBytesCustomChain);
+            IAggchain(rollupAddress).initialize(initializeBytesCustomChain);
         } else {
             // Initialize new rollup
             IPolygonRollupBase(rollupAddress).initialize(
@@ -1169,7 +1169,7 @@ contract PolygonRollupManager is
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
             // Allow chains to manage customData
             // Callback to the rollup address
-            IAggchainBase(rollup.rollupContract).onVerifyPessimistic(
+            IAggchain(rollup.rollupContract).onVerifyPessimistic(
                 customChainData
             );
         }
@@ -1410,7 +1410,7 @@ contract PolygonRollupManager is
     ) internal view returns (bytes memory inputPessimisticBytes) {
         // Different consensusHash and encoding if the rollup is ALGateway or pessimistic
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
-            bytes32 aggchainHash = IAggchainBase(rollup.rollupContract)
+            bytes32 aggchainHash = IAggchain(rollup.rollupContract)
                 .getAggchainHash(customChainData);
 
             inputPessimisticBytes = abi.encodePacked(

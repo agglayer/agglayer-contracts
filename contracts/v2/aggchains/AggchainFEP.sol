@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import "../lib/AggchainBase.sol";
+import "../interfaces/IAggchain.sol";
 import "../AggLayerGateway.sol";
 
 /**
@@ -9,7 +10,7 @@ import "../AggLayerGateway.sol";
  * @notice Generic aggchain based on full execution proof.
  * This proof, along with bridge checks, constitutes the final FEP proof.
  */
-contract AggchainFEP is AggchainBase {
+contract AggchainFEP is AggchainBase, IAggchain {
 
     // Aggchain type selector, hardcoded value used to force the first 2 byes of aggchain selector to retrieve  the aggchain verification key
     bytes2 constant AGGCHAIN_TYPE_SELECTOR = 0;
@@ -173,7 +174,7 @@ contract AggchainFEP is AggchainBase {
      * length (bits):   |    32         |       256      | 256           |
      * uint256 aggchainConfig = keccak256(abi.encodePacked(l1Head, l2PreRoot, claimRoot, claimBlockNum, chainConfigHash, rangeVkeyCommitment, aggregationVkey))
      */
-    /// @inheritdoc IAggchainBase
+    /// @inheritdoc IAggchain
     function getAggchainHash(
         bytes memory customChainData
     ) external view returns (bytes32) {

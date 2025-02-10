@@ -2,6 +2,8 @@
 pragma solidity 0.8.28;
 
 import "../lib/AggchainBase.sol";
+import "../interfaces/IAggchain.sol";
+
 
 /**
  * @title AggchainECDSA
@@ -10,7 +12,7 @@ import "../lib/AggchainBase.sol";
  * transitions on the pessimistic trees (local_exit_tree, local_balance_tree & nullifier_tree).
  * That address is the trustedSequencer and is set during the chain initialization.
  */
-contract AggchainECDSA is AggchainBase {
+contract AggchainECDSA is AggchainBase, IAggchain {
     // Aggchain type selector, hardcoded value used to force the first 2 byes of aggchain selector to retrieve  the aggchain verification key
     bytes2 constant AGGCHAIN_TYPE_SELECTOR = 0;
     /**
@@ -73,7 +75,7 @@ contract AggchainECDSA is AggchainBase {
      * length (bits):   |    32         |       256      |     256       |
      * aggchainConfig = keccak256(abi.encodePacked(trusted_sequencer))
      */
-    /// @inheritdoc IAggchainBase
+    /// @inheritdoc IAggchain
     function getAggchainHash(
         bytes memory customChainData
     ) external view returns (bytes32) {

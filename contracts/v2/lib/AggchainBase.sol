@@ -58,22 +58,6 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
         aggLayerGateway = _aggLayerGateway;
     }
 
-    /**
-     * @notice Override the function to prevent the contract from being initialized with this initializer implemented at PolygonConsensusBase.
-     * @dev The function modifiers and initializer found in the original function have been removed for bytecode optimizations.
-     */
-    function initialize(
-        address, // _admin
-        address, // sequencer
-        uint32, //networkID,
-        address, // _gasTokenAddress,
-        string memory, // sequencerURL,
-        string memory // _networkName
-    ) external pure override(PolygonConsensusBase) {
-        // Set initialize variables
-        revert InvalidInitializeFunction();
-    }
-
     //////////////////
     // admin functions
     //////////////////
@@ -82,10 +66,10 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
      * @notice Enable the use of the default gateway to manage the aggchain keys.
      */
     function enableUseDefaultGatewayFlag() external onlyAdmin {
-        if (!useDefaultGateway) {
+        if (useDefaultGateway) {
             revert UseDefaultGatewayAlreadySet();
         }
-        useDefaultGateway = false;
+        useDefaultGateway = true;
         // Emit event
         emit UpdateUseDefaultGatewayFlag(useDefaultGateway);
     }
@@ -94,10 +78,10 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
      * @notice Disable the use of the default gateway to manage the aggchain keys. After disable, the keys are handled by the aggchain contract.
      */
     function disableUseDefaultGatewayFlag() external onlyAdmin {
-        if (useDefaultGateway) {
+        if (!useDefaultGateway) {
             revert UseDefaultGatewayAlreadySet();
         }
-        useDefaultGateway = true;
+        useDefaultGateway = false;
         // Emit event
         emit UpdateUseDefaultGatewayFlag(useDefaultGateway);
     }
