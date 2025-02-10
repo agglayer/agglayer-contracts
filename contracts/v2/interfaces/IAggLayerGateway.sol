@@ -64,7 +64,7 @@ interface IAggLayerGatewayErrors {
     /// @notice Thrown when trying to add an aggchain verification key that already exists
     error AggchainVKeyAlreadyExists();
 
-    /// @notice Thrown when trying to update an aggchain verification key that doesn't exists
+    /// @notice Thrown when trying to retrieve an aggchain verification key from the mapping that doesn't exists
     error AggchainVKeyNotFound();
 }
 

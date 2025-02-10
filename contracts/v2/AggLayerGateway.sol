@@ -192,6 +192,9 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
     function getDefaultAggchainVKey(
         bytes4 defaultAggchainSelector
     ) external view returns (bytes32) {
+        if (defaultAggchainVKeys[defaultAggchainSelector] == bytes32(0)) {
+            revert AggchainVKeyNotFound();
+        }
         return defaultAggchainVKeys[defaultAggchainSelector];
     }
 }
