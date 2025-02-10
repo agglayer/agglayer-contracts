@@ -55,6 +55,7 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
     /**
      * @notice  Initializer function to set new rollup manager version.
      * @param admin The address of the default admin. Can grant role to addresses.
+     * @dev This address is the highest privileged address so it's recommended to use a timelock
      */
     function initialize(address admin) external virtual initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);

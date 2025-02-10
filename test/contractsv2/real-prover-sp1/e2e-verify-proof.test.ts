@@ -121,14 +121,12 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         );
 
         // Initialize Mock
-        await rollupManagerContract.initializeMock(
+        await expect(rollupManagerContract.initializeMock(
             trustedAggregator.address,
             admin.address,
             timelock.address,
             emergencyCouncil.address
-        );
-
-        await expect(rollupManagerContract.initialize()).to.emit(rollupManagerContract, "UpdateRollupManagerVersion");
+        )).to.emit(rollupManagerContract, "UpdateRollupManagerVersion");
 
         // fund sequencer address with Matic tokens
         await polTokenContract.transfer(trustedSequencer, ethers.parseEther("1000"));

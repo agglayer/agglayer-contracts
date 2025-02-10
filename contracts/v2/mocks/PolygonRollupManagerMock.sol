@@ -25,7 +25,7 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
         address admin,
         address timelock,
         address emergencyCouncil
-    ) external reinitializer(2) {
+    ) external reinitializer(4) {
         //pendingStateTimeout = _pendingStateTimeout;
         //trustedAggregatorTimeout = _trustedAggregatorTimeout;
 
@@ -68,6 +68,8 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
 
         // Since it's mock, use admin for everything
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
     function prepareMockCalculateRoot(bytes32[] memory localExitRoots) public {

@@ -19,10 +19,10 @@ contract GlobalExitRootManagerL2SovereignChain is
     address public globalExitRootRemover;
 
     // Value of the global exit roots hash chain after last insertion
-    bytes32 public currentHashChainValue;
+    bytes32 public insertedGERHashChain;
 
     // Value of the removed global exit roots hash chain after last removal
-    bytes32 public currentRemovalHashChainValue;
+    bytes32 public removedGERHashChain;
 
     /**
      * @dev Emitted when a new global exit root is inserted and added to the hash chain
@@ -108,10 +108,10 @@ contract GlobalExitRootManagerL2SovereignChain is
         if (globalExitRootMap[_newRoot] == 0) {
             globalExitRootMap[_newRoot] = block.timestamp;
             // Update hash chain value
-            currentHashChainValue = keccak256(
-                abi.encodePacked(currentHashChainValue, _newRoot)
+            insertedGERHashChain = keccak256(
+                abi.encodePacked(insertedGERHashChain, _newRoot)
             );
-            emit InsertGlobalExitRoot(_newRoot, currentHashChainValue);
+            emit InsertGlobalExitRoot(_newRoot, insertedGERHashChain);
         } else {
             revert GlobalExitRootAlreadySet();
         }
@@ -127,7 +127,7 @@ contract GlobalExitRootManagerL2SovereignChain is
         bytes32[] calldata gersToRemove
     ) external onlyGlobalExitRootRemover {
         // @dev A memory variable is used to reduce sload/sstore operations while the loop
-        bytes32 nextRemovalHashChainValue = currentRemovalHashChainValue;
+        bytes32 nextRemovalHashChainValue = removedGERHashChain;
         for (uint256 i = 0; i < gersToRemove.length; i++) {
             // Check if the GER exists
             bytes32 gerToRemove = gersToRemove[i];
@@ -148,8 +148,8 @@ contract GlobalExitRootManagerL2SovereignChain is
                 nextRemovalHashChainValue
             );
         }
-        // Update the currentRemovalHashChainValue
-        currentRemovalHashChainValue = nextRemovalHashChainValue;
+        // Update the removedGERHashChain
+        removedGERHashChain = nextRemovalHashChainValue;
     }
     /**
      * @notice Set the globalExitRootUpdater
