@@ -54,6 +54,12 @@ describe("AggLayerGateway tests", () => {
         expect(await aggLayerGatewayContract.hasRole(DEFAULT_ADMIN_ROLE, defaultAdmin.address)).to.be.equal(true);
     });
 
+    it("should check error 'contract is already initialized'", async () => {
+        // initialize AggLayerGateway
+        await expect(aggLayerGatewayContract.initialize(aggLayerAdmin.address))
+        .to.be.revertedWith("Initializable: contract is already initialized");
+    });
+
     it("addPessimisticVKeyRoute", async () => {
         // add pessimistic vkey route
         // check onlyRole

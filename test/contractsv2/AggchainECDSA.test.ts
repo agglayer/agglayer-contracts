@@ -148,6 +148,10 @@ describe("AggchainECDSA", () => {
             .withArgs("0x1253");
 
         // transferAdminRole & acceptAdminRole
+        await expect(aggchainECDSAcontract.transferAdminRole(deployer.address)).to.be.revertedWithCustomError(
+            aggchainECDSAcontract,
+            "OnlyAdmin"
+        );
         await expect(aggchainECDSAcontract.connect(admin).transferAdminRole(deployer.address))
             .to.emit(aggchainECDSAcontract, "TransferAdminRole")
             .withArgs(deployer.address);
