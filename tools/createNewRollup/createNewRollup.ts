@@ -9,7 +9,7 @@ import {ethers, upgrades} from "hardhat";
 import {processorUtils, Constants} from "@0xpolygonhermez/zkevm-commonjs";
 import {VerifierType, ConsensusContracts} from "../../src/pessimistic-utils";
 const createRollupParameters = require("./create_new_rollup.json");
-import {genOperation, transactionTypes, convertBigIntsToNumbers} from "../utils";
+import utils from "../utils";
 import updateVanillaGenesis from "../../deployment/v2/utils/updateVanillaGenesis";
 
 import {
@@ -22,6 +22,7 @@ import {
 
 async function main() {
     console.log(`Starting script to create new rollup from ${createRollupParameters.type}...`);
+
     const outputJson = {} as any;
     const dateStr = new Date().toISOString();
     const destPath = createRollupParameters.outputPath
@@ -44,17 +45,9 @@ async function main() {
         "gasTokenAddress",
         "type",
     ];
-    // check create rollup type
-    switch (createRollupParameters.type) {
-        case transactionTypes.EOA:
-        case transactionTypes.MULTISIG:
-            break;
-        case transactionTypes.TIMELOCK:
-            mandatoryDeploymentParameters.push("timelockDelay");
-            break;
-        default:
-            throw new Error(`Invalid type ${createRollupParameters.type}`);
-    }
+
+    utils.addTimelockDelayIfTimelock(createRollupParameters, mandatoryDeploymentParameters);
+
     for (const parameterName of mandatoryDeploymentParameters) {
         if (createRollupParameters[parameterName] === undefined || createRollupParameters[parameterName] === "") {
             throw new Error(`Missing parameter: ${parameterName}`);
@@ -127,51 +120,10 @@ async function main() {
     }
 
     // Load provider
-    let currentProvider = ethers.provider;
-    if (createRollupParameters.multiplierGas || createRollupParameters.maxFeePerGas) {
-        if (process.env.HARDHAT_NETWORK !== "hardhat") {
-            currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
-            ) as any;
-            if (createRollupParameters.maxPriorityFeePerGas && createRollupParameters.maxFeePerGas) {
-                console.log(
-                    `Hardcoded gas used: MaxPriority${createRollupParameters.maxPriorityFeePerGas} gwei, MaxFee${createRollupParameters.maxFeePerGas} gwei`
-                );
-                const FEE_DATA = new ethers.FeeData(
-                    null,
-                    ethers.parseUnits(createRollupParameters.maxFeePerGas, "gwei"),
-                    ethers.parseUnits(createRollupParameters.maxPriorityFeePerGas, "gwei")
-                );
-
-                currentProvider.getFeeData = async () => FEE_DATA;
-            } else {
-                console.log("Multiplier gas used: ", createRollupParameters.multiplierGas);
-                async function overrideFeeData() {
-                    const feeData = await ethers.provider.getFeeData();
-                    return new ethers.FeeData(
-                        null,
-                        ((feeData.maxFeePerGas as bigint) * BigInt(createRollupParameters.multiplierGas)) / 1000n,
-                        ((feeData.maxPriorityFeePerGas as bigint) * BigInt(createRollupParameters.multiplierGas)) /
-                            1000n
-                    );
-                }
-                currentProvider.getFeeData = overrideFeeData;
-            }
-        }
-    }
+    const currentProvider = utils.loadProvider(createRollupParameters);
 
     // Load deployer
-    let deployer;
-    if (createRollupParameters.deployerPvtKey) {
-        deployer = new ethers.Wallet(createRollupParameters.deployerPvtKey, currentProvider);
-    } else if (process.env.MNEMONIC) {
-        deployer = ethers.HDNodeWallet.fromMnemonic(
-            ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0"
-        ).connect(currentProvider);
-    } else {
-        [deployer] = await ethers.getSigners();
-    }
+    const deployer = utils.loadDeployer(createRollupParameters, currentProvider);
 
     // Load Rollup manager
     const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager", deployer);
@@ -186,19 +138,12 @@ async function main() {
         globalExitRootManagerAddress
     ) as PolygonRollupManager;
 
-    // Check if the deployer has right to deploy new rollups from rollupManager contract
-    const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
-    if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) == false) {
-        throw new Error(
-            `Deployer does not have admin role. Use the test flag on deploy_parameters if this is a test deployment`
-        );
-    }
-    const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
     // Check chainID
     let rollupID = await rollupManagerContract.chainIDToRollupID(chainID);
     if (Number(rollupID) !== 0) {
         throw new Error(`Rollup with chainID ${chainID} already exists`);
     }
+
     // Check rollupTypeId
     const rollupType = await rollupManagerContract.rollupTypeMap(createRollupParameters.rollupTypeId);
     const consensusContractAddress = rollupType[0];
@@ -250,11 +195,6 @@ async function main() {
         }
     }
 
-    // Grant role CREATE_ROLLUP_ROLE to deployer
-    const CREATE_ROLLUP_ROLE = ethers.id("CREATE_ROLLUP_ROLE");
-    if ((await rollupManagerContract.hasRole(CREATE_ROLLUP_ROLE, deployer.address)) == false)
-        await rollupManagerContract.grantRole(CREATE_ROLLUP_ROLE, deployer.address);
-
     // Get rollup address deterministically
     const nonce = await currentProvider.getTransactionCount(rollupManagerContract.target);
     const createdRollupAddress = ethers.getCreateAddress({
@@ -269,12 +209,13 @@ async function main() {
     outputJson.genesis = rollupType.genesis;
     outputJson.gasTokenAddress = createRollupParameters.gasTokenAddress;
     outputJson.rollupManagerAddress = createRollupParameters.rollupManagerAddress;
-    if (createRollupParameters.type === transactionTypes.TIMELOCK) {
+
+    if (createRollupParameters.type === utils.transactionTypes.TIMELOCK) {
         console.log("Creating timelock txs for rollup creation...");
         const salt = createRollupParameters.timelockSalt || ethers.ZeroHash;
         const predecessor = ethers.ZeroHash;
         const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
-        const operation = genOperation(
+        const operation = utils.genOperation(
             createRollupParameters.rollupManagerAddress,
             0, // value
             PolygonRollupManagerFactory.interface.encodeFunctionData("createNewRollup", [
@@ -310,35 +251,16 @@ async function main() {
         console.log({executeData});
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
+
         // Decode the scheduleData for better readability
         const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
-        const paramsArray = timelockTx?.fragment.inputs;
-        const objectDecoded = {};
-        for (let i = 0; i < paramsArray?.length; i++) {
-            const currentParam = paramsArray[i];
+        const objectDecoded = utils.decodeTimelockTx(timelockTx, PolygonRollupManagerFactory);
+        outputJson.decodedScheduleData = utils.convertBigIntsToNumbers(objectDecoded);
 
-            objectDecoded[currentParam.name] = timelockTx?.args[i];
-
-            if (currentParam.name == "data") {
-                const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
-                    data: timelockTx?.args[i],
-                });
-                const objectDecodedData = {};
-                const paramsArrayData = decodedRollupManagerData?.fragment.inputs;
-
-                for (let j = 0; j < paramsArrayData?.length; j++) {
-                    const currentParam = paramsArrayData[j];
-                    objectDecodedData[currentParam.name] = decodedRollupManagerData?.args[j];
-                }
-                objectDecoded["decodedData"] = objectDecodedData;
-            }
-        }
-
-        outputJson.decodedScheduleData = convertBigIntsToNumbers(objectDecoded);
         fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
         console.log("Finished script, output saved at: ", destPath);
         process.exit(0);
-    } else if (createRollupParameters.type === transactionTypes.MULTISIG) {
+    } else if (createRollupParameters.type === utils.transactionTypes.MULTISIG) {
         console.log("Creating calldata for rollup creation from multisig...");
         const txDeployRollupCalldata = PolygonRollupManagerFactory.interface.encodeFunctionData("createNewRollup", [
             createRollupParameters.rollupTypeId,
@@ -354,6 +276,18 @@ async function main() {
         console.log("Finished script, output saved at: ", destPath);
         process.exit(0);
     } else {
+        // Check if the deployer has right to deploy new rollups from rollupManager contract
+        const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+        if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) == false) {
+            throw new Error(
+                `Deployer does not have admin role. Use the test flag on deploy_parameters if this is a test deployment`
+            );
+        }
+        // Grant role CREATE_ROLLUP_ROLE to deployer
+        const CREATE_ROLLUP_ROLE = ethers.id("CREATE_ROLLUP_ROLE");
+        if ((await rollupManagerContract.hasRole(CREATE_ROLLUP_ROLE, deployer.address)) == false)
+            await rollupManagerContract.grantRole(CREATE_ROLLUP_ROLE, deployer.address);
+
         console.log("Deploying rollup....");
         // Create new rollup
         const txDeployRollup = await rollupManagerContract.createNewRollup(
@@ -382,6 +316,7 @@ async function main() {
         );
 
         // Search added global exit root on the logs
+        const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
         for (const log of receipt?.logs) {
             if (log.address == createdRollupAddress) {
                 const parsedLog = polygonConsensusFactory.interface.parseLog(log);
