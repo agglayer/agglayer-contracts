@@ -1,6 +1,5 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
 import path = require("path");
 import fs = require("fs");
 
@@ -37,7 +36,6 @@ async function main() {
         "programVKey",
         "type",
     ];
-
     utils.addTimelockDelayIfTimelock(addRollupTypeParameters, mandatoryDeploymentParameters);
 
     for (const parameterName of mandatoryDeploymentParameters) {
@@ -68,8 +66,17 @@ async function main() {
     const currentProvider = utils.loadProvider(addRollupTypeParameters);
 
     // Load deployer
-    const deployer = utils.loadDeployer(addRollupTypeParameters, currentProvider);
-
+    let deployer;
+    if (addRollupTypeParameters.deployerPvtKey) {
+        deployer = new ethers.Wallet(addRollupTypeParameters.deployerPvtKey, currentProvider);
+    } else if (process.env.MNEMONIC) {
+        deployer = ethers.HDNodeWallet.fromMnemonic(
+            ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
+            "m/44'/60'/0'/0/0"
+        ).connect(currentProvider);
+    } else {
+        [deployer] = await ethers.getSigners();
+    }
     console.log("Using with: ", deployer.address);
 
     // Load Rollup manager
@@ -116,7 +123,6 @@ async function main() {
                 `Deployer does not have admin role. Use the test flag on deploy_parameters if this is a test deployment`
             );
         }
-
         // Since it's a mock deployment deployer has all the rights
         const ADD_ROLLUP_TYPE_ROLE = ethers.id("ADD_ROLLUP_TYPE_ROLE");
 
@@ -241,9 +247,9 @@ async function main() {
 
         // Decode the scheduleData for better readability
         const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
-        const objectDecoded = utils.decodeTimelockData(timelockTx, PolygonRollupManagerFactory);
+        const objectDecoded = utils.decodeTimelockTx(timelockTx, PolygonRollupManagerFactory);
         outputJson.decodedScheduleData = objectDecoded;
-    } else {
+    } else if (addRollupTypeParameters.type === utils.transactionTypes.EOA) {
         console.log(
             await (
                 await rollupManagerContract.addNewRollupType(
@@ -263,6 +269,8 @@ async function main() {
         outputJson.rollupTypeID = await rollupManagerContract.rollupTypeCount();
         outputJson.programVKey = programVKeyFinal;
         outputJson.consensusContractAddress = PolygonConsensusContractAddress;
+    } else {
+        throw new Error("Invalid transaction type (Multisig not supported)");
     }
 
     outputJson.genesis = genesis.root;

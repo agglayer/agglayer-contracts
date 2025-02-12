@@ -45,7 +45,6 @@ async function main() {
         "gasTokenAddress",
         "type",
     ];
-
     utils.addTimelockDelayIfTimelock(createRollupParameters, mandatoryDeploymentParameters);
 
     for (const parameterName of mandatoryDeploymentParameters) {
@@ -144,6 +143,8 @@ async function main() {
         throw new Error(`Rollup with chainID ${chainID} already exists`);
     }
 
+    const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
+
     // Check rollupTypeId
     const rollupType = await rollupManagerContract.rollupTypeMap(createRollupParameters.rollupTypeId);
     const consensusContractAddress = rollupType[0];
@@ -203,6 +204,7 @@ async function main() {
     });
     let globalExitRoot = "";
     let batchData = {};
+
     // Populate output json
     outputJson.consensusContractName = consensusContractName;
     outputJson.rollupAddress = createdRollupAddress;
@@ -316,7 +318,6 @@ async function main() {
         );
 
         // Search added global exit root on the logs
-        const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
         for (const log of receipt?.logs) {
             if (log.address == createdRollupAddress) {
                 const parsedLog = polygonConsensusFactory.interface.parseLog(log);

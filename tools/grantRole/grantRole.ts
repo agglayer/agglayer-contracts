@@ -1,10 +1,10 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
 import path = require("path");
 import fs = require("fs");
 
 import * as dotenv from "dotenv";
+import utils from "../utils";
 dotenv.config({path: path.resolve(__dirname, "../../.env")});
 import {ethers} from "hardhat";
 
@@ -60,7 +60,7 @@ async function main() {
     // Load Rollup manager
     const PolgonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager");
 
-    const operation = genOperation(
+    const operation = utils.genOperation(
         polygonRollupManagerAddress,
         0, // value
         PolgonRollupManagerFactory.interface.encodeFunctionData("grantRole", [roleID, accountToGrantRole]),
@@ -94,28 +94,7 @@ async function main() {
 
     // Decode the scheduleData for better readibility
     const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
-    const paramsArray = timelockTx?.fragment.inputs as any;
-    const objectDecoded = {} as any;
-
-    for (let i = 0; i < paramsArray?.length; i++) {
-        const currentParam = paramsArray[i];
-        objectDecoded[currentParam.name] = timelockTx?.args[i];
-
-        if (currentParam.name == "data") {
-            const decodedRollupManagerData = PolgonRollupManagerFactory.interface.parseTransaction({
-                data: timelockTx?.args[i],
-            });
-            const objectDecodedData = {} as any;
-            const paramsArrayData = decodedRollupManagerData?.fragment.inputs as any;
-
-            for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedRollupManagerData?.args[j];
-            }
-            objectDecoded["decodedData"] = objectDecodedData;
-        }
-    }
-
+    const objectDecoded = utils.decodeTimelockData(timelockTx, PolgonRollupManagerFactory);
     outputJson.decodedScheduleData = objectDecoded;
 
     fs.writeFileSync(pathOutputJson, JSON.stringify(outputJson, null, 1));
@@ -125,20 +104,3 @@ main().catch((e) => {
     console.error(e);
     process.exit(1);
 });
-
-// OZ test functions
-function genOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
-    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "bytes", "uint256", "bytes32"],
-        [target, value, data, predecessor, salt]
-    );
-    const id = ethers.keccak256(abiEncoded);
-    return {
-        id,
-        target,
-        value,
-        data,
-        predecessor,
-        salt,
-    };
-}

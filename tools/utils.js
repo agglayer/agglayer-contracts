@@ -88,7 +88,7 @@ function loadProvider(parameters) {
     return currentProvider;
 }
 
-function loadDeployer(parameters, currentProvider) {
+async function loadDeployer(parameters, currentProvider) {
     // Load deployer
     let deployer;
     if (parameters.deployerPvtKey) {
@@ -110,15 +110,15 @@ function decodeTimelockTx(timelockTx, contractFactory) {
         const currentParam = paramsArray[i];
         objectDecoded[currentParam.name] = timelockTx?.args[i];
         if (currentParam.name == "data") {
-            const decodedRollupManagerData = contractFactory.interface.parseTransaction({
+            const decodedData = contractFactory.interface.parseTransaction({
                 data: timelockTx?.args[i],
             });
             const objectDecodedData = {};
-            const paramsArrayData = decodedRollupManagerData?.fragment.inputs;
+            const paramsArrayData = decodedData?.fragment.inputs;
 
             for (let j = 0; j < paramsArrayData?.length; j++) {
                 const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedRollupManagerData?.args[j];
+                objectDecodedData[currentParam.name] = decodedData?.args[j];
             }
             objectDecoded["decodedData"] = objectDecodedData;
         }
@@ -128,10 +128,10 @@ function decodeTimelockTx(timelockTx, contractFactory) {
 
 function addTimelockDelayIfTimelock(params, mandatoryDeploymentParameters) {
     switch (params.type) {
-        case utils.transactionTypes.EOA:
-        case utils.transactionTypes.MULTISIG:
+        case transactionTypes.EOA:
+        case transactionTypes.MULTISIG:
             break;
-        case utils.transactionTypes.TIMELOCK:
+        case transactionTypes.TIMELOCK:
             mandatoryDeploymentParameters.push("timelockDelay");
             break;
         default:
