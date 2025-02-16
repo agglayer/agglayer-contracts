@@ -256,7 +256,7 @@ describe("Polygon Rollup Manager", () => {
         const forkID = 0;
         const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
         const rollupCompatibilityID = 0;
-        const descirption = "zkevm test";
+        const description = "zkevm test";
         // Native token will be ether
         const gasTokenAddress = ethers.ZeroAddress;
         const gasTokenNetwork = 0;
@@ -281,7 +281,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -296,7 +296,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -307,7 +307,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
@@ -966,7 +966,7 @@ describe("Polygon Rollup Manager", () => {
         const forkID = 0;
         const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
         const rollupCompatibilityID = 0;
-        const descirption = "zkevm test";
+        const description = "zkevm test";
         // Native token will be ether
 
         // deploy pol
@@ -1011,7 +1011,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -1026,7 +1026,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -1037,7 +1037,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
@@ -1545,7 +1545,7 @@ describe("Polygon Rollup Manager", () => {
         const forkID = 0;
         const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
         const rollupCompatibilityID = 0;
-        const descirption = "zkevm test";
+        const description = "zkevm test";
         // Native token will be ether
 
         // deploy pol
@@ -1590,7 +1590,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             )
         ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
 
@@ -1605,7 +1605,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -1616,7 +1616,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
@@ -2122,7 +2122,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -2133,7 +2133,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // Add a new rollup type with timelock
@@ -2147,7 +2147,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     randomType,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -2158,7 +2158,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 randomType,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
@@ -2259,7 +2259,7 @@ describe("Polygon Rollup Manager", () => {
         const forkID = 0;
         const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
         const rollupCompatibilityID = 0;
-        const descirption = "zkevm test";
+        const description = "zkevm test";
         // Native token will be ether
 
         // deploy pol
@@ -2307,7 +2307,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -2318,7 +2318,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
@@ -2568,7 +2568,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -2579,7 +2579,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // Add a new rollup type with timelock
@@ -2593,7 +2593,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     randomType,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -2604,7 +2604,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 randomType,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
@@ -2696,7 +2696,7 @@ describe("Polygon Rollup Manager", () => {
         const forkID = 0;
         const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
         const rollupCompatibilityID = 0;
-        const descirption = "zkevm test";
+        const description = "zkevm test";
         // Native token will be ether
         const gasTokenAddress = ethers.ZeroAddress;
         const gasTokenNetwork = 0;
@@ -3111,7 +3111,7 @@ describe("Polygon Rollup Manager", () => {
         const forkID = 0;
         const genesisRandom = "0x0000000000000000000000000000000000000000000000000000000000000001";
         const rollupCompatibilityID = 0;
-        const descirption = "zkevm test";
+        const description = "zkevm test";
 
         // In order to create a new rollup type, create an implementation of the contract
 
@@ -3136,7 +3136,7 @@ describe("Polygon Rollup Manager", () => {
                     forkID,
                     rollupCompatibilityID,
                     genesisRandom,
-                    descirption
+                    description
                 )
         )
             .to.emit(rollupManagerContract, "AddNewRollupType")
@@ -3147,7 +3147,7 @@ describe("Polygon Rollup Manager", () => {
                 forkID,
                 rollupCompatibilityID,
                 genesisRandom,
-                descirption
+                description
             );
 
         // assert new rollup type
