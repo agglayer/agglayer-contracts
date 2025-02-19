@@ -103,8 +103,6 @@ async function main() {
             expect(await aggchainECDSAContract.gasTokenAddress()).to.be.equal(data.gasTokenAddress);
 
             for (let j = 0; j < aggchainSelectors.length; j++) {
-                console.log("Added aggchainSelector: ", aggchainSelectors[j]);
-                console.log("Added ownedAggchainVKey: ", data.ownedAggchainVkeys[j]);
                 expect(await aggchainECDSAContract.ownedAggchainVKeys(aggchainSelectors[j])).to.be.equal(
                     data.ownedAggchainVkeys[j]
                 );
@@ -131,7 +129,6 @@ async function main() {
                         aggchainParams
                     )
                 );
-                console.log(aggchainData[j]);
                 // get aggchainHash from contract
                 const aggchainHashContract = await aggchainECDSAContract.getAggchainHash(aggchainData[j], {
                     gasPrice: 0,
