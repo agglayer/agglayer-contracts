@@ -30,5 +30,21 @@
     "output": {
       "hashAggchainParams": "0x00314e565e0574cb412563df634608d76f5c59d9f817e85966100ec1d48005c0"
     }
+  },
+  {
+    "input": {
+      "trustedSequencer": "0x0000000000000000000000000000000000000000"
+    },
+    "output": {
+      "hashAggchainParams": "0x5380c7b7ae81a58eb98d9c78de4a1fd7fd9535fc953ed2be602daaa41767312a"
+    }
+  },
+  {
+    "input": {
+      "trustedSequencer": "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    },
+    "output": {
+      "hashAggchainParams": "0xd3b5b90cebf74d639049264c331b8cfaadb9a1b2ec320816b39e30081310200a"
+    }
   }
 ]

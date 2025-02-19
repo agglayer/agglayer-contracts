@@ -38,5 +38,25 @@
     "output": {
       "aggchainHash": "0x5b780539bfc81112e78409973934ea0f327f86fae7c30b80b055279d9157957f"
     }
+  },
+  {
+    "input": {
+      "aggchainType": 1,
+      "aggchainVKey": "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+      "hashAggchainParams": "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    },
+    "output": {
+      "aggchainHash": "0x77b4a3e9d8da3348ad14f0b67c7317d2387520739d5b09848d33fa7ba4bbeadc"
+    }
+  },
+  {
+    "input": {
+      "aggchainType": 1,
+      "aggchainVKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "hashAggchainParams": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "output": {
+      "aggchainHash": "0xa52bea95d270a4a72ddbaaafa2f2059dd0ee4111e21fbdec87f5cddddb8bd7e4"
+    }
   }
 ]

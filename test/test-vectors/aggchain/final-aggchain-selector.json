@@ -43,5 +43,23 @@
     "output": {
       "finalAggchainVKeySelector": "0x00010001"
     }
+  },
+  {
+    "input": {
+      "aggchainType": "0x0000",
+      "aggchainVKeySelector": "0x0000"
+    },
+    "output": {
+      "finalAggchainVKeySelector": "0x00000000"
+    }
+  },
+  {
+    "input": {
+      "aggchainType": "0xFFFF",
+      "aggchainVKeySelector": "0xFFFF"
+    },
+    "output": {
+      "finalAggchainVKeySelector": "0xffffffff"
+    }
   }
 ]
