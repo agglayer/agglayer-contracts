@@ -1,19 +1,19 @@
 const ethers = require('ethers');
 
-/// //////////////////////////////
-/// // Constants for Aggchain ////
-/// //////////////////////////////
+/////////////////////////////////
+///// Constants for Aggchain ////
+/////////////////////////////////
 
 // aggchain type constant to define an aggchain using pessimistic proof v0.3.0
 const AGGCHAIN_TYPE = 1;
 
-/// //////////////////////////////
-/// // Functions for Aggchain ////
-/// //////////////////////////////
+/////////////////////////////////
+///// Functions for Aggchain ////
+/////////////////////////////////
 
 /**
  * Compute aggchain hash
- * @param {Number} aggchainType agg chain type (ECDSA: 0, FEP: 1)
+ * @param {Number|BigInt} aggchainType agg chain type (ECDSA: 0, FEP: 1)
  * @param {String} aggchainVKey aggchain verification key
  * @param {String} hashAggchainParams hash aggchain params
  * @returns compute aggchain hash
@@ -24,7 +24,7 @@ function computeAggchainHash(
     hashAggchainParams,
 ) {
     // sanity check
-    if (aggchainType !== AGGCHAIN_TYPE) {
+    if (Number(aggchainType) !== AGGCHAIN_TYPE) {
         throw new Error(`Invalid aggchain type for v0.3.0. Must be ${AGGCHAIN_TYPE}`);
     }
 
@@ -37,31 +37,31 @@ function computeAggchainHash(
 
 /**
  * Encodes the final selector for aggchain
- * @param {String} _aggChainType aggchain selector type (ECDSA:0, FEP: 1)
- * @param {String} _aggchainSelector aggchain custom selector
+ * @param {String} _aggchainVKeySelector aggchain vkey selector
+ * @param {String} _aggchainType aggchain selector type (ECDSA:0, FEP: 1)
  * @returns Final selector
  */
-function getFinalAggchainVKeySelectorFromType(_aggChainTypeSelector, _aggchainSelector) {
-    // remove "0x" if ot exist on _aggChainTypeSelector with startWith method
-    const aggChainType = _aggChainTypeSelector.startsWith('0x') ? _aggChainTypeSelector.slice(2) : _aggChainTypeSelector;
-
+function getFinalAggchainVKeySelectorFromType(_aggchainVKeySelector, _aggchainType) {
     // remove "0x" if ot exist on aggchainSelector with startWith method
-    const aggchainSelector = _aggchainSelector.startsWith('0x') ? _aggchainSelector.slice(2) : _aggchainSelector;
+    const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x') ? _aggchainVKeySelector.slice(2) : _aggchainVKeySelector;
+
+    // remove "0x" if ot exist on _aggchainType with startWith method
+    const aggChainType = _aggchainType.startsWith('0x') ? _aggchainType.slice(2) : _aggchainType;
 
     // check lenght ois 2 bytes
     if (aggChainType.length !== 4) {
         throw new Error('aggChainType must be 2 bytes long');
     }
 
-    if (aggchainSelector.length !== 4) {
-        throw new Error('aggchainSelector must be 2 bytes long');
+    if (aggchainVKeySelector.length !== 4) {
+        throw new Error('aggchainVKeySelector must be 2 bytes long');
     }
 
-    return `0x${aggChainType}${aggchainSelector}`;
+    return `0x${aggchainVKeySelector}${aggChainType}`;
 }
 
 module.exports = {
     AGGCHAIN_TYPE,
     computeAggchainHash,
     getFinalAggchainVKeySelectorFromType,
-};
+}

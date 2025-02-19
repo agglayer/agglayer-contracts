@@ -1,11 +1,47 @@
 [
   {
     "input": {
-      "aggChainTypeSelector": "0x0001",
-      "aggchainSelector": "0x1234"
+      "aggchainType": "0x0001",
+      "aggchainVKeySelector": "0x1234"
     },
     "output": {
-      "finalAggchainVKeySelector": "0x00011234"
+      "finalAggchainVKeySelector": "0x12340001"
+    }
+  },
+  {
+    "input": {
+      "aggchainType": "0x0001",
+      "aggchainVKeySelector": "0x0000"
+    },
+    "output": {
+      "finalAggchainVKeySelector": "0x00000001"
+    }
+  },
+  {
+    "input": {
+      "aggchainType": "0x0001",
+      "aggchainVKeySelector": "0x4444"
+    },
+    "output": {
+      "finalAggchainVKeySelector": "0x44440001"
+    }
+  },
+  {
+    "input": {
+      "aggchainType": "0x0001",
+      "aggchainVKeySelector": "0x0210"
+    },
+    "output": {
+      "finalAggchainVKeySelector": "0x02100001"
+    }
+  },
+  {
+    "input": {
+      "aggchainType": "0x0001",
+      "aggchainVKeySelector": "0x0001"
+    },
+    "output": {
+      "finalAggchainVKeySelector": "0x00010001"
     }
   }
 ]
