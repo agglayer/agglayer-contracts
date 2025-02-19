@@ -49,7 +49,6 @@ describe("Test vectors aggchain common utils", () => {
                 testVector.trustedSequencerURL,
                 testVector.networkName
             );
-            console.log("VERSION 0: ", initBytesAggchainECDSAv0);
             if (update) {
                 aggchainInitBytesV0[i].output = {};
                 aggchainInitBytesV0[i].output.initBytesAggchainECDSAv0 = initBytesAggchainECDSAv0;
@@ -73,7 +72,6 @@ describe("Test vectors aggchain common utils", () => {
                 testVector.aggchainVKeySelectors,
                 testVector.vKeyManager
             );
-            console.log("VERSION 1: ", initBytesAggchainECDSAv1);
             if (update) {
                 aggchainInitBytesV1[i].output = {};
                 aggchainInitBytesV1[i].output.initBytesAggchainECDSAv1 = initBytesAggchainECDSAv1;

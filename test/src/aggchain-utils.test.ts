@@ -38,12 +38,24 @@ describe("Test vectors aggchain common utils", () => {
         it(`Check test-vectors getFinalAggchainVKeySelectorFromType hash ID=${i}`, async () => {
             const testVector = finalAggchainSelectorTestVectors[i].input;
             const finalAggchainSelector = utilsCommon.getFinalAggchainVKeySelectorFromType(
-                testVector.aggChainTypeSelector,
-                testVector.aggchainSelector
+                testVector.aggchainVKeySelector,
+                testVector.aggchainType
             );
             if (update) {
+                const AggchainBaseMockFactory = await ethers.getContractFactory("AggchainBaseMock");
+                const aggchainContract = await AggchainBaseMockFactory.deploy(
+                    "0xA00000000000000000000000000000000000000A",
+                    "0xB00000000000000000000000000000000000000B",
+                    "0xC00000000000000000000000000000000000000C",
+                    "0xD00000000000000000000000000000000000000D",
+                    "0xE00000000000000000000000000000000000000E"
+                );
                 finalAggchainSelectorTestVectors[i].output = {};
-                finalAggchainSelectorTestVectors[i].output.finalAggchainVKeySelector = finalAggchainSelector;
+                finalAggchainSelectorTestVectors[i].output.finalAggchainVKeySelector =
+                    await aggchainContract.getFinalAggchainVKeySelectorFromType(
+                        testVector.aggchainVKeySelector,
+                        testVector.aggchainType
+                    );
                 console.log(`WRITE: ${path.join(pathTestvectors, "final-aggchain-selector.json")}`);
                 fs.writeFileSync(
                     path.join(pathTestvectors, "final-aggchain-selector.json"),
