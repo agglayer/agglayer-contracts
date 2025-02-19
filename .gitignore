@@ -26,3 +26,5 @@ docker/deploymentOutput
 .DS_Store
 
 tools/createSovereignGenesisWithHardhat/genesis-sovereign_hardhat.json
+
+upgrade/upgradeAL/upgrade_output.json

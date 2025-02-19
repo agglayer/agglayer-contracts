@@ -239,15 +239,19 @@ contract PolygonRollupManager is
     string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.0";
 
     // Global Exit Root address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IPolygonZkEVMBridge public immutable bridgeAddress;
 
     // POL token address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IERC20Upgradeable public immutable pol;
 
     // Polygon Verifier Gateway address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     AggLayerGateway public immutable aggLayerGateway;
 
     // Number of rollup types added, every new type will be assigned sequentially a new ID

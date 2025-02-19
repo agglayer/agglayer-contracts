@@ -1,10 +1,6 @@
 {
-    "rollupManagerAddress": "0x00..",
-    "aggLayerGatewayAddress": "0x00..",
-    "timelockDelay": 0,
-    "timelockSalt": "",
-    "deployerPvtKey": "",
-    "maxFeePerGas": "",
-    "maxPriorityFeePerGas": "",
-    "multiplierGas": ""
+    "network": "sepolia",
+    "rollupManagerAddress": "0x...",
+    "aggLayerGatewayAddress":"0x...",
+    "timelockDelay": 3600
 }

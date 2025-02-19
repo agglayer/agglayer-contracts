@@ -2,16 +2,16 @@
 /* eslint-disable no-restricted-syntax */
 const ethers = require('ethers');
 
-///////////////////////////////////////
-///// Constants for Aggchain ECDSA ////
-///////////////////////////////////////
+/// ////////////////////////////////////
+/// // Constants for Aggchain ECDSA ////
+/// ////////////////////////////////////
 
 // aggchain type selector for ECDSA
 const AGGCHAIN_TYPE_SELECTOR_ECDSA = '0x0000';
 
-///////////////////////////////////////
-///// Functions for Aggchain ECDSA ////
-///////////////////////////////////////
+/// ////////////////////////////////////
+/// // Functions for Aggchain ECDSA ////
+/// ////////////////////////////////////
 
 /**
  * Function to encode the initialize bytes for the custom chain (version 0 --> initializerVersion = 0)
@@ -102,5 +102,5 @@ module.exports = {
     encodeInitializeBytesAggchainECDSAv0,
     encodeInitializeBytesAggchainECDSAv1,
     encodeAggchainDataECDSA,
-    computeHashAggchainParamsECDSA
+    computeHashAggchainParamsECDSA,
 };

@@ -7,41 +7,37 @@ import {utils} from "ffjavascript";
 
 import * as dotenv from "dotenv";
 dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, upgrades} from "hardhat";
-import {PolygonRollupManager} from "../../typechain-types";
+import {ethers, upgrades, run} from "hardhat";
+import {PolygonRollupManagerPessimistic} from "../../typechain-types";
+import {genTimelockOperation} from "../utils";
+import {checkParams} from "../../src/utils";
 
 const pathOutputJson = path.join(__dirname, "./upgrade_output.json");
 
 const upgradeParameters = require("./upgrade_parameters.json");
 
 async function main() {
-    upgrades.silenceWarnings();
+    //upgrades.silenceWarnings();
 
     /*
      * Check upgrade parameters
      * Check that every necessary parameter is fulfilled
      */
     const mandatoryUpgradeParameters = ["rollupManagerAddress", "aggLayerGatewayAddress", "timelockDelay"];
+    checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    for (const parameterName of mandatoryUpgradeParameters) {
-        if (upgradeParameters[parameterName] === undefined || upgradeParameters[parameterName] === "") {
-            throw new Error(`Missing parameter: ${parameterName}`);
-        }
-        // Check addresses
-        if (parameterName.includes("Address") && !ethers.isAddress(upgradeParameters[parameterName])) {
-            throw new Error(`Invalid address: ${parameterName}`);
-        }
-    }
-    const {rollupManagerAddress, timelockDelay} = upgradeParameters;
+    const {rollupManagerAddress, timelockDelay, aggLayerGatewayAddress} = upgradeParameters;
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
 
     // Load onchain parameters
-    const polygonRMPreviousFactory = await ethers.getContractFactory("PolygonRollupManagerPreviousPessimistic");
-    const polygonRMContract = (await polygonRMPreviousFactory.attach(rollupManagerAddress)) as PolygonRollupManager;
+    let polygonRMPreviousFactory = await ethers.getContractFactory("PolygonRollupManagerPessimistic");
+    const rollupManagerPessimisticContract = (await polygonRMPreviousFactory.attach(
+        rollupManagerAddress
+    )) as PolygonRollupManagerPessimistic;
 
-    const globalExitRootManagerAddress = await polygonRMContract.globalExitRootManager();
-    const polAddress = await polygonRMContract.pol();
-    const bridgeAddress = await polygonRMContract.bridgeAddress();
+    const globalExitRootManagerAddress = await rollupManagerPessimisticContract.globalExitRootManager();
+    const polAddress = await rollupManagerPessimisticContract.pol();
+    const bridgeAddress = await rollupManagerPessimisticContract.bridgeAddress();
 
     // Load provider
     const currentProvider = ethers.provider;
@@ -91,43 +87,56 @@ async function main() {
 
     console.log("deploying with: ", deployer.address);
 
-    const proxyAdmin = await upgrades.admin.getInstance();
-
-    // Assert correct admin
-    expect(await upgrades.erc1967.getAdminAddress(rollupManagerAddress as string)).to.be.equal(proxyAdmin.target);
-
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(rollupManagerPessimisticContract.target);
+    const proxyAdminFactory = await ethers.getContractFactory(
+        "@openzeppelin/contracts5/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
+    );
+    const proxyAdmin = proxyAdminFactory.attach(proxyAdminAddress);
     const timelockAddress = await proxyAdmin.owner();
 
     // load timelock
     const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
 
     // prepare upgrades
-
+    // Force import the current deployed proxy and implementation for storage layout upgrade checks
+    await upgrades.forceImport(rollupManagerAddress, polygonRMPreviousFactory, {
+        constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress],
+        kind: "transparent",
+    });
     // Upgrade to rollup manager
     const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager", deployer);
 
     const implRollupManager = await upgrades.prepareUpgrade(rollupManagerAddress, PolygonRollupManagerFactory, {
-        constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress, upgradeParameters.aggLayerGatewayAddress],
-        unsafeAllow: ["constructor", "state-variable-immutable", "enum-definition", "struct-definition"],
-        unsafeAllowRenames: true,
-        unsafeAllowCustomTypes: true,
-        unsafeSkipStorageCheck: true,
+        constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress],
+        unsafeAllow: ["constructor"],
     });
 
     console.log("#######################\n");
     console.log(`Polygon rollup manager: ${implRollupManager}`);
+    try {
+        console.log("Trying to verify the new implementation contract");
+        // wait a few seconds before trying etherscan verification
+        await new Promise((r) => setTimeout(r, 5000));
+        // verify
+        await run("verify:verify", {
+            address: implRollupManager,
+            constructorArguments: [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress],
+        });
+    } catch (error) {
+        console.log("Error verifying the new implementation contract: ", error);
+        console.log("you can verify the new impl address with:");
+        console.log(
+            `npx hardhat verify --constructor-args upgrade/arguments.js ${implRollupManager} --network ${process.env.HARDHAT_NETWORK}\n`
+        );
+        console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
+            globalExitRootManagerAddress,
+            polAddress,
+            bridgeAddress,
+            aggLayerGatewayAddress,
+        ]);
+    }
 
-    console.log("you can verify the new impl address with:");
-    console.log(
-        `npx hardhat verify --constructor-args upgrade/arguments.js ${implRollupManager} --network ${process.env.HARDHAT_NETWORK}\n`
-    );
-    console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
-        globalExitRootManagerAddress,
-        polAddress,
-        bridgeAddress,
-    ]);
-
-    const operationRollupManager = genOperation(
+    const operationRollupManager = genTimelockOperation(
         proxyAdmin.target,
         0, // value
         proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
@@ -203,20 +212,3 @@ main().catch((e) => {
     console.error(e);
     process.exit(1);
 });
-
-// OZ test functions
-function genOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
-    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "bytes", "uint256", "bytes32"],
-        [target, value, data, predecessor, salt]
-    );
-    const id = ethers.keccak256(abiEncoded);
-    return {
-        id,
-        target,
-        value,
-        data,
-        predecessor,
-        salt,
-    };
-}

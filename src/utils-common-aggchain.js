@@ -1,15 +1,15 @@
 const ethers = require('ethers');
 
-/////////////////////////////////
-///// Constants for Aggchain ////
-/////////////////////////////////
+/// //////////////////////////////
+/// // Constants for Aggchain ////
+/// //////////////////////////////
 
 // aggchain type constant to define an aggchain using pessimistic proof v0.3.0
 const AGGCHAIN_TYPE = 1;
 
-/////////////////////////////////
-///// Functions for Aggchain ////
-/////////////////////////////////
+/// //////////////////////////////
+/// // Functions for Aggchain ////
+/// //////////////////////////////
 
 /**
  * Compute aggchain hash
@@ -21,7 +21,7 @@ const AGGCHAIN_TYPE = 1;
 function computeAggchainHash(
     aggchainType,
     aggchainVKey,
-    hashAggchainParams
+    hashAggchainParams,
 ) {
     // sanity check
     if (aggchainType !== AGGCHAIN_TYPE) {
@@ -30,8 +30,8 @@ function computeAggchainHash(
 
     // solidity keccak
     return ethers.solidityPackedKeccak256(
-        ["uint32", "bytes32", "bytes32"],
-        [aggchainType, aggchainVKey, hashAggchainParams]
+        ['uint32', 'bytes32', 'bytes32'],
+        [aggchainType, aggchainVKey, hashAggchainParams],
     );
 }
 
@@ -43,18 +43,18 @@ function computeAggchainHash(
  */
 function getFinalAggchainVKeySelectorFromType(_aggChainTypeSelector, _aggchainSelector) {
     // remove "0x" if ot exist on _aggChainTypeSelector with startWith method
-    const aggChainType = _aggChainTypeSelector.startsWith("0x") ? _aggChainTypeSelector.slice(2) : _aggChainTypeSelector;
+    const aggChainType = _aggChainTypeSelector.startsWith('0x') ? _aggChainTypeSelector.slice(2) : _aggChainTypeSelector;
 
     // remove "0x" if ot exist on aggchainSelector with startWith method
-    const aggchainSelector = _aggchainSelector.startsWith("0x") ? _aggchainSelector.slice(2) : _aggchainSelector;
+    const aggchainSelector = _aggchainSelector.startsWith('0x') ? _aggchainSelector.slice(2) : _aggchainSelector;
 
     // check lenght ois 2 bytes
     if (aggChainType.length !== 4) {
-        throw new Error("aggChainType must be 2 bytes long");
+        throw new Error('aggChainType must be 2 bytes long');
     }
 
     if (aggchainSelector.length !== 4) {
-        throw new Error("aggchainSelector must be 2 bytes long");
+        throw new Error('aggchainSelector must be 2 bytes long');
     }
 
     return `0x${aggChainType}${aggchainSelector}`;
@@ -63,5 +63,5 @@ function getFinalAggchainVKeySelectorFromType(_aggChainTypeSelector, _aggchainSe
 module.exports = {
     AGGCHAIN_TYPE,
     computeAggchainHash,
-    getFinalAggchainVKeySelectorFromType
+    getFinalAggchainVKeySelectorFromType,
 };
