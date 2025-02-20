@@ -62,8 +62,8 @@ describe("Test vectors aggchain common utils", () => {
                     JSON.stringify(finalAggchainSelectorTestVectors, null, 2)
                 );
             } else {
-                expect(finalAggchainSelector).to.equal(
-                    finalAggchainSelectorTestVectors[i].output.finalAggchainVKeySelector
+                expect(finalAggchainSelector.toLowerCase()).to.equal(
+                    finalAggchainSelectorTestVectors[i].output.finalAggchainVKeySelector.toLowerCase()
                 );
             }
         });
