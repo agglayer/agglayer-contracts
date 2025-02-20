@@ -25,6 +25,7 @@ docker/deploymentOutput
 
 .DS_Store
 
+# create specififc .gitignore in those tools
 tools/createSovereignGenesisWithHardhat/genesis-sovereign_hardhat.json
 
 upgrade/upgradeAL/upgrade_output.json

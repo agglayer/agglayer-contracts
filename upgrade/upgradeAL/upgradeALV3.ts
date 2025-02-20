@@ -88,6 +88,8 @@ async function main() {
     console.log("deploying with: ", deployer.address);
 
     const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(rollupManagerPessimisticContract.target);
+    // The current ProxyAdmin is: "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
+    // which is the one deployed in current networks as per the '3_deployContracts.ts' script
     const proxyAdminFactory = await ethers.getContractFactory(
         "@openzeppelin/contracts5/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
     );
@@ -99,6 +101,9 @@ async function main() {
 
     // prepare upgrades
     // Force import the current deployed proxy and implementation for storage layout upgrade checks
+    // Double check this can be used here without any issues
+    // Add a comment that it crates the manifest file
+    // Also add sanity checks like: "Manifest already exist"
     await upgrades.forceImport(rollupManagerAddress, polygonRMPreviousFactory, {
         constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress],
         kind: "transparent",
@@ -113,6 +118,8 @@ async function main() {
 
     console.log("#######################\n");
     console.log(`Polygon rollup manager: ${implRollupManager}`);
+
+    // IMO: worth it to add it in the 'utils.ts'
     try {
         console.log("Trying to verify the new implementation contract");
         // wait a few seconds before trying etherscan verification
@@ -177,6 +184,7 @@ async function main() {
     };
 
     // Decode the scheduleData for better readability
+    // IMO: worth it to add it in the 'utils.ts'
     const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
     const paramsArray = timelockTx?.fragment.inputs as any;
     const objectDecoded = {} as any;

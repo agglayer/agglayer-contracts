@@ -11,6 +11,9 @@ function checkParams(objParams, expectedParams) {
         if (objParams[parameterName] === undefined || objParams[parameterName] === '') {
             throw new Error(`Missing parameter: ${parameterName}`);
         }
+
+        // This function is to check expected parameters
+        // If a certain parameter must be an address, it should be checked in another place
         // Check addresses
         if (parameterName.includes('Address') && !ethers.isAddress(objParams[parameterName])) {
             throw new Error(`Invalid parameter address: ${parameterName}`);
@@ -95,6 +98,9 @@ function getStorageReadWrites(trace) {
     return trace.structLogs[trace.structLogs.length - 1].storage;
 }
 
+// This file is meant to be generic utils
+// This constant declaration should be placed in `utils-common-aggchain.js`
+// AggchainType.GENERIC is already there
 const AggchainType = {
     LEGACY: 0,
     GENERIC: 1,

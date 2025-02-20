@@ -1,0 +1,1 @@
+Delete all generated files. .gitognoire should avoid uploading them
