@@ -6,7 +6,7 @@ import fs = require("fs");
 
 import * as dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { PolygonRollupManager, PolygonZkEVMTimelock, PolygonRollupManagerPessimistic } from "../../typechain-types";
 
 import { time, reset, setBalance, setStorageAt } from "@nomicfoundation/hardhat-network-helpers";
@@ -45,15 +45,27 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         console.log("✓ admin role is same as upgrade output file timelock address");
 
         // Get timelock admin role
+        // TODO: move this logic to utils
         const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock");
         const timelockContract = (await timelockContractFactory.attach(adminRoleAddress)) as PolygonZkEVMTimelock;
         const PROPOSER_ROLE = ethers.id("PROPOSER_ROLE");
-        const proposerRoleFilter = timelockContract.filters.RoleGranted(PROPOSER_ROLE, null, null);
-        const proposerRoleEvents = await timelockContract.queryFilter(proposerRoleFilter, 0, "latest");
-        if (proposerRoleEvents.length === 0) {
-            throw new Error("No proposer role granted for timelock");
+        const EXECUTOR_ROLE = ethers.id("EXECUTOR_ROLE");
+        let proposerRoleAddress = upgradeParams.timelockAdminAddress;
+        if (typeof proposerRoleAddress === "undefined") {
+            // Try retrieve timelock admin address from events
+            const proposerRoleFilter = timelockContract.filters.RoleGranted(PROPOSER_ROLE, null, null);
+            const proposerRoleEvents = await timelockContract.queryFilter(proposerRoleFilter, 0, "latest");
+            if (proposerRoleEvents.length === 0) {
+                throw new Error("No proposer role granted for timelock");
+            }
+            proposerRoleAddress = proposerRoleEvents[0].args.account;
         }
-        const proposerRoleAddress = proposerRoleEvents[0].args.account;
+        const hasProposerRole = await timelockContract.hasRole(PROPOSER_ROLE, proposerRoleAddress);
+        const hasExecutorRole = await timelockContract.hasRole(EXECUTOR_ROLE, proposerRoleAddress);
+        if (!hasProposerRole || !hasExecutorRole) {
+            throw new Error("Timelock admin address does not have proposer and executor role");
+        }
+
         console.log(`Proposer/executor timelock role address: ${proposerRoleAddress}`);
         await ethers.provider.send("hardhat_impersonateAccount", [proposerRoleAddress]);
         const proposerRoleSigner = await ethers.getSigner(proposerRoleAddress as any);

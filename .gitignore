@@ -25,4 +25,4 @@ docker/deploymentOutput
 
 .DS_Store
 
-upgrade/upgradeAL/upgrade_output.json
+*upgrade_output.json

@@ -1,0 +1,8 @@
+{
+    "network": "sepolia",
+    "timelockDelay": 3600,
+    "timelockAdminAddress": "0x..",
+    "deployerPvtKey": "0x...",
+    "rpc": "rpc url",
+    "globalExitRootManagerL2SovereignChainAddress": "0x.."
+}
