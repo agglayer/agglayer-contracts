@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.28;
 import "../../PolygonZkEVMGlobalExitRootL2.sol";
+import "../lib/Hashes.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
@@ -122,9 +123,7 @@ contract GlobalExitRootManagerL2SovereignChain is
         if (globalExitRootMap[_newRoot] == 0) {
             globalExitRootMap[_newRoot] = block.timestamp;
             // Update hash chain value
-            insertedGERHashChain = keccak256(
-                abi.encodePacked(insertedGERHashChain, _newRoot)
-            );
+            insertedGERHashChain = Hashes._efficientKeccak256(insertedGERHashChain, _newRoot);
             // @dev we are emitting to events for backwards compatibility, should deprecate InsertGlobalExitRoot event in the future
             emit InsertGlobalExitRoot(_newRoot);
             emit UpdateHashChainValue(_newRoot, insertedGERHashChain);
@@ -171,9 +170,7 @@ contract GlobalExitRootManagerL2SovereignChain is
                 revert GlobalExitRootNotFound();
             }
             // Encode new removed GERs to generate the nextRemovalHashChainValue
-            nextRemovalHashChainValue = keccak256(
-                abi.encodePacked(nextRemovalHashChainValue, gerToRemove)
-            );
+            nextRemovalHashChainValue = Hashes._efficientKeccak256(nextRemovalHashChainValue, gerToRemove);
 
             // Remove the GER from the map
             delete globalExitRootMap[gerToRemove];

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.20;
 
+import "./Hashes.sol";
+
 /**
  * This contract will be used as a helper for all the sparse merkle tree related functions
  * Based on the implementation of the deposit eth2.0 contract https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol
@@ -45,13 +47,11 @@ contract DepositContractBase {
             height++
         ) {
             if (((size >> height) & 1) == 1)
-                node = keccak256(abi.encodePacked(_branch[height], node));
+                node = Hashes._efficientKeccak256(_branch[height], node);
             else
-                node = keccak256(abi.encodePacked(node, currentZeroHashHeight));
+                node = Hashes._efficientKeccak256(node, currentZeroHashHeight);
 
-            currentZeroHashHeight = keccak256(
-                abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight)
-            );
+            currentZeroHashHeight = Hashes._efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
         }
         return node;
     }
@@ -79,7 +79,7 @@ contract DepositContractBase {
                 _branch[height] = node;
                 return;
             }
-            node = keccak256(abi.encodePacked(_branch[height], node));
+            node = Hashes._efficientKeccak256(_branch[height], node);
         }
         // As the loop should always end prematurely with the `return` statement,
         // this code should be unreachable. We assert `false` just to be safe.
@@ -122,8 +122,8 @@ contract DepositContractBase {
             height++
         ) {
             if (((index >> height) & 1) == 1)
-                node = keccak256(abi.encodePacked(smtProof[height], node));
-            else node = keccak256(abi.encodePacked(node, smtProof[height]));
+                node = Hashes._efficientKeccak256(smtProof[height], node);
+            else node = Hashes._efficientKeccak256(node, smtProof[height]);
         }
 
         return node;
