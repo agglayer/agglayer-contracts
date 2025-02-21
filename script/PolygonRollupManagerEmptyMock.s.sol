@@ -5,13 +5,11 @@ import "forge-std/Script.sol";
 import "script/deployers/PolygonRollupManagerEmptyMockDeployer.s.sol";
 
 contract Deploy is Script, PolygonRollupManagerEmptyMockDeployer {
-    function run() public {
-        address proxyAdminOwner = makeAddr("proxyAdminOwner");
-
+    function run(address _proxyAdmin) public {
         (address implementation, address proxyAdmin, address proxy) =
-            deployPolygonRollupManagerEmptyMockTransparent(proxyAdminOwner);
-        console.log("PolygonRollupManagerEmptyMock deployed at: ", proxy);
-        console.log("PolygonRollupManagerEmptyMock implementation deployed at: ", implementation);
+            deployPolygonRollupManagerEmptyMockTransparent(_proxyAdmin);
+        console.log("PolygonRollupManagerEmptyMock proxy: ", proxy);
+        console.log("PolygonRollupManagerEmptyMock implementation: ", implementation);
         console.log("PolygonRollupManagerEmptyMock proxy admin: ", proxyAdmin);
     }
 }

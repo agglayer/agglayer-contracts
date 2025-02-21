@@ -26,7 +26,7 @@ abstract contract PolygonZkEVMGlobalExitRootV2Deployer is Script {
     ) internal returns (address implementation, address proxyAdmin, address proxy) {
         bytes memory initData = abi.encodeCall(PolygonZkEVMGlobalExitRootV2.initialize, ());
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
 
         polygonZkEVMGlobalExitRootV2Implementation =
             address(new PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress));
@@ -62,7 +62,7 @@ abstract contract PolygonZkEVMGlobalExitRootV2Deployer is Script {
         internal
         returns (address implementation)
     {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress));
         vm.stopBroadcast();
     }

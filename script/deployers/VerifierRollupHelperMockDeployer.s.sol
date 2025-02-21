@@ -25,7 +25,7 @@ abstract contract VerifierRollupHelperMockDeployer is Script {
     {
         bytes memory initData = "";
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
 
         verifierRollupHelperMockImplementation = address(new VerifierRollupHelperMock());
         verifierRollupHelperMock = VerifierRollupHelperMock(
@@ -55,7 +55,7 @@ abstract contract VerifierRollupHelperMockDeployer is Script {
     }
 
     function deployVerifierRollupHelperMockImplementation() internal returns (address implementation) {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new VerifierRollupHelperMock());
         vm.stopBroadcast();
     }

@@ -5,15 +5,11 @@ import "forge-std/Script.sol";
 import "script/deployers/PolygonZkEVMGlobalExitRootV2Deployer.s.sol";
 
 contract Deploy is Script, PolygonZkEVMGlobalExitRootV2Deployer {
-    function run() public {
-        address proxyAdminOwner = makeAddr("proxyAdminOwner");
-        address _rollupManager = makeAddr("RollupManager");
-        address _bridgeAddress = makeAddr("PolygonZkEVMBridgeV2");
-
+    function run(address _proxyAdmin, address _rollupManager, address _bridgeAddress) public {
         (address implementation, address proxyAdmin, address proxy) =
-            deployPolygonZkEVMGlobalExitRootV2Transparent(proxyAdminOwner, _rollupManager, _bridgeAddress);
-        console.log("PolygonZkEVMGlobalExitRootV2 deployed at: ", proxy);
-        console.log("PolygonZkEVMGlobalExitRootV2 implementation deployed at: ", implementation);
+            deployPolygonZkEVMGlobalExitRootV2Transparent(_proxyAdmin, _rollupManager, _bridgeAddress);
+        console.log("PolygonZkEVMGlobalExitRootV2 proxy: ", proxy);
+        console.log("PolygonZkEVMGlobalExitRootV2 implementation: ", implementation);
         console.log("PolygonZkEVMGlobalExitRootV2 proxy admin: ", proxyAdmin);
     }
 }

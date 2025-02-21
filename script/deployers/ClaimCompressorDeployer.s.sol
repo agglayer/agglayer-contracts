@@ -14,7 +14,7 @@ abstract contract ClaimCompressorDeployer is Script {
         internal
         returns (address implementation)
     {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new ClaimCompressor(__bridgeAddress, __networkID));
         vm.stopBroadcast();
     }

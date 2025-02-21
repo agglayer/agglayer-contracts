@@ -5,15 +5,16 @@ import "forge-std/Script.sol";
 import "script/deployers/PolygonZkEVMTimelockDeployer.s.sol";
 
 contract Deploy is Script, PolygonZkEVMTimelockDeployer {
-    function run() public {
-        uint256 minDelay = 0;
-        address[] memory proposers = new address[](0);
-        address[] memory executors = new address[](0);
-        address admin = makeAddr("admin");
-        PolygonZkEVM _polygonZkEVM = PolygonZkEVM(makeAddr("polygonZkEVM"));
-
-        address implementation =
-            deployPolygonZkEVMTimelockImplementation(minDelay, proposers, executors, admin, _polygonZkEVM);
-        console.log("PolygonZkEVMTimelock deployed at: ", implementation);
+    function run(
+        address[] calldata _proposers,
+        address[] calldata _executors,
+        address _admin,
+        address _polygonZkEVM,
+        uint256 _minDelay
+    ) public {
+        address implementation = deployPolygonZkEVMTimelockImplementation(
+            _minDelay, _proposers, _executors, _admin, PolygonZkEVM(_polygonZkEVM)
+        );
+        console.log("PolygonZkEVMTimelock implementation: ", implementation);
     }
 }

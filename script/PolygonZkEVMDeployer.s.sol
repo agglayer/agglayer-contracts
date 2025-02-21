@@ -5,10 +5,8 @@ import "forge-std/Script.sol";
 import "script/deployers/PolygonZkEVMDeployerDeployer.s.sol";
 
 contract Deploy is Script, PolygonZkEVMDeployerDeployer {
-    function run() public {
-        address _owner = vm.addr(vm.envUint("PRIVATE_KEY"));
-
+    function run(address _owner) public {
         address implementation = deployPolygonZkEVMDeployerImplementation(_owner);
-        console.log("PolygonZkEVMDeployer deployed at: ", implementation);
+        console.log("PolygonZkEVMDeployer implementation: ", implementation);
     }
 }

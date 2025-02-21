@@ -42,7 +42,7 @@ abstract contract PolygonZkEVMEtrogDeployer is Script {
             _networkName
         );
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         polygonZkEVMEtrogImplementation =
             address(new PolygonZkEVMEtrog(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager));
         vm.stopBroadcast();
@@ -76,7 +76,7 @@ abstract contract PolygonZkEVMEtrogDeployer is Script {
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManager _rollupManager
     ) internal returns (address implementation) {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new PolygonZkEVMEtrog(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager));
         vm.stopBroadcast();
     }

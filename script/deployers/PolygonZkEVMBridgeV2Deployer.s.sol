@@ -40,7 +40,7 @@ abstract contract PolygonZkEVMBridgeV2Deployer is Script {
             )
         );
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
 
         polygonZkEVMBridgeV2Implementation = address(new PolygonZkEVMBridgeV2());
         polygonZkEVMBridgeV2 = PolygonZkEVMBridgeV2(
@@ -67,7 +67,7 @@ abstract contract PolygonZkEVMBridgeV2Deployer is Script {
     }
 
     function deployPolygonZkEVMBridgeV2Implementation() internal returns (address implementation) {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new PolygonZkEVMBridgeV2());
         vm.stopBroadcast();
     }

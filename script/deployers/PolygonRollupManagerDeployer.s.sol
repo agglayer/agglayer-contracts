@@ -19,7 +19,7 @@ abstract contract PolygonRollupManagerDeployer is Script {
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress
     ) internal returns (address implementation) {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new PolygonRollupManager(_globalExitRootManager, _pol, _bridgeAddress));
         vm.stopBroadcast();
     }

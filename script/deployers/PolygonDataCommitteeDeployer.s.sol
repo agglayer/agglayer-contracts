@@ -25,7 +25,7 @@ abstract contract PolygonDataCommitteeDeployer is Script {
     {
         bytes memory initData = abi.encodeCall(PolygonDataCommittee.initialize, ());
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
 
         polygonDataCommitteeImplementation = address(new PolygonDataCommittee());
         polygonDataCommittee = PolygonDataCommittee(
@@ -52,7 +52,7 @@ abstract contract PolygonDataCommitteeDeployer is Script {
     }
 
     function deployPolygonDataCommitteeImplementation() internal returns (address implementation) {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new PolygonDataCommittee());
         vm.stopBroadcast();
     }

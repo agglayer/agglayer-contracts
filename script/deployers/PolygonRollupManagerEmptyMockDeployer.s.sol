@@ -25,7 +25,7 @@ abstract contract PolygonRollupManagerEmptyMockDeployer is Script {
     {
         bytes memory initData = "";
 
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
 
         polygonRollupManagerEmptyMockImplementation = address(new PolygonRollupManagerEmptyMock());
         polygonRollupManagerEmptyMock = PolygonRollupManagerEmptyMock(
@@ -57,7 +57,7 @@ abstract contract PolygonRollupManagerEmptyMockDeployer is Script {
     }
 
     function deployPolygonRollupManagerEmptyMockImplementation() internal returns (address implementation) {
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast();
         implementation = address(new PolygonRollupManagerEmptyMock());
         vm.stopBroadcast();
     }

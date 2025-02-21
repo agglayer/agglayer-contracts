@@ -5,13 +5,11 @@ import "forge-std/Script.sol";
 import "script/deployers/VerifierRollupHelperMockDeployer.s.sol";
 
 contract Deploy is Script, VerifierRollupHelperMockDeployer {
-    function run() public {
-        address proxyAdminOwner = makeAddr("proxyAdminOwner");
-
+    function run(address _proxyAdmin) public {
         (address implementation, address proxyAdmin, address proxy) =
-            deployVerifierRollupHelperMockTransparent(proxyAdminOwner);
-        console.log("VerifierRollupHelperMock deployed at: ", proxy);
-        console.log("VerifierRollupHelperMock implementation deployed at: ", implementation);
+            deployVerifierRollupHelperMockTransparent(_proxyAdmin);
+        console.log("VerifierRollupHelperMock proxy: ", proxy);
+        console.log("VerifierRollupHelperMock implementation: ", implementation);
         console.log("VerifierRollupHelperMock proxy admin: ", proxyAdmin);
     }
 }
