@@ -129,8 +129,8 @@ contract DeployContracts is Script {
         // if not, deploy ProxyAdmin and transfer ownership to deployer
         bytes memory callData =
             abi.encodeWithSelector(ProxyAdmin(proxyAdminAddr).transferOwnership.selector, vm.addr(deployerPvtKey));
-        vm.startBroadcast(deployerPvtKey);
         zkevmDeployer.deployDeterministicAndCall(0, salt, bytecode, callData);
+        vm.startBroadcast(deployerPvtKey);
         vm.stopBroadcast();
 
         console.log("\n----------------------\n");
