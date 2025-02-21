@@ -2,13 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "./DepositContractBase.sol";
+import "./DepositContractBaseV2.sol";
 
 /**
  * This contract will be used in the PolygonZkEVMBridge contract, it inherits the DepositContractBase and adds the logic
  * to calculate the leaf of the tree
  */
-contract DepositContractV2 is ReentrancyGuardUpgradeable, DepositContractBase {
+contract DepositContractV2 is ReentrancyGuardUpgradeable, DepositContractBaseV2 {
     /**
      * @notice Given the leaf data returns the leaf value
      * @param leafType Leaf type -->  [0] transfer Ether / ERC20 tokens, [1] message

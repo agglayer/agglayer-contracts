@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 import "./lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "../lib/GlobalExitRootLib.sol";
-import "./lib/DepositContractBase.sol";
+import "./lib/DepositContractBaseV2.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
@@ -13,7 +13,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  */
 contract PolygonZkEVMGlobalExitRootV2 is
     PolygonZkEVMGlobalExitRootBaseStorage,
-    DepositContractBase,
+    DepositContractBaseV2,
     Initializable
 {
     // PolygonZkEVMBridge address
@@ -148,7 +148,7 @@ contract PolygonZkEVMGlobalExitRootV2 is
     function getRoot()
         public
         view
-        override(DepositContractBase, IPolygonZkEVMGlobalExitRootV2)
+        override(DepositContractBaseV2, IPolygonZkEVMGlobalExitRootV2)
         returns (bytes32)
     {
         return super.getRoot();
