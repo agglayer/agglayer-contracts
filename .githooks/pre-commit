@@ -40,9 +40,15 @@ if npm run lint; then
 
     cp artifacts/contracts/v2/utils/ClaimCompressor.sol/ClaimCompressor.json compiled-contracts/
 
+    cp artifacts/contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol/GlobalExitRootManagerL2SovereignChain.json compiled-contracts/
+    cp artifacts/contracts/v2/sovereignChains/BridgeL2SovereignChain.sol/BridgeL2SovereignChain.json compiled-contracts/
+    cp artifacts/contracts/v2/AggLayerGateway.sol/AggLayerGateway.json compiled-contracts/
+    cp artifacts/contracts/v2/lib/AggchainBase.sol/AggchainBase.json compiled-contracts/
+    cp artifacts/contracts/v2/aggchains/AggchainECDSA.sol/AggchainECDSA.json compiled-contracts/
+    ## Aggchain FEP is obtained from a private repo, should be updated manually until it is public, therefore it is commented out
+    ## cp artifacts/contracts/v2/aggchains/AggchainFEP.sol/AggchainFEP.json compiled-contracts/
     forge selectors ls > docs/selectors.txt
     git add docs/selectors.txt
-    
     git add compiled-contracts
     exit 0
 else

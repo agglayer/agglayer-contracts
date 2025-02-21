@@ -81,7 +81,7 @@ contract GlobalExitRootManagerL2SovereignChain is
     function initialize(
         address _globalExitRootUpdater,
         address _globalExitRootRemover
-    ) external virtual initializer {
+    ) external virtual reinitializer(2) {
         // set globalExitRootUpdater
         globalExitRootUpdater = _globalExitRootUpdater;
         // set globalExitRootRemover

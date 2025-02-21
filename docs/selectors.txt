@@ -1,2 +1,2 @@
 Listing selectors for contracts in the project...
-[2m2025-02-21T06:26:44.281916Z[0m [31mERROR[0m [2mfoundry_compilers::resolver[0m[2m:[0m failed to resolve versions
+[2m2025-02-21T07:32:48.838148Z[0m [31mERROR[0m [2mfoundry_compilers::resolver[0m[2m:[0m failed to resolve versions
