@@ -41,7 +41,7 @@ async function main() {
     console.log(`Default Admin rollup manager role address: ${adminRoleAddress}`);
     // Expect upgrade param timelock address to equal admin role address
     expect(upgradeOutput.timelockContractAddress).to.be.equal(adminRoleAddress);
-    console.log("✓ admin role is same as upgraded file timelock address");
+    console.log("✓ admin role is same as upgrade output file timelock address");
 
     // Get timelock admin role
     const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock");
@@ -55,9 +55,9 @@ async function main() {
     const proposerRoleAddress = proposerRoleEvents[0].args.account;
     console.log(`Proposer/executor timelock role address: ${proposerRoleAddress}`);
     await ethers.provider.send("hardhat_impersonateAccount", [proposerRoleAddress]);
-    const adminBali = await ethers.getSigner(proposerRoleAddress as any);
+    const proposerRoleSigner = await ethers.getSigner(proposerRoleAddress as any);
     await setBalance(proposerRoleAddress, 100n ** 18n);
-    console.log("✓ Funded proposer account");
+    console.log(`✓ Funded proposer account ${proposerRoleAddress}`);
 
     // Get current rollupManager params to compare after upgrade
     const rollupManagerVersion = await rollupManagerPessimisticContract.ROLLUP_MANAGER_VERSION();
@@ -82,7 +82,7 @@ async function main() {
         to: upgradeOutput.timelockContractAddress,
         data: upgradeOutput.scheduleData,
     };
-    await (await adminBali.sendTransaction(txScheduleUpgrade)).wait();
+    await (await proposerRoleSigner.sendTransaction(txScheduleUpgrade)).wait();
     console.log("✓ Sent schedule transaction");
     // Increase time to bypass the timelock delay
     const timelockDelay = upgradeOutput.decodedScheduleData.delay;
@@ -93,7 +93,7 @@ async function main() {
         to: upgradeOutput.timelockContractAddress,
         data: upgradeOutput.executeData,
     };
-    await (await adminBali.sendTransaction(txExecuteUpgrade)).wait();
+    await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
     console.log(`✓ Sent execute transaction`);
     const rollupMangerFactory = await ethers.getContractFactory("PolygonRollupManager");
     const rollupManagerContract = rollupMangerFactory.attach(

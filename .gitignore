@@ -11,7 +11,7 @@ coverage
 artifacts/
 docs/interfaces
 docs/mocks
-.vscode/launch.json
+.vscode
 deploy_output.json
 deploy_parameters.json
 deployments
@@ -24,7 +24,5 @@ create_rollup_parameters.json
 docker/deploymentOutput
 
 .DS_Store
-
-tools/createSovereignGenesisWithHardhat/genesis-sovereign_hardhat.json
 
 upgrade/upgradeAL/upgrade_output.json

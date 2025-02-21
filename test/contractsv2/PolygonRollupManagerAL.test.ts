@@ -11,7 +11,7 @@ import {
     PolygonPessimisticConsensus,
 } from "../../typechain-types";
 const {VerifierType, computeRandomBytes} = require("../../src/pessimistic-utils");
-const {AggchainType} = require("../../src/utils");
+const {AggchainType} = require("../../src/utils-common-aggchain");
 const {
     AGGCHAIN_TYPE_SELECTOR_ECDSA,
     encodeAggchainDataECDSA,

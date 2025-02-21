@@ -1,15 +1,17 @@
 const ethers = require('ethers');
 
-/////////////////////////////////
-///// Constants for Aggchain ////
-/////////////////////////////////
+/// //////////////////////////////
+/// // Constants for Aggchain ////
+/// //////////////////////////////
 
 // aggchain type constant to define an aggchain using pessimistic proof v0.3.0
-const AGGCHAIN_TYPE = 1;
-
-/////////////////////////////////
-///// Functions for Aggchain ////
-/////////////////////////////////
+const AggchainType = {
+    LEGACY: 0,
+    GENERIC: 1,
+};
+/// //////////////////////////////
+/// // Functions for Aggchain ////
+/// //////////////////////////////
 
 /**
  * Compute aggchain hash
@@ -24,8 +26,8 @@ function computeAggchainHash(
     hashAggchainParams,
 ) {
     // sanity check
-    if (Number(aggchainType) !== AGGCHAIN_TYPE) {
-        throw new Error(`Invalid aggchain type for v0.3.0. Must be ${AGGCHAIN_TYPE}`);
+    if (Number(aggchainType) !== AggchainType.GENERIC) {
+        throw new Error(`Invalid aggchain type for v0.3.0. Must be ${AggchainType.GENERIC}`);
     }
 
     // solidity keccak
@@ -61,7 +63,7 @@ function getFinalAggchainVKeySelectorFromType(_aggchainVKeySelector, _aggchainTy
 }
 
 module.exports = {
-    AGGCHAIN_TYPE,
+    AggchainType,
     computeAggchainHash,
     getFinalAggchainVKeySelectorFromType,
-}
+};

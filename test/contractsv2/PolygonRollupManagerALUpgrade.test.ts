@@ -10,14 +10,14 @@ import {
     VerifierRollupHelperMock,
     PolygonPessimisticConsensus,
 } from "../../typechain-types";
-const {VerifierType, AggchainSelector, computeRandomBytes} = require("../../src/pessimistic-utils");
+const {VerifierType, computeRandomBytes} = require("../../src/pessimistic-utils");
 const {
     AGGCHAIN_TYPE_SELECTOR_ECDSA,
     encodeAggchainDataECDSA,
     encodeInitializeBytesAggchainECDSAv1,
     encodeInitializeBytesAggchainECDSAv0,
 } = require("../../src/utils-aggchain-ECDSA");
-const {AggchainType} = require("../../src/utils");
+const {AggchainType} = require("../../src/utils-common-aggchain");
 const {getFinalAggchainVKeySelectorFromType} = require("../../src/utils-common-aggchain");
 
 describe("Polygon rollup manager aggregation layer v3 UPGRADED", () => {

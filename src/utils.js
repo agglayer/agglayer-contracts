@@ -4,16 +4,20 @@ const { ethers } = require('ethers');
  * Check if all params are present in the expectedParams
  * @param {Object} objParams - object with parameters
  * @param {Array} expectedParams - array of expected parameters in string
+ * @param {Boolean} checkAddresses - check if the parameter is a correct address in case has Address string in param name
  */
-function checkParams(objParams, expectedParams) {
+function checkParams(objParams, expectedParams, checkAddresses = false) {
     // eslint-disable-next-line no-restricted-syntax
     for (const parameterName of expectedParams) {
         if (objParams[parameterName] === undefined || objParams[parameterName] === '') {
             throw new Error(`Missing parameter: ${parameterName}`);
         }
+
+        if (checkAddresses) {
         // Check addresses
-        if (parameterName.includes('Address') && !ethers.isAddress(objParams[parameterName])) {
-            throw new Error(`Invalid parameter address: ${parameterName}`);
+            if (parameterName.includes('Address') && !ethers.isAddress(objParams[parameterName])) {
+                throw new Error(`Invalid parameter address: ${parameterName}`);
+            }
         }
     }
 }
@@ -95,15 +99,9 @@ function getStorageReadWrites(trace) {
     return trace.structLogs[trace.structLogs.length - 1].storage;
 }
 
-const AggchainType = {
-    LEGACY: 0,
-    GENERIC: 1,
-};
-
 module.exports = {
     getStorageWrites,
     getStorageReadWrites,
     valueToStorageBytes,
     checkParams,
-    AggchainType,
 };

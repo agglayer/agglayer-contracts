@@ -124,7 +124,7 @@ async function main() {
                 // get aggchainHash
                 aggchainHash.push(
                     utilsCommon.computeAggchainHash(
-                        utilsCommon.AGGCHAIN_TYPE,
+                        utilsCommon.AggchainType.GENERIC,
                         data.ownedAggchainVkeys[j],
                         aggchainParams
                     )

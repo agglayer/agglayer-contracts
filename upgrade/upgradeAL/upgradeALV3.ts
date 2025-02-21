@@ -1,16 +1,15 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
 import path = require("path");
 import fs = require("fs");
-import {utils} from "ffjavascript";
+import { utils } from "ffjavascript";
 
 import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, upgrades, run} from "hardhat";
-import {PolygonRollupManagerPessimistic} from "../../typechain-types";
-import {genTimelockOperation} from "../utils";
-import {checkParams} from "../../src/utils";
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+import { ethers, upgrades } from "hardhat";
+import { PolygonRollupManagerPessimistic } from "../../typechain-types";
+import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData } from "../utils";
+import { checkParams } from "../../src/utils";
 
 const pathOutputJson = path.join(__dirname, "./upgrade_output.json");
 
@@ -26,7 +25,7 @@ async function main() {
     const mandatoryUpgradeParameters = ["rollupManagerAddress", "aggLayerGatewayAddress", "timelockDelay"];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    const {rollupManagerAddress, timelockDelay, aggLayerGatewayAddress} = upgradeParameters;
+    const { rollupManagerAddress, timelockDelay, aggLayerGatewayAddress } = upgradeParameters;
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
 
     // Load onchain parameters
@@ -89,7 +88,7 @@ async function main() {
 
     const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(rollupManagerPessimisticContract.target);
     const proxyAdminFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts5/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
+        "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
     );
     const proxyAdmin = proxyAdminFactory.attach(proxyAdminAddress);
     const timelockAddress = await proxyAdmin.owner();
@@ -98,7 +97,8 @@ async function main() {
     const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
 
     // prepare upgrades
-    // Force import the current deployed proxy and implementation for storage layout upgrade checks
+    // Force import the current deployed proxy and implementation for storage layout upgrade checks.
+    // It creates the manifest file for open zeppelin upgrades
     await upgrades.forceImport(rollupManagerAddress, polygonRMPreviousFactory, {
         constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress],
         kind: "transparent",
@@ -113,28 +113,7 @@ async function main() {
 
     console.log("#######################\n");
     console.log(`Polygon rollup manager: ${implRollupManager}`);
-    try {
-        console.log("Trying to verify the new implementation contract");
-        // wait a few seconds before trying etherscan verification
-        await new Promise((r) => setTimeout(r, 5000));
-        // verify
-        await run("verify:verify", {
-            address: implRollupManager,
-            constructorArguments: [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress],
-        });
-    } catch (error) {
-        console.log("Error verifying the new implementation contract: ", error);
-        console.log("you can verify the new impl address with:");
-        console.log(
-            `npx hardhat verify --constructor-args upgrade/arguments.js ${implRollupManager} --network ${process.env.HARDHAT_NETWORK}\n`
-        );
-        console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
-            globalExitRootManagerAddress,
-            polAddress,
-            bridgeAddress,
-            aggLayerGatewayAddress,
-        ]);
-    }
+    await verifyContractEtherscan(implRollupManager as string, [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress]);
 
     const operationRollupManager = genTimelockOperation(
         proxyAdmin.target,
@@ -167,8 +146,8 @@ async function main() {
         salt, // salt
     ]);
 
-    console.log({scheduleData});
-    console.log({executeData});
+    console.log({ scheduleData });
+    console.log({ executeData });
 
     const outputJson = {
         scheduleData,
@@ -177,31 +156,8 @@ async function main() {
     };
 
     // Decode the scheduleData for better readability
-    const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
-    const paramsArray = timelockTx?.fragment.inputs as any;
-    const objectDecoded = {} as any;
+    const objectDecoded = await decodeScheduleData(scheduleData, proxyAdmin);
 
-    for (let i = 0; i < paramsArray?.length; i++) {
-        const currentParam = paramsArray[i];
-        objectDecoded[currentParam.name] = timelockTx?.args[i];
-
-        if (currentParam.name == "data") {
-            const decodedProxyAdmin = proxyAdmin.interface.parseTransaction({
-                data: timelockTx?.args[i],
-            });
-            const objectDecodedData = {} as any;
-            const paramsArrayData = decodedProxyAdmin?.fragment.inputs as any;
-
-            objectDecodedData.signature = decodedProxyAdmin?.signature;
-            objectDecodedData.selector = decodedProxyAdmin?.selector;
-
-            for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedProxyAdmin?.args[j];
-            }
-            objectDecoded["decodedData"] = objectDecodedData;
-        }
-    }
 
     outputJson.decodedScheduleData = objectDecoded;
 

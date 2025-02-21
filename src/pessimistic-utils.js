@@ -16,10 +16,6 @@ const ConsensusContracts = {
     PolygonPessimisticConsensus: 'PolygonPessimisticConsensus',
 
 };
-const AggchainSelector = {
-    ECDSA: '0000',
-    FEP: '0001',
-};
 /**
  * Compute input for SNARK circuit: sha256(
  * initStateRoot, initBlobStateRoot, initBlobAccInputHash, initNumBlob, chainId, forkID
@@ -66,6 +62,11 @@ function computeConsensusHashEcdsa(address) {
     return ethers.solidityPackedKeccak256(['uint32', 'address'], [ConsensusTypes.Ecdsa, address]);
 }
 
+/**
+ * Computes random bytes and formats it as a hex string
+ * @param {Number} length of the output random bytes
+ * @returns random bytes as a hex string
+ */
 function computeRandomBytes(length) {
     return `0x${Buffer.from(ethers.randomBytes(length)).toString('hex')}`;
 }
@@ -76,6 +77,5 @@ module.exports = {
     computeInputPessimisticBytes,
     computeConsensusHashEcdsa,
     ConsensusContracts,
-    AggchainSelector,
     computeRandomBytes,
 };

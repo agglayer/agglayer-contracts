@@ -25,6 +25,7 @@ contract PolygonZkEVMGlobalExitRootL2 is IBasePolygonZkEVMGlobalExitRoot {
     ///////////////////
 
     // PolygonZkEVM Bridge address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable bridgeAddress;
 
     /**
