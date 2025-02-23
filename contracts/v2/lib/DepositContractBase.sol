@@ -47,11 +47,11 @@ contract DepositContractBase {
             height++
         ) {
             if (((size >> height) & 1) == 1)
-                node = Hashes._efficientKeccak256(_branch[height], node);
+                node = Hashes.efficientKeccak256(_branch[height], node);
             else
-                node = Hashes._efficientKeccak256(node, currentZeroHashHeight);
+                node = Hashes.efficientKeccak256(node, currentZeroHashHeight);
 
-            currentZeroHashHeight = Hashes._efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
+            currentZeroHashHeight = Hashes.efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
         }
         return node;
     }
@@ -79,7 +79,7 @@ contract DepositContractBase {
                 _branch[height] = node;
                 return;
             }
-            node = Hashes._efficientKeccak256(_branch[height], node);
+            node = Hashes.efficientKeccak256(_branch[height], node);
         }
         // As the loop should always end prematurely with the `return` statement,
         // this code should be unreachable. We assert `false` just to be safe.
@@ -122,8 +122,8 @@ contract DepositContractBase {
             height++
         ) {
             if (((index >> height) & 1) == 1)
-                node = Hashes._efficientKeccak256(smtProof[height], node);
-            else node = Hashes._efficientKeccak256(node, smtProof[height]);
+                node = Hashes.efficientKeccak256(smtProof[height], node);
+            else node = Hashes.efficientKeccak256(node, smtProof[height]);
         }
 
         return node;

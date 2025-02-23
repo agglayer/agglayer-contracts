@@ -1292,16 +1292,16 @@ contract PolygonRollupManager is
             for (uint256 i = 0; i < nextIterationNodes; i++) {
                 // if we are on the last iteration of the current level and the nodes are odd
                 if (i == nextIterationNodes - 1 && (currentNodes % 2) == 1) {
-                    nextTmpTree[i] = Hashes._efficientKeccak256(tmpTree[i * 2], currentZeroHashHeight);
+                    nextTmpTree[i] = Hashes.efficientKeccak256(tmpTree[i * 2], currentZeroHashHeight);
                 } else {
-                    nextTmpTree[i] = Hashes._efficientKeccak256(tmpTree[i * 2], tmpTree[(i * 2) + 1]);
+                    nextTmpTree[i] = Hashes.efficientKeccak256(tmpTree[i * 2], tmpTree[(i * 2) + 1]);
                 }
             }
 
             // Update tree variables
             tmpTree = nextTmpTree;
             currentNodes = nextIterationNodes;
-            currentZeroHashHeight = Hashes._efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
+            currentZeroHashHeight = Hashes.efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
             remainingLevels--;
         }
 
@@ -1309,8 +1309,8 @@ contract PolygonRollupManager is
 
         // Calculate remaining levels, since it's a sequential merkle tree, the rest of the tree are zeroes
         for (uint256 i = 0; i < remainingLevels; i++) {
-            currentRoot = Hashes._efficientKeccak256(currentRoot, currentZeroHashHeight);
-            currentZeroHashHeight = Hashes._efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
+            currentRoot = Hashes.efficientKeccak256(currentRoot, currentZeroHashHeight);
+            currentZeroHashHeight = Hashes.efficientKeccak256(currentZeroHashHeight, currentZeroHashHeight);
         }
         return currentRoot;
     }

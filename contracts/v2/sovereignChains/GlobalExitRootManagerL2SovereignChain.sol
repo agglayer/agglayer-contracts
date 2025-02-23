@@ -123,7 +123,7 @@ contract GlobalExitRootManagerL2SovereignChain is
         if (globalExitRootMap[_newRoot] == 0) {
             globalExitRootMap[_newRoot] = block.timestamp;
             // Update hash chain value
-            insertedGERHashChain = Hashes._efficientKeccak256(insertedGERHashChain, _newRoot);
+            insertedGERHashChain = Hashes.efficientKeccak256(insertedGERHashChain, _newRoot);
             // @dev we are emitting to events for backwards compatibility, should deprecate InsertGlobalExitRoot event in the future
             emit InsertGlobalExitRoot(_newRoot);
             emit UpdateHashChainValue(_newRoot, insertedGERHashChain);
@@ -170,7 +170,7 @@ contract GlobalExitRootManagerL2SovereignChain is
                 revert GlobalExitRootNotFound();
             }
             // Encode new removed GERs to generate the nextRemovalHashChainValue
-            nextRemovalHashChainValue = Hashes._efficientKeccak256(nextRemovalHashChainValue, gerToRemove);
+            nextRemovalHashChainValue = Hashes.efficientKeccak256(nextRemovalHashChainValue, gerToRemove);
 
             // Remove the GER from the map
             delete globalExitRootMap[gerToRemove];
