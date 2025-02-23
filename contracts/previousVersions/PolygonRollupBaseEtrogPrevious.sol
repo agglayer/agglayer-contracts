@@ -4,13 +4,8 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-<<<<<<< HEAD:contracts/v2/previousVersions/PolygonRollupBaseEtrogPrevious.sol
-import "../../interfaces/IPolygonZkEVMErrors.sol";
-import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
-=======
 import "../interfaces/IPolygonZkEVMErrors.sol";
-import "../interfaces/IPolygonZkEVMVEtrogErrors.sol";
->>>>>>> 9fcf8b76 (chore: relocate contract dirs and files):contracts/previousVersions/PolygonRollupBaseEtrogPrevious.sol
+import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "../PolygonRollupManager.sol";
 import "./IPolygonRollupBasePrevious.sol";
 import "../interfaces/IPolygonZkEVMBridgeV2.sol";

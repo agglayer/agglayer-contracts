@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-import "../../../interfaces/IVerifierRollup.sol";
+import "../../interfaces/IVerifierRollup.sol";
 import "../../interfaces/IPolygonRollupBase.sol";
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 

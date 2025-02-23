@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
-import "../../../interfaces/IPolygonZkEVMErrors.sol";
+import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "./PolygonRollupManagerPessimistic.sol";
 import "../../interfaces/IPolygonRollupBase.sol";

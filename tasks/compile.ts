@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 
 const IGNORED_CONTRACTS = [
-    "contracts/PolygonZkEVMBridgeV2.sol.ignored",
+    // "contracts/PolygonZkEVMBridgeV2.sol.ignored",
     "contracts/outdated/mocks/DaiMock.sol.ignored",
     "contracts/outdated/mocks/Uni.sol.ignored",
 ];
