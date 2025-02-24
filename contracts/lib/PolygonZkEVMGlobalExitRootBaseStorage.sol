@@ -8,7 +8,9 @@ import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
  * Since the current contract of PolygonZkEVMGlobalExitRoot will be upgraded to a PolygonZkEVMGlobalExitRootV2, and it will implement
  * the DepositContractBase, this base is needed to preserve the previous storage slots
  */
-abstract contract PolygonZkEVMGlobalExitRootBaseStorage is IPolygonZkEVMGlobalExitRootV2 {
+abstract contract PolygonZkEVMGlobalExitRootBaseStorage is
+    IPolygonZkEVMGlobalExitRootV2
+{
     // Rollup root, contains all exit roots of all rollups
     bytes32 public lastRollupExitRoot;
 

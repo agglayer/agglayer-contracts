@@ -36,13 +36,15 @@ contract FflonkVerifier_12 {
     // Omega_3, Omega_3^2
     uint256 constant w3 =
         21_888_242_871_839_275_217_838_484_774_961_031_246_154_997_185_409_878_258_781_734_729_429_964_517_155;
-    uint256 constant w3_2 = 4_407_920_970_296_243_842_393_367_215_006_156_084_916_469_457_145_843_978_461;
+    uint256 constant w3_2 =
+        4_407_920_970_296_243_842_393_367_215_006_156_084_916_469_457_145_843_978_461;
     // Omega_4, Omega_4^2, Omega_4^3
     uint256 constant w4 =
         21_888_242_871_839_275_217_838_484_774_961_031_246_007_050_428_528_088_939_761_107_053_157_389_710_902;
     uint256 constant w4_2 =
         21_888_242_871_839_275_222_246_405_745_257_275_088_548_364_400_416_034_343_698_204_186_575_808_495_616;
-    uint256 constant w4_3 = 4_407_920_970_296_243_842_541_313_971_887_945_403_937_097_133_418_418_784_715;
+    uint256 constant w4_3 =
+        4_407_920_970_296_243_842_541_313_971_887_945_403_937_097_133_418_418_784_715;
     // Omega_8, Omega_8^2, Omega_8^3, Omega_8^4, Omega_8^5, Omega_8^6, Omega_8^7
     uint256 constant w8_1 =
         19_540_430_494_807_482_326_159_819_597_004_422_086_093_766_032_135_589_407_132_600_596_362_845_576_832;
@@ -54,7 +56,8 @@ contract FflonkVerifier_12 {
         21_888_242_871_839_275_222_246_405_745_257_275_088_548_364_400_416_034_343_698_204_186_575_808_495_616;
     uint256 constant w8_5 =
         2_347_812_377_031_792_896_086_586_148_252_853_002_454_598_368_280_444_936_565_603_590_212_962_918_785;
-    uint256 constant w8_6 = 4_407_920_970_296_243_842_541_313_971_887_945_403_937_097_133_418_418_784_715;
+    uint256 constant w8_6 =
+        4_407_920_970_296_243_842_541_313_971_887_945_403_937_097_133_418_418_784_715;
     uint256 constant w8_7 =
         8_613_538_655_231_327_379_234_925_296_132_678_673_308_827_349_856_085_326_283_699_237_864_372_525_723;
 
@@ -180,7 +183,10 @@ contract FflonkVerifier_12 {
 
     uint16 constant lastMem = 1920;
 
-    function verifyProof(bytes32[24] calldata proof, uint256[1] calldata pubSignals) public view returns (bool) {
+    function verifyProof(
+        bytes32[24] calldata proof,
+        uint256[1] calldata pubSignals
+    ) public view returns (bool) {
         assembly {
             // Computes the inverse of an array of values
             // See https://vitalik.ca/general/2018/07/21/starks_part_3.html in section where explain fields operations
@@ -432,8 +438,14 @@ contract FflonkVerifier_12 {
                 mstore(add(pMem, 2016), calldataload(pC1))
                 mstore(add(pMem, 2048), calldataload(add(pC1, 32)))
 
-                mstore(add(pMem, pBeta), mod(keccak256(add(pMem, lastMem), 160), q))
-                mstore(add(pMem, pGamma), mod(keccak256(add(pMem, pBeta), 32), q))
+                mstore(
+                    add(pMem, pBeta),
+                    mod(keccak256(add(pMem, lastMem), 160), q)
+                )
+                mstore(
+                    add(pMem, pGamma),
+                    mod(keccak256(add(pMem, pBeta), 32), q)
+                )
 
                 // Get xiSeed & xiSeed2
                 mstore(add(pMem, lastMem), mload(add(pMem, pGamma)))
@@ -445,33 +457,106 @@ contract FflonkVerifier_12 {
                 mstore(add(pMem, pXiSeed2), mulmod(xiSeed, xiSeed, q))
 
                 // Compute roots.S0.h0w8
-                mstore(add(pMem, pH0w8_0), mulmod(mload(add(pMem, pXiSeed2)), mload(add(pMem, pXiSeed)), q))
-                mstore(add(pMem, pH0w8_1), mulmod(mload(add(pMem, pH0w8_0)), w8_1, q))
-                mstore(add(pMem, pH0w8_2), mulmod(mload(add(pMem, pH0w8_0)), w8_2, q))
-                mstore(add(pMem, pH0w8_3), mulmod(mload(add(pMem, pH0w8_0)), w8_3, q))
-                mstore(add(pMem, pH0w8_4), mulmod(mload(add(pMem, pH0w8_0)), w8_4, q))
-                mstore(add(pMem, pH0w8_5), mulmod(mload(add(pMem, pH0w8_0)), w8_5, q))
-                mstore(add(pMem, pH0w8_6), mulmod(mload(add(pMem, pH0w8_0)), w8_6, q))
-                mstore(add(pMem, pH0w8_7), mulmod(mload(add(pMem, pH0w8_0)), w8_7, q))
+                mstore(
+                    add(pMem, pH0w8_0),
+                    mulmod(
+                        mload(add(pMem, pXiSeed2)),
+                        mload(add(pMem, pXiSeed)),
+                        q
+                    )
+                )
+                mstore(
+                    add(pMem, pH0w8_1),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_1, q)
+                )
+                mstore(
+                    add(pMem, pH0w8_2),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_2, q)
+                )
+                mstore(
+                    add(pMem, pH0w8_3),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_3, q)
+                )
+                mstore(
+                    add(pMem, pH0w8_4),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_4, q)
+                )
+                mstore(
+                    add(pMem, pH0w8_5),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_5, q)
+                )
+                mstore(
+                    add(pMem, pH0w8_6),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_6, q)
+                )
+                mstore(
+                    add(pMem, pH0w8_7),
+                    mulmod(mload(add(pMem, pH0w8_0)), w8_7, q)
+                )
 
                 // Compute roots.S1.h1w4
-                mstore(add(pMem, pH1w4_0), mulmod(mload(add(pMem, pH0w8_0)), mload(add(pMem, pH0w8_0)), q))
-                mstore(add(pMem, pH1w4_1), mulmod(mload(add(pMem, pH1w4_0)), w4, q))
-                mstore(add(pMem, pH1w4_2), mulmod(mload(add(pMem, pH1w4_0)), w4_2, q))
-                mstore(add(pMem, pH1w4_3), mulmod(mload(add(pMem, pH1w4_0)), w4_3, q))
+                mstore(
+                    add(pMem, pH1w4_0),
+                    mulmod(
+                        mload(add(pMem, pH0w8_0)),
+                        mload(add(pMem, pH0w8_0)),
+                        q
+                    )
+                )
+                mstore(
+                    add(pMem, pH1w4_1),
+                    mulmod(mload(add(pMem, pH1w4_0)), w4, q)
+                )
+                mstore(
+                    add(pMem, pH1w4_2),
+                    mulmod(mload(add(pMem, pH1w4_0)), w4_2, q)
+                )
+                mstore(
+                    add(pMem, pH1w4_3),
+                    mulmod(mload(add(pMem, pH1w4_0)), w4_3, q)
+                )
 
                 // Compute roots.S2.h2w3
-                mstore(add(pMem, pH2w3_0), mulmod(mload(add(pMem, pH1w4_0)), mload(add(pMem, pXiSeed2)), q))
-                mstore(add(pMem, pH2w3_1), mulmod(mload(add(pMem, pH2w3_0)), w3, q))
-                mstore(add(pMem, pH2w3_2), mulmod(mload(add(pMem, pH2w3_0)), w3_2, q))
+                mstore(
+                    add(pMem, pH2w3_0),
+                    mulmod(
+                        mload(add(pMem, pH1w4_0)),
+                        mload(add(pMem, pXiSeed2)),
+                        q
+                    )
+                )
+                mstore(
+                    add(pMem, pH2w3_1),
+                    mulmod(mload(add(pMem, pH2w3_0)), w3, q)
+                )
+                mstore(
+                    add(pMem, pH2w3_2),
+                    mulmod(mload(add(pMem, pH2w3_0)), w3_2, q)
+                )
 
                 // Compute roots.S2.h2w3
-                mstore(add(pMem, pH3w3_0), mulmod(mload(add(pMem, pH2w3_0)), wr, q))
-                mstore(add(pMem, pH3w3_1), mulmod(mload(add(pMem, pH3w3_0)), w3, q))
-                mstore(add(pMem, pH3w3_2), mulmod(mload(add(pMem, pH3w3_0)), w3_2, q))
+                mstore(
+                    add(pMem, pH3w3_0),
+                    mulmod(mload(add(pMem, pH2w3_0)), wr, q)
+                )
+                mstore(
+                    add(pMem, pH3w3_1),
+                    mulmod(mload(add(pMem, pH3w3_0)), w3, q)
+                )
+                mstore(
+                    add(pMem, pH3w3_2),
+                    mulmod(mload(add(pMem, pH3w3_0)), w3_2, q)
+                )
 
-                let xin :=
-                    mulmod(mulmod(mload(add(pMem, pH2w3_0)), mload(add(pMem, pH2w3_0)), q), mload(add(pMem, pH2w3_0)), q)
+                let xin := mulmod(
+                    mulmod(
+                        mload(add(pMem, pH2w3_0)),
+                        mload(add(pMem, pH2w3_0)),
+                        q
+                    ),
+                    mload(add(pMem, pH2w3_0)),
+                    q
+                )
                 mstore(add(pMem, pXi), xin)
 
                 // Compute xi^n
@@ -532,7 +617,10 @@ contract FflonkVerifier_12 {
                 mstore(add(pMem, lastMem), xiSeed)
 
                 calldatacopy(add(pMem, 1952), pEval_ql, 480)
-                mstore(add(pMem, pAlpha), mod(keccak256(add(pMem, lastMem), 512), q))
+                mstore(
+                    add(pMem, pAlpha),
+                    mod(keccak256(add(pMem, lastMem), 512), q)
+                )
 
                 // Compute challenge.y
                 mstore(add(pMem, lastMem), mload(add(pMem, pAlpha)))
@@ -554,45 +642,117 @@ contract FflonkVerifier_12 {
 
                 den1 := mulmod(8, den1, q)
 
-                let den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 0), 8), 32))))
-                let den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(0, 32))))), q), q)
+                let den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 0), 8), 32)))
+                )
+                let den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(0, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 0)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 0)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 1), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(1, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 1), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(1, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 32)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 32)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 2), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(2, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 2), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(2, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 64)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 64)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 3), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(3, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 3), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(3, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 96)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 96)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 4), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(4, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 4), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(4, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 128)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 128)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 5), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(5, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 5), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(5, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 160)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 160)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 6), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(6, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 6), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(6, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 192)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 192)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH0w8_0, mul(mod(mul(7, 7), 8), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(7, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH0w8_0, mul(mod(mul(7, 7), 8), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH0w8_0, mul(7, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS0Inv, 224)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS0Inv, 224)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
             }
 
             function computeLiS1(pMem) {
@@ -604,73 +764,169 @@ contract FflonkVerifier_12 {
 
                 den1 := mulmod(4, den1, q)
 
-                let den2 := mload(add(pMem, add(pH1w4_0, mul(mod(mul(3, 0), 4), 32))))
-                let den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(0, 32))))), q), q)
+                let den2 := mload(
+                    add(pMem, add(pH1w4_0, mul(mod(mul(3, 0), 4), 32)))
+                )
+                let den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(0, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS1Inv, 0)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS1Inv, 0)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH1w4_0, mul(mod(mul(3, 1), 4), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(1, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH1w4_0, mul(mod(mul(3, 1), 4), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(1, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS1Inv, 32)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS1Inv, 32)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH1w4_0, mul(mod(mul(3, 2), 4), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(2, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH1w4_0, mul(mod(mul(3, 2), 4), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(2, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS1Inv, 64)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS1Inv, 64)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH1w4_0, mul(mod(mul(3, 3), 4), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(3, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH1w4_0, mul(mod(mul(3, 3), 4), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH1w4_0, mul(3, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS1Inv, 96)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS1Inv, 96)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
             }
 
             function computeLiS2(pMem) {
                 let y := mload(add(pMem, pY))
 
-                let den1 :=
-                    mulmod(
-                        mulmod(3, mload(add(pMem, pH2w3_0)), q),
-                        addmod(mload(add(pMem, pXi)), mod(sub(q, mulmod(mload(add(pMem, pXi)), w1, q)), q), q),
+                let den1 := mulmod(
+                    mulmod(3, mload(add(pMem, pH2w3_0)), q),
+                    addmod(
+                        mload(add(pMem, pXi)),
+                        mod(sub(q, mulmod(mload(add(pMem, pXi)), w1, q)), q),
                         q
-                    )
+                    ),
+                    q
+                )
 
-                let den2 := mload(add(pMem, add(pH2w3_0, mul(mod(mul(2, 0), 3), 32))))
-                let den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH2w3_0, mul(0, 32))))), q), q)
+                let den2 := mload(
+                    add(pMem, add(pH2w3_0, mul(mod(mul(2, 0), 3), 32)))
+                )
+                let den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH2w3_0, mul(0, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS2Inv, 0)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS2Inv, 0)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH2w3_0, mul(mod(mul(2, 1), 3), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH2w3_0, mul(1, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH2w3_0, mul(mod(mul(2, 1), 3), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH2w3_0, mul(1, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS2Inv, 32)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS2Inv, 32)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH2w3_0, mul(mod(mul(2, 2), 3), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH2w3_0, mul(2, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH2w3_0, mul(mod(mul(2, 2), 3), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH2w3_0, mul(2, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS2Inv, 64)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS2Inv, 64)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den1 :=
-                    mulmod(
-                        mulmod(3, mload(add(pMem, pH3w3_0)), q),
-                        addmod(mulmod(mload(add(pMem, pXi)), w1, q), mod(sub(q, mload(add(pMem, pXi))), q), q),
+                den1 := mulmod(
+                    mulmod(3, mload(add(pMem, pH3w3_0)), q),
+                    addmod(
+                        mulmod(mload(add(pMem, pXi)), w1, q),
+                        mod(sub(q, mload(add(pMem, pXi))), q),
                         q
-                    )
+                    ),
+                    q
+                )
 
-                den2 := mload(add(pMem, add(pH3w3_0, mul(mod(mul(2, 0), 3), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH3w3_0, mul(0, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH3w3_0, mul(mod(mul(2, 0), 3), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH3w3_0, mul(0, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS2Inv, 96)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS2Inv, 96)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH3w3_0, mul(mod(mul(2, 1), 3), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH3w3_0, mul(1, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH3w3_0, mul(mod(mul(2, 1), 3), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH3w3_0, mul(1, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS2Inv, 128)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS2Inv, 128)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
 
-                den2 := mload(add(pMem, add(pH3w3_0, mul(mod(mul(2, 2), 3), 32))))
-                den3 := addmod(y, mod(sub(q, mload(add(pMem, add(pH3w3_0, mul(2, 32))))), q), q)
+                den2 := mload(
+                    add(pMem, add(pH3w3_0, mul(mod(mul(2, 2), 3), 32)))
+                )
+                den3 := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, add(pH3w3_0, mul(2, 32))))), q),
+                    q
+                )
 
-                mstore(add(pMem, add(pLiS2Inv, 160)), mulmod(den1, mulmod(den2, den3, q), q))
+                mstore(
+                    add(pMem, add(pLiS2Inv, 160)),
+                    mulmod(den1, mulmod(den2, den3, q), q)
+                )
             }
 
             // Prepare all the denominators that must be inverted, placed them in consecutive memory addresses
@@ -682,18 +938,50 @@ contract FflonkVerifier_12 {
                 // used in steps 10 and 11 of the verifier
                 let y := mload(add(pMem, pY))
                 let w := addmod(y, mod(sub(q, mload(add(pMem, pH1w4_0))), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH1w4_1))), q), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH1w4_2))), q), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH1w4_3))), q), q), q)
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH1w4_1))), q), q),
+                    q
+                )
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH1w4_2))), q), q),
+                    q
+                )
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH1w4_3))), q), q),
+                    q
+                )
                 mstore(add(pMem, pDenH1), w)
 
                 // 1/((y - h2) (y - h2w3) (y - h2w3_2) (y - h3) (y - h3w3) (y - h3w3_2))
                 w := addmod(y, mod(sub(q, mload(add(pMem, pH2w3_0))), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH2w3_1))), q), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH2w3_2))), q), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH3w3_0))), q), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH3w3_1))), q), q), q)
-                w := mulmod(w, addmod(y, mod(sub(q, mload(add(pMem, pH3w3_2))), q), q), q)
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH2w3_1))), q), q),
+                    q
+                )
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH2w3_2))), q), q),
+                    q
+                )
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH3w3_0))), q), q),
+                    q
+                )
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH3w3_1))), q), q),
+                    q
+                )
+                w := mulmod(
+                    w,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH3w3_2))), q), q),
+                    q
+                )
                 mstore(add(pMem, pDenH2), w)
 
                 // Denominator needed in the verifier when computing L_i^{S0}(X)
@@ -709,7 +997,10 @@ contract FflonkVerifier_12 {
                 w := 1
                 let xi := mload(add(pMem, pXi))
 
-                mstore(add(pMem, pEval_l1), mulmod(n, mod(add(sub(xi, w), q), q), q))
+                mstore(
+                    add(pMem, pEval_l1),
+                    mulmod(n, mod(add(sub(xi, w), q), q), q)
+                )
 
                 // Execute Montgomery batched inversions of the previous prepared values
                 inverseArray(pMem)
@@ -720,13 +1011,29 @@ contract FflonkVerifier_12 {
                 let zh := mload(add(pMem, pZh))
                 let w := 1
 
-                mstore(add(pMem, pEval_l1), mulmod(mload(add(pMem, pEval_l1)), zh, q))
+                mstore(
+                    add(pMem, pEval_l1),
+                    mulmod(mload(add(pMem, pEval_l1)), zh, q)
+                )
             }
 
             // Compute public input polynomial evaluation PI(xi)
             function computePi(pMem, pPub) {
                 let pi := 0
-                pi := mod(add(sub(pi, mulmod(mload(add(pMem, pEval_l1)), calldataload(pPub), q)), q), q)
+                pi := mod(
+                    add(
+                        sub(
+                            pi,
+                            mulmod(
+                                mload(add(pMem, pEval_l1)),
+                                calldataload(pPub),
+                                q
+                            )
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 mstore(add(pMem, pPi), pi)
             }
@@ -757,154 +1064,442 @@ contract FflonkVerifier_12 {
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_0))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 0))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 0))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_1))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 32))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 32))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_2))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 64))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 64))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_3))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 96))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 96))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_4))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 128))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 128))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_5))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 160))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 160))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_6))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 192))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 192))), q),
+                        q
+                    ),
+                    q
+                )
 
                 // Compute c0Value = ql + (h0w8i) qr + (h0w8i)^2 qo + (h0w8i)^3 qm + (h0w8i)^4 qc +
                 //                      + (h0w8i)^5 S1 + (h0w8i)^6 S2 + (h0w8i)^7 S3
                 h0w80 := mload(add(pMem, pH0w8_7))
-                c0Value := addmod(calldataload(pEval_ql), mulmod(calldataload(pEval_qr), h0w80, q), q)
+                c0Value := addmod(
+                    calldataload(pEval_ql),
+                    mulmod(calldataload(pEval_qr), h0w80, q),
+                    q
+                )
                 h0w8i := mulmod(h0w80, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qo), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qo), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qm), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qm), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_qc), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_qc), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s1), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s1), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s2), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s2), h0w8i, q),
+                    q
+                )
                 h0w8i := mulmod(h0w8i, h0w80, q)
-                c0Value := addmod(c0Value, mulmod(calldataload(pEval_s3), h0w8i, q), q)
+                c0Value := addmod(
+                    c0Value,
+                    mulmod(calldataload(pEval_s3), h0w8i, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c0Value, mulmod(num, mload(add(pMem, add(pLiS0Inv, 224))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c0Value,
+                        mulmod(num, mload(add(pMem, add(pLiS0Inv, 224))), q),
+                        q
+                    ),
+                    q
+                )
 
                 mstore(add(pMem, pR0), res)
             }
@@ -930,7 +1525,11 @@ contract FflonkVerifier_12 {
 
                 t0 := mulmod(calldataload(pEval_ql), evalA, q)
                 t0 := addmod(t0, mulmod(calldataload(pEval_qr), evalB, q), q)
-                t0 := addmod(t0, mulmod(calldataload(pEval_qm), mulmod(evalA, evalB, q), q), q)
+                t0 := addmod(
+                    t0,
+                    mulmod(calldataload(pEval_qm), mulmod(evalA, evalB, q), q),
+                    q
+                )
                 t0 := addmod(t0, mulmod(calldataload(pEval_qo), evalC, q), q)
                 t0 := addmod(t0, calldataload(pEval_qc), q)
                 t0 := addmod(t0, mload(add(pMem, pPi)), q)
@@ -946,9 +1545,25 @@ contract FflonkVerifier_12 {
                 c1Value := addmod(c1Value, mulmod(h1w4, evalB, q), q)
                 square := mulmod(h1w4, h1w4, q)
                 c1Value := addmod(c1Value, mulmod(square, evalC, q), q)
-                c1Value := addmod(c1Value, mulmod(mulmod(square, h1w4, q), t0, q), q)
+                c1Value := addmod(
+                    c1Value,
+                    mulmod(mulmod(square, h1w4, q), t0, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c1Value, mulmod(num, mload(add(pMem, add(pLiS1Inv, mul(0, 32)))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c1Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS1Inv, mul(0, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 c1Value := evalA
                 h1w4 := mload(add(pMem, pH1w4_1))
@@ -956,9 +1571,25 @@ contract FflonkVerifier_12 {
                 c1Value := addmod(c1Value, mulmod(h1w4, evalB, q), q)
                 square := mulmod(h1w4, h1w4, q)
                 c1Value := addmod(c1Value, mulmod(square, evalC, q), q)
-                c1Value := addmod(c1Value, mulmod(mulmod(square, h1w4, q), t0, q), q)
+                c1Value := addmod(
+                    c1Value,
+                    mulmod(mulmod(square, h1w4, q), t0, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c1Value, mulmod(num, mload(add(pMem, add(pLiS1Inv, mul(1, 32)))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c1Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS1Inv, mul(1, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 c1Value := evalA
                 h1w4 := mload(add(pMem, pH1w4_2))
@@ -966,9 +1597,25 @@ contract FflonkVerifier_12 {
                 c1Value := addmod(c1Value, mulmod(h1w4, evalB, q), q)
                 square := mulmod(h1w4, h1w4, q)
                 c1Value := addmod(c1Value, mulmod(square, evalC, q), q)
-                c1Value := addmod(c1Value, mulmod(mulmod(square, h1w4, q), t0, q), q)
+                c1Value := addmod(
+                    c1Value,
+                    mulmod(mulmod(square, h1w4, q), t0, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c1Value, mulmod(num, mload(add(pMem, add(pLiS1Inv, mul(2, 32)))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c1Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS1Inv, mul(2, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 c1Value := evalA
                 h1w4 := mload(add(pMem, pH1w4_3))
@@ -976,9 +1623,25 @@ contract FflonkVerifier_12 {
                 c1Value := addmod(c1Value, mulmod(h1w4, evalB, q), q)
                 square := mulmod(h1w4, h1w4, q)
                 c1Value := addmod(c1Value, mulmod(square, evalC, q), q)
-                c1Value := addmod(c1Value, mulmod(mulmod(square, h1w4, q), t0, q), q)
+                c1Value := addmod(
+                    c1Value,
+                    mulmod(mulmod(square, h1w4, q), t0, q),
+                    q
+                )
 
-                res := addmod(res, mulmod(c1Value, mulmod(num, mload(add(pMem, add(pLiS1Inv, mul(3, 32)))), q), q), q)
+                res := addmod(
+                    res,
+                    mulmod(
+                        c1Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS1Inv, mul(3, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 mstore(add(pMem, pR1), res)
             }
@@ -1001,51 +1664,104 @@ contract FflonkVerifier_12 {
                 num2 := mulmod(y, num2, q)
                 num2 := mulmod(y, num2, q)
                 num2 := mulmod(y, num2, q)
-                num2 := mulmod(num2, addmod(mulmod(mload(add(pMem, pXi)), w1, q), mload(add(pMem, pXi)), q), q)
+                num2 := mulmod(
+                    num2,
+                    addmod(
+                        mulmod(mload(add(pMem, pXi)), w1, q),
+                        mload(add(pMem, pXi)),
+                        q
+                    ),
+                    q
+                )
 
                 num := addmod(num, mod(sub(q, num2), q), q)
 
-                num2 := mulmod(mulmod(mload(add(pMem, pXi)), w1, q), mload(add(pMem, pXi)), q)
+                num2 := mulmod(
+                    mulmod(mload(add(pMem, pXi)), w1, q),
+                    mload(add(pMem, pXi)),
+                    q
+                )
 
                 num := addmod(num, num2, q)
 
                 let t1
                 let t2
-                let betaXi := mulmod(mload(add(pMem, pBeta)), mload(add(pMem, pXi)), q)
+                let betaXi := mulmod(
+                    mload(add(pMem, pBeta)),
+                    mload(add(pMem, pXi)),
+                    q
+                )
                 let gamma := mload(add(pMem, pGamma))
 
                 t2 := addmod(calldataload(pEval_a), addmod(betaXi, gamma, q), q)
-                t2 := mulmod(t2, addmod(calldataload(pEval_b), addmod(mulmod(betaXi, k1, q), gamma, q), q), q)
-                t2 := mulmod(t2, addmod(calldataload(pEval_c), addmod(mulmod(betaXi, k2, q), gamma, q), q), q)
+                t2 := mulmod(
+                    t2,
+                    addmod(
+                        calldataload(pEval_b),
+                        addmod(mulmod(betaXi, k1, q), gamma, q),
+                        q
+                    ),
+                    q
+                )
+                t2 := mulmod(
+                    t2,
+                    addmod(
+                        calldataload(pEval_c),
+                        addmod(mulmod(betaXi, k2, q), gamma, q),
+                        q
+                    ),
+                    q
+                )
                 t2 := mulmod(t2, calldataload(pEval_z), q)
 
                 //Let's use t1 as a temporal variable to save one local
-                t1 :=
+                t1 := addmod(
+                    calldataload(pEval_a),
                     addmod(
-                        calldataload(pEval_a),
-                        addmod(mulmod(mload(add(pMem, pBeta)), calldataload(pEval_s1), q), gamma, q),
+                        mulmod(
+                            mload(add(pMem, pBeta)),
+                            calldataload(pEval_s1),
+                            q
+                        ),
+                        gamma,
                         q
-                    )
-                t1 :=
-                    mulmod(
-                        t1,
+                    ),
+                    q
+                )
+                t1 := mulmod(
+                    t1,
+                    addmod(
+                        calldataload(pEval_b),
                         addmod(
-                            calldataload(pEval_b),
-                            addmod(mulmod(mload(add(pMem, pBeta)), calldataload(pEval_s2), q), gamma, q),
+                            mulmod(
+                                mload(add(pMem, pBeta)),
+                                calldataload(pEval_s2),
+                                q
+                            ),
+                            gamma,
                             q
                         ),
                         q
-                    )
-                t1 :=
-                    mulmod(
-                        t1,
+                    ),
+                    q
+                )
+                t1 := mulmod(
+                    t1,
+                    addmod(
+                        calldataload(pEval_c),
                         addmod(
-                            calldataload(pEval_c),
-                            addmod(mulmod(mload(add(pMem, pBeta)), calldataload(pEval_s3), q), gamma, q),
+                            mulmod(
+                                mload(add(pMem, pBeta)),
+                                calldataload(pEval_s3),
+                                q
+                            ),
+                            gamma,
                             q
                         ),
                         q
-                    )
+                    ),
+                    q
+                )
                 t1 := mulmod(t1, calldataload(pEval_zw), q)
 
                 t2 := addmod(t2, mod(sub(q, t1), q), q)
@@ -1065,38 +1781,128 @@ contract FflonkVerifier_12 {
                 hw := mload(add(pMem, pH2w3_0))
                 c2Value := addmod(calldataload(pEval_z), mulmod(hw, t1, q), q)
                 c2Value := addmod(c2Value, mulmod(mulmod(hw, hw, q), t2, q), q)
-                gamma :=
-                    addmod(gamma, mulmod(c2Value, mulmod(num, mload(add(pMem, add(pLiS2Inv, mul(0, 32)))), q), q), q)
+                gamma := addmod(
+                    gamma,
+                    mulmod(
+                        c2Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS2Inv, mul(0, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 hw := mload(add(pMem, pH2w3_1))
                 c2Value := addmod(calldataload(pEval_z), mulmod(hw, t1, q), q)
                 c2Value := addmod(c2Value, mulmod(mulmod(hw, hw, q), t2, q), q)
-                gamma :=
-                    addmod(gamma, mulmod(c2Value, mulmod(num, mload(add(pMem, add(pLiS2Inv, mul(1, 32)))), q), q), q)
+                gamma := addmod(
+                    gamma,
+                    mulmod(
+                        c2Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS2Inv, mul(1, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 hw := mload(add(pMem, pH2w3_2))
                 c2Value := addmod(calldataload(pEval_z), mulmod(hw, t1, q), q)
                 c2Value := addmod(c2Value, mulmod(mulmod(hw, hw, q), t2, q), q)
-                gamma :=
-                    addmod(gamma, mulmod(c2Value, mulmod(num, mload(add(pMem, add(pLiS2Inv, mul(2, 32)))), q), q), q)
+                gamma := addmod(
+                    gamma,
+                    mulmod(
+                        c2Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS2Inv, mul(2, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 hw := mload(add(pMem, pH3w3_0))
-                c2Value := addmod(calldataload(pEval_zw), mulmod(hw, calldataload(pEval_t1w), q), q)
-                c2Value := addmod(c2Value, mulmod(mulmod(hw, hw, q), calldataload(pEval_t2w), q), q)
-                gamma :=
-                    addmod(gamma, mulmod(c2Value, mulmod(num, mload(add(pMem, add(pLiS2Inv, mul(3, 32)))), q), q), q)
+                c2Value := addmod(
+                    calldataload(pEval_zw),
+                    mulmod(hw, calldataload(pEval_t1w), q),
+                    q
+                )
+                c2Value := addmod(
+                    c2Value,
+                    mulmod(mulmod(hw, hw, q), calldataload(pEval_t2w), q),
+                    q
+                )
+                gamma := addmod(
+                    gamma,
+                    mulmod(
+                        c2Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS2Inv, mul(3, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 hw := mload(add(pMem, pH3w3_1))
-                c2Value := addmod(calldataload(pEval_zw), mulmod(hw, calldataload(pEval_t1w), q), q)
-                c2Value := addmod(c2Value, mulmod(mulmod(hw, hw, q), calldataload(pEval_t2w), q), q)
-                gamma :=
-                    addmod(gamma, mulmod(c2Value, mulmod(num, mload(add(pMem, add(pLiS2Inv, mul(4, 32)))), q), q), q)
+                c2Value := addmod(
+                    calldataload(pEval_zw),
+                    mulmod(hw, calldataload(pEval_t1w), q),
+                    q
+                )
+                c2Value := addmod(
+                    c2Value,
+                    mulmod(mulmod(hw, hw, q), calldataload(pEval_t2w), q),
+                    q
+                )
+                gamma := addmod(
+                    gamma,
+                    mulmod(
+                        c2Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS2Inv, mul(4, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 hw := mload(add(pMem, pH3w3_2))
-                c2Value := addmod(calldataload(pEval_zw), mulmod(hw, calldataload(pEval_t1w), q), q)
-                c2Value := addmod(c2Value, mulmod(mulmod(hw, hw, q), calldataload(pEval_t2w), q), q)
-                gamma :=
-                    addmod(gamma, mulmod(c2Value, mulmod(num, mload(add(pMem, add(pLiS2Inv, mul(5, 32)))), q), q), q)
+                c2Value := addmod(
+                    calldataload(pEval_zw),
+                    mulmod(hw, calldataload(pEval_t1w), q),
+                    q
+                )
+                c2Value := addmod(
+                    c2Value,
+                    mulmod(mulmod(hw, hw, q), calldataload(pEval_t2w), q),
+                    q
+                )
+                gamma := addmod(
+                    gamma,
+                    mulmod(
+                        c2Value,
+                        mulmod(
+                            num,
+                            mload(add(pMem, add(pLiS2Inv, mul(5, 32)))),
+                            q
+                        ),
+                        q
+                    ),
+                    q
+                )
 
                 mstore(add(pMem, pR2), gamma)
             }
@@ -1172,23 +1978,62 @@ contract FflonkVerifier_12 {
             function computeFEJ(pMem) {
                 // Prepare shared numerator between F, E and J to reuse it
                 let y := mload(add(pMem, pY))
-                let numerator := addmod(y, mod(sub(q, mload(add(pMem, pH0w8_0))), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_1))), q), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_2))), q), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_3))), q), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_4))), q), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_5))), q), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_6))), q), q), q)
-                numerator := mulmod(numerator, addmod(y, mod(sub(q, mload(add(pMem, pH0w8_7))), q), q), q)
+                let numerator := addmod(
+                    y,
+                    mod(sub(q, mload(add(pMem, pH0w8_0))), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_1))), q), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_2))), q), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_3))), q), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_4))), q), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_5))), q), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_6))), q), q),
+                    q
+                )
+                numerator := mulmod(
+                    numerator,
+                    addmod(y, mod(sub(q, mload(add(pMem, pH0w8_7))), q), q),
+                    q
+                )
 
                 // Prepare shared quotient between F and E to reuse it
-                let quotient1 := mulmod(mload(add(pMem, pAlpha)), mulmod(numerator, mload(add(pMem, pDenH1)), q), q)
-                let quotient2 :=
+                let quotient1 := mulmod(
+                    mload(add(pMem, pAlpha)),
+                    mulmod(numerator, mload(add(pMem, pDenH1)), q),
+                    q
+                )
+                let quotient2 := mulmod(
                     mulmod(
-                        mulmod(mload(add(pMem, pAlpha)), mload(add(pMem, pAlpha)), q),
-                        mulmod(numerator, mload(add(pMem, pDenH2)), q),
+                        mload(add(pMem, pAlpha)),
+                        mload(add(pMem, pAlpha)),
                         q
-                    )
+                    ),
+                    mulmod(numerator, mload(add(pMem, pDenH2)), q),
+                    q
+                )
 
                 // Compute full batched polynomial commitment [F]_1
                 mstore(add(pMem, pF), C0x)
@@ -1204,7 +2049,9 @@ contract FflonkVerifier_12 {
                     addmod(
                         mload(add(pMem, pR0)),
                         addmod(
-                            mulmod(quotient1, mload(add(pMem, pR1)), q), mulmod(quotient2, mload(add(pMem, pR2)), q), q
+                            mulmod(quotient1, mload(add(pMem, pR1)), q),
+                            mulmod(quotient2, mload(add(pMem, pR2)), q),
+                            q
                         ),
                         q
                     )
@@ -1220,9 +2067,15 @@ contract FflonkVerifier_12 {
 
                 // First pairing value
                 // Compute -E
-                mstore(add(add(pMem, pE), 32), mod(sub(qf, mload(add(add(pMem, pE), 32))), qf))
+                mstore(
+                    add(add(pMem, pE), 32),
+                    mod(sub(qf, mload(add(add(pMem, pE), 32))), qf)
+                )
                 // Compute -J
-                mstore(add(add(pMem, pJ), 32), mod(sub(qf, mload(add(add(pMem, pJ), 32))), qf))
+                mstore(
+                    add(add(pMem, pJ), 32),
+                    mod(sub(qf, mload(add(add(pMem, pJ), 32))), qf)
+                )
                 // F = F - E - J + y·W2
                 g1_acc(add(pMem, pF), add(pMem, pE))
                 g1_acc(add(pMem, pF), add(pMem, pJ))
@@ -1250,7 +2103,14 @@ contract FflonkVerifier_12 {
                 mstore(add(mIn, 320), X2y2)
                 mstore(add(mIn, 352), X2y1)
 
-                let success := staticcall(sub(gas(), 2000), 8, mIn, 384, mIn, 0x20)
+                let success := staticcall(
+                    sub(gas(), 2000),
+                    8,
+                    mIn,
+                    384,
+                    mIn,
+                    0x20
+                )
 
                 isOk := and(success, mload(mIn))
             }

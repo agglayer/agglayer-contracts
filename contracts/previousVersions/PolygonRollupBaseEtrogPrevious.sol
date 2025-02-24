@@ -89,7 +89,8 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     uint16 public constant INITIALIZE_TX_CONSTANT_BYTES = 32;
 
     // Tx parameters after the bridge address
-    bytes public constant INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS = hex"80b9";
+    bytes public constant INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS =
+        hex"80b9";
 
     // RLP empty metadata
 
@@ -105,7 +106,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     uint8 public constant INITIALIZE_TX_DATA_LEN_EMPTY_METADATA = 228; // 0xe4
 
     // Tx parameters after the bridge address
-    bytes public constant INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS_EMPTY_METADATA = hex"80b8";
+    bytes
+        public constant INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS_EMPTY_METADATA =
+        hex"80b8";
 
     // Signature used to initialize the bridge
 
@@ -124,8 +127,11 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
 
     // Global Exit Root address L2
-    IBasePolygonZkEVMGlobalExitRoot public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBasePolygonZkEVMGlobalExitRoot(0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA);
+    IBasePolygonZkEVMGlobalExitRoot
+        public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
+        IBasePolygonZkEVMGlobalExitRoot(
+            0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
+        );
 
     // Timestamp range that's given to the sequencer as a safety measure to avoid reverts if the transaction is mined to quickly
     uint256 public constant TIMESTAMP_RANGE = 36;
@@ -199,7 +205,12 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     /**
      * @dev Emitted when a batch is forced
      */
-    event ForceBatch(uint64 indexed forceBatchNum, bytes32 lastGlobalExitRoot, address sequencer, bytes transactions);
+    event ForceBatch(
+        uint64 indexed forceBatchNum,
+        bytes32 lastGlobalExitRoot,
+        address sequencer,
+        bytes transactions
+    );
 
     /**
      * @dev Emitted when forced batches are sequenced by not the trusted sequencer
@@ -209,12 +220,20 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     /**
      * @dev Emitted when the contract is initialized, contain the first sequenced transaction
      */
-    event InitialSequenceBatches(bytes transactions, bytes32 lastGlobalExitRoot, address sequencer);
+    event InitialSequenceBatches(
+        bytes transactions,
+        bytes32 lastGlobalExitRoot,
+        address sequencer
+    );
 
     /**
      * @dev Emitted when a aggregator verifies batches
      */
-    event VerifyBatches(uint64 indexed numBatch, bytes32 stateRoot, address indexed aggregator);
+    event VerifyBatches(
+        uint64 indexed numBatch,
+        bytes32 stateRoot,
+        address indexed aggregator
+    );
 
     /**
      * @dev Emitted when the admin updates the trusted sequencer address
@@ -291,14 +310,19 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         // Sequence transaction to initilize the bridge
 
         // Calculate transaction to initialize the bridge
-        bytes memory transaction =
-            generateInitializeTransaction(networkID, gasTokenAddress, gasTokenNetwork, gasTokenMetadata);
+        bytes memory transaction = generateInitializeTransaction(
+            networkID,
+            gasTokenAddress,
+            gasTokenNetwork,
+            gasTokenMetadata
+        );
 
         bytes32 currentTransactionsHash = keccak256(transaction);
 
         // Get current timestamp and global exit root
         uint64 currentTimestamp = uint64(block.timestamp);
-        bytes32 lastGlobalExitRoot = globalExitRootManager.getLastGlobalExitRoot();
+        bytes32 lastGlobalExitRoot = globalExitRootManager
+            .getLastGlobalExitRoot();
 
         // Add the transaction to the sequence as if it was a force transaction
         bytes32 newAccInputHash = keccak256(
@@ -350,7 +374,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
 
     modifier isSenderAllowedToForceBatches() {
         address cacheForceBatchAddress = forceBatchAddress;
-        if (cacheForceBatchAddress != address(0) && cacheForceBatchAddress != msg.sender) {
+        if (
+            cacheForceBatchAddress != address(0) &&
+            cacheForceBatchAddress != msg.sender
+        ) {
             revert ForceBatchNotAllowed();
         }
         _;
@@ -393,7 +420,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         }
 
         // Check max sequence timestamp inside of range
-        if (uint256(maxSequenceTimestamp) > (block.timestamp + TIMESTAMP_RANGE)) {
+        if (
+            uint256(maxSequenceTimestamp) > (block.timestamp + TIMESTAMP_RANGE)
+        ) {
             revert MaxTimestampSequenceInvalid();
         }
 
@@ -415,7 +444,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
             BatchData memory currentBatch = batches[i];
 
             // Store the current transactions hash since can be used more than once for gas saving
-            bytes32 currentTransactionsHash = keccak256(currentBatch.transactions);
+            bytes32 currentTransactionsHash = keccak256(
+                currentBatch.transactions
+            );
 
             // Check if it's a forced batch
             if (currentBatch.forcedTimestamp > 0) {
@@ -431,7 +462,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
                     )
                 );
 
-                if (hashedForcedBatchData != forcedBatches[currentLastForceBatchSequenced]) {
+                if (
+                    hashedForcedBatchData !=
+                    forcedBatches[currentLastForceBatchSequenced]
+                ) {
                     revert ForcedDataDoesNotMatch();
                 }
 
@@ -452,7 +486,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
             } else {
                 // Note that forcedGlobalExitRoot and forcedBlockHashL1 remain unused and unchecked in this path
                 // The synchronizer should be aware of that
-                if (currentBatch.transactions.length > _MAX_TRANSACTIONS_BYTE_LENGTH) {
+                if (
+                    currentBatch.transactions.length >
+                    _MAX_TRANSACTIONS_BYTE_LENGTH
+                ) {
                     revert TransactionsLengthAboveMax();
                 }
 
@@ -482,12 +519,16 @@ abstract contract PolygonRollupBaseEtrogPrevious is
 
         // Check if there has been forced batches
         if (currentLastForceBatchSequenced != initLastForceBatchSequenced) {
-            uint64 forcedBatchesSequenced = currentLastForceBatchSequenced - initLastForceBatchSequenced;
+            uint64 forcedBatchesSequenced = currentLastForceBatchSequenced -
+                initLastForceBatchSequenced;
             // substract forced batches
             nonForcedBatchesSequenced -= forcedBatchesSequenced;
 
             // Transfer pol for every forced batch submitted
-            pol.safeTransfer(address(rollupManager), calculatePolPerForceBatch() * (forcedBatchesSequenced));
+            pol.safeTransfer(
+                address(rollupManager),
+                calculatePolPerForceBatch() * (forcedBatchesSequenced)
+            );
 
             // Store new last force batch sequenced
             lastForceBatchSequenced = currentLastForceBatchSequenced;
@@ -495,13 +536,20 @@ abstract contract PolygonRollupBaseEtrogPrevious is
 
         // Pay collateral for every non-forced batch submitted
         pol.safeTransferFrom(
-            msg.sender, address(rollupManager), rollupManager.getBatchFee() * nonForcedBatchesSequenced
+            msg.sender,
+            address(rollupManager),
+            rollupManager.getBatchFee() * nonForcedBatchesSequenced
         );
 
-        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(uint64(batchesNum), currentAccInputHash);
+        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(
+            uint64(batchesNum),
+            currentAccInputHash
+        );
 
         // Check init sequenced batch
-        if (initSequencedBatch != (currentBatchSequenced - uint64(batchesNum))) {
+        if (
+            initSequencedBatch != (currentBatchSequenced - uint64(batchesNum))
+        ) {
             revert InitSequencedBatchDoesNotMatch();
         }
 
@@ -514,12 +562,11 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * @param newStateRoot new state root
      * @param aggregator Aggregator address
      */
-    function onVerifyBatches(uint64 lastVerifiedBatch, bytes32 newStateRoot, address aggregator)
-        public
-        virtual
-        override
-        onlyRollupManager
-    {
+    function onVerifyBatches(
+        uint64 lastVerifiedBatch,
+        bytes32 newStateRoot,
+        address aggregator
+    ) public virtual override onlyRollupManager {
         emit VerifyBatches(lastVerifiedBatch, newStateRoot, aggregator);
     }
 
@@ -536,7 +583,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * @param transactions L2 ethereum transactions EIP-155 or pre-EIP-155 with signature:
      * @param polAmount Max amount of pol tokens that the sender is willing to pay
      */
-    function forceBatch(bytes calldata transactions, uint256 polAmount) public virtual isSenderAllowedToForceBatches {
+    function forceBatch(
+        bytes calldata transactions,
+        uint256 polAmount
+    ) public virtual isSenderAllowedToForceBatches {
         // Check if rollup manager is on emergency state
         if (rollupManager.isEmergencyState()) {
             revert ForceBatchesNotAllowedOnEmergencyState();
@@ -557,14 +607,18 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         pol.safeTransferFrom(msg.sender, address(this), polFee);
 
         // Get globalExitRoot global exit root
-        bytes32 lastGlobalExitRoot = globalExitRootManager.getLastGlobalExitRoot();
+        bytes32 lastGlobalExitRoot = globalExitRootManager
+            .getLastGlobalExitRoot();
 
         // Update forcedBatches mapping
         lastForceBatch++;
 
         forcedBatches[lastForceBatch] = keccak256(
             abi.encodePacked(
-                keccak256(transactions), lastGlobalExitRoot, uint64(block.timestamp), blockhash(block.number - 1)
+                keccak256(transactions),
+                lastGlobalExitRoot,
+                uint64(block.timestamp),
+                blockhash(block.number - 1)
             )
         );
 
@@ -574,7 +628,12 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         } else {
             // Getting internal transaction calldata is complicated (because it requires an archive node)
             // Therefore it's worth it to put the `transactions` in the event, which is easy to query
-            emit ForceBatch(lastForceBatch, lastGlobalExitRoot, msg.sender, transactions);
+            emit ForceBatch(
+                lastForceBatch,
+                lastGlobalExitRoot,
+                msg.sender,
+                transactions
+            );
         }
     }
 
@@ -582,9 +641,15 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * @notice Allows anyone to sequence forced Batches if the trusted sequencer has not done so in the timeout period
      * @param batches Struct array which holds the necessary data to append force batches
      */
-    function sequenceForceBatches(BatchData[] calldata batches) external virtual isSenderAllowedToForceBatches {
+    function sequenceForceBatches(
+        BatchData[] calldata batches
+    ) external virtual isSenderAllowedToForceBatches {
         // Check if rollup manager is on emergency state
-        if (rollupManager.lastDeactivatedEmergencyStateTimestamp() + _HALT_AGGREGATION_TIMEOUT > block.timestamp) {
+        if (
+            rollupManager.lastDeactivatedEmergencyStateTimestamp() +
+                _HALT_AGGREGATION_TIMEOUT >
+            block.timestamp
+        ) {
             revert HaltTimeoutNotExpiredAfterEmergencyState();
         }
 
@@ -598,7 +663,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
             revert ExceedMaxVerifyBatches();
         }
 
-        if (uint256(lastForceBatchSequenced) + batchesNum > uint256(lastForceBatch)) {
+        if (
+            uint256(lastForceBatchSequenced) + batchesNum >
+            uint256(lastForceBatch)
+        ) {
             revert ForceBatchesOverflow();
         }
 
@@ -613,7 +681,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
             currentLastForceBatchSequenced++;
 
             // Store the current transactions hash since it's used more than once for gas saving
-            bytes32 currentTransactionsHash = keccak256(currentBatch.transactions);
+            bytes32 currentTransactionsHash = keccak256(
+                currentBatch.transactions
+            );
 
             // Check forced data matches
             bytes32 hashedForcedBatchData = keccak256(
@@ -625,7 +695,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
                 )
             );
 
-            if (hashedForcedBatchData != forcedBatches[currentLastForceBatchSequenced]) {
+            if (
+                hashedForcedBatchData !=
+                forcedBatches[currentLastForceBatchSequenced]
+            ) {
                 revert ForcedDataDoesNotMatch();
             }
 
@@ -634,7 +707,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
 
             if (i == (batchesNum - 1)) {
                 // The last batch will have the most restrictive timestamp
-                if (currentBatch.forcedTimestamp + forceBatchTimeout > block.timestamp) {
+                if (
+                    currentBatch.forcedTimestamp + forceBatchTimeout >
+                    block.timestamp
+                ) {
                     revert ForceBatchTimeoutNotExpired();
                 }
             }
@@ -652,13 +728,19 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         }
 
         // Transfer pol for every forced batch submitted
-        pol.safeTransfer(address(rollupManager), calculatePolPerForceBatch() * (batchesNum));
+        pol.safeTransfer(
+            address(rollupManager),
+            calculatePolPerForceBatch() * (batchesNum)
+        );
 
         // Store back the storage variables
         lastAccInputHash = currentAccInputHash;
         lastForceBatchSequenced = currentLastForceBatchSequenced;
 
-        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(uint64(batchesNum), currentAccInputHash);
+        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(
+            uint64(batchesNum),
+            currentAccInputHash
+        );
 
         emit SequenceForceBatches(currentBatchSequenced);
     }
@@ -671,7 +753,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * @notice Allow the admin to set a new trusted sequencer
      * @param newTrustedSequencer Address of the new trusted sequencer
      */
-    function setTrustedSequencer(address newTrustedSequencer) external onlyAdmin {
+    function setTrustedSequencer(
+        address newTrustedSequencer
+    ) external onlyAdmin {
         trustedSequencer = newTrustedSequencer;
 
         emit SetTrustedSequencer(newTrustedSequencer);
@@ -681,7 +765,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * @notice Allow the admin to set the trusted sequencer URL
      * @param newTrustedSequencerURL URL of trusted sequencer
      */
-    function setTrustedSequencerURL(string memory newTrustedSequencerURL) external onlyAdmin {
+    function setTrustedSequencerURL(
+        string memory newTrustedSequencerURL
+    ) external onlyAdmin {
         trustedSequencerURL = newTrustedSequencerURL;
 
         emit SetTrustedSequencerURL(newTrustedSequencerURL);
@@ -692,7 +778,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * If address 0 is set, then everyone is able to force batches, this action is irreversible
      * @param newForceBatchAddress New force batch address
      */
-    function setForceBatchAddress(address newForceBatchAddress) external onlyAdmin {
+    function setForceBatchAddress(
+        address newForceBatchAddress
+    ) external onlyAdmin {
         if (forceBatchAddress == address(0)) {
             revert ForceBatchesDecentralized();
         }
@@ -706,7 +794,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * The new value can only be lower, except if emergency state is active
      * @param newforceBatchTimeout New force batch timeout
      */
-    function setForceBatchTimeout(uint64 newforceBatchTimeout) external onlyAdmin {
+    function setForceBatchTimeout(
+        uint64 newforceBatchTimeout
+    ) external onlyAdmin {
         if (newforceBatchTimeout > _HALT_AGGREGATION_TIMEOUT) {
             revert InvalidRangeForceBatchTimeout();
         }
@@ -790,7 +880,8 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         if (_gasTokenMetadata.length == 0) {
             bytesToSign = abi.encodePacked(
                 INITIALIZE_TX_BRIDGE_LIST_LEN_LEN,
-                uint16(initializeBrigeData.length) + INITIALIZE_TX_CONSTANT_BYTES_EMPTY_METADATA, // do not support more than 2 bytes of length, intended to revert on overflow
+                uint16(initializeBrigeData.length) +
+                    INITIALIZE_TX_CONSTANT_BYTES_EMPTY_METADATA, // do not support more than 2 bytes of length, intended to revert on overflow
                 INITIALIZE_TX_BRIDGE_PARAMS,
                 bridgeAddress,
                 INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS_EMPTY_METADATA,
@@ -806,7 +897,8 @@ abstract contract PolygonRollupBaseEtrogPrevious is
 
             bytesToSign = abi.encodePacked(
                 INITIALIZE_TX_BRIDGE_LIST_LEN_LEN,
-                uint16(initializeBrigeData.length) + INITIALIZE_TX_CONSTANT_BYTES, // do not support more than 2 bytes of length, intended to revert on overflow
+                uint16(initializeBrigeData.length) +
+                    INITIALIZE_TX_CONSTANT_BYTES, // do not support more than 2 bytes of length, intended to revert on overflow
                 INITIALIZE_TX_BRIDGE_PARAMS,
                 bridgeAddress,
                 INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS,
@@ -818,7 +910,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         // Sanity check that the ecrecover will work
         // Should never happen that giving a valid signature, ecrecover "breaks"
         address signer = ecrecover(
-            keccak256(bytesToSign), SIGNATURE_INITIALIZE_TX_V, SIGNATURE_INITIALIZE_TX_R, SIGNATURE_INITIALIZE_TX_S
+            keccak256(bytesToSign),
+            SIGNATURE_INITIALIZE_TX_V,
+            SIGNATURE_INITIALIZE_TX_R,
+            SIGNATURE_INITIALIZE_TX_S
         );
 
         if (signer == address(0)) {
@@ -836,7 +931,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         return transaction;
     }
 
-    function _verifyOrigin(address _gasTokenAddress) internal virtual returns (bytes memory gasTokenMetadata) {
+    function _verifyOrigin(
+        address _gasTokenAddress
+    ) internal virtual returns (bytes memory gasTokenMetadata) {
         if (_gasTokenAddress != address(0)) {
             // Ask for token metadata, the same way is enconded in the bridge
             // Note that this function will revert if the token is not in this network
@@ -844,8 +941,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
             gasTokenMetadata = bridgeAddress.getTokenMetadata(_gasTokenAddress);
 
             // Check gas token address on the bridge
-            (uint32 originWrappedNetwork, address originWrappedAddress) =
-                bridgeAddress.wrappedTokenToTokenInfo(_gasTokenAddress);
+            (
+                uint32 originWrappedNetwork,
+                address originWrappedAddress
+            ) = bridgeAddress.wrappedTokenToTokenInfo(_gasTokenAddress);
 
             if (originWrappedNetwork != 0) {
                 // It's a wrapped token, get the wrapped parameters

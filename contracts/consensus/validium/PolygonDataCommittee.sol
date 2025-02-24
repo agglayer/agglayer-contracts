@@ -10,7 +10,11 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * Contract responsible managing the data committee that will verify that the data sent for a validium is singed by a committee
  * It is advised to give the owner of the contract to a timelock contract once the data committee is set
  */
-contract PolygonDataCommittee is IDataAvailabilityProtocol, IPolygonDataCommitteeErrors, OwnableUpgradeable {
+contract PolygonDataCommittee is
+    IDataAvailabilityProtocol,
+    IPolygonDataCommitteeErrors,
+    OwnableUpgradeable
+{
     /**
      * @notice Struct which will store all the data of the committee members
      * @param url string that represents the URL of the member to be used to access the data
@@ -66,10 +70,11 @@ contract PolygonDataCommittee is IDataAvailabilityProtocol, IPolygonDataCommitte
      * @param urls List of urls of the members of the committee
      * @param addrsBytes Byte array that contains the addressess of the members of the committee
      */
-    function setupCommittee(uint256 _requiredAmountOfSignatures, string[] calldata urls, bytes calldata addrsBytes)
-        external
-        onlyOwner
-    {
+    function setupCommittee(
+        uint256 _requiredAmountOfSignatures,
+        string[] calldata urls,
+        bytes calldata addrsBytes
+    ) external onlyOwner {
         uint256 membersLength = urls.length;
         if (membersLength < _requiredAmountOfSignatures) {
             revert TooManyRequiredSignatures();
@@ -84,8 +89,12 @@ contract PolygonDataCommittee is IDataAvailabilityProtocol, IPolygonDataCommitte
         address lastAddr;
         for (uint256 i = 0; i < membersLength; i++) {
             uint256 currentAddresStartingByte = i * _ADDR_SIZE;
-            address currentMemberAddr =
-                address(bytes20(addrsBytes[currentAddresStartingByte:currentAddresStartingByte + _ADDR_SIZE]));
+            address currentMemberAddr = address(
+                bytes20(
+                    addrsBytes[currentAddresStartingByte:currentAddresStartingByte +
+                        _ADDR_SIZE]
+                )
+            );
 
             // Check url is not empty
             if (bytes(urls[i]).length == 0) {
@@ -113,13 +122,19 @@ contract PolygonDataCommittee is IDataAvailabilityProtocol, IPolygonDataCommitte
      * [signature 0, ..., signature requiredAmountOfSignatures -1, address 0, ... address N]
      * note that each ECDSA signatures are used, therefore each one must be 65 bytes
      */
-    function verifyMessage(bytes32 signedHash, bytes calldata signaturesAndAddrs) external view {
+    function verifyMessage(
+        bytes32 signedHash,
+        bytes calldata signaturesAndAddrs
+    ) external view {
         // Save storage variable on cache since will be used multiple times
         uint256 cacheRequiredAmountOfSignatures = requiredAmountOfSignatures;
 
         // pre-check: byte array size
         uint256 splitByte = _SIGNATURE_SIZE * cacheRequiredAmountOfSignatures;
-        if (signaturesAndAddrs.length < splitByte || (signaturesAndAddrs.length - splitByte) % _ADDR_SIZE != 0) {
+        if (
+            signaturesAndAddrs.length < splitByte ||
+            (signaturesAndAddrs.length - splitByte) % _ADDR_SIZE != 0
+        ) {
             revert UnexpectedAddrsAndSignaturesSize();
         }
 
@@ -137,7 +152,8 @@ contract PolygonDataCommittee is IDataAvailabilityProtocol, IPolygonDataCommitte
             // Recover currnet signer from the signature
             address currentSigner = ECDSA.recover(
                 signedHash,
-                signaturesAndAddrs[currentSignatureStartingByte:currentSignatureStartingByte + _SIGNATURE_SIZE]
+                signaturesAndAddrs[currentSignatureStartingByte:currentSignatureStartingByte +
+                    _SIGNATURE_SIZE]
             );
 
             // Search the recovered signer inside the address array
@@ -145,7 +161,10 @@ contract PolygonDataCommittee is IDataAvailabilityProtocol, IPolygonDataCommitte
             for (uint256 j = lastAddrIndexUsed; j < addrsLen; j++) {
                 uint256 currentAddresStartingByte = splitByte + j * _ADDR_SIZE;
                 address committeeAddr = address(
-                    bytes20(signaturesAndAddrs[currentAddresStartingByte:currentAddresStartingByte + _ADDR_SIZE])
+                    bytes20(
+                        signaturesAndAddrs[currentAddresStartingByte:currentAddresStartingByte +
+                            _ADDR_SIZE]
+                    )
                 );
                 if (committeeAddr == currentSigner) {
                     lastAddrIndexUsed = j + 1;

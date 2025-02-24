@@ -17,7 +17,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * - Add custom errors
  * - Replace _msgSender() with msg.sender
  */
-abstract contract PolygonAccessControlUpgradeable is Initializable, ContextUpgradeable, IAccessControlUpgradeable {
+abstract contract PolygonAccessControlUpgradeable is
+    Initializable,
+    ContextUpgradeable,
+    IAccessControlUpgradeable
+{
     function __AccessControl_init() internal onlyInitializing {}
 
     // Legacy variable
@@ -61,7 +65,10 @@ abstract contract PolygonAccessControlUpgradeable is Initializable, ContextUpgra
     /**
      * @dev Returns `true` if `account` has been granted `role`.
      */
-    function hasRole(bytes32 role, address account) public view virtual override returns (bool) {
+    function hasRole(
+        bytes32 role,
+        address account
+    ) public view virtual override returns (bool) {
         return _roles[role].members[account];
     }
 
@@ -96,7 +103,9 @@ abstract contract PolygonAccessControlUpgradeable is Initializable, ContextUpgra
      *
      * To change a role's admin, use {_setRoleAdmin}.
      */
-    function getRoleAdmin(bytes32 role) public view virtual override returns (bytes32) {
+    function getRoleAdmin(
+        bytes32 role
+    ) public view virtual override returns (bytes32) {
         return _roles[role].adminRole;
     }
 
@@ -112,7 +121,10 @@ abstract contract PolygonAccessControlUpgradeable is Initializable, ContextUpgra
      *
      * May emit a {RoleGranted} event.
      */
-    function grantRole(bytes32 role, address account) public virtual override onlyRole(getRoleAdmin(role)) {
+    function grantRole(
+        bytes32 role,
+        address account
+    ) public virtual override onlyRole(getRoleAdmin(role)) {
         _grantRole(role, account);
     }
 
@@ -127,7 +139,10 @@ abstract contract PolygonAccessControlUpgradeable is Initializable, ContextUpgra
      *
      * May emit a {RoleRevoked} event.
      */
-    function revokeRole(bytes32 role, address account) public virtual override onlyRole(getRoleAdmin(role)) {
+    function revokeRole(
+        bytes32 role,
+        address account
+    ) public virtual override onlyRole(getRoleAdmin(role)) {
         _revokeRole(role, account);
     }
 
@@ -147,7 +162,10 @@ abstract contract PolygonAccessControlUpgradeable is Initializable, ContextUpgra
      *
      * May emit a {RoleRevoked} event.
      */
-    function renounceRole(bytes32 role, address account) public virtual override {
+    function renounceRole(
+        bytes32 role,
+        address account
+    ) public virtual override {
         if (account != msg.sender) {
             revert AccessControlOnlyCanRenounceRolesForSelf();
         }

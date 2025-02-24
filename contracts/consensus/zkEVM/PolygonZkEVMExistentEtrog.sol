@@ -37,7 +37,12 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
     /**
      * @dev Emitted when the system is updated to a etrog using this contract, contain the set up etrog transaction
      */
-    event UpdateEtrogSequence(uint64 numBatch, bytes transactions, bytes32 lastGlobalExitRoot, address sequencer);
+    event UpdateEtrogSequence(
+        uint64 numBatch,
+        bytes transactions,
+        bytes32 lastGlobalExitRoot,
+        address sequencer
+    );
 
     /**
      * @param _globalExitRootManager Global exit root manager address
@@ -50,7 +55,14 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManager _rollupManager
-    ) PolygonRollupBaseEtrog(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager) {}
+    )
+        PolygonRollupBaseEtrog(
+            _globalExitRootManager,
+            _pol,
+            _bridgeAddress,
+            _rollupManager
+        )
+    {}
 
     /**
      * note This initializer will be called instead of the PolygonRollupBase
@@ -74,7 +86,8 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
 
         // Get current timestamp and global exit root
         uint64 currentTimestamp = uint64(block.timestamp);
-        bytes32 lastGlobalExitRoot = globalExitRootManager.getLastGlobalExitRoot();
+        bytes32 lastGlobalExitRoot = globalExitRootManager
+            .getLastGlobalExitRoot();
 
         // Add the transaction to the sequence as if it was a force transaction
         bytes32 newAccInputHash = keccak256(
@@ -111,6 +124,11 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
         // Both gasTokenAddress and gasTokenNetwork are 0, since it uses ether as gas token
         // Therefore is not necessary to set the variables
 
-        emit UpdateEtrogSequence(currentBatchSequenced, transaction, lastGlobalExitRoot, _trustedSequencer);
+        emit UpdateEtrogSequence(
+            currentBatchSequenced,
+            transaction,
+            lastGlobalExitRoot,
+            _trustedSequencer
+        );
     }
 }

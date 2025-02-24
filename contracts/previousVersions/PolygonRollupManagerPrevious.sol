@@ -111,41 +111,52 @@ contract PolygonRollupManagerPrevious is
     // Roles
 
     // Be able to add a new rollup type
-    bytes32 internal constant _ADD_ROLLUP_TYPE_ROLE = keccak256("ADD_ROLLUP_TYPE_ROLE");
+    bytes32 internal constant _ADD_ROLLUP_TYPE_ROLE =
+        keccak256("ADD_ROLLUP_TYPE_ROLE");
 
     // Be able to obsolete a rollup type, which means that new rollups cannot use this type
-    bytes32 internal constant _OBSOLETE_ROLLUP_TYPE_ROLE = keccak256("OBSOLETE_ROLLUP_TYPE_ROLE");
+    bytes32 internal constant _OBSOLETE_ROLLUP_TYPE_ROLE =
+        keccak256("OBSOLETE_ROLLUP_TYPE_ROLE");
 
     // Be able to create a new rollup using a rollup type
-    bytes32 internal constant _CREATE_ROLLUP_ROLE = keccak256("CREATE_ROLLUP_ROLE");
+    bytes32 internal constant _CREATE_ROLLUP_ROLE =
+        keccak256("CREATE_ROLLUP_ROLE");
 
     // Be able to create a new rollup which does not have to follow any rollup type.
     // Also sets the genesis block for that network
-    bytes32 internal constant _ADD_EXISTING_ROLLUP_ROLE = keccak256("ADD_EXISTING_ROLLUP_ROLE");
+    bytes32 internal constant _ADD_EXISTING_ROLLUP_ROLE =
+        keccak256("ADD_EXISTING_ROLLUP_ROLE");
 
     // Be able to update a rollup to a new rollup type that it's compatible
-    bytes32 internal constant _UPDATE_ROLLUP_ROLE = keccak256("UPDATE_ROLLUP_ROLE");
+    bytes32 internal constant _UPDATE_ROLLUP_ROLE =
+        keccak256("UPDATE_ROLLUP_ROLE");
 
     // Be able to that has priority to verify batches and consolidates the state instantly
-    bytes32 internal constant _TRUSTED_AGGREGATOR_ROLE = keccak256("TRUSTED_AGGREGATOR_ROLE");
+    bytes32 internal constant _TRUSTED_AGGREGATOR_ROLE =
+        keccak256("TRUSTED_AGGREGATOR_ROLE");
 
     // Be able to set the trusted aggregator address
-    bytes32 internal constant _TRUSTED_AGGREGATOR_ROLE_ADMIN = keccak256("TRUSTED_AGGREGATOR_ROLE_ADMIN");
+    bytes32 internal constant _TRUSTED_AGGREGATOR_ROLE_ADMIN =
+        keccak256("TRUSTED_AGGREGATOR_ROLE_ADMIN");
 
     // Be able to tweak parameters
-    bytes32 internal constant _TWEAK_PARAMETERS_ROLE = keccak256("TWEAK_PARAMETERS_ROLE");
+    bytes32 internal constant _TWEAK_PARAMETERS_ROLE =
+        keccak256("TWEAK_PARAMETERS_ROLE");
 
     // Be able to set the current batch fee
     bytes32 internal constant _SET_FEE_ROLE = keccak256("SET_FEE_ROLE");
 
     // Be able to stop the emergency state
-    bytes32 internal constant _STOP_EMERGENCY_ROLE = keccak256("STOP_EMERGENCY_ROLE");
+    bytes32 internal constant _STOP_EMERGENCY_ROLE =
+        keccak256("STOP_EMERGENCY_ROLE");
 
     // Be able to activate the emergency state without any further condition
-    bytes32 internal constant _EMERGENCY_COUNCIL_ROLE = keccak256("EMERGENCY_COUNCIL_ROLE");
+    bytes32 internal constant _EMERGENCY_COUNCIL_ROLE =
+        keccak256("EMERGENCY_COUNCIL_ROLE");
 
     // Be able to set the emergency council address
-    bytes32 internal constant _EMERGENCY_COUNCIL_ADMIN = keccak256("EMERGENCY_COUNCIL_ADMIN");
+    bytes32 internal constant _EMERGENCY_COUNCIL_ADMIN =
+        keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Global Exit Root address
     IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
@@ -227,7 +238,11 @@ contract PolygonRollupManagerPrevious is
      * @dev Emitted when a new rollup is created based on a rollupType
      */
     event CreateNewRollup(
-        uint32 indexed rollupID, uint32 rollupTypeID, address rollupAddress, uint64 chainID, address gasTokenAddress
+        uint32 indexed rollupID,
+        uint32 rollupTypeID,
+        address rollupAddress,
+        uint64 chainID,
+        address gasTokenAddress
     );
 
     /**
@@ -245,7 +260,11 @@ contract PolygonRollupManagerPrevious is
     /**
      * @dev Emitted when a rollup is udpated
      */
-    event UpdateRollup(uint32 indexed rollupID, uint32 newRollupTypeID, uint64 lastVerifiedBatchBeforeUpgrade);
+    event UpdateRollup(
+        uint32 indexed rollupID,
+        uint32 newRollupTypeID,
+        uint64 lastVerifiedBatchBeforeUpgrade
+    );
 
     /**
      * @dev Emitted when a new verifier is added
@@ -256,33 +275,52 @@ contract PolygonRollupManagerPrevious is
      * @dev Emitted when an aggregator verifies batches
      */
     event VerifyBatches(
-        uint32 indexed rollupID, uint64 numBatch, bytes32 stateRoot, bytes32 exitRoot, address indexed aggregator
+        uint32 indexed rollupID,
+        uint64 numBatch,
+        bytes32 stateRoot,
+        bytes32 exitRoot,
+        address indexed aggregator
     );
 
     /**
      * @dev Emitted when the trusted aggregator verifies batches
      */
     event VerifyBatchesTrustedAggregator(
-        uint32 indexed rollupID, uint64 numBatch, bytes32 stateRoot, bytes32 exitRoot, address indexed aggregator
+        uint32 indexed rollupID,
+        uint64 numBatch,
+        bytes32 stateRoot,
+        bytes32 exitRoot,
+        address indexed aggregator
     );
 
     /**
      * @dev Emitted when pending state is consolidated
      */
     event ConsolidatePendingState(
-        uint32 indexed rollupID, uint64 numBatch, bytes32 stateRoot, bytes32 exitRoot, uint64 pendingStateNum
+        uint32 indexed rollupID,
+        uint64 numBatch,
+        bytes32 stateRoot,
+        bytes32 exitRoot,
+        uint64 pendingStateNum
     );
 
     /**
      * @dev Emitted when is proved a different state given the same batches
      */
-    event ProveNonDeterministicPendingState(bytes32 storedStateRoot, bytes32 provedStateRoot);
+    event ProveNonDeterministicPendingState(
+        bytes32 storedStateRoot,
+        bytes32 provedStateRoot
+    );
 
     /**
      * @dev Emitted when the trusted aggregator overrides pending state
      */
     event OverridePendingState(
-        uint32 indexed rollupID, uint64 numBatch, bytes32 stateRoot, bytes32 exitRoot, address aggregator
+        uint32 indexed rollupID,
+        uint64 numBatch,
+        bytes32 stateRoot,
+        bytes32 exitRoot,
+        address aggregator
     );
 
     /**
@@ -388,7 +426,9 @@ contract PolygonRollupManagerPrevious is
      * @notice Obsolete Rollup type
      * @param rollupTypeID Rollup type to obsolete
      */
-    function obsoleteRollupType(uint32 rollupTypeID) external onlyRole(_OBSOLETE_ROLLUP_TYPE_ROLE) {
+    function obsoleteRollupType(
+        uint32 rollupTypeID
+    ) external onlyRole(_OBSOLETE_ROLLUP_TYPE_ROLE) {
         // Check that rollup type exists
         if (rollupTypeID == 0 || rollupTypeID > rollupTypeCount) {
             revert RollupTypeDoesNotExist();
@@ -450,8 +490,13 @@ contract PolygonRollupManagerPrevious is
         // Create a new Rollup, using a transparent proxy pattern
         // Consensus will be the implementation, and this contract the admin
         uint32 rollupID = ++rollupCount;
-        address rollupAddress =
-            address(new PolygonTransparentProxy(rollupType.consensusImplementation, address(this), new bytes(0)));
+        address rollupAddress = address(
+            new PolygonTransparentProxy(
+                rollupType.consensusImplementation,
+                address(this),
+                new bytes(0)
+            )
+        );
 
         // Set chainID nullifier
         chainIDToRollupID[chainID] = rollupID;
@@ -469,11 +514,22 @@ contract PolygonRollupManagerPrevious is
         rollup.rollupTypeID = rollupTypeID;
         rollup.rollupCompatibilityID = rollupType.rollupCompatibilityID;
 
-        emit CreateNewRollup(rollupID, rollupTypeID, rollupAddress, chainID, gasTokenAddress);
+        emit CreateNewRollup(
+            rollupID,
+            rollupTypeID,
+            rollupAddress,
+            chainID,
+            gasTokenAddress
+        );
 
         // Initialize new rollup
         IPolygonRollupBase(rollupAddress).initialize(
-            admin, sequencer, rollupID, gasTokenAddress, sequencerURL, networkName
+            admin,
+            sequencer,
+            rollupID,
+            gasTokenAddress,
+            sequencerURL,
+            networkName
         );
     }
 
@@ -646,7 +702,9 @@ contract PolygonRollupManagerPrevious is
         }
 
         // Check compatibility of the rollups
-        if (rollup.rollupCompatibilityID != newRollupType.rollupCompatibilityID) {
+        if (
+            rollup.rollupCompatibilityID != newRollupType.rollupCompatibilityID
+        ) {
             revert UpdateNotCompatible();
         }
 
@@ -664,7 +722,10 @@ contract PolygonRollupManagerPrevious is
         rollup.lastVerifiedBatchBeforeUpgrade = lastVerifiedBatch;
 
         // Upgrade rollup
-        rollupContract.upgradeToAndCall(newRollupType.consensusImplementation, upgradeData);
+        rollupContract.upgradeToAndCall(
+            newRollupType.consensusImplementation,
+            upgradeData
+        );
 
         emit UpdateRollup(rollupID, newRollupTypeID, lastVerifiedBatch);
     }
@@ -765,11 +826,10 @@ contract PolygonRollupManagerPrevious is
      * @param newSequencedBatches Number of batches sequenced
      * @param newAccInputHash New accumulate input hash
      */
-    function onSequenceBatches(uint64 newSequencedBatches, bytes32 newAccInputHash)
-        external
-        ifNotEmergencyState
-        returns (uint64)
-    {
+    function onSequenceBatches(
+        uint64 newSequencedBatches,
+        bytes32 newAccInputHash
+    ) external ifNotEmergencyState returns (uint64) {
         // Check that the msg.sender is an added rollup
         uint32 rollupID = rollupAddressToID[msg.sender];
         if (rollupID == 0) {
@@ -788,7 +848,8 @@ contract PolygonRollupManagerPrevious is
 
         // Update sequenced batches of the current rollup
         uint64 previousLastBatchSequenced = rollup.lastBatchSequenced;
-        uint64 newLastBatchSequenced = previousLastBatchSequenced + newSequencedBatches;
+        uint64 newLastBatchSequenced = previousLastBatchSequenced +
+            newSequencedBatches;
 
         rollup.lastBatchSequenced = newLastBatchSequenced;
         rollup.sequencedBatches[newLastBatchSequenced] = SequencedBatchData({
@@ -830,7 +891,11 @@ contract PolygonRollupManagerPrevious is
 
         // Check if the trusted aggregator timeout expired,
         // Note that the sequencedBatches struct must exists for this finalNewBatch, if not newAccInputHash will be 0
-        if (rollup.sequencedBatches[finalNewBatch].sequencedTimestamp + trustedAggregatorTimeout > block.timestamp) {
+        if (
+            rollup.sequencedBatches[finalNewBatch].sequencedTimestamp +
+                trustedAggregatorTimeout >
+            block.timestamp
+        ) {
             revert TrustedAggregatorTimeoutNotExpired();
         }
 
@@ -839,7 +904,14 @@ contract PolygonRollupManagerPrevious is
         }
 
         _verifyAndRewardBatches(
-            rollup, pendingStateNum, initNumBatch, finalNewBatch, newLocalExitRoot, newStateRoot, beneficiary, proof
+            rollup,
+            pendingStateNum,
+            initNumBatch,
+            finalNewBatch,
+            newLocalExitRoot,
+            newStateRoot,
+            beneficiary,
+            proof
         );
 
         // Update batch fees
@@ -865,7 +937,9 @@ contract PolygonRollupManagerPrevious is
 
             // Update pending state
             rollup.lastPendingState++;
-            rollup.pendingStateTransitions[rollup.lastPendingState] = PendingState({
+            rollup.pendingStateTransitions[
+                rollup.lastPendingState
+            ] = PendingState({
                 timestamp: uint64(block.timestamp),
                 lastVerifiedBatch: finalNewBatch,
                 exitRoot: newLocalExitRoot,
@@ -873,7 +947,13 @@ contract PolygonRollupManagerPrevious is
             });
         }
 
-        emit VerifyBatches(rollupID, finalNewBatch, newStateRoot, newLocalExitRoot, msg.sender);
+        emit VerifyBatches(
+            rollupID,
+            finalNewBatch,
+            newStateRoot,
+            newLocalExitRoot,
+            msg.sender
+        );
     }
 
     /**
@@ -900,7 +980,14 @@ contract PolygonRollupManagerPrevious is
         RollupData storage rollup = rollupIDToRollupData[rollupID];
 
         _verifyAndRewardBatches(
-            rollup, pendingStateNum, initNumBatch, finalNewBatch, newLocalExitRoot, newStateRoot, beneficiary, proof
+            rollup,
+            pendingStateNum,
+            initNumBatch,
+            finalNewBatch,
+            newLocalExitRoot,
+            newStateRoot,
+            beneficiary,
+            proof
         );
 
         // Consolidate state
@@ -917,7 +1004,13 @@ contract PolygonRollupManagerPrevious is
         // Interact with globalExitRootManager
         globalExitRootManager.updateExitRoot(getRollupExitRoot());
 
-        emit VerifyBatchesTrustedAggregator(rollupID, finalNewBatch, newStateRoot, newLocalExitRoot, msg.sender);
+        emit VerifyBatchesTrustedAggregator(
+            rollupID,
+            finalNewBatch,
+            newStateRoot,
+            newLocalExitRoot,
+            msg.sender
+        );
     }
 
     /**
@@ -957,7 +1050,8 @@ contract PolygonRollupManagerPrevious is
             }
 
             // Check choosen pending state
-            PendingState storage currentPendingState = rollup.pendingStateTransitions[pendingStateNum];
+            PendingState storage currentPendingState = rollup
+                .pendingStateTransitions[pendingStateNum];
 
             // Get oldStateRoot from pending batch
             oldStateRoot = currentPendingState.stateRoot;
@@ -986,8 +1080,14 @@ contract PolygonRollupManagerPrevious is
         }
 
         // Get snark bytes
-        bytes memory snarkHashBytes =
-            _getInputSnarkBytes(rollup, initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot);
+        bytes memory snarkHashBytes = _getInputSnarkBytes(
+            rollup,
+            initNumBatch,
+            finalNewBatch,
+            newLocalExitRoot,
+            oldStateRoot,
+            newStateRoot
+        );
 
         // Calulate the snark input
         uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
@@ -1000,14 +1100,21 @@ contract PolygonRollupManagerPrevious is
         // Pay POL rewards
         uint64 newVerifiedBatches = finalNewBatch - currentLastVerifiedBatch;
 
-        pol.safeTransfer(beneficiary, calculateRewardPerBatch() * newVerifiedBatches);
+        pol.safeTransfer(
+            beneficiary,
+            calculateRewardPerBatch() * newVerifiedBatches
+        );
 
         // Update aggregation parameters
         totalVerifiedBatches += newVerifiedBatches;
         lastAggregationTimestamp = uint64(block.timestamp);
 
         // Callback to the rollup address
-        rollup.rollupContract.onVerifyBatches(finalNewBatch, newStateRoot, msg.sender);
+        rollup.rollupContract.onVerifyBatches(
+            finalNewBatch,
+            newStateRoot,
+            msg.sender
+        );
     }
 
     /**
@@ -1021,7 +1128,9 @@ contract PolygonRollupManagerPrevious is
             uint64 nextPendingState = rollup.lastPendingStateConsolidated + 1;
             if (_isPendingStateConsolidable(rollup, nextPendingState)) {
                 // Check middle pending state ( binary search of 1 step)
-                uint64 middlePendingState = nextPendingState + (rollup.lastPendingState - nextPendingState) / 2;
+                uint64 middlePendingState = nextPendingState +
+                    (rollup.lastPendingState - nextPendingState) /
+                    2;
 
                 // Try to consolidate it, and if not, consolidate the nextPendingState
                 if (_isPendingStateConsolidable(rollup, middlePendingState)) {
@@ -1039,7 +1148,10 @@ contract PolygonRollupManagerPrevious is
      * @param rollupID Rollup identifier
      * @param pendingStateNum Pending state to consolidate
      */
-    function consolidatePendingState(uint32 rollupID, uint64 pendingStateNum) external {
+    function consolidatePendingState(
+        uint32 rollupID,
+        uint64 pendingStateNum
+    ) external {
         RollupData storage rollup = rollupIDToRollupData[rollupID];
         // Check if pending state can be consolidated
         // If trusted aggregator is the sender, do not check the timeout or the emergency state
@@ -1060,20 +1172,28 @@ contract PolygonRollupManagerPrevious is
      * @param rollup Rollup data storage pointer
      * @param pendingStateNum Pending state to consolidate
      */
-    function _consolidatePendingState(RollupData storage rollup, uint64 pendingStateNum) internal {
+    function _consolidatePendingState(
+        RollupData storage rollup,
+        uint64 pendingStateNum
+    ) internal {
         // Check if pendingStateNum is in correct range
         // - not consolidated (implicity checks that is not 0)
         // - exist ( has been added)
-        if (pendingStateNum <= rollup.lastPendingStateConsolidated || pendingStateNum > rollup.lastPendingState) {
+        if (
+            pendingStateNum <= rollup.lastPendingStateConsolidated ||
+            pendingStateNum > rollup.lastPendingState
+        ) {
             revert PendingStateInvalid();
         }
 
-        PendingState storage currentPendingState = rollup.pendingStateTransitions[pendingStateNum];
+        PendingState storage currentPendingState = rollup
+            .pendingStateTransitions[pendingStateNum];
 
         // Update state
         uint64 newLastVerifiedBatch = currentPendingState.lastVerifiedBatch;
         rollup.lastVerifiedBatch = newLastVerifiedBatch;
-        rollup.batchNumToStateRoot[newLastVerifiedBatch] = currentPendingState.stateRoot;
+        rollup.batchNumToStateRoot[newLastVerifiedBatch] = currentPendingState
+            .stateRoot;
         rollup.lastLocalExitRoot = currentPendingState.exitRoot;
 
         // Update pending state
@@ -1147,7 +1267,13 @@ contract PolygonRollupManagerPrevious is
         // Update trusted aggregator timeout to max
         trustedAggregatorTimeout = _HALT_AGGREGATION_TIMEOUT;
 
-        emit OverridePendingState(rollupID, finalNewBatch, newStateRoot, newLocalExitRoot, msg.sender);
+        emit OverridePendingState(
+            rollupID,
+            finalNewBatch,
+            newStateRoot,
+            newLocalExitRoot,
+            msg.sender
+        );
     }
 
     /**
@@ -1185,7 +1311,8 @@ contract PolygonRollupManagerPrevious is
         );
 
         emit ProveNonDeterministicPendingState(
-            rollup.pendingStateTransitions[finalPendingStateNum].stateRoot, newStateRoot
+            rollup.pendingStateTransitions[finalPendingStateNum].stateRoot,
+            newStateRoot
         );
 
         // Activate emergency state
@@ -1228,7 +1355,8 @@ contract PolygonRollupManagerPrevious is
             }
 
             // Check choosen pending state
-            PendingState storage initPendingState = rollup.pendingStateTransitions[initPendingStateNum];
+            PendingState storage initPendingState = rollup
+                .pendingStateTransitions[initPendingStateNum];
 
             // Get oldStateRoot from init pending state
             oldStateRoot = initPendingState.stateRoot;
@@ -1255,20 +1383,32 @@ contract PolygonRollupManagerPrevious is
         // - bigger than the initPendingstate
         // - not consolidated
         if (
-            finalPendingStateNum > rollup.lastPendingState || finalPendingStateNum <= initPendingStateNum
-                || finalPendingStateNum <= rollup.lastPendingStateConsolidated
+            finalPendingStateNum > rollup.lastPendingState ||
+            finalPendingStateNum <= initPendingStateNum ||
+            finalPendingStateNum <= rollup.lastPendingStateConsolidated
         ) {
             revert FinalPendingStateNumInvalid();
         }
 
         // Check final num batch
-        if (finalNewBatch != rollup.pendingStateTransitions[finalPendingStateNum].lastVerifiedBatch) {
+        if (
+            finalNewBatch !=
+            rollup
+                .pendingStateTransitions[finalPendingStateNum]
+                .lastVerifiedBatch
+        ) {
             revert FinalNumBatchDoesNotMatchPendingState();
         }
 
         // Get snark bytes
-        bytes memory snarkHashBytes =
-            _getInputSnarkBytes(rollup, initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot);
+        bytes memory snarkHashBytes = _getInputSnarkBytes(
+            rollup,
+            initNumBatch,
+            finalNewBatch,
+            newLocalExitRoot,
+            oldStateRoot,
+            newStateRoot
+        );
 
         // Calulate the snark input
         uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
@@ -1278,7 +1418,10 @@ contract PolygonRollupManagerPrevious is
             revert InvalidProof();
         }
 
-        if (rollup.pendingStateTransitions[finalPendingStateNum].stateRoot == newStateRoot) {
+        if (
+            rollup.pendingStateTransitions[finalPendingStateNum].stateRoot ==
+            newStateRoot
+        ) {
             revert StoredRootMustBeDifferentThanNewRoot();
         }
     }
@@ -1288,31 +1431,42 @@ contract PolygonRollupManagerPrevious is
      * The batch fee will not be updated when the trusted aggregator verifies batches
      * @param newLastVerifiedBatch New last verified batch
      */
-    function _updateBatchFee(RollupData storage rollup, uint64 newLastVerifiedBatch) internal {
+    function _updateBatchFee(
+        RollupData storage rollup,
+        uint64 newLastVerifiedBatch
+    ) internal {
         uint64 currentLastVerifiedBatch = _getLastVerifiedBatch(rollup);
         uint64 currentBatch = newLastVerifiedBatch;
 
         uint256 totalBatchesAboveTarget;
-        uint256 newBatchesVerified = newLastVerifiedBatch - currentLastVerifiedBatch;
+        uint256 newBatchesVerified = newLastVerifiedBatch -
+            currentLastVerifiedBatch;
 
         uint256 targetTimestamp = block.timestamp - verifyBatchTimeTarget;
 
         while (currentBatch != currentLastVerifiedBatch) {
             // Load sequenced batchdata
-            SequencedBatchData storage currentSequencedBatchData = rollup.sequencedBatches[currentBatch];
+            SequencedBatchData storage currentSequencedBatchData = rollup
+                .sequencedBatches[currentBatch];
 
             // Check if timestamp is below the verifyBatchTimeTarget
-            if (targetTimestamp < currentSequencedBatchData.sequencedTimestamp) {
+            if (
+                targetTimestamp < currentSequencedBatchData.sequencedTimestamp
+            ) {
                 // update currentBatch
-                currentBatch = currentSequencedBatchData.previousLastBatchSequenced;
+                currentBatch = currentSequencedBatchData
+                    .previousLastBatchSequenced;
             } else {
                 // The rest of batches will be above
-                totalBatchesAboveTarget = currentBatch - currentLastVerifiedBatch;
+                totalBatchesAboveTarget =
+                    currentBatch -
+                    currentLastVerifiedBatch;
                 break;
             }
         }
 
-        uint256 totalBatchesBelowTarget = newBatchesVerified - totalBatchesAboveTarget;
+        uint256 totalBatchesBelowTarget = newBatchesVerified -
+            totalBatchesAboveTarget;
 
         // _MAX_BATCH_FEE --> (< 70 bits)
         // multiplierBatchFee --> (< 10 bits)
@@ -1325,21 +1479,30 @@ contract PolygonRollupManagerPrevious is
         unchecked {
             if (totalBatchesBelowTarget < totalBatchesAboveTarget) {
                 // There are more batches above target, fee is multiplied
-                uint256 diffBatches = totalBatchesAboveTarget - totalBatchesBelowTarget;
+                uint256 diffBatches = totalBatchesAboveTarget -
+                    totalBatchesBelowTarget;
 
-                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER ? _MAX_BATCH_MULTIPLIER : diffBatches;
+                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER
+                    ? _MAX_BATCH_MULTIPLIER
+                    : diffBatches;
 
                 // For every multiplierBatchFee multiplication we must shift 3 zeroes since we have 3 decimals
-                _batchFee = (_batchFee * (uint256(multiplierBatchFee) ** diffBatches)) / (uint256(1000) ** diffBatches);
+                _batchFee =
+                    (_batchFee * (uint256(multiplierBatchFee) ** diffBatches)) /
+                    (uint256(1000) ** diffBatches);
             } else {
                 // There are more batches below target, fee is divided
-                uint256 diffBatches = totalBatchesBelowTarget - totalBatchesAboveTarget;
+                uint256 diffBatches = totalBatchesBelowTarget -
+                    totalBatchesAboveTarget;
 
-                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER ? _MAX_BATCH_MULTIPLIER : diffBatches;
+                diffBatches = diffBatches > _MAX_BATCH_MULTIPLIER
+                    ? _MAX_BATCH_MULTIPLIER
+                    : diffBatches;
 
                 // For every multiplierBatchFee multiplication we must shift 3 zeroes since we have 3 decimals
-                uint256 accDivisor =
-                    (uint256(1 ether) * (uint256(multiplierBatchFee) ** diffBatches)) / (uint256(1000) ** diffBatches);
+                uint256 accDivisor = (uint256(1 ether) *
+                    (uint256(multiplierBatchFee) ** diffBatches)) /
+                    (uint256(1000) ** diffBatches);
 
                 // multiplyFactor = multiplierBatchFee ** diffBatches / 10 ** (diffBatches * 3)
                 // accDivisor = 1E18 * multiplyFactor
@@ -1368,8 +1531,12 @@ contract PolygonRollupManagerPrevious is
     function activateEmergencyState() external {
         if (!hasRole(_EMERGENCY_COUNCIL_ROLE, msg.sender)) {
             if (
-                lastAggregationTimestamp == 0 || lastAggregationTimestamp + _HALT_AGGREGATION_TIMEOUT > block.timestamp
-                    || lastDeactivatedEmergencyStateTimestamp + _HALT_AGGREGATION_TIMEOUT > block.timestamp
+                lastAggregationTimestamp == 0 ||
+                lastAggregationTimestamp + _HALT_AGGREGATION_TIMEOUT >
+                block.timestamp ||
+                lastDeactivatedEmergencyStateTimestamp +
+                    _HALT_AGGREGATION_TIMEOUT >
+                block.timestamp
             ) {
                 revert HaltTimeoutNotExpired();
             }
@@ -1380,7 +1547,10 @@ contract PolygonRollupManagerPrevious is
     /**
      * @notice Function to deactivate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
      */
-    function deactivateEmergencyState() external onlyRole(_STOP_EMERGENCY_ROLE) {
+    function deactivateEmergencyState()
+        external
+        onlyRole(_STOP_EMERGENCY_ROLE)
+    {
         // Set last deactivated emergency state
         lastDeactivatedEmergencyStateTimestamp = uint64(block.timestamp);
 
@@ -1411,10 +1581,9 @@ contract PolygonRollupManagerPrevious is
      * The timeout can only be lowered, except if emergency state is active
      * @param newTrustedAggregatorTimeout Trusted aggregator timeout
      */
-    function setTrustedAggregatorTimeout(uint64 newTrustedAggregatorTimeout)
-        external
-        onlyRole(_TWEAK_PARAMETERS_ROLE)
-    {
+    function setTrustedAggregatorTimeout(
+        uint64 newTrustedAggregatorTimeout
+    ) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
         if (!isEmergencyState) {
             if (newTrustedAggregatorTimeout >= trustedAggregatorTimeout) {
                 revert NewTrustedAggregatorTimeoutMustBeLower();
@@ -1430,7 +1599,9 @@ contract PolygonRollupManagerPrevious is
      * The timeout can only be lowered, except if emergency state is active
      * @param newPendingStateTimeout Trusted aggregator timeout
      */
-    function setPendingStateTimeout(uint64 newPendingStateTimeout) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
+    function setPendingStateTimeout(
+        uint64 newPendingStateTimeout
+    ) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
         if (!isEmergencyState) {
             if (newPendingStateTimeout >= pendingStateTimeout) {
                 revert NewPendingStateTimeoutMustBeLower();
@@ -1445,7 +1616,9 @@ contract PolygonRollupManagerPrevious is
      * @notice Set a new multiplier batch fee
      * @param newMultiplierBatchFee multiplier batch fee
      */
-    function setMultiplierBatchFee(uint16 newMultiplierBatchFee) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
+    function setMultiplierBatchFee(
+        uint16 newMultiplierBatchFee
+    ) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
         if (newMultiplierBatchFee < 1000 || newMultiplierBatchFee > 1023) {
             revert InvalidRangeMultiplierBatchFee();
         }
@@ -1460,7 +1633,9 @@ contract PolygonRollupManagerPrevious is
      * the trustedAggregatorTimeout should be zero or very close to zero
      * @param newVerifyBatchTimeTarget Verify batch time target
      */
-    function setVerifyBatchTimeTarget(uint64 newVerifyBatchTimeTarget) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
+    function setVerifyBatchTimeTarget(
+        uint64 newVerifyBatchTimeTarget
+    ) external onlyRole(_TWEAK_PARAMETERS_ROLE) {
         if (newVerifyBatchTimeTarget > 1 days) {
             revert InvalidRangeBatchTimeTarget();
         }
@@ -1522,16 +1697,22 @@ contract PolygonRollupManagerPrevious is
             for (uint256 i = 0; i < nextIterationNodes; i++) {
                 // if we are on the last iteration of the current level and the nodes are odd
                 if (i == nextIterationNodes - 1 && (currentNodes % 2) == 1) {
-                    nextTmpTree[i] = keccak256(abi.encodePacked(tmpTree[i * 2], currentZeroHashHeight));
+                    nextTmpTree[i] = keccak256(
+                        abi.encodePacked(tmpTree[i * 2], currentZeroHashHeight)
+                    );
                 } else {
-                    nextTmpTree[i] = keccak256(abi.encodePacked(tmpTree[i * 2], tmpTree[(i * 2) + 1]));
+                    nextTmpTree[i] = keccak256(
+                        abi.encodePacked(tmpTree[i * 2], tmpTree[(i * 2) + 1])
+                    );
                 }
             }
 
             // Update tree variables
             tmpTree = nextTmpTree;
             currentNodes = nextIterationNodes;
-            currentZeroHashHeight = keccak256(abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight));
+            currentZeroHashHeight = keccak256(
+                abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight)
+            );
             remainingLevels--;
         }
 
@@ -1539,8 +1720,12 @@ contract PolygonRollupManagerPrevious is
 
         // Calculate remaining levels, since it's a sequencial merkle tree, the rest of the tree are zeroes
         for (uint256 i = 0; i < remainingLevels; i++) {
-            currentRoot = keccak256(abi.encodePacked(currentRoot, currentZeroHashHeight));
-            currentZeroHashHeight = keccak256(abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight));
+            currentRoot = keccak256(
+                abi.encodePacked(currentRoot, currentZeroHashHeight)
+            );
+            currentZeroHashHeight = keccak256(
+                abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight)
+            );
         }
         return currentRoot;
     }
@@ -1548,16 +1733,23 @@ contract PolygonRollupManagerPrevious is
     /**
      * @notice Get the last verified batch
      */
-    function getLastVerifiedBatch(uint32 rollupID) public view returns (uint64) {
+    function getLastVerifiedBatch(
+        uint32 rollupID
+    ) public view returns (uint64) {
         return _getLastVerifiedBatch(rollupIDToRollupData[rollupID]);
     }
 
     /**
      * @notice Get the last verified batch
      */
-    function _getLastVerifiedBatch(RollupData storage rollup) internal view returns (uint64) {
+    function _getLastVerifiedBatch(
+        RollupData storage rollup
+    ) internal view returns (uint64) {
         if (rollup.lastPendingState > 0) {
-            return rollup.pendingStateTransitions[rollup.lastPendingState].lastVerifiedBatch;
+            return
+                rollup
+                    .pendingStateTransitions[rollup.lastPendingState]
+                    .lastVerifiedBatch;
         } else {
             return rollup.lastVerifiedBatch;
         }
@@ -1569,8 +1761,15 @@ contract PolygonRollupManagerPrevious is
      * @param pendingStateNum Pending state number to check
      * Note that his function does not check if the pending state currently exists, or if it's consolidated already
      */
-    function isPendingStateConsolidable(uint32 rollupID, uint64 pendingStateNum) public view returns (bool) {
-        return _isPendingStateConsolidable(rollupIDToRollupData[rollupID], pendingStateNum);
+    function isPendingStateConsolidable(
+        uint32 rollupID,
+        uint64 pendingStateNum
+    ) public view returns (bool) {
+        return
+            _isPendingStateConsolidable(
+                rollupIDToRollupData[rollupID],
+                pendingStateNum
+            );
     }
 
     /**
@@ -1579,12 +1778,13 @@ contract PolygonRollupManagerPrevious is
      * @param pendingStateNum Pending state number to check
      * Note that his function does not check if the pending state currently exists, or if it's consolidated already
      */
-    function _isPendingStateConsolidable(RollupData storage rollup, uint64 pendingStateNum)
-        internal
-        view
-        returns (bool)
-    {
-        return (rollup.pendingStateTransitions[pendingStateNum].timestamp + pendingStateTimeout <= block.timestamp);
+    function _isPendingStateConsolidable(
+        RollupData storage rollup,
+        uint64 pendingStateNum
+    ) internal view returns (bool) {
+        return (rollup.pendingStateTransitions[pendingStateNum].timestamp +
+            pendingStateTimeout <=
+            block.timestamp);
     }
 
     /**
@@ -1594,7 +1794,8 @@ contract PolygonRollupManagerPrevious is
         uint256 currentBalance = pol.balanceOf(address(this));
 
         // Total Batches to be verified = total Sequenced Batches - total verified Batches
-        uint256 totalBatchesToVerify = totalSequencedBatches - totalVerifiedBatches;
+        uint256 totalBatchesToVerify = totalSequencedBatches -
+            totalVerifiedBatches;
 
         if (totalBatchesToVerify == 0) return 0;
         return currentBalance / totalBatchesToVerify;
@@ -1633,9 +1834,15 @@ contract PolygonRollupManagerPrevious is
         bytes32 oldStateRoot,
         bytes32 newStateRoot
     ) public view returns (bytes memory) {
-        return _getInputSnarkBytes(
-            rollupIDToRollupData[rollupID], initNumBatch, finalNewBatch, newLocalExitRoot, oldStateRoot, newStateRoot
-        );
+        return
+            _getInputSnarkBytes(
+                rollupIDToRollupData[rollupID],
+                initNumBatch,
+                finalNewBatch,
+                newLocalExitRoot,
+                oldStateRoot,
+                newStateRoot
+            );
     }
 
     /**
@@ -1656,9 +1863,13 @@ contract PolygonRollupManagerPrevious is
         bytes32 newStateRoot
     ) internal view returns (bytes memory) {
         // Sanity check
-        bytes32 oldAccInputHash = rollup.sequencedBatches[initNumBatch].accInputHash;
+        bytes32 oldAccInputHash = rollup
+            .sequencedBatches[initNumBatch]
+            .accInputHash;
 
-        bytes32 newAccInputHash = rollup.sequencedBatches[finalNewBatch].accInputHash;
+        bytes32 newAccInputHash = rollup
+            .sequencedBatches[finalNewBatch]
+            .accInputHash;
 
         // Sanity check
         if (initNumBatch != 0 && oldAccInputHash == bytes32(0)) {
@@ -1674,30 +1885,34 @@ contract PolygonRollupManagerPrevious is
             revert NewStateRootNotInsidePrime();
         }
 
-        return abi.encodePacked(
-            msg.sender,
-            oldStateRoot,
-            oldAccInputHash,
-            initNumBatch,
-            rollup.chainID,
-            rollup.forkID,
-            newStateRoot,
-            newAccInputHash,
-            newLocalExitRoot,
-            finalNewBatch
-        );
+        return
+            abi.encodePacked(
+                msg.sender,
+                oldStateRoot,
+                oldAccInputHash,
+                initNumBatch,
+                rollup.chainID,
+                rollup.forkID,
+                newStateRoot,
+                newAccInputHash,
+                newLocalExitRoot,
+                finalNewBatch
+            );
     }
 
     /**
      * @notice Function to check if the state root is inside of the prime field
      * @param newStateRoot New State root once the batch is processed
      */
-    function _checkStateRootInsidePrime(uint256 newStateRoot) internal pure returns (bool) {
+    function _checkStateRootInsidePrime(
+        uint256 newStateRoot
+    ) internal pure returns (bool) {
         if (
-            ((newStateRoot & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD)
-                && (((newStateRoot >> 64) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD)
-                && (((newStateRoot >> 128) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD)
-                && ((newStateRoot >> 192) < _GOLDILOCKS_PRIME_FIELD)
+            ((newStateRoot & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD) &&
+            (((newStateRoot >> 64) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD) &&
+            (((newStateRoot >> 128) & _MAX_UINT_64) <
+                _GOLDILOCKS_PRIME_FIELD) &&
+            ((newStateRoot >> 192) < _GOLDILOCKS_PRIME_FIELD)
         ) {
             return true;
         } else {
@@ -1710,7 +1925,10 @@ contract PolygonRollupManagerPrevious is
      * @param rollupID Rollup identifier
      * @param batchNum Batch number
      */
-    function getRollupBatchNumToStateRoot(uint32 rollupID, uint64 batchNum) public view returns (bytes32) {
+    function getRollupBatchNumToStateRoot(
+        uint32 rollupID,
+        uint64 batchNum
+    ) public view returns (bytes32) {
         return rollupIDToRollupData[rollupID].batchNumToStateRoot[batchNum];
     }
 
@@ -1719,11 +1937,10 @@ contract PolygonRollupManagerPrevious is
      * @param rollupID Rollup identifier
      * @param batchNum Batch number
      */
-    function getRollupSequencedBatches(uint32 rollupID, uint64 batchNum)
-        public
-        view
-        returns (SequencedBatchData memory)
-    {
+    function getRollupSequencedBatches(
+        uint32 rollupID,
+        uint64 batchNum
+    ) public view returns (SequencedBatchData memory) {
         return rollupIDToRollupData[rollupID].sequencedBatches[batchNum];
     }
 
@@ -1732,11 +1949,10 @@ contract PolygonRollupManagerPrevious is
      * @param rollupID Rollup identifier
      * @param batchNum Batch number
      */
-    function getRollupPendingStateTransitions(uint32 rollupID, uint64 batchNum)
-        public
-        view
-        returns (PendingState memory)
-    {
+    function getRollupPendingStateTransitions(
+        uint32 rollupID,
+        uint64 batchNum
+    ) public view returns (PendingState memory) {
         return rollupIDToRollupData[rollupID].pendingStateTransitions[batchNum];
     }
 }

@@ -90,7 +90,9 @@ interface IPolygonZkEVMBridgeV2 {
      */
     error FailedTokenWrappedDeployment();
 
-    function wrappedTokenToTokenInfo(address destinationAddress) external view returns (uint32, address);
+    function wrappedTokenToTokenInfo(
+        address destinationAddress
+    ) external view returns (uint32, address);
 
     function updateGlobalExitRoot() external;
 
@@ -159,5 +161,7 @@ interface IPolygonZkEVMBridgeV2 {
         bytes memory _gasTokenMetadata
     ) external;
 
-    function getTokenMetadata(address token) external view returns (bytes memory);
+    function getTokenMetadata(
+        address token
+    ) external view returns (bytes memory);
 }

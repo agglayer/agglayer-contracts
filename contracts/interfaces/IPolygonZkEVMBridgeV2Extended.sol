@@ -37,16 +37,26 @@ interface IPolygonZkEVMBridgeV2Extended {
         uint32 depositCount
     );
     event ClaimEvent(
-        uint256 globalIndex, uint32 originNetwork, address originAddress, address destinationAddress, uint256 amount
+        uint256 globalIndex,
+        uint32 originNetwork,
+        address originAddress,
+        address destinationAddress,
+        uint256 amount
     );
     event EmergencyStateActivated();
     event EmergencyStateDeactivated();
     event Initialized(uint8 version);
     event NewWrappedToken(
-        uint32 originNetwork, address originTokenAddress, address wrappedTokenAddress, bytes metadata
+        uint32 originNetwork,
+        address originTokenAddress,
+        address wrappedTokenAddress,
+        bytes metadata
     );
 
-    function BASE_INIT_BYTECODE_WRAPPED_TOKEN() external view returns (bytes memory);
+    function BASE_INIT_BYTECODE_WRAPPED_TOKEN()
+        external
+        view
+        returns (bytes memory);
 
     function WETHToken() external view returns (address);
 
@@ -76,15 +86,17 @@ interface IPolygonZkEVMBridgeV2Extended {
         bytes calldata metadata
     ) external;
 
-    function calculateRoot(bytes32 leafHash, bytes32[32] calldata smtProof, uint32 index)
-        external
-        pure
-        returns (bytes32);
+    function calculateRoot(
+        bytes32 leafHash,
+        bytes32[32] calldata smtProof,
+        uint32 index
+    ) external pure returns (bytes32);
 
-    function calculateTokenWrapperAddress(uint32 originNetwork, address originTokenAddress, address token)
-        external
-        view
-        returns (address);
+    function calculateTokenWrapperAddress(
+        uint32 originNetwork,
+        address originTokenAddress,
+        address token
+    ) external view returns (address);
 
     function claimAsset(
         bytes32[32] calldata smtProofLocalExitRoot,
@@ -138,9 +150,14 @@ interface IPolygonZkEVMBridgeV2Extended {
 
     function getRoot() external view returns (bytes32);
 
-    function getTokenMetadata(address token) external view returns (bytes memory);
+    function getTokenMetadata(
+        address token
+    ) external view returns (bytes memory);
 
-    function getTokenWrappedAddress(uint32 originNetwork, address originTokenAddress) external view returns (address);
+    function getTokenWrappedAddress(
+        uint32 originNetwork,
+        address originTokenAddress
+    ) external view returns (address);
 
     function globalExitRootManager() external view returns (address);
 
@@ -153,7 +170,10 @@ interface IPolygonZkEVMBridgeV2Extended {
         bytes calldata _gasTokenMetadata
     ) external;
 
-    function isClaimed(uint32 leafIndex, uint32 sourceBridgeNetwork) external view returns (bool);
+    function isClaimed(
+        uint32 leafIndex,
+        uint32 sourceBridgeNetwork
+    ) external view returns (bool);
 
     function isEmergencyState() external view returns (bool);
 
@@ -175,10 +195,14 @@ interface IPolygonZkEVMBridgeV2Extended {
 
     function updateGlobalExitRoot() external;
 
-    function verifyMerkleProof(bytes32 leafHash, bytes32[32] calldata smtProof, uint32 index, bytes32 root)
-        external
-        pure
-        returns (bool);
+    function verifyMerkleProof(
+        bytes32 leafHash,
+        bytes32[32] calldata smtProof,
+        uint32 index,
+        bytes32 root
+    ) external pure returns (bool);
 
-    function wrappedTokenToTokenInfo(address destinationAddress) external view returns (uint32, address);
+    function wrappedTokenToTokenInfo(
+        address destinationAddress
+    ) external view returns (uint32, address);
 }

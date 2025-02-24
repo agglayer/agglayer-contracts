@@ -27,7 +27,10 @@ contract PolygonZkEVMGlobalExitRoot is IPolygonZkEVMGlobalExitRoot {
     /**
      * @dev Emitted when the global exit root is updated
      */
-    event UpdateGlobalExitRoot(bytes32 indexed mainnetExitRoot, bytes32 indexed rollupExitRoot);
+    event UpdateGlobalExitRoot(
+        bytes32 indexed mainnetExitRoot,
+        bytes32 indexed rollupExitRoot
+    );
 
     /**
      * @param _rollupAddress Rollup contract address
@@ -57,13 +60,18 @@ contract PolygonZkEVMGlobalExitRoot is IPolygonZkEVMGlobalExitRoot {
             revert OnlyAllowedContracts();
         }
 
-        bytes32 newGlobalExitRoot =
-            GlobalExitRootLib.calculateGlobalExitRoot(cacheLastMainnetExitRoot, cacheLastRollupExitRoot);
+        bytes32 newGlobalExitRoot = GlobalExitRootLib.calculateGlobalExitRoot(
+            cacheLastMainnetExitRoot,
+            cacheLastRollupExitRoot
+        );
 
         // If it already exists, do not modify the timestamp
         if (globalExitRootMap[newGlobalExitRoot] == 0) {
             globalExitRootMap[newGlobalExitRoot] = block.timestamp;
-            emit UpdateGlobalExitRoot(cacheLastMainnetExitRoot, cacheLastRollupExitRoot);
+            emit UpdateGlobalExitRoot(
+                cacheLastMainnetExitRoot,
+                cacheLastRollupExitRoot
+            );
         }
     }
 
@@ -71,6 +79,10 @@ contract PolygonZkEVMGlobalExitRoot is IPolygonZkEVMGlobalExitRoot {
      * @notice Return last global exit root
      */
     function getLastGlobalExitRoot() public view returns (bytes32) {
-        return GlobalExitRootLib.calculateGlobalExitRoot(lastMainnetExitRoot, lastRollupExitRoot);
+        return
+            GlobalExitRootLib.calculateGlobalExitRoot(
+                lastMainnetExitRoot,
+                lastRollupExitRoot
+            );
     }
 }

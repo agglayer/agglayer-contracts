@@ -30,5 +30,7 @@ interface IBasePolygonZkEVMGlobalExitRoot {
 
     function updateExitRoot(bytes32 newRollupExitRoot) external;
 
-    function globalExitRootMap(bytes32 globalExitRootNum) external returns (uint256);
+    function globalExitRootMap(
+        bytes32 globalExitRootNum
+    ) external returns (uint256);
 }

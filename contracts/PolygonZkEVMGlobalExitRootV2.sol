@@ -11,7 +11,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 /**
  * Contract responsible for managing the exit roots across multiple networks
  */
-contract PolygonZkEVMGlobalExitRootV2 is PolygonZkEVMGlobalExitRootBaseStorage, DepositContractBase, Initializable {
+contract PolygonZkEVMGlobalExitRootV2 is
+    PolygonZkEVMGlobalExitRootBaseStorage,
+    DepositContractBase,
+    Initializable
+{
     // PolygonZkEVMBridge address
     address public immutable bridgeAddress;
 
@@ -24,13 +28,19 @@ contract PolygonZkEVMGlobalExitRootV2 is PolygonZkEVMGlobalExitRootBaseStorage, 
     /**
      * @dev Emitted when the global exit root is updated
      */
-    event UpdateL1InfoTree(bytes32 indexed mainnetExitRoot, bytes32 indexed rollupExitRoot);
+    event UpdateL1InfoTree(
+        bytes32 indexed mainnetExitRoot,
+        bytes32 indexed rollupExitRoot
+    );
 
     /**
      * @dev Emitted when the global exit root is updated with the L1InfoTree leaf information
      */
     event UpdateL1InfoTreeV2(
-        bytes32 currentL1InfoRoot, uint32 indexed leafCount, uint256 blockhash, uint64 minTimestamp
+        bytes32 currentL1InfoRoot,
+        uint32 indexed leafCount,
+        uint256 blockhash,
+        uint64 minTimestamp
     );
 
     /**
@@ -84,8 +94,10 @@ contract PolygonZkEVMGlobalExitRootV2 is PolygonZkEVMGlobalExitRootBaseStorage, 
             revert OnlyAllowedContracts();
         }
 
-        bytes32 newGlobalExitRoot =
-            GlobalExitRootLib.calculateGlobalExitRoot(cacheLastMainnetExitRoot, cacheLastRollupExitRoot);
+        bytes32 newGlobalExitRoot = GlobalExitRootLib.calculateGlobalExitRoot(
+            cacheLastMainnetExitRoot,
+            cacheLastRollupExitRoot
+        );
 
         // If it already exists, do not modify the blockhash
         if (globalExitRootMap[newGlobalExitRoot] == 0) {
@@ -105,7 +117,10 @@ contract PolygonZkEVMGlobalExitRootV2 is PolygonZkEVMGlobalExitRootBaseStorage, 
             // Store L1InfoRoot
             l1InfoRootMap[uint32(depositCount)] = currentL1InfoRoot;
 
-            emit UpdateL1InfoTree(cacheLastMainnetExitRoot, cacheLastRollupExitRoot);
+            emit UpdateL1InfoTree(
+                cacheLastMainnetExitRoot,
+                cacheLastRollupExitRoot
+            );
 
             emit UpdateL1InfoTreeV2(
                 currentL1InfoRoot,
@@ -120,13 +135,22 @@ contract PolygonZkEVMGlobalExitRootV2 is PolygonZkEVMGlobalExitRootBaseStorage, 
      * @notice Return last global exit root
      */
     function getLastGlobalExitRoot() public view returns (bytes32) {
-        return GlobalExitRootLib.calculateGlobalExitRoot(lastMainnetExitRoot, lastRollupExitRoot);
+        return
+            GlobalExitRootLib.calculateGlobalExitRoot(
+                lastMainnetExitRoot,
+                lastRollupExitRoot
+            );
     }
 
     /**
      * @notice Computes and returns the merkle root of the L1InfoTree
      */
-    function getRoot() public view override(DepositContractBase, IPolygonZkEVMGlobalExitRootV2) returns (bytes32) {
+    function getRoot()
+        public
+        view
+        override(DepositContractBase, IPolygonZkEVMGlobalExitRootV2)
+        returns (bytes32)
+    {
         return super.getRoot();
     }
 
@@ -136,11 +160,14 @@ contract PolygonZkEVMGlobalExitRootV2 is PolygonZkEVMGlobalExitRootBaseStorage, 
      * @param lastBlockHash Last accessible block hash
      * @param timestamp Ethereum timestamp in seconds
      */
-    function getLeafValue(bytes32 newGlobalExitRoot, uint256 lastBlockHash, uint64 timestamp)
-        public
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(newGlobalExitRoot, lastBlockHash, timestamp));
+    function getLeafValue(
+        bytes32 newGlobalExitRoot,
+        uint256 lastBlockHash,
+        uint64 timestamp
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(newGlobalExitRoot, lastBlockHash, timestamp)
+            );
     }
 }

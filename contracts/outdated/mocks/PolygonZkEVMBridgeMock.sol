@@ -53,7 +53,17 @@ contract PolygonZkEVMBridgeMock is PolygonZkEVMBridge, OwnableUpgradeable {
         bool forceUpdateGlobalExitRoot,
         bytes calldata permitData
     ) public payable override {
-        require(msg.value <= maxEtherBridge, "PolygonZkEVMBridge::bridgeAsset: Cannot bridge more than maxEtherBridge");
-        super.bridgeAsset(destinationNetwork, destinationAddress, amount, token, forceUpdateGlobalExitRoot, permitData);
+        require(
+            msg.value <= maxEtherBridge,
+            "PolygonZkEVMBridge::bridgeAsset: Cannot bridge more than maxEtherBridge"
+        );
+        super.bridgeAsset(
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            token,
+            forceUpdateGlobalExitRoot,
+            permitData
+        );
     }
 }

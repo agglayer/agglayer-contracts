@@ -27,7 +27,11 @@ contract PolygonTransparentProxy is ERC1967Proxy {
      * backed by the implementation at `_logic`, and optionally initialized with `_data` as explained in
      * {ERC1967Proxy-constructor}.
      */
-    constructor(address _logic, address admin, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
+    constructor(
+        address _logic,
+        address admin,
+        bytes memory _data
+    ) payable ERC1967Proxy(_logic, _data) {
         _admin = admin;
         // Set the storage value and emit an event for ERC-1967 compatibility
         ERC1967Utils.changeAdmin(_proxyAdmin());
@@ -45,7 +49,10 @@ contract PolygonTransparentProxy is ERC1967Proxy {
      */
     function _fallback() internal virtual override {
         if (msg.sender == _proxyAdmin()) {
-            if (msg.sig != ITransparentUpgradeableProxy.upgradeToAndCall.selector) {
+            if (
+                msg.sig !=
+                ITransparentUpgradeableProxy.upgradeToAndCall.selector
+            ) {
                 super._fallback();
             } else {
                 _dispatchUpgradeToAndCall();
@@ -63,7 +70,10 @@ contract PolygonTransparentProxy is ERC1967Proxy {
      * - If `data` is empty, `msg.value` must be zero.
      */
     function _dispatchUpgradeToAndCall() private {
-        (address newImplementation, bytes memory data) = abi.decode(msg.data[4:], (address, bytes));
+        (address newImplementation, bytes memory data) = abi.decode(
+            msg.data[4:],
+            (address, bytes)
+        );
         ERC1967Utils.upgradeToAndCall(newImplementation, data);
     }
 }

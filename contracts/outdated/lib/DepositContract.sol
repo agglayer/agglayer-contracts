@@ -17,7 +17,8 @@ contract DepositContract is ReentrancyGuardUpgradeable {
     uint256 internal constant _DEPOSIT_CONTRACT_TREE_DEPTH = 32;
 
     // This ensures `depositCount` will fit into 32-bits
-    uint256 internal constant _MAX_DEPOSIT_COUNT = 2 ** _DEPOSIT_CONTRACT_TREE_DEPTH - 1;
+    uint256 internal constant _MAX_DEPOSIT_COUNT =
+        2 ** _DEPOSIT_CONTRACT_TREE_DEPTH - 1;
 
     // Branch array which contains the necessary sibilings to compute the next root when a new
     // leaf is inserted
@@ -40,14 +41,20 @@ contract DepositContract is ReentrancyGuardUpgradeable {
         uint256 size = depositCount;
         bytes32 currentZeroHashHeight = 0;
 
-        for (uint256 height = 0; height < _DEPOSIT_CONTRACT_TREE_DEPTH; height++) {
+        for (
+            uint256 height = 0;
+            height < _DEPOSIT_CONTRACT_TREE_DEPTH;
+            height++
+        ) {
             if (((size >> height) & 1) == 1) {
                 node = keccak256(abi.encodePacked(_branch[height], node));
             } else {
                 node = keccak256(abi.encodePacked(node, currentZeroHashHeight));
             }
 
-            currentZeroHashHeight = keccak256(abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight));
+            currentZeroHashHeight = keccak256(
+                abi.encodePacked(currentZeroHashHeight, currentZeroHashHeight)
+            );
         }
         return node;
     }
@@ -66,7 +73,11 @@ contract DepositContract is ReentrancyGuardUpgradeable {
 
         // Add deposit data root to Merkle tree (update a single `_branch` node)
         uint256 size = ++depositCount;
-        for (uint256 height = 0; height < _DEPOSIT_CONTRACT_TREE_DEPTH; height++) {
+        for (
+            uint256 height = 0;
+            height < _DEPOSIT_CONTRACT_TREE_DEPTH;
+            height++
+        ) {
             if (((size >> height) & 1) == 1) {
                 _branch[height] = node;
                 return;
@@ -94,7 +105,11 @@ contract DepositContract is ReentrancyGuardUpgradeable {
         bytes32 node = leafHash;
 
         // Check merkle proof
-        for (uint256 height = 0; height < _DEPOSIT_CONTRACT_TREE_DEPTH; height++) {
+        for (
+            uint256 height = 0;
+            height < _DEPOSIT_CONTRACT_TREE_DEPTH;
+            height++
+        ) {
             if (((index >> height) & 1) == 1) {
                 node = keccak256(abi.encodePacked(smtProof[height], node));
             } else {
@@ -124,10 +139,17 @@ contract DepositContract is ReentrancyGuardUpgradeable {
         uint256 amount,
         bytes32 metadataHash
     ) public pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                leafType, originNetwork, originAddress, destinationNetwork, destinationAddress, amount, metadataHash
-            )
-        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    leafType,
+                    originNetwork,
+                    originAddress,
+                    destinationNetwork,
+                    destinationAddress,
+                    amount,
+                    metadataHash
+                )
+            );
     }
 }

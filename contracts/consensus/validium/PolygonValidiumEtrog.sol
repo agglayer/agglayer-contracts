@@ -61,7 +61,14 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManager _rollupManager
-    ) PolygonRollupBaseEtrog(_globalExitRootManager, _pol, _bridgeAddress, _rollupManager) {}
+    )
+        PolygonRollupBaseEtrog(
+            _globalExitRootManager,
+            _pol,
+            _bridgeAddress,
+            _rollupManager
+        )
+    {}
 
     /////////////////////////////////////
     // Sequence/Verify batches functions
@@ -99,7 +106,9 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
         }
 
         // Check max sequence timestamp inside of range
-        if (uint256(maxSequenceTimestamp) > (block.timestamp + TIMESTAMP_RANGE)) {
+        if (
+            uint256(maxSequenceTimestamp) > (block.timestamp + TIMESTAMP_RANGE)
+        ) {
             revert MaxTimestampSequenceInvalid();
         }
 
@@ -107,7 +116,9 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
         bridgeAddress.updateGlobalExitRoot();
 
         // Get global batch variables
-        bytes32 l1InfoRoot = globalExitRootManager.l1InfoRootMap(l1InfoTreeLeafCount);
+        bytes32 l1InfoRoot = globalExitRootManager.l1InfoRootMap(
+            l1InfoTreeLeafCount
+        );
 
         if (l1InfoRoot == bytes32(0)) {
             revert L1InfoTreeLeafCountInvalid();
@@ -138,7 +149,10 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
                     )
                 );
 
-                if (hashedForcedBatchData != forcedBatches[currentLastForceBatchSequenced]) {
+                if (
+                    hashedForcedBatchData !=
+                    forcedBatches[currentLastForceBatchSequenced]
+                ) {
                     revert ForcedDataDoesNotMatch();
                 }
 
@@ -186,12 +200,16 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
 
         // Check if there has been forced batches
         if (currentLastForceBatchSequenced != initLastForceBatchSequenced) {
-            uint64 forcedBatchesSequenced = currentLastForceBatchSequenced - initLastForceBatchSequenced;
+            uint64 forcedBatchesSequenced = currentLastForceBatchSequenced -
+                initLastForceBatchSequenced;
             // substract forced batches
             nonForcedBatchesSequenced -= forcedBatchesSequenced;
 
             // Transfer pol for every forced batch submitted
-            pol.safeTransfer(address(rollupManager), calculatePolPerForceBatch() * (forcedBatchesSequenced));
+            pol.safeTransfer(
+                address(rollupManager),
+                calculatePolPerForceBatch() * (forcedBatchesSequenced)
+            );
 
             // Store new last force batch sequenced
             lastForceBatchSequenced = currentLastForceBatchSequenced;
@@ -200,15 +218,23 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
         // Pay collateral for every non-forced batch submitted
         if (nonForcedBatchesSequenced != 0) {
             pol.safeTransferFrom(
-                msg.sender, address(rollupManager), rollupManager.getBatchFee() * nonForcedBatchesSequenced
+                msg.sender,
+                address(rollupManager),
+                rollupManager.getBatchFee() * nonForcedBatchesSequenced
             );
 
             // Validate that the data availability protocol accepts the dataAvailabilityMessage
             // note This is a view function, so there's not much risk even if this contract was vulnerable to reentrant attacks
-            dataAvailabilityProtocol.verifyMessage(expectedFinalAccInputHash, dataAvailabilityMessage);
+            dataAvailabilityProtocol.verifyMessage(
+                expectedFinalAccInputHash,
+                dataAvailabilityMessage
+            );
         }
 
-        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(uint64(batchesNum), currentAccInputHash);
+        uint64 currentBatchSequenced = rollupManager.onSequenceBatches(
+            uint64(batchesNum),
+            currentAccInputHash
+        );
 
         // Check expectedFinalAccInputHash
         if (currentAccInputHash != expectedFinalAccInputHash) {
@@ -239,7 +265,13 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
         if (!isSequenceWithDataAvailabilityAllowed) {
             revert SequenceWithDataAvailabilityNotAllowed();
         }
-        super.sequenceBatches(batches, l1InfoTreeLeafCount, maxSequenceTimestamp, expectedFinalAccInputHash, l2Coinbase);
+        super.sequenceBatches(
+            batches,
+            l1InfoTreeLeafCount,
+            maxSequenceTimestamp,
+            expectedFinalAccInputHash,
+            l2Coinbase
+        );
     }
 
     //////////////////
@@ -250,7 +282,9 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
      * @notice Allow the admin to set a new data availability protocol
      * @param newDataAvailabilityProtocol Address of the new data availability protocol
      */
-    function setDataAvailabilityProtocol(IDataAvailabilityProtocol newDataAvailabilityProtocol) external onlyAdmin {
+    function setDataAvailabilityProtocol(
+        IDataAvailabilityProtocol newDataAvailabilityProtocol
+    ) external onlyAdmin {
         dataAvailabilityProtocol = newDataAvailabilityProtocol;
 
         emit SetDataAvailabilityProtocol(address(newDataAvailabilityProtocol));
@@ -260,8 +294,13 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
      * @notice Allow the admin to switch the sequence with data availability
      * @param newIsSequenceWithDataAvailabilityAllowed Boolean to switch
      */
-    function switchSequenceWithDataAvailability(bool newIsSequenceWithDataAvailabilityAllowed) external onlyAdmin {
-        if (newIsSequenceWithDataAvailabilityAllowed == isSequenceWithDataAvailabilityAllowed) {
+    function switchSequenceWithDataAvailability(
+        bool newIsSequenceWithDataAvailabilityAllowed
+    ) external onlyAdmin {
+        if (
+            newIsSequenceWithDataAvailabilityAllowed ==
+            isSequenceWithDataAvailabilityAllowed
+        ) {
             revert SwitchToSameValue();
         }
         isSequenceWithDataAvailabilityAllowed = newIsSequenceWithDataAvailabilityAllowed;
