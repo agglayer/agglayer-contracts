@@ -6,11 +6,12 @@ import "script/deployers/PolygonRollupManagerDeployer.s.sol";
 
 contract Deploy is Script, PolygonRollupManagerDeployer {
     function run(address _globalExitRootManager, address _pol, address _bridgeAddress) public {
-        address implementation = deployPolygonRollupManagerImplementation(
-            IPolygonZkEVMGlobalExitRootV2(_globalExitRootManager),
-            IERC20Upgradeable(_pol),
-            IPolygonZkEVMBridge(_bridgeAddress)
-        );
-        console.log("PolygonRollupManager implementation: ", implementation);
+        // TODO: Implement this function
+        // address implementation = deployPolygonRollupManagerImplementation(
+        //     IPolygonZkEVMGlobalExitRootV2(_globalExitRootManager),
+        //     IERC20Upgradeable(_pol),
+        //     IPolygonZkEVMBridge(_bridgeAddress)
+        // );
+        // console.log("PolygonRollupManager implementation: ", implementation);
     }
 }

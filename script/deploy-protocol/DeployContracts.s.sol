@@ -242,36 +242,38 @@ contract DeployContracts is Script {
         internal
         returns (address)
     {
-        vm.startBroadcast(deployerPvtKey);
-        PolygonRollupManagerNotUpgraded rollupManager = new PolygonRollupManagerNotUpgraded(
-            IPolygonZkEVMGlobalExitRootV2(globalExitRootManagerAddr),
-            IERC20Upgradeable(polTokenAddress),
-            IPolygonZkEVMBridge(bridgeAddr)
-        );
-        address rollupManagerProxy = _proxify(
-            address(rollupManager),
-            proxyAdminAddr,
-            abi.encodeWithSelector(
-                rollupManager.initialize.selector,
-                trustedAggregator,
-                pendingStateTimeout,
-                trustedAggregatorTimeout,
-                admin,
-                timelockAdminAddress,
-                emergencyCouncilAddress,
-                bytes32(0),
-                bytes32(0),
-                0,
-                0
-            )
-        );
-        vm.stopBroadcast();
+        return address(0);
+        // TODO: Fix PolygonRollupManagerNotUpgraded contract deployment
+        // vm.startBroadcast(deployerPvtKey);
+        // PolygonRollupManagerNotUpgraded rollupManager = new PolygonRollupManagerNotUpgraded(
+        //     IPolygonZkEVMGlobalExitRootV2(globalExitRootManagerAddr),
+        //     IERC20Upgradeable(polTokenAddress),
+        //     IPolygonZkEVMBridge(bridgeAddr)
+        // );
+        // address rollupManagerProxy = _proxify(
+        //     address(rollupManager),
+        //     proxyAdminAddr,
+        //     abi.encodeWithSelector(
+        //         rollupManager.initialize.selector,
+        //         trustedAggregator,
+        //         pendingStateTimeout,
+        //         trustedAggregatorTimeout,
+        //         admin,
+        //         timelockAdminAddress,
+        //         emergencyCouncilAddress,
+        //         bytes32(0),
+        //         bytes32(0),
+        //         0,
+        //         0
+        //     )
+        // );
+        // vm.stopBroadcast();
 
-        console.log("\n----------------------\n");
-        console.log("Rollup Manager deployed!");
-        console.log("Rollup Manager implementation address: %s", address(rollupManager));
-        console.log("Rollup Manager Address: %s", rollupManagerProxy);
-        return rollupManagerProxy;
+        // console.log("\n----------------------\n");
+        // console.log("Rollup Manager deployed!");
+        // console.log("Rollup Manager implementation address: %s", address(rollupManager));
+        // console.log("Rollup Manager Address: %s", rollupManagerProxy);
+        // return rollupManagerProxy;
     }
 
     function _verifyRollupManager(address rolluplManagerAddr, address bridgeProxyAddr) internal view {

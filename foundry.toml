@@ -8,7 +8,6 @@ optimizer_runs = 999999
 verbosity = 2
 ffi = true
 fs_permissions = [{ access = "read-write", path = "./script/"}]
-evm_version = "shanghai"
 ignored_error_codes = [2018, 2072, 5667, 6321, 9302, 5574, 3860] # TODO: Figure out which ones to keep
 
 remappings = [

@@ -17,10 +17,12 @@ abstract contract PolygonRollupManagerDeployer is Script {
     function deployPolygonRollupManagerImplementation(
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridge _bridgeAddress
+        IPolygonZkEVMBridge _bridgeAddress,
+        AggLayerGateway _aggLayerGateway
     ) internal returns (address implementation) {
         vm.startBroadcast();
-        implementation = address(new PolygonRollupManager(_globalExitRootManager, _pol, _bridgeAddress));
+        implementation =
+            address(new PolygonRollupManager(_globalExitRootManager, _pol, _bridgeAddress, _aggLayerGateway));
         vm.stopBroadcast();
     }
 }

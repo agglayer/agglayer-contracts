@@ -122,7 +122,7 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_initialize_onlyRollupManager() public {
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.OnlyRollupManager.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.OnlyRollupManager.selector);
         _initializePolygonValidiumEtrog();
     }
 
@@ -241,7 +241,7 @@ contract PolygonValidiumEtrogTest is
 
         polygonValidiumEtrog.setForceBatchAddress(address(0));
 
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.ForceBatchesDecentralized.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.ForceBatchesDecentralized.selector);
         polygonValidiumEtrog.setForceBatchAddress(address(0));
 
         vm.stopPrank();
@@ -266,7 +266,7 @@ contract PolygonValidiumEtrogTest is
 
         bytes memory hugeTokenMetaData = new bytes(1_000_000); // huge data
 
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.HugeTokenMetadataNotSupported.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.HugeTokenMetadataNotSupported.selector);
         polygonValidiumEtrog.generateInitializeTransaction(
             networkIDRollup, address(0), networkIDMainnet, hugeTokenMetaData
         );
@@ -362,7 +362,7 @@ contract PolygonValidiumEtrogTest is
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(trustedSequencer);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.MaxTimestampSequenceInvalid.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.MaxTimestampSequenceInvalid.selector);
         polygonValidiumEtrog.sequenceBatches(
             batchData,
             l1InfoRootIndex,
@@ -382,7 +382,7 @@ contract PolygonValidiumEtrogTest is
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(trustedSequencer);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.L1InfoTreeLeafCountInvalid.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.L1InfoTreeLeafCountInvalid.selector);
         polygonValidiumEtrog.sequenceBatches(
             batchData,
             10, // Invalid l1InfoRootIndex
@@ -504,7 +504,7 @@ contract PolygonValidiumEtrogTest is
         vm.stopPrank();
 
         vm.prank(admin);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.ForceBatchesNotAllowedOnEmergencyState.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.ForceBatchesNotAllowedOnEmergencyState.selector);
         polygonValidiumEtrog.forceBatch(bytes(""), 0);
     }
 
@@ -513,7 +513,7 @@ contract PolygonValidiumEtrogTest is
         _initializePolygonValidiumEtrog();
 
         vm.prank(admin);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.NotEnoughPOLAmount.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.NotEnoughPOLAmount.selector);
         polygonValidiumEtrog.forceBatch(bytes(""), 0);
     }
 
@@ -584,7 +584,7 @@ contract PolygonValidiumEtrogTest is
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(admin);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.HaltTimeoutNotExpiredAfterEmergencyState.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.HaltTimeoutNotExpiredAfterEmergencyState.selector);
         polygonValidiumEtrog.sequenceForceBatches(batchData);
     }
 
@@ -709,7 +709,7 @@ contract PolygonValidiumEtrogTest is
         vm.prank(address(polygonRollupManager));
         _initializePolygonValidiumEtrog();
 
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.OnlyRollupManager.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.OnlyRollupManager.selector);
         polygonValidiumEtrog.onVerifyBatches(0, bytes32(0), trustedAggregator);
     }
 
@@ -777,7 +777,7 @@ contract PolygonValidiumEtrogTest is
         PolygonValidiumEtrog.ValidiumBatchData[] memory batchData = new PolygonValidiumEtrog.ValidiumBatchData[](1);
 
         vm.prank(trustedSequencer);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.MaxTimestampSequenceInvalid.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.MaxTimestampSequenceInvalid.selector);
         polygonValidiumEtrog.sequenceBatchesValidium(
             batchData,
             l1InfoRootIndex,
@@ -798,7 +798,7 @@ contract PolygonValidiumEtrogTest is
         PolygonValidiumEtrog.ValidiumBatchData[] memory batchData = new PolygonValidiumEtrog.ValidiumBatchData[](1);
 
         vm.prank(trustedSequencer);
-        vm.expectRevert(IPolygonZkEVMVEtrogErrors.L1InfoTreeLeafCountInvalid.selector);
+        vm.expectRevert(IPolygonZkEVMEtrogErrors.L1InfoTreeLeafCountInvalid.selector);
         polygonValidiumEtrog.sequenceBatchesValidium(
             batchData,
             10, // Invalid l1InfoRootIndex
