@@ -20,7 +20,8 @@ const rollupManagerAddress = "0xC00000000000000000000000000000000000000C" as unk
 const bridgeAddress = "0xD00000000000000000000000000000000000000D" as unknown as Address;
 const aggLayerGatewayAddress = "0xE00000000000000000000000000000000000000E" as unknown as Address;
 
-async function main() {
+describe("Test vectors aggchain ECDSA", () => {
+    upgrades.silenceWarnings();
     const update = process.env.UPDATE === "true";
 
     for (let i = 0; i < dataECDSA.length; i++) {
@@ -219,6 +220,9 @@ async function main() {
                 dataECDSA[i].output.aggchainSelectors = aggchainSelectors;
                 dataECDSA[i].output.aggchainHashes = aggchainHash;
                 dataECDSA[i].output.aggchainParams = aggchainParams;
+
+                console.log(`Writing data to test-vector: ${i}. Path: ${pathTestVector}`);
+                await fs.writeFileSync(pathTestVector, JSON.stringify(dataECDSA, null, 2));
             } else {
                 expect(dataECDSA[i].output.vKeyManager).to.be.equal(vKeyManager.address);
                 expect(dataECDSA[i].output.admin).to.be.equal(admin.address);
@@ -229,14 +233,6 @@ async function main() {
                 expect(dataECDSA[i].output.aggchainHashes).to.be.deep.equal(aggchainHash);
                 expect(dataECDSA[i].output.aggchainParams).to.be.equal(aggchainParams);
             }
-
-            console.log(`Writing data to test-vector: ${i}. Path: ${pathTestVector}`);
-            await fs.writeFileSync(pathTestVector, JSON.stringify(dataECDSA, null, 2));
         });
     }
-}
-
-main().catch((e) => {
-    console.error(e);
-    process.exit(1);
 });

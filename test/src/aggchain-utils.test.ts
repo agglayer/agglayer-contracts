@@ -1,5 +1,4 @@
-import {ethers, upgrades} from "hardhat";
-import {Address, AggchainECDSA} from "../../typechain-types";
+import {ethers} from "hardhat";
 import {expect} from "chai";
 import fs = require("fs");
 import path = require("path");

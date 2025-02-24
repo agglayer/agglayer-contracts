@@ -1,5 +1,3 @@
-import {ethers, upgrades} from "hardhat";
-import {Address, AggchainECDSA} from "../../typechain-types";
 import {expect} from "chai";
 import fs = require("fs");
 import path = require("path");
@@ -11,7 +9,7 @@ const aggchainInitBytesV1 = require(path.join(pathTestvectors, "aggchain-initByt
 const aggchainHashParams = require(path.join(pathTestvectors, "hash-aggchain-params.json"));
 const utilsECDSA = require("../../src/utils-aggchain-ECDSA");
 
-describe("Test vectors aggchain common utils", () => {
+describe("Test vectors aggchain ECDSA utils", () => {
     const update = process.env.UPDATE === "true";
 
     for (let i = 0; i < aggchainDataTestvectors.length; i++) {
