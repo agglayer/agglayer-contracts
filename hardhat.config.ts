@@ -1,11 +1,11 @@
 import "dotenv/config";
-import "@openzeppelin/hardhat-upgrades";
 import "hardhat-dependency-compiler";
 import "hardhat-switch-network";
 import "@nomiclabs/hardhat-solhint";
+import "solidity-coverage";
 import "@nomicfoundation/hardhat-chai-matchers";
+import 'solidity-coverage';
 import {HardhatUserConfig} from "hardhat/config";
-import 'solidity-coverage'
 
 const DEFAULT_MNEMONIC = "test test test test test test test test test test test junk";
 
@@ -314,7 +314,7 @@ const config: HardhatUserConfig = {
                 },
             },
         ],
-    },
+    }
 };
 
 export default config;
