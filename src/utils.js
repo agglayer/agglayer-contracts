@@ -1,5 +1,70 @@
+/* eslint-disable no-inner-declarations */
+/* eslint-disable no-console */
 const { Scalar } = require('ffjavascript');
 const { ethers } = require('ethers');
+
+/**
+ * Adjusts the multiplier gas and/or the maxFeePer gas of the provider depending on the deploy parameters values and returns the adjusted provider
+ * @param {Object} deployParameters The input deploy parameters of the script
+ * @returns {Object} The adjusted provider or `ethers.provider` if no deploy parameters applied
+ * @param {Object} connectedEthers current ethers instance connected to a network
+ */
+function getProviderAdjustingMultiplierGas(deployParameters, connectedEthers) {
+    let currentProvider = connectedEthers.provider;
+    if (deployParameters.multiplierGas || deployParameters.maxFeePerGas) {
+        if (process.env.HARDHAT_NETWORK !== 'hardhat') {
+            currentProvider = ethers.getDefaultProvider(
+                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+            );
+            if (deployParameters.maxPriorityFeePerGas && deployParameters.maxFeePerGas) {
+                console.log(
+                    `Hardcoded gas used: MaxPriority${deployParameters.maxPriorityFeePerGas} gwei, MaxFee${deployParameters.maxFeePerGas} gwei`,
+                );
+                const FEE_DATA = new ethers.FeeData(
+                    null,
+                    ethers.parseUnits(deployParameters.maxFeePerGas, 'gwei'),
+                    ethers.parseUnits(deployParameters.maxPriorityFeePerGas, 'gwei'),
+                );
+
+                currentProvider.getFeeData = async () => FEE_DATA;
+            } else {
+                console.log('Multiplier gas used: ', deployParameters.multiplierGas);
+                async function overrideFeeData() {
+                    const feedata = await connectedEthers.provider.getFeeData();
+                    return new connectedEthers.FeeData(
+                        null,
+                        ((feedata.maxFeePerGas) * BigInt(deployParameters.multiplierGas)) / BigInt(1000),
+                        ((feedata.maxPriorityFeePerGas) * BigInt(deployParameters.multiplierGas)) / BigInt(1000),
+                    );
+                }
+                currentProvider.getFeeData = overrideFeeData;
+            }
+        }
+    }
+    return currentProvider;
+}
+
+/**
+ * Resolves a deployer given the deploy parameters and the current provider
+ * @param {Object} currentProvider The current provider
+ * @param {Object} deployParameters Json OBject with the script deploy parameters
+ * @param {Object} connectedEthers current ethers instance connected to a network
+ * @returns The resolved deployer
+ */
+async function getDeployerFromParameters(currentProvider, deployParameters, connectedEthers) {
+    let deployer;
+    if (deployParameters.deployerPvtKey) {
+        deployer = new connectedEthers.Wallet(deployParameters.deployerPvtKey, currentProvider);
+    } else if (process.env.MNEMONIC) {
+        deployer = connectedEthers.HDNodeWallet.fromMnemonic(
+            connectedEthers.Mnemonic.fromPhrase(process.env.MNEMONIC),
+            "m/44'/60'/0'/0/0",
+        ).connect(currentProvider);
+    } else {
+        [deployer] = await connectedEthers.getSigners();
+    }
+    return deployer;
+}
 /**
  * Check if all params are present in the expectedParams
  * @param {Object} objParams - object with parameters
@@ -104,4 +169,6 @@ module.exports = {
     getStorageReadWrites,
     valueToStorageBytes,
     checkParams,
+    getProviderAdjustingMultiplierGas,
+    getDeployerFromParameters,
 };

@@ -1,5 +1,14 @@
 import { ethers, run } from "hardhat";
 
+/**
+ * Generates a timelock operation with the given input valies
+ * @param target The timelock contract address to call
+ * @param value Amount of ether to sent to the call
+ * @param data The encoded data of the transaction to execute
+ * @param predecessor timelock operation predecessor
+ * @param salt timelock operation salt
+ * @returns The timelock operation params
+ */
 function genTimelockOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
     const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
         ["address", "uint256", "bytes", "uint256", "bytes32"],
@@ -16,6 +25,12 @@ function genTimelockOperation(target: any, value: any, data: any, predecessor: a
     };
 }
 
+/**
+ * Function to handle the verification of a contract on etherscan
+ * @param implementationAddress the contract address to verify
+ * @param constructorArguments the constructor arguments of the contract
+ * @dev In case the verification fails, the function will print the command to run the verification manually
+ */
 async function verifyContractEtherscan(implementationAddress: string, constructorArguments: Array<string>) {
     try {
         console.log(`Trying to verify implementation contract ${implementationAddress} with arguments ${constructorArguments}`);
