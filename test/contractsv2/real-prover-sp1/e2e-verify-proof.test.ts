@@ -1,6 +1,6 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
-import {expect} from "chai";
-import {ethers, upgrades} from "hardhat";
+import { expect } from "chai";
+import { ethers, upgrades } from "hardhat";
 import {
     SP1VerifierPlonk,
     ERC20PermitMock,
@@ -36,8 +36,17 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
     const polTokenSymbol = "POL";
     const polTokenInitialBalance = ethers.parseEther("20000000");
 
+    const pendingStateTimeoutDefault = 100;
+    const trustedAggregatorTimeout = 100;
+
     // BRidge constants
     const networkIDMainnet = 0;
+    const networkIDRollup = 1;
+
+    const LEAF_TYPE_ASSET = 0;
+    const LEAF_TYPE_MESSAGE = 1;
+
+    let firstDeployment = true;
 
     //roles
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
@@ -53,6 +62,9 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
     const STOP_EMERGENCY_ROLE = ethers.id("STOP_EMERGENCY_ROLE");
     const EMERGENCY_COUNCIL_ROLE = ethers.id("EMERGENCY_COUNCIL_ROLE");
     const EMERGENCY_COUNCIL_ADMIN = ethers.id("EMERGENCY_COUNCIL_ADMIN");
+
+    const SIGNATURE_BYTES = 32 + 32 + 1;
+    const EFFECTIVE_PERCENTAGE_BYTES = 1;
 
     beforeEach("Deploy contract", async () => {
         upgrades.silenceWarnings();
@@ -73,6 +85,37 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
             polTokenInitialBalance
         );
 
+        /*
+         * deploy global exit root manager
+         * In order to not have trouble with nonce deploy first proxy admin
+         */
+        await upgrades.deployProxyAdmin();
+
+        if ((await upgrades.admin.getInstance()).target !== "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0") {
+            firstDeployment = false;
+        }
+        const nonceProxyBridge =
+            Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
+
+        const nonceProxyZkevm = nonceProxyBridge + 2; // Always have to redeploy impl since the polygonZkEVMGlobalExitRoot address changes
+
+        const precalculateBridgeAddress = ethers.getCreateAddress({
+            from: deployer.address,
+            nonce: nonceProxyBridge,
+        });
+        const precalculateRollupManagerAddress = ethers.getCreateAddress({
+            from: deployer.address,
+            nonce: nonceProxyZkevm,
+        });
+        firstDeployment = false;
+
+        // deploy globalExitRoot
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2Mock");
+        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
+            constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
+            unsafeAllow: ["constructor", "state-variable-immutable"],
+        });
+
         // deploy PolygonZkEVMBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
@@ -80,21 +123,9 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
             unsafeAllow: ["constructor", "missing-initializer"],
         });
 
-        const currentDeployerNonce = await ethers.provider.getTransactionCount(deployer.address);
-        const precalculateRollupManagerAddress = ethers.getCreateAddress({
-            from: deployer.address,
-            nonce: currentDeployerNonce + 3,
-        });
-
-        // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2Mock");
-        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
-            constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
-        });
-
         // deploy polygon rollup manager mock
         const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManagerMock");
+
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
             constructorArgs: [
@@ -109,6 +140,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         await rollupManagerContract.waitForDeployment();
 
         // check precalculated address
+        expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
 
         await polygonZkEVMBridgeContract.initialize(
@@ -206,7 +238,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         // create new pessimistic
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 2,
+            nonce: 1,
         });
 
         await rollupManagerContract
@@ -222,7 +254,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
                 initializeBytesCustomChain
             );
 
-        // select unexistent global exit root
+        // select not existent global exit root
         const l1InfoTreeLeafCount = 2;
         const newLER = inputProof["pp-inputs"]["new-local-exit-root"];
         const newPPRoot = inputProof["pp-inputs"]["new-pessimistic-root"];
@@ -242,14 +274,16 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
 
         // global exit root does not exist
         await expect(
-            rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
-                pessimisticRollupID,
-                l1InfoTreeLeafCount,
-                newLER,
-                newPPRoot,
-                proofPP,
-                "0x" // customChainData
-            )
+            rollupManagerContract
+                .connect(trustedAggregator)
+                .verifyPessimisticTrustedAggregator(
+                    pessimisticRollupID,
+                    l1InfoTreeLeafCount,
+                    newLER,
+                    newPPRoot,
+                    proofPP,
+                    "0x" // customChainData
+                )
         ).to.be.revertedWithCustomError(rollupManagerContract, "L1InfoTreeLeafCountInvalid");
 
         const l1InfoRoot = inputProof["pp-inputs"]["l1-info-root"];
@@ -282,14 +316,16 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
 
         // verify pessimistic
         await expect(
-            rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
-                pessimisticRollupID,
-                l1InfoTreeLeafCount,
-                newLER,
-                newPPRoot,
-                proofPP,
-                "0x" // customChainData
-            )
+            rollupManagerContract
+                .connect(trustedAggregator)
+                .verifyPessimisticTrustedAggregator(
+                    pessimisticRollupID,
+                    l1InfoTreeLeafCount,
+                    newLER,
+                    newPPRoot,
+                    proofPP,
+                    "0x" // customChainData
+                )
         )
             .to.emit(rollupManagerContract, "VerifyBatchesTrustedAggregator")
             .withArgs(pessimisticRollupID, 0, ethers.ZeroHash, newLER, trustedAggregator.address);

@@ -39,6 +39,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
 
     // Bridge constants
     const networkIDMainnet = 0;
+    let firstDeployment = true;
 
     //roles
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
@@ -78,24 +79,42 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
             polTokenInitialBalance
         );
 
+        /*
+         * deploy global exit root manager
+         * In order to not have trouble with nonce deploy first proxy admin
+         */
+        await upgrades.deployProxyAdmin();
+
+        if ((await upgrades.admin.getInstance()).target !== "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0") {
+            firstDeployment = false;
+        }
+        const nonceProxyBridge =
+            Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
+
+        const nonceProxyZkevm = nonceProxyBridge + 2; // Always have to redeploy impl since the polygonZkEVMGlobalExitRoot address changes
+
+        const precalculateBridgeAddress = ethers.getCreateAddress({
+            from: deployer.address,
+            nonce: nonceProxyBridge,
+        });
+        const precalculateRollupManagerAddress = ethers.getCreateAddress({
+            from: deployer.address,
+            nonce: nonceProxyZkevm,
+        });
+        firstDeployment = false;
+
+        // deploy globalExitRoot
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2");
+        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
+            constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
+            unsafeAllow: ["constructor", "state-variable-immutable"],
+        });
+
         // deploy PolygonZkEVMBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ["constructor", "missing-initializer"],
-        });
-
-        const currentDeployerNonce = await ethers.provider.getTransactionCount(deployer.address);
-        const precalculateRollupManagerAddress = ethers.getCreateAddress({
-            from: deployer.address,
-            nonce: currentDeployerNonce + 3,
-        });
-
-        // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2");
-        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
-            constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
         });
 
         // deploy polygon rollup manager mock
@@ -109,12 +128,13 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
                 polygonZkEVMBridgeContract.target,
                 ethers.ZeroAddress, // aggLayerGateway
             ],
-            unsafeAllow: ["constructor", "state-variable-immutable", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ["constructor", "state-variable-immutable"],
         })) as unknown as PolygonRollupManagerMock;
 
         await rollupManagerContract.waitForDeployment();
 
         // check precalculated address
+        expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
 
         await polygonZkEVMBridgeContract.initialize(
@@ -354,7 +374,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         // create new pessimistic
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 2,
+            nonce: 1,
         });
         const newZkEVMContract = ppConsensusFactory.attach(newZKEVMAddress) as PolygonPessimisticConsensus;
 
@@ -618,7 +638,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         // create new pessimistic
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 2,
+            nonce: 1,
         });
 
         await rollupManagerContract.connect(admin).createNewRollup(
@@ -782,7 +802,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         // create new pessimistic
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
-            nonce: 2,
+            nonce: 1,
         });
 
         await rollupManagerContract.connect(admin).createNewRollup(
