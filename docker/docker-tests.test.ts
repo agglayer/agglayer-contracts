@@ -3,7 +3,7 @@ import {ethers} from "hardhat";
 import fs from "fs";
 import path from "path";
 const deployOutput = JSON.parse(fs.readFileSync(path.join(__dirname, "./deploymentOutput/deploy_output.json"), "utf8"));
-const {polygonRollupManagerAddress, polygonZkEVMBridgeAddress, polygonZkEVMGlobalExitRootAddress, polTokenAddress} =
+const {polygonRollupManagerAddress, polygonZkEVMBridgeAddress, polygonZkEVMGlobalExitRootAddress, polTokenAddress, aggLayerGatewayAddress, admin} =
     deployOutput;
 const createRollupOutput = JSON.parse(
     fs.readFileSync(path.join(__dirname, "./deploymentOutput/create_rollup_output.json"), "utf8")
@@ -14,6 +14,7 @@ import {
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMEtrog,
+    AggLayerGateway,
 } from "../typechain-types";
 
 describe("Docker build tests Contract", () => {
@@ -74,5 +75,21 @@ describe("Docker build tests Contract", () => {
                 "0x"
             )
         ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
+
+    it("should check AggLayerGateway", async () => {
+        const AggLayerGatewayFactory = await ethers.getContractFactory("AggLayerGateway");
+        const AggLayerGatewayContract = AggLayerGatewayFactory.attach(
+            aggLayerGatewayAddress
+        ) as AggLayerGateway;
+        expect(AggLayerGatewayContract.target).to.equal(aggLayerGatewayAddress);
+        const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+        const AGGCHAIN_DEFAULT_VKEY_ROLE = ethers.id("AGGCHAIN_DEFAULT_VKEY_ROLE");
+        const AGGLAYER_ADD_ROUTE_ROLE = ethers.id("AGGLAYER_ADD_ROUTE_ROLE");
+        const AGGLAYER_FREEZE_ROUTE_ROLE = ethers.id("AGGLAYER_FREEZE_ROUTE_ROLE");
+        expect(await AggLayerGatewayContract.hasRole(DEFAULT_ADMIN_ROLE, admin)).to.be.true;
+        expect(await AggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, admin)).to.be.true;
+        expect(await AggLayerGatewayContract.hasRole(AGGLAYER_ADD_ROUTE_ROLE, admin)).to.be.true;
+        expect(await AggLayerGatewayContract.hasRole(AGGLAYER_FREEZE_ROUTE_ROLE, admin)).to.be.true;
     });
 });

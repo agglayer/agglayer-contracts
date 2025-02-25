@@ -18,6 +18,7 @@ const deployParameters = require("./deploy_parameters.json");
 const pathOZUpgradability = path.join(__dirname, `../../.openzeppelin/${process.env.HARDHAT_NETWORK}.json`);
 
 import {
+    AggLayerGateway,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMDeployer,
     PolygonZkEVMGlobalExitRootV2,
@@ -239,8 +240,9 @@ async function main() {
         // Nonce globalExitRoot: currentNonce + 1 (deploy bridge proxy) + 1(impl globalExitRoot)
         // + 1 (deployTimelock) + 1 (transfer Ownership Admin) = +4
         const nonceProxyGlobalExitRoot = Number(await ethers.provider.getTransactionCount(deployer.address)) + 4;
-        // nonceProxyRollupManager :Nonce globalExitRoot + 1 (proxy globalExitRoot) + 1 (impl rollupManager) = +2
-        const nonceProxyRollupManager = nonceProxyGlobalExitRoot + 2;
+
+        // nonceProxyRollupManager :Nonce globalExitRoot + 1 (proxy globalExitRoot) + 1 (impl agglayer) + 1 (proxy agglayer) + 1 (impl rollupManager) = +4
+        const nonceProxyRollupManager = nonceProxyGlobalExitRoot + 4;
 
         // Contracts are not deployed, normal deployment
         precalculateGlobalExitRootAddress = ethers.getCreateAddress({
@@ -389,6 +391,62 @@ async function main() {
         expect(precalculateRollupManager).to.be.equal(await polygonZkEVMGlobalExitRoot.rollupManager());
     }
 
+    /*
+     * Deployment AggLayerGateway
+    */
+    let aggLayerGatewayContract;
+    const AggLayerGatewayFactory = await ethers.getContractFactory("AggLayerGateway", deployer);
+    if (!ongoingDeployment.aggLayerGatewayContract) {
+        for (let i = 0; i < attemptsDeployProxy; i++) {
+            try {
+                aggLayerGatewayContract = await upgrades.deployProxy(AggLayerGatewayFactory,
+                    [
+                        deployParameters.defaultAdminAggLayerGateway,
+                        deployParameters.aggchainDefaultVKeyRole,
+                        deployParameters.addRouteAggLayerGatewayRole,
+                        deployParameters.freezeRouteAgglayerGatewayRole,
+                    ],
+                    {
+                        initializer: "initialize(address,address,address,address)",
+                        unsafeAllow: ["constructor", "state-variable-immutable"],
+                    }
+                );
+
+                break;
+            } catch (error: any) {
+                console.log(`attempt ${i}`);
+                console.log("upgrades.deployProxy of aggLayerGatewayContract ", error.message);
+            }
+ 
+            // reach limits of attempts
+            if (i + 1 === attemptsDeployProxy) {
+                throw new Error("aggLayerGatewayContract contract has not been deployed");
+            }
+        }
+ 
+        console.log("#######################\n");
+        console.log("aggLayerGatewayContract deployed to:", aggLayerGatewayContract?.target);
+ 
+        // save an ongoing deployment
+        ongoingDeployment.aggLayerGatewayContract = aggLayerGatewayContract?.target;
+        fs.writeFileSync(pathOngoingDeploymentJson, JSON.stringify(ongoingDeployment, null, 1));
+    } else {
+        // Expect the precalculate address matches de onogin deployment
+        aggLayerGatewayContract = AggLayerGatewayFactory.attach(
+            ongoingDeployment.aggLayerGatewayContract
+        ) as AggLayerGateway;
+        
+        console.log("#######################\n");
+        console.log("aggLayerGatewayContract already deployed on: ", ongoingDeployment.aggLayerGatewayContract);
+
+        // Import OZ manifest the deployed contracts, its enough to import just the proyx, the rest are imported automatically (admin/impl)
+        await upgrades.forceImport(
+            ongoingDeployment.aggLayerGatewayContract,
+            AggLayerGatewayFactory,
+            "transparent" as any
+        );
+    }
+
     const timelockAddressRollupManager = deployParameters.test ? deployer.address : timelockContract.target;
 
     // deploy Rollup Manager
@@ -399,6 +457,7 @@ async function main() {
     console.log("PolygonZkEVMGlobalExitRootAddress:", polygonZkEVMGlobalExitRoot?.target);
     console.log("polTokenAddress:", polTokenAddress);
     console.log("polygonZkEVMBridgeContract:", polygonZkEVMBridgeContract.target);
+    console.log("aggLayerGatewayContract:", aggLayerGatewayContract.target);
 
     console.log("trustedAggregator:", trustedAggregator);
     console.log("pendingStateTimeout:", pendingStateTimeout);
@@ -428,6 +487,7 @@ async function main() {
                             polygonZkEVMGlobalExitRoot?.target,
                             polTokenAddress,
                             polygonZkEVMBridgeContract.target,
+                            aggLayerGatewayContract.target,
                         ],
                         unsafeAllow: ["constructor", "state-variable-immutable"],
                     }
@@ -517,11 +577,13 @@ async function main() {
     expect(await upgrades.erc1967.getAdminAddress(precalculateRollupManager)).to.be.equal(proxyAdminAddress);
     expect(await upgrades.erc1967.getAdminAddress(precalculateGlobalExitRootAddress)).to.be.equal(proxyAdminAddress);
     expect(await upgrades.erc1967.getAdminAddress(proxyBridgeAddress)).to.be.equal(proxyAdminAddress);
+    expect(await upgrades.erc1967.getAdminAddress(aggLayerGatewayContract.target)).to.be.equal(proxyAdminAddress);
 
     const outputJson = {
         polygonRollupManagerAddress: polygonRollupManagerContract.target,
         polygonZkEVMBridgeAddress: polygonZkEVMBridgeContract.target,
         polygonZkEVMGlobalExitRootAddress: polygonZkEVMGlobalExitRoot?.target,
+        aggLayerGatewayAddress: aggLayerGatewayContract?.target,
         polTokenAddress,
         zkEVMDeployerContract: zkEVMDeployerContract.target,
         deployerAddress: deployer.address,

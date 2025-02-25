@@ -26,6 +26,10 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
 - `initialZkEVMDeployerOwner`: address, Initial owner of the `PolygonZkEVMDeployer`
 - `admin`: address, Admin address, can adjust RollupManager parameters or stop the emergency state
 - `trustedAggregator`: address, Trusted aggregator address
+- `defaultAdminAggLayerGateway`: address, Default admin AggLayerGateway contract
+- `aggchainDefaultVKeyRole`: address, address that can manage the aggchain verification keys 
+- `addRouteAggLayerGatewayRole`: address, address that can add a route to a pessimistic verification key
+- `freezeRouteAgglayerGatewayRole`: adddress, address that can freeze a route to a pessimistic verification key.
 - `trustedAggregatorTimeout`: uint64, If a sequence is not verified in this timeout everyone can verify it
 - `pendingStateTimeout`: uint64, Once a pending state exceeds this timeout it can be consolidated by everyone
 - `emergencyCouncilAddress`: address, Emergency council address
@@ -46,7 +50,7 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
 -   `chainID`: uint64, chainID of the new rollup
 -   `adminZkEVM`: address, Admin address, can adjust Rollup parameters
 -   `forkID`: uint64, Fork ID of the new rollup, indicates the prover (zkROM/executor) version
--   `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus"]`. This is the name of the consensus of the rollupType of the rollup to be created
+-   `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA"]`. This is the name of the consensus of the rollupType of the rollup to be created
 -   `gasTokenAddress`:  Address of the native gas token of the rollup, zero if ether
 -   `deployerPvtKey`: Not mandatory, used to deploy from specific wallet
 -   `maxFeePerGas(optional)`: string, Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it
@@ -60,6 +64,11 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
     -   `sovereignWETHAddressIsNotMintable`: Flag to indicate if the wrapped ETH is not mintable
     -   `globalExitRootUpdater`: Address of globalExitRootUpdater for sovereign chains
     -   `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
+- `aggchainParams`: Only mandatory if consensusContract is AggchainXXXX
+    - `useDefaultGateway`: bool, flag to setup initial values for the owned gateway
+    - `ownedAggchainVKeys`: bytes32, Initial owned aggchain verification key
+    - `aggchainVKeySelectors`: bytes4, Initial aggchain selector
+    - `vKeyManager`: address, Initial vKeyManager
 
 ## Run script
 
