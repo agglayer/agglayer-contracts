@@ -40,6 +40,7 @@ describe("Docker build tests Contract", () => {
         expect(await rollupManagerContract.bridgeAddress()).to.equal(polygonZkEVMBridgeAddress);
         expect(await rollupManagerContract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
         expect(await rollupManagerContract.pol()).to.equal(polTokenAddress);
+        expect(await rollupManagerContract.aggLayerGateway()).to.equal(aggLayerGatewayAddress);
     });
 
     it("should check GlobalExitRootV2", async () => {

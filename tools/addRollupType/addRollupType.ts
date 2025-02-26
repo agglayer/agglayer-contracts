@@ -19,6 +19,8 @@ const pathOutputJson = addRollupTypeParameters.outputPath
 import {PolygonRollupManager} from "../../typechain-types";
 import "../../deployment/helpers/utils";
 import {supportedBridgeContracts, transactionTypes, genOperation} from "../utils";
+import {AggchainContracts} from "../../src/utils-common-aggchain"
+import {ConsensusContracts} from "../../src/pessimistic-utils";
 
 async function main() {
     const outputJson = {} as any;
@@ -33,7 +35,6 @@ async function main() {
         "forkID",
         "consensusContract",
         "polygonRollupManagerAddress",
-        "verifierAddress",
         "genesisRoot",
         "programVKey",
     ];
@@ -60,18 +61,28 @@ async function main() {
         forkID,
         consensusContract,
         polygonRollupManagerAddress,
-        verifierAddress,
         timelockDelay,
         genesisRoot,
-        programVKey,
+        programVKey
     } = addRollupTypeParameters;
 
-    const supportedConsensus = ["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"];
+    const supportedConsensus = AggchainContracts.concat(ConsensusContracts);
     const isPessimistic = consensusContract === "PolygonPessimisticConsensus";
 
     if (!supportedConsensus.includes(consensusContract)) {
         throw new Error(`Consensus contract not supported, supported contracts are: ${supportedConsensus}`);
     }
+
+    // verifierAddress only mandatory if consensusContract !== Aggchain
+    let verifierAddress;
+    if(!consensusContract.includes("Aggchain")) {
+        verifierAddress = addRollupTypeParameters.verifierAddress;
+        if(verifierAddress === undefined || verifierAddress === "") {
+            throw new Error(`Missing parameter: verifierAddress`);
+        }
+    } else {
+        verifierAddress = ethers.ZeroAddress;
+    }    
 
     // Load provider
     let currentProvider = ethers.provider;
@@ -132,6 +143,7 @@ async function main() {
     const polygonZkEVMBridgeAddress = await rollupManagerContract.bridgeAddress();
     const polygonZkEVMGlobalExitRootAddress = await rollupManagerContract.globalExitRootManager();
     const polTokenAddress = await rollupManagerContract.pol();
+    const aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
 
     if (!isPessimistic) {
         // checks for rollups
@@ -187,41 +199,86 @@ async function main() {
         const PolygonConsensusFactory = (await ethers.getContractFactory(consensusContract, deployer)) as any;
         let PolygonConsensusContract;
 
-        PolygonConsensusContract = await PolygonConsensusFactory.deploy(
-            polygonZkEVMGlobalExitRootAddress,
-            polTokenAddress,
-            polygonZkEVMBridgeAddress,
-            polygonRollupManagerAddress
-        );
-        await PolygonConsensusContract.waitForDeployment();
-        console.log("#######################\n");
-        console.log(`new consensus name: ${consensusContract}`);
-        console.log(`new PolygonConsensusContract impl: ${PolygonConsensusContract.target}`);
+        // Create consensus/aggchain implementation
+        if(!consensusContract.toLowerCase().includes("aggchain")) {
+            PolygonConsensusContract = await PolygonConsensusFactory.deploy(
+                polygonZkEVMGlobalExitRootAddress,
+                polTokenAddress,
+                polygonZkEVMBridgeAddress,
+                polygonRollupManagerAddress
+            );
+            await PolygonConsensusContract.waitForDeployment();
 
-        try {
-            console.log("Verifying contract...");
-            await run("verify:verify", {
-                address: PolygonConsensusContract.target,
-                constructorArguments: [
+            console.log("#######################\n");
+            console.log(`new consensus name: ${consensusContract}`);
+            console.log(`new PolygonConsensusContract impl: ${PolygonConsensusContract.target}`);
+
+            try {
+                console.log("Verifying contract...");
+                await run("verify:verify", {
+                    address: PolygonConsensusContract.target,
+                    constructorArguments: [
+                        polygonZkEVMGlobalExitRootAddress,
+                        polTokenAddress,
+                        polygonZkEVMBridgeAddress,
+                        polygonRollupManagerAddress,
+                    ],
+                });
+            } catch (e) {
+                console.log("Automatic verification failed. Please verify the contract manually.");
+                console.log("you can verify the new impl address with:");
+                console.log(
+                    `npx hardhat verify --constructor-args upgrade/arguments.js ${PolygonConsensusContract.target} --network ${process.env.HARDHAT_NETWORK}\n`
+                );
+                console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
                     polygonZkEVMGlobalExitRootAddress,
                     polTokenAddress,
                     polygonZkEVMBridgeAddress,
                     polygonRollupManagerAddress,
-                ],
-            });
-        } catch (e) {
-            console.log("Automatic verification failed. Please verify the contract manually.");
-            console.log("you can verify the new impl address with:");
-            console.log(
-                `npx hardhat verify --constructor-args upgrade/arguments.js ${PolygonConsensusContract.target} --network ${process.env.HARDHAT_NETWORK}\n`
-            );
-            console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
+                ]);
+            }
+        } else {
+            PolygonConsensusContract = await PolygonConsensusFactory.deploy(
                 polygonZkEVMGlobalExitRootAddress,
                 polTokenAddress,
                 polygonZkEVMBridgeAddress,
                 polygonRollupManagerAddress,
-            ]);
+                aggLayerGatewayAddress,
+            );
+            await PolygonConsensusContract.waitForDeployment();
+
+            console.log("#######################\n");
+            console.log(`new consensus name: ${consensusContract}`);
+            console.log(`new PolygonConsensusContract impl: ${PolygonConsensusContract.target}`);
+
+            try {
+                console.log("Verifying contract...");
+                await run("verify:verify", {
+                    address: PolygonConsensusContract.target,
+                    constructorArguments: [
+                        polygonZkEVMGlobalExitRootAddress,
+                        polTokenAddress,
+                        polygonZkEVMBridgeAddress,
+                        polygonRollupManagerAddress,
+                        aggLayerGatewayAddress,
+                    ],
+                });
+            } catch (e) {
+                console.log("Automatic verification failed. Please verify the contract manually.");
+                console.log("you can verify the new impl address with:");
+                console.log(
+                    `npx hardhat verify --constructor-args upgrade/arguments.js ${PolygonConsensusContract.target} --network ${process.env.HARDHAT_NETWORK}\n`
+                );
+                console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
+                    polygonZkEVMGlobalExitRootAddress,
+                    polTokenAddress,
+                    polygonZkEVMBridgeAddress,
+                    polygonRollupManagerAddress,
+                    aggLayerGatewayAddress,
+                ]);
+            }
         }
+
         consensusContractAddress = PolygonConsensusContract.target;
     }
 
@@ -230,29 +287,40 @@ async function main() {
     let genesisFinal;
     let programVKeyFinal;
 
-    if (consensusContract == "PolygonPessimisticConsensus") {
+    if (consensusContract.includes("Aggchain")) {
+        // rollupVerifierType = VerifierType.ALGateway = 2
+        rollupVerifierType = 2;
+        // genesis = bytes32(0)
+        genesisFinal = ethers.ZeroHash;
+        // programVKey = bytes32(0)
+        programVKeyFinal = ethers.ZeroHash;
+    } else if (consensusContract == "PolygonPessimisticConsensus") {
+        // rollupVerifierType = VerifierType.Pessimistic = 1
         rollupVerifierType = 1;
+        // genesis = bytes32(0)
         genesisFinal = ethers.ZeroHash;
         programVKeyFinal = programVKey || ethers.ZeroHash;
     } else {
+        // rollupVerifierType = VerifierType.StateTransition = 0
         rollupVerifierType = 0;
         genesisFinal = genesis.root;
+        // programVKey = bytes32(0)
         programVKeyFinal = ethers.ZeroHash;
     }
 
     if(type === "EOA") {
         console.log(
-        await (
-            await rollupManagerContract.addNewRollupType(
-                consensusContractAddress,
-                verifierAddress,
-                forkID,
-                rollupVerifierType,
-                genesisFinal,
-                description,
-                programVKeyFinal
-            )
-        ).wait()
+            await (
+                await rollupManagerContract.addNewRollupType(
+                    consensusContractAddress,
+                    verifierAddress,
+                    forkID,
+                    rollupVerifierType,
+                    genesisFinal,
+                    description,
+                    programVKeyFinal
+                )
+            ).wait()
         );
 
         console.log("#######################\n");

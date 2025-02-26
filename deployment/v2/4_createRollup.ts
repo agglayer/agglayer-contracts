@@ -289,7 +289,7 @@ async function main() {
         genesisFinal = ethers.ZeroHash;
         // programVKey = bytes32(0)
         programVKey = ethers.ZeroHash;
-        // verifiderAddress = address(0)
+        // verifierAddress = address(0)
         verifierAddress = ethers.ZeroAddress;
         if(consensusContract == "AggchainECDSA") {
             initializeBytesCustomChain = utilsECDSA.encodeInitializeBytesAggchainECDSAv0(

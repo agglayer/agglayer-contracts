@@ -11,10 +11,10 @@ npm i
   - `type`: Specify the type of rollup creation, only available:
       - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
       - `Timelock`: If creating the rollup through a timelock, the script will output the execute and schedule data to send to the timelock contract
-  - `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus"]`
+  - `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`
   - `consensusContractAddress`: gets this address instead of deploying a new consensus implementation
   - `polygonRollupManagerAddress`: `PolygonRollupManager.sol` smart contract address
-  - `verifierAddress`: verifier address to be used
+  - `verifierAddress`: verifier address to be used. Only mandatory if `consensusContract !== Aggchain`
   - `description`: string to describe rollup type added. Example: "Type: Validium, Version: etrog, genesis: /ipfs/QmUXnRoPbUmZuEZCGyiHjEsoNcFVu3hLtSvhpnfBS2mAYU"
   - `forkID`: forkID to be used
   - `programVKey`: program key for pessimistic consensus
@@ -61,9 +61,11 @@ cp ./tools/addRollupType/add_rollup_type.json.example ./tools/addRollupType/add_
 ```
 
 - Set your parameters
+  - `type`: "Timelock"
+  - ...
 - Run tool:
 ```
-npx hardhat run ./tools/addRollupType/addRollupTypeTimelock.ts --network <network>
+npx hardhat run ./tools/addRollupType/addRollupType.ts --network <network>
 ```
 - Output:
   - scheduleData

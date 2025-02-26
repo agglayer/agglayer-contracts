@@ -9,6 +9,12 @@ const AggchainType = {
     LEGACY: 0,
     GENERIC: 1,
 };
+
+const AggchainsContracts = {
+    AggchainECDSA: 'AggchainECDSA',
+    AggchainFEP: 'AggchainFEP'
+
+};
 /// //////////////////////////////
 /// // Functions for Aggchain ////
 /// //////////////////////////////
@@ -92,6 +98,7 @@ function encodeInitializeBytesPessimistic(
 
 module.exports = {
     AggchainType,
+    AggchainsContracts,
     computeAggchainHash,
     getFinalAggchainVKeySelectorFromType,
     encodeInitializeBytesPessimistic,
