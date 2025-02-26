@@ -642,7 +642,7 @@ contract PolygonZkEVMBridge is
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(index);
         uint256 mask = 1 << bitPos;
         uint256 flipped = claimedBitMap[wordPos] ^= mask;
-        if (flipped & mask == 0) {
+        if ((flipped & mask) == 0) {
             revert AlreadyClaimed();
         }
     }
