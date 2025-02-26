@@ -8,6 +8,9 @@ npm i
 
 ## Setup
 - Config file `add_rollup_type.json`:
+  - `type`: Specify the type of rollup creation, only available:
+      - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
+      - `Timelock`: If creating the rollup through a timelock, the script will output the execute and schedule data to send to the timelock contract
   - `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus"]`
   - `consensusContractAddress`: gets this address instead of deploying a new consensus implementation
   - `polygonRollupManagerAddress`: `PolygonRollupManager.sol` smart contract address

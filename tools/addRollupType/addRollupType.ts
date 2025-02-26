@@ -18,7 +18,7 @@ const pathOutputJson = addRollupTypeParameters.outputPath
 
 import {PolygonRollupManager} from "../../typechain-types";
 import "../../deployment/helpers/utils";
-import {supportedBridgeContracts} from "../utils";
+import {supportedBridgeContracts, transactionTypes, genOperation} from "../utils";
 
 async function main() {
     const outputJson = {} as any;
@@ -28,6 +28,7 @@ async function main() {
      * Check that every necessary parameter is fulfilled
      */
     const mandatoryDeploymentParameters = [
+        "type",
         "description",
         "forkID",
         "consensusContract",
@@ -36,6 +37,16 @@ async function main() {
         "genesisRoot",
         "programVKey",
     ];
+    // check add new rollup type
+    switch (addRollupTypeParameters.type) {
+        case transactionTypes.EOA:
+            break;
+        case transactionTypes.TIMELOCK:
+            mandatoryDeploymentParameters.push("timelockDelay");
+            break;
+        default:
+            throw new Error(`Invalid type ${addRollupTypeParameters.type}`);
+    }
 
     for (const parameterName of mandatoryDeploymentParameters) {
         if (addRollupTypeParameters[parameterName] === undefined || addRollupTypeParameters[parameterName] === "") {
@@ -44,16 +55,18 @@ async function main() {
     }
 
     const {
+        type,
         description,
         forkID,
         consensusContract,
         polygonRollupManagerAddress,
         verifierAddress,
+        timelockDelay,
         genesisRoot,
         programVKey,
     } = addRollupTypeParameters;
 
-    const supportedConsensus = ["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus"];
+    const supportedConsensus = ["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"];
     const isPessimistic = consensusContract === "PolygonPessimisticConsensus";
 
     if (!supportedConsensus.includes(consensusContract)) {
@@ -145,21 +158,23 @@ async function main() {
         }
     }
 
-    // Check roles
-    const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
-    if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) == false) {
-        throw new Error(
-            `Deployer does not have admin role. Use the test flag on deploy_parameters if this is a test deployment`
-        );
+    if(type !== "Timelock") {
+        // Check roles
+        const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+        if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) == false) {
+            throw new Error(
+                `Deployer does not have admin role. Use the test flag on deploy_parameters if this is a test deployment`
+            );
+        }
+
+        // Since it's a mock deployment deployer has all the rights
+        const ADD_ROLLUP_TYPE_ROLE = ethers.id("ADD_ROLLUP_TYPE_ROLE");
+
+        // Check role:
+        if ((await rollupManagerContract.hasRole(ADD_ROLLUP_TYPE_ROLE, deployer.address)) == false)
+            await rollupManagerContract.grantRole(ADD_ROLLUP_TYPE_ROLE, deployer.address);
     }
-
-    // Since it's a mock deployment deployer has all the rights
-    const ADD_ROLLUP_TYPE_ROLE = ethers.id("ADD_ROLLUP_TYPE_ROLE");
-
-    // Check role:
-    if ((await rollupManagerContract.hasRole(ADD_ROLLUP_TYPE_ROLE, deployer.address)) == false)
-        await rollupManagerContract.grantRole(ADD_ROLLUP_TYPE_ROLE, deployer.address);
-
+    
     // Create consensus implementation if needed
     let consensusContractAddress;
 
@@ -225,7 +240,8 @@ async function main() {
         programVKeyFinal = ethers.ZeroHash;
     }
 
-    console.log(
+    if(type === "EOA") {
+        console.log(
         await (
             await rollupManagerContract.addNewRollupType(
                 consensusContractAddress,
@@ -237,19 +253,96 @@ async function main() {
                 programVKeyFinal
             )
         ).wait()
-    );
+        );
 
-    console.log("#######################\n");
-    console.log("Added new Rollup Type deployed");
-    const newRollupTypeID = await rollupManagerContract.rollupTypeCount();
+        console.log("#######################\n");
+        console.log("Added new Rollup Type deployed");
+        const newRollupTypeID = await rollupManagerContract.rollupTypeCount();
 
-    outputJson.genesis = genesis.root;
-    outputJson.verifierAddress = verifierAddress;
-    outputJson.consensusContract = consensusContract;
-    outputJson.rollupTypeID = newRollupTypeID;
-    outputJson.programVKey = programVKeyFinal;
-    outputJson.consensusContractAddress = consensusContractAddress;
+        outputJson.genesis = genesis.root;
+        outputJson.verifierAddress = verifierAddress;
+        outputJson.consensusContract = consensusContract;
+        outputJson.rollupTypeID = newRollupTypeID;
+        outputJson.programVKey = programVKeyFinal;
+        outputJson.consensusContractAddress = consensusContractAddress;
+    } else {
+        // load timelock
+        const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
+        const salt = addRollupTypeParameters.timelockSalt || ethers.ZeroHash;
+        const predecessor = addRollupTypeParameters.predecessor || ethers.ZeroHash;
 
+        const operation = genOperation(
+            polygonRollupManagerAddress,
+            0, // value
+            PolygonRollupManagerFactory.interface.encodeFunctionData("addNewRollupType", [
+                consensusContractAddress,
+                verifierAddress,
+                forkID,
+                rollupVerifierType,
+                genesisFinal,
+                description,
+                programVKeyFinal,
+            ]),
+            predecessor, // predecessor
+            salt // salt
+        );
+    
+        // Schedule operation
+        const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
+            operation.target,
+            operation.value,
+            operation.data,
+            operation.predecessor,
+            operation.salt,
+            timelockDelay,
+        ]);
+        // Execute operation
+        const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
+            operation.target,
+            operation.value,
+            operation.data,
+            operation.predecessor,
+            operation.salt,
+        ]);
+    
+        console.log({scheduleData});
+        console.log({executeData});
+    
+        outputJson.genesis = genesis.root;
+        outputJson.verifierAddress = verifierAddress;
+        outputJson.consensusContract = consensusContract;
+        outputJson.scheduleData = scheduleData;
+        outputJson.executeData = executeData;
+        outputJson.id = operation.id;
+    
+        // Decode the scheduleData for better readability
+        const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
+        const paramsArray = timelockTx?.fragment.inputs;
+        const objectDecoded = {};
+    
+        for (let i = 0; i < paramsArray?.length; i++) {
+            const currentParam = paramsArray[i];
+    
+            objectDecoded[currentParam.name] = timelockTx?.args[i];
+    
+            if (currentParam.name == "data") {
+                const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
+                    data: timelockTx?.args[i],
+                });
+                const objectDecodedData = {};
+                const paramsArrayData = decodedRollupManagerData?.fragment.inputs;
+    
+                for (let j = 0; j < paramsArrayData?.length; j++) {
+                    const currentParam = paramsArrayData[j];
+                    objectDecodedData[currentParam.name] = decodedRollupManagerData?.args[j];
+                }
+                objectDecoded["decodedData"] = objectDecodedData;
+            }
+        }
+    
+        outputJson.decodedScheduleData = objectDecoded;
+    }
+    
     // add time to output path
     fs.writeFileSync(pathOutputJson, JSON.stringify(outputJson, null, 1));
 }
