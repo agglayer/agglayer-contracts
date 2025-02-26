@@ -1,6 +1,7 @@
 import "dotenv/config";
 import "hardhat-dependency-compiler";
 import "hardhat-switch-network";
+import "@openzeppelin/hardhat-upgrades"
 import "@nomiclabs/hardhat-solhint";
 import "solidity-coverage";
 import "@nomicfoundation/hardhat-chai-matchers";
