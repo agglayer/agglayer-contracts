@@ -28,7 +28,7 @@ contract PolygonDataCommitteeTest is Test, TestHelpers, PolygonDataCommitteeDepl
         polygonDataCommittee.initialize();
     }
 
-    function test_initialize() public view {
+    function test_setup() public view {
         assertEq(polygonDataCommittee.getProcotolName(), "DataAvailabilityCommittee");
     }
 

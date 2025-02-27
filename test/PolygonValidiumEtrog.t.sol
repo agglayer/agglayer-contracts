@@ -12,6 +12,8 @@ import {IPolygonZkEVMBridgeV2Extended} from "contracts/interfaces/IPolygonZkEVMB
 import {IPolygonZkEVMBridgeV2} from "contracts/interfaces/IPolygonZkEVMBridgeV2.sol";
 
 import {ERC20PermitMockDeployer} from "script/deployers/ERC20PermitMockDeployer.s.sol";
+import {PolygonRollupBaseEtrog} from "contracts/lib/PolygonRollupBaseEtrog.sol";
+import {PolygonDataCommittee} from "contracts/consensus/validium/PolygonDataCommittee.sol";
 import {PolygonDataCommitteeDeployer} from "script/deployers/PolygonDataCommitteeDeployer.s.sol";
 import {PolygonRollupManagerEmptyMockDeployer} from "script/deployers/PolygonRollupManagerEmptyMockDeployer.s.sol";
 import {PolygonZkEVMGlobalExitRootV2Deployer} from "script/deployers/PolygonZkEVMGlobalExitRootV2Deployer.s.sol";
@@ -71,22 +73,6 @@ contract PolygonValidiumEtrogTest is
         uint256 privateKey;
     }
 
-    event SequenceBatches(uint64 indexed numBatch, bytes32 l1InfoRoot);
-    event ForceBatch(uint64 indexed forceBatchNum, bytes32 lastGlobalExitRoot, address sequencer, bytes transactions);
-    event SequenceForceBatches(uint64 indexed numBatch);
-    event InitialSequenceBatches(bytes transactions, bytes32 lastGlobalExitRoot, address sequencer);
-    event VerifyBatches(uint64 indexed numBatch, bytes32 stateRoot, address indexed aggregator);
-    event RollbackBatches(uint64 indexed targetBatch, bytes32 accInputHashToRollback);
-    event SetDataAvailabilityProtocol(address newDataAvailabilityProtocol);
-    event SwitchSequenceWithDataAvailability();
-    event SetTrustedSequencer(address newTrustedSequencer);
-    event SetTrustedSequencerURL(string newTrustedSequencerURL);
-    event SetForceBatchTimeout(uint64 newforceBatchTimeout);
-    event SetForceBatchAddress(address newForceBatchAddress);
-    event TransferAdminRole(address newPendingAdmin);
-    event AcceptAdminRole(address newAdmin);
-    event CommitteeUpdated(bytes32 committeeHash);
-
     function setUp() public {
         pol = IERC20Upgradeable(
             deployERC20PermitMockImplementation(tokenName, tokenSymbol, polTokenOwner, tokenInitialBalance)
@@ -109,7 +95,26 @@ contract PolygonValidiumEtrogTest is
         vm.prank(polTokenOwner);
         pol.transfer(trustedSequencer, 1000 ether);
 
-        polygonValidiumEtrog = PolygonValidiumEtrog(
+        deployPolygonDataCommitteeTransparent(proxyAdminOwner);
+
+        (,, address polygonValidiumEtrogProxy) = deployPolygonValidiumEtrogTransparent(
+            admin,
+            polygonZkEVMGlobalExitRootV2,
+            pol,
+            IPolygonZkEVMBridgeV2(address(polygonZkEVMBridge)),
+            polygonRollupManager,
+            admin,
+            trustedSequencer,
+            networkIDRollup,
+            address(0),
+            sequencerURL,
+            networkName
+        );
+        polygonValidiumEtrog = PolygonValidiumEtrog(polygonValidiumEtrogProxy);
+    }
+
+    function testRevert_initialize_onlyRollupManager() public {
+        PolygonValidiumEtrog polygonValidiumEtrogTest = PolygonValidiumEtrog(
             deployPolygonValidiumEtrogImplementation(
                 polygonZkEVMGlobalExitRootV2,
                 pol,
@@ -118,17 +123,13 @@ contract PolygonValidiumEtrogTest is
             )
         );
 
-        deployPolygonDataCommitteeTransparent(proxyAdminOwner);
-    }
-
-    function testRevert_initialize_onlyRollupManager() public {
         vm.expectRevert(IPolygonZkEVMEtrogErrors.OnlyRollupManager.selector);
-        _initializePolygonValidiumEtrog();
+        polygonValidiumEtrogTest.initialize(
+            admin, trustedSequencer, networkIDRollup, address(0), sequencerURL, networkName
+        );
     }
 
-    function test_initialize() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
+    function test_setup() public view {
         assertEq(polygonValidiumEtrog.admin(), admin);
         assertEq(polygonValidiumEtrog.trustedSequencer(), trustedSequencer);
         assertEq(polygonValidiumEtrog.trustedSequencerURL(), sequencerURL);
@@ -137,16 +138,12 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_initialize_alreadyInitialized() public {
-        vm.startPrank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
+        vm.prank(address(polygonRollupManager));
         vm.expectRevert("Initializable: contract is already initialized");
-        _initializePolygonValidiumEtrog();
-        vm.stopPrank();
+        polygonValidiumEtrog.initialize(admin, trustedSequencer, networkIDRollup, address(0), sequencerURL, networkName);
     }
 
     function testRevert_adminFunctions() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         bytes4 selector = IPolygonZkEVMErrors.OnlyAdmin.selector;
 
         vm.expectRevert(selector);
@@ -175,44 +172,42 @@ contract PolygonValidiumEtrogTest is
     }
 
     function test_adminFunctions() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         vm.startPrank(admin);
 
         vm.expectEmit();
-        emit SwitchSequenceWithDataAvailability();
+        emit PolygonValidiumEtrog.SwitchSequenceWithDataAvailability();
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
         assertEq(polygonValidiumEtrog.isSequenceWithDataAvailabilityAllowed(), true);
 
         vm.expectEmit();
-        emit SetDataAvailabilityProtocol(address(polygonDataCommittee));
+        emit PolygonValidiumEtrog.SetDataAvailabilityProtocol(address(polygonDataCommittee));
         polygonValidiumEtrog.setDataAvailabilityProtocol(polygonDataCommittee);
         assertEq(address(polygonValidiumEtrog.dataAvailabilityProtocol()), address(polygonDataCommittee));
 
         vm.expectEmit();
-        emit SetForceBatchTimeout(0);
+        emit PolygonRollupBaseEtrog.SetForceBatchTimeout(0);
         polygonValidiumEtrog.setForceBatchTimeout(0);
         assertEq(polygonValidiumEtrog.forceBatchTimeout(), 0);
 
         vm.expectEmit();
-        emit SetTrustedSequencer(makeAddr("newTrustedSequencer"));
+        emit PolygonConsensusBase.SetTrustedSequencer(makeAddr("newTrustedSequencer"));
         polygonValidiumEtrog.setTrustedSequencer(makeAddr("newTrustedSequencer"));
         assertEq(polygonValidiumEtrog.trustedSequencer(), makeAddr("newTrustedSequencer"));
 
         vm.expectEmit();
-        emit SetTrustedSequencerURL("http://zkevm-json-rpc:8145");
+        emit PolygonConsensusBase.SetTrustedSequencerURL("http://zkevm-json-rpc:8145");
         polygonValidiumEtrog.setTrustedSequencerURL("http://zkevm-json-rpc:8145");
         assertEq(polygonValidiumEtrog.trustedSequencerURL(), "http://zkevm-json-rpc:8145");
 
         vm.expectEmit();
-        emit SetForceBatchAddress(makeAddr("newForceBatchAddress"));
+        emit PolygonRollupBaseEtrog.SetForceBatchAddress(makeAddr("newForceBatchAddress"));
         polygonValidiumEtrog.setForceBatchAddress(makeAddr("newForceBatchAddress"));
         assertEq(polygonValidiumEtrog.forceBatchAddress(), makeAddr("newForceBatchAddress"));
 
         address newAdmin = makeAddr("newAdmin");
 
         vm.expectEmit();
-        emit TransferAdminRole(newAdmin);
+        emit PolygonConsensusBase.TransferAdminRole(newAdmin);
         polygonValidiumEtrog.transferAdminRole(newAdmin);
         assertEq(polygonValidiumEtrog.pendingAdmin(), newAdmin);
 
@@ -220,15 +215,12 @@ contract PolygonValidiumEtrogTest is
 
         vm.prank(newAdmin);
         vm.expectEmit();
-        emit AcceptAdminRole(makeAddr("newAdmin"));
+        emit PolygonConsensusBase.AcceptAdminRole(makeAddr("newAdmin"));
         polygonValidiumEtrog.acceptAdminRole();
         assertEq(polygonValidiumEtrog.admin(), newAdmin);
     }
 
     function testRevert_setForceBatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         bytes4 forceBatchNotAllowedSelector = IPolygonZkEVMErrors.ForceBatchNotAllowed.selector;
 
         vm.expectRevert(forceBatchNotAllowedSelector);
@@ -248,9 +240,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_setForceBatchTimeout_invalidRangeForceBatchTimeout() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.startPrank(admin);
         vm.expectRevert(IPolygonZkEVMErrors.InvalidRangeForceBatchTimeout.selector);
         polygonValidiumEtrog.setForceBatchTimeout(HALT_AGGREGATION_TIMEOUT + 1);
@@ -261,9 +250,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_generateInitializeTransaction_hugeTokenMetadataNotSupported() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         bytes memory hugeTokenMetaData = new bytes(1_000_000); // huge data
 
         vm.expectRevert(IPolygonZkEVMEtrogErrors.HugeTokenMetadataNotSupported.selector);
@@ -272,10 +258,7 @@ contract PolygonValidiumEtrogTest is
         );
     }
 
-    function test_generateInitializeTransaction() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
+    function test_generateInitializeTransaction() public view {
         uint64 timestamp = uint64(block.timestamp);
         bytes32 blockParentHash = blockhash(block.number - 1);
         bytes memory initialTx =
@@ -293,9 +276,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_sequenceWithDataAvailabilityNotAllowed() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.expectRevert(IPolygonValidium.SequenceWithDataAvailabilityNotAllowed.selector);
@@ -305,9 +285,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_onlyTrustedSequencer() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -320,9 +297,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_sequenceZeroBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -336,9 +310,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_exceedMaxVerifyBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -353,9 +324,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_maxTimestampSequenceInvalid() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -373,9 +341,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_l1InfoRootIndexInvalid() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -393,9 +358,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_forcedDataDoesNotMatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -426,9 +388,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatches_transactionsLengthAboveMax() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -456,9 +415,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function test_sequenceBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -482,7 +438,7 @@ contract PolygonValidiumEtrogTest is
         pol.approve(address(polygonValidiumEtrog), 100);
 
         vm.expectEmit();
-        emit SequenceBatches(2, l1InfoRootHash);
+        emit PolygonRollupBaseEtrog.SequenceBatches(2, l1InfoRootHash);
         polygonValidiumEtrog.sequenceBatches(
             batchData, l1InfoRootIndex, uint64(currentTime), expectedAccInputHash, trustedSequencer
         );
@@ -490,16 +446,11 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_forceBatch_forceBatchNotAllowed() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.expectRevert(IPolygonZkEVMErrors.ForceBatchNotAllowed.selector);
         polygonValidiumEtrog.forceBatch(bytes(""), 0);
     }
 
     function testRevert_forceBatch_forceBatchesNotAllowedOnEmergencyState() public {
-        vm.startPrank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         polygonRollupManager.activateEmergencyState();
         vm.stopPrank();
 
@@ -509,18 +460,12 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_forceBatch_notEnoughPOLAmount() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         vm.expectRevert(IPolygonZkEVMEtrogErrors.NotEnoughPOLAmount.selector);
         polygonValidiumEtrog.forceBatch(bytes(""), 0);
     }
 
     function testRevert_forceBatch_transactionsLengthAboveMax() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         bytes memory hugeData = new bytes(1_000_000); // huge data
 
         vm.prank(admin);
@@ -529,9 +474,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function test_forceBatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         uint64 lastForcedBatch = 1;
 
         vm.prank(polTokenOwner);
@@ -541,7 +483,9 @@ contract PolygonValidiumEtrogTest is
         pol.approve(address(polygonValidiumEtrog), tokenTransferAmount);
 
         vm.expectEmit();
-        emit ForceBatch(lastForcedBatch, polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(), admin, l2TxData);
+        emit PolygonRollupBaseEtrog.ForceBatch(
+            lastForcedBatch, polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(), admin, l2TxData
+        );
         polygonValidiumEtrog.forceBatch(l2TxData, tokenTransferAmount);
         vm.stopPrank();
 
@@ -549,9 +493,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function test_forceBatch_sendFromContract() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         SendData sendData = new SendData();
         vm.prank(polTokenOwner);
         pol.transfer(address(sendData), 1000);
@@ -561,7 +502,7 @@ contract PolygonValidiumEtrogTest is
         sendData.sendData(address(pol), approveData);
 
         vm.expectEmit();
-        emit SetForceBatchAddress(address(sendData));
+        emit PolygonRollupBaseEtrog.SetForceBatchAddress(address(sendData));
         vm.prank(admin);
         polygonValidiumEtrog.setForceBatchAddress(address(sendData));
 
@@ -571,16 +512,13 @@ contract PolygonValidiumEtrogTest is
         bytes memory forceBatchData =
             abi.encodeWithSelector(polygonValidiumEtrog.forceBatch.selector, l2TxData, tokenTransferAmount);
         vm.expectEmit();
-        emit ForceBatch(lastForcedBatch, globalExitRoot, address(sendData), l2TxData);
+        emit PolygonRollupBaseEtrog.ForceBatch(lastForcedBatch, globalExitRoot, address(sendData), l2TxData);
         sendData.sendData(address(polygonValidiumEtrog), forceBatchData);
 
         assertEq(polygonValidiumEtrog.calculatePolPerForceBatch(), polygonRollupManager.getForcedBatchFee());
     }
 
     function testRevert_sequenceForceBatches_haltTimeoutNotExpiredAfterEmergencyState() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(admin);
@@ -589,8 +527,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_sequenceZeroBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         skip(1 weeks);
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](0); // Empty batchData
@@ -601,8 +537,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_exceedMaxVerifyBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         skip(1 weeks);
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData =
@@ -614,8 +548,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_forceBatchesOverflow() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         skip(1 weeks);
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
@@ -626,8 +558,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_forcedDataDoesNotMatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         skip(1 weeks);
 
         vm.prank(polTokenOwner);
@@ -646,8 +576,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_forceBatchTimeoutNotExpired() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         skip(1 weeks);
 
         vm.prank(polTokenOwner);
@@ -671,8 +599,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function test_sequenceForceBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
         skip(1 weeks);
 
         vm.prank(polTokenOwner);
@@ -695,7 +621,7 @@ contract PolygonValidiumEtrogTest is
         bytes32 lastAccInputHash = polygonValidiumEtrog.lastAccInputHash();
 
         vm.expectEmit();
-        emit SequenceForceBatches(expectedBatchNum);
+        emit PolygonRollupBaseEtrog.SequenceForceBatches(expectedBatchNum);
         polygonValidiumEtrog.sequenceForceBatches(batchDataArray);
 
         bytes32 expectedAccInputHash = _calculateAccInputHash(
@@ -706,26 +632,17 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_onVerifyBatches_onlyRollupManager() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.expectRevert(IPolygonZkEVMEtrogErrors.OnlyRollupManager.selector);
         polygonValidiumEtrog.onVerifyBatches(0, bytes32(0), trustedAggregator);
     }
 
     function testRevert_switchSequenceWithDataAvailability_switchToSameValue() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         vm.expectRevert(IPolygonValidium.SwitchToSameValue.selector);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(false);
     }
 
     function testRevert_sequenceBatchesValidium_onlyTrustedSequencer() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         PolygonValidiumEtrog.ValidiumBatchData[] memory batchData = new PolygonValidiumEtrog.ValidiumBatchData[](1);
 
         vm.expectRevert(IPolygonZkEVMErrors.OnlyTrustedSequencer.selector);
@@ -735,9 +652,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatchesValidium_sequenceZeroBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -751,9 +665,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatchesValidium_exceedMaxVerifyBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -768,9 +679,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatchesValidium_maxTimestampSequenceInvalid() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -789,9 +697,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatchesValidium_l1InfoRootIndexInvalid() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -810,9 +715,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatchesValidium_forcedDataDoesNotMatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.prank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
 
@@ -843,9 +745,6 @@ contract PolygonValidiumEtrogTest is
     }
 
     function testRevert_sequenceBatchesValidium() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonValidiumEtrog();
-
         vm.startPrank(admin);
         polygonValidiumEtrog.switchSequenceWithDataAvailability(true);
         polygonValidiumEtrog.setDataAvailabilityProtocol(polygonDataCommittee);
@@ -878,7 +777,7 @@ contract PolygonValidiumEtrogTest is
 
         address committeeOwner = polygonDataCommittee.owner();
         vm.expectEmit();
-        emit CommitteeUpdated(keccak256(committeeMemberAddrBytes));
+        emit PolygonDataCommittee.CommitteeUpdated(keccak256(committeeMemberAddrBytes));
         vm.prank(committeeOwner);
         polygonDataCommittee.setupCommittee(numberOfCommitteeMembers, committeeMemberUrls, committeeMemberAddrBytes);
 
@@ -891,10 +790,6 @@ contract PolygonValidiumEtrogTest is
         );
         vm.stopPrank();
         assertEq(polygonValidiumEtrog.lastAccInputHash(), expectedAccInputHash);
-    }
-
-    function _initializePolygonValidiumEtrog() internal {
-        polygonValidiumEtrog.initialize(admin, trustedSequencer, networkIDRollup, address(0), sequencerURL, networkName);
     }
 
     function _proxify(address logic) internal returns (address proxy) {
