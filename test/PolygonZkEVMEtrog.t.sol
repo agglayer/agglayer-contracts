@@ -62,19 +62,6 @@ contract PolygonZkEVMEtrogTest is
     uint8 constant LEAF_TYPE_MESSAGE = 1;
     bytes l2TxData = "0x123456";
 
-    event SequenceBatches(uint64 indexed numBatch, bytes32 l1InfoRoot);
-    event ForceBatch(uint64 indexed forceBatchNum, bytes32 lastGlobalExitRoot, address sequencer, bytes transactions);
-    event SequenceForceBatches(uint64 indexed numBatch);
-    event InitialSequenceBatches(bytes transactions, bytes32 lastGlobalExitRoot, address sequencer);
-    event VerifyBatches(uint64 indexed numBatch, bytes32 stateRoot, address indexed aggregator);
-    event RollbackBatches(uint64 indexed targetBatch, bytes32 accInputHashToRollback);
-    event SetTrustedSequencer(address newTrustedSequencer);
-    event SetTrustedSequencerURL(string newTrustedSequencerURL);
-    event SetForceBatchTimeout(uint64 newforceBatchTimeout);
-    event SetForceBatchAddress(address newForceBatchAddress);
-    event TransferAdminRole(address newPendingAdmin);
-    event AcceptAdminRole(address newAdmin);
-
     function setUp() public {
         pol = IERC20Upgradeable(
             deployERC20PermitMockImplementation(tokenName, tokenSymbol, polTokenOwner, tokenInitialBalance)
@@ -97,7 +84,24 @@ contract PolygonZkEVMEtrogTest is
         vm.prank(polTokenOwner);
         pol.transfer(trustedSequencer, 1000 ether);
 
-        polygonZkEVMEtrog = PolygonZkEVMEtrog(
+        (,, address polygonZkEVMEtrogProxy) = deployPolygonZkEVMEtrogTransparent(
+            admin,
+            polygonZkEVMGlobalExitRootV2,
+            pol,
+            IPolygonZkEVMBridgeV2(address(polygonZkEVMBridge)),
+            polygonRollupManager,
+            admin,
+            trustedSequencer,
+            networkIDRollup,
+            address(0),
+            sequencerURL,
+            networkName
+        );
+        polygonZkEVMEtrog = PolygonZkEVMEtrog(polygonZkEVMEtrogProxy);
+    }
+
+    function testRevert_initialize_onlyRollupManager() public {
+        PolygonZkEVMEtrog polygonZkEVMEtrogTest = PolygonZkEVMEtrog(
             deployPolygonZkEVMEtrogImplementation(
                 polygonZkEVMGlobalExitRootV2,
                 pol,
@@ -105,16 +109,14 @@ contract PolygonZkEVMEtrogTest is
                 polygonRollupManager
             )
         );
-    }
 
-    function testRevert_initialize_onlyRollupManager() public {
         vm.expectRevert(IPolygonZkEVMEtrogErrors.OnlyRollupManager.selector);
-        _initializePolygonZkEVMEtrog();
+        polygonZkEVMEtrogTest.initialize(
+            admin, trustedSequencer, networkIDRollup, address(0), sequencerURL, networkName
+        );
     }
 
-    function test_initialize() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
+    function test_setup() public view {
         assertEq(polygonZkEVMEtrog.admin(), admin);
         assertEq(polygonZkEVMEtrog.trustedSequencer(), trustedSequencer);
         assertEq(polygonZkEVMEtrog.trustedSequencerURL(), sequencerURL);
@@ -124,15 +126,12 @@ contract PolygonZkEVMEtrogTest is
 
     function testRevert_initialize_alreadyInitialized() public {
         vm.startPrank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         vm.expectRevert("Initializable: contract is already initialized");
-        _initializePolygonZkEVMEtrog();
+        polygonZkEVMEtrog.initialize(admin, trustedSequencer, networkIDRollup, address(0), sequencerURL, networkName);
         vm.stopPrank();
     }
 
     function testRevert_adminFunctions() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         bytes4 selector = IPolygonZkEVMErrors.OnlyAdmin.selector;
 
         vm.expectRevert(selector);
@@ -155,34 +154,32 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function test_adminFunctions() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         vm.startPrank(admin);
 
         vm.expectEmit();
-        emit SetForceBatchTimeout(0);
+        emit PolygonRollupBaseEtrog.SetForceBatchTimeout(0);
         polygonZkEVMEtrog.setForceBatchTimeout(0);
         assertEq(polygonZkEVMEtrog.forceBatchTimeout(), 0);
 
         vm.expectEmit();
-        emit SetTrustedSequencer(makeAddr("newTrustedSequencer"));
+        emit PolygonConsensusBase.SetTrustedSequencer(makeAddr("newTrustedSequencer"));
         polygonZkEVMEtrog.setTrustedSequencer(makeAddr("newTrustedSequencer"));
         assertEq(polygonZkEVMEtrog.trustedSequencer(), makeAddr("newTrustedSequencer"));
 
         vm.expectEmit();
-        emit SetTrustedSequencerURL("http://zkevm-json-rpc:8145");
+        emit PolygonConsensusBase.SetTrustedSequencerURL("http://zkevm-json-rpc:8145");
         polygonZkEVMEtrog.setTrustedSequencerURL("http://zkevm-json-rpc:8145");
         assertEq(polygonZkEVMEtrog.trustedSequencerURL(), "http://zkevm-json-rpc:8145");
 
         vm.expectEmit();
-        emit SetForceBatchAddress(makeAddr("newForceBatchAddress"));
+        emit PolygonRollupBaseEtrog.SetForceBatchAddress(makeAddr("newForceBatchAddress"));
         polygonZkEVMEtrog.setForceBatchAddress(makeAddr("newForceBatchAddress"));
         assertEq(polygonZkEVMEtrog.forceBatchAddress(), makeAddr("newForceBatchAddress"));
 
         address newAdmin = makeAddr("newAdmin");
 
         vm.expectEmit();
-        emit TransferAdminRole(newAdmin);
+        emit PolygonConsensusBase.TransferAdminRole(newAdmin);
         polygonZkEVMEtrog.transferAdminRole(newAdmin);
         assertEq(polygonZkEVMEtrog.pendingAdmin(), newAdmin);
 
@@ -190,15 +187,12 @@ contract PolygonZkEVMEtrogTest is
 
         vm.prank(newAdmin);
         vm.expectEmit();
-        emit AcceptAdminRole(makeAddr("newAdmin"));
+        emit PolygonConsensusBase.AcceptAdminRole(makeAddr("newAdmin"));
         polygonZkEVMEtrog.acceptAdminRole();
         assertEq(polygonZkEVMEtrog.admin(), newAdmin);
     }
 
     function testRevert_setForceBatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         bytes4 forceBatchNotAllowedSelector = IPolygonZkEVMErrors.ForceBatchNotAllowed.selector;
 
         vm.expectRevert(forceBatchNotAllowedSelector);
@@ -218,9 +212,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_setForceBatchTimeout_invalidRangeForceBatchTimeout() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         vm.startPrank(admin);
         vm.expectRevert(IPolygonZkEVMErrors.InvalidRangeForceBatchTimeout.selector);
         polygonZkEVMEtrog.setForceBatchTimeout(HALT_AGGREGATION_TIMEOUT + 1);
@@ -231,9 +222,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_generateInitializeTransaction_hugeTokenMetadataNotSupported() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         bytes memory hugeTokenMetaData = new bytes(1_000_000); // huge data
 
         vm.expectRevert(IPolygonZkEVMEtrogErrors.HugeTokenMetadataNotSupported.selector);
@@ -242,10 +230,7 @@ contract PolygonZkEVMEtrogTest is
         );
     }
 
-    function test_generateInitializeTransaction() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
+    function test_generateInitializeTransaction() public view {
         uint64 timestamp = uint64(block.timestamp);
         bytes32 blockParentHash = blockhash(block.number - 1);
         bytes memory initialTx =
@@ -263,9 +248,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_onlyTrustedSequencer() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.expectRevert(IPolygonZkEVMErrors.OnlyTrustedSequencer.selector);
@@ -275,9 +257,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_sequenceZeroBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](0); // Empty batchData
 
         vm.prank(trustedSequencer);
@@ -288,9 +267,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_exceedMaxVerifyBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData =
             new PolygonRollupBaseEtrog.BatchData[](MAX_VERIFY_BATCHES + 1); // Exceed max verify batches
 
@@ -302,9 +278,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_maxTimestampSequenceInvalid() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(trustedSequencer);
@@ -319,9 +292,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_l1InfoRootIndexInvalid() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(trustedSequencer);
@@ -336,9 +306,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_forcedDataDoesNotMatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
         batchData[0] = PolygonRollupBaseEtrog.BatchData(
             l2TxData,
@@ -366,9 +333,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceBatches_transactionsLengthAboveMax() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         bytes memory hugeData = new bytes(1_000_000); // huge data
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
@@ -393,9 +357,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function test_sequenceBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
         batchData[0] = PolygonRollupBaseEtrog.BatchData(l2TxData, bytes32(0), 0, bytes32(0));
 
@@ -416,7 +377,7 @@ contract PolygonZkEVMEtrogTest is
         pol.approve(address(polygonZkEVMEtrog), 100);
 
         vm.expectEmit();
-        emit SequenceBatches(2, l1InfoRootHash);
+        emit PolygonRollupBaseEtrog.SequenceBatches(2, l1InfoRootHash);
         polygonZkEVMEtrog.sequenceBatches(
             batchData, l1InfoRootIndex, uint64(currentTime), expectedAccInputHash, trustedSequencer
         );
@@ -424,16 +385,11 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_forceBatch_forceBatchNotAllowed() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         vm.expectRevert(IPolygonZkEVMErrors.ForceBatchNotAllowed.selector);
         polygonZkEVMEtrog.forceBatch(bytes(""), 0);
     }
 
     function testRevert_forceBatch_forceBatchesNotAllowedOnEmergencyState() public {
-        vm.startPrank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         polygonRollupManager.activateEmergencyState();
         vm.stopPrank();
 
@@ -443,18 +399,12 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_forceBatch_notEnoughPOLAmount() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         vm.prank(admin);
         vm.expectRevert(IPolygonZkEVMEtrogErrors.NotEnoughPOLAmount.selector);
         polygonZkEVMEtrog.forceBatch(bytes(""), 0);
     }
 
     function testRevert_forceBatch_transactionsLengthAboveMax() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         bytes memory hugeData = new bytes(1_000_000); // huge data
 
         vm.prank(admin);
@@ -463,9 +413,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function test_forceBatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         uint64 lastForcedBatch = 1;
 
         vm.prank(polTokenOwner);
@@ -475,7 +422,9 @@ contract PolygonZkEVMEtrogTest is
         pol.approve(address(polygonZkEVMEtrog), tokenTransferAmount);
 
         vm.expectEmit();
-        emit ForceBatch(lastForcedBatch, polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(), admin, l2TxData);
+        emit PolygonRollupBaseEtrog.ForceBatch(
+            lastForcedBatch, polygonZkEVMGlobalExitRootV2.getLastGlobalExitRoot(), admin, l2TxData
+        );
         polygonZkEVMEtrog.forceBatch(l2TxData, tokenTransferAmount);
         vm.stopPrank();
 
@@ -483,9 +432,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function test_forceBatch_sendFromContract() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         SendData sendData = new SendData();
         vm.prank(polTokenOwner);
         pol.transfer(address(sendData), 1000);
@@ -495,7 +441,7 @@ contract PolygonZkEVMEtrogTest is
         sendData.sendData(address(pol), approveData);
 
         vm.expectEmit();
-        emit SetForceBatchAddress(address(sendData));
+        emit PolygonRollupBaseEtrog.SetForceBatchAddress(address(sendData));
         vm.prank(admin);
         polygonZkEVMEtrog.setForceBatchAddress(address(sendData));
 
@@ -505,16 +451,13 @@ contract PolygonZkEVMEtrogTest is
         bytes memory forceBatchData =
             abi.encodeWithSelector(polygonZkEVMEtrog.forceBatch.selector, l2TxData, tokenTransferAmount);
         vm.expectEmit();
-        emit ForceBatch(lastForcedBatch, globalExitRoot, address(sendData), l2TxData);
+        emit PolygonRollupBaseEtrog.ForceBatch(lastForcedBatch, globalExitRoot, address(sendData), l2TxData);
         sendData.sendData(address(polygonZkEVMEtrog), forceBatchData);
 
         assertEq(polygonZkEVMEtrog.calculatePolPerForceBatch(), polygonRollupManager.getForcedBatchFee());
     }
 
     function testRevert_sequenceForceBatches_haltTimeoutNotExpiredAfterEmergencyState() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
 
         vm.prank(admin);
@@ -523,8 +466,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_sequenceZeroBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         skip(1 weeks);
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](0); // Empty batchData
@@ -535,8 +476,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_exceedMaxVerifyBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         skip(1 weeks);
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData =
@@ -548,8 +487,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_forceBatchesOverflow() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         skip(1 weeks);
 
         PolygonRollupBaseEtrog.BatchData[] memory batchData = new PolygonRollupBaseEtrog.BatchData[](1);
@@ -560,8 +497,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_forcedDataDoesNotMatch() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         skip(1 weeks);
 
         vm.prank(polTokenOwner);
@@ -580,8 +515,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_sequenceForceBatches_forceBatchTimeoutNotExpired() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         skip(1 weeks);
 
         vm.prank(polTokenOwner);
@@ -605,8 +538,6 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function test_sequenceForceBatches() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
         skip(1 weeks);
 
         vm.prank(polTokenOwner);
@@ -629,7 +560,7 @@ contract PolygonZkEVMEtrogTest is
         bytes32 lastAccInputHash = polygonZkEVMEtrog.lastAccInputHash();
 
         vm.expectEmit();
-        emit SequenceForceBatches(expectedBatchNum);
+        emit PolygonRollupBaseEtrog.SequenceForceBatches(expectedBatchNum);
         polygonZkEVMEtrog.sequenceForceBatches(batchDataArray);
 
         bytes32 expectedAccInputHash = _calculateAccInputHash(
@@ -640,15 +571,8 @@ contract PolygonZkEVMEtrogTest is
     }
 
     function testRevert_onVerifyBatches_onlyRollupManager() public {
-        vm.prank(address(polygonRollupManager));
-        _initializePolygonZkEVMEtrog();
-
         vm.expectRevert(IPolygonZkEVMEtrogErrors.OnlyRollupManager.selector);
         polygonZkEVMEtrog.onVerifyBatches(0, bytes32(0), trustedAggregator);
-    }
-
-    function _initializePolygonZkEVMEtrog() internal {
-        polygonZkEVMEtrog.initialize(admin, trustedSequencer, networkIDRollup, address(0), sequencerURL, networkName);
     }
 
     function _proxify(address logic) internal returns (address proxy) {

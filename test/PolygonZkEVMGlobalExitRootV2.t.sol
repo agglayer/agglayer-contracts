@@ -15,19 +15,13 @@ contract PolygonZkEVMGlobalExitRootV2Test is Test, TestHelpers, ZkEVMCommon, Pol
     address polygonZkEVMBridge = makeAddr("polygonZkEVMBridge");
     address polygonZkEVMGlobalExitRootV2ProxyOwner = makeAddr("polygonZkEVMGlobalExitRootV2ProxyOwner");
 
-    event UpdateL1InfoTree(bytes32 indexed mainnetExitRoot, bytes32 indexed rollupExitRoot);
-
-    event UpdateL1InfoTreeV2(
-        bytes32 currentL1InfoRoot, uint32 indexed leafCount, uint256 blockhash, uint64 minTimestamp
-    );
-
     function setUp() public {
         deployPolygonZkEVMGlobalExitRootV2Transparent(
             polygonZkEVMGlobalExitRootV2ProxyOwner, rollupManager, polygonZkEVMBridge
         );
     }
 
-    function test_initialize() public view {
+    function test_setup() public view {
         assertEq(polygonZkEVMGlobalExitRootV2.rollupManager(), rollupManager);
         assertEq(polygonZkEVMGlobalExitRootV2.bridgeAddress(), polygonZkEVMBridge);
         bytes32 zeroHash = bytes32(0);
@@ -60,12 +54,12 @@ contract PolygonZkEVMGlobalExitRootV2Test is Test, TestHelpers, ZkEVMCommon, Pol
         assertEq(entries.length, 2);
 
         assertEq(entries[0].topics.length, 3);
-        assertEq(entries[0].topics[0], UpdateL1InfoTree.selector);
+        assertEq(entries[0].topics[0], PolygonZkEVMGlobalExitRootV2.UpdateL1InfoTree.selector);
         assertEq(entries[0].topics[1], newRootBridge);
         assertEq(entries[0].topics[2], bytes32(0));
 
         assertEq(entries[1].topics.length, 2);
-        assertEq(entries[1].topics[0], UpdateL1InfoTreeV2.selector);
+        assertEq(entries[1].topics[0], PolygonZkEVMGlobalExitRootV2.UpdateL1InfoTreeV2.selector);
         assertEq(entries[1].topics[1], bytes32(leafCount));
         (bytes32 eventCurrentL1InfoRoot, uint256 eventBlockhash, uint64 eventminTimestamp) =
             abi.decode(entries[1].data, (bytes32, uint256, uint64));
@@ -93,12 +87,12 @@ contract PolygonZkEVMGlobalExitRootV2Test is Test, TestHelpers, ZkEVMCommon, Pol
         Vm.Log[] memory entries = vm.getRecordedLogs();
         assertEq(entries.length, 2);
         assertEq(entries[0].topics.length, 3);
-        assertEq(entries[0].topics[0], UpdateL1InfoTree.selector);
+        assertEq(entries[0].topics[0], PolygonZkEVMGlobalExitRootV2.UpdateL1InfoTree.selector);
         assertEq(entries[0].topics[1], bytes32(0));
         assertEq(entries[0].topics[2], newRootRollup);
 
         assertEq(entries[1].topics.length, 2);
-        assertEq(entries[1].topics[0], UpdateL1InfoTreeV2.selector);
+        assertEq(entries[1].topics[0], PolygonZkEVMGlobalExitRootV2.UpdateL1InfoTreeV2.selector);
         assertEq(entries[1].topics[1], bytes32(leafCount));
         (bytes32 eventCurrentL1InfoRoot, uint256 eventBlockhash, uint64 eventminTimestamp) =
             abi.decode(entries[1].data, (bytes32, uint256, uint64));

@@ -16,8 +16,6 @@ contract PolygonDataCommitteeTest is Test, TestHelpers, PolygonDataCommitteeDepl
     address proxyAdminOwner = makeAddr("proxyAdminOwner");
     address dataCommitteeOwner;
 
-    event CommitteeUpdated(bytes32 committeeHash);
-
     function setUp() public {
         deployPolygonDataCommitteeTransparent(proxyAdminOwner);
         dataCommitteeOwner = polygonDataCommittee.owner();
@@ -87,7 +85,7 @@ contract PolygonDataCommitteeTest is Test, TestHelpers, PolygonDataCommitteeDepl
             _generateCommitteeMembers(requiredAmountOfSignatures);
 
         vm.expectEmit();
-        emit CommitteeUpdated(keccak256(committeeMemberAddrBytes));
+        emit PolygonDataCommittee.CommitteeUpdated(keccak256(committeeMemberAddrBytes));
         vm.prank(dataCommitteeOwner);
         polygonDataCommittee.setupCommittee(requiredAmountOfSignatures, committeeMemberUrls, committeeMemberAddrBytes);
 

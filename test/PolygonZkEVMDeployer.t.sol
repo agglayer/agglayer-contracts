@@ -39,10 +39,6 @@ abstract contract Common is Test, TestHelpers {
         "initialize(string,string,uint256,address)", tokenName, tokenSymbol, tokenSupply, tokenOwner
     );
 
-    event NewDeterministicDeployment(address newContractAddress);
-    event FunctionCall();
-    event FunctionalCall();
-
     constructor() {
         creationCode = abi.encodePacked(vm.getCode("ERC20PresetFixedSupplyUpgradeable"), "");
         creationCodeHash = keccak256(abi.encodePacked(creationCode));
@@ -81,7 +77,7 @@ contract PolygonZkEVMDeployerTestPredeployment is Predeployment {
 
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectEmit();
-        emit NewDeterministicDeployment(tokenDeterministicAddr);
+        emit PolygonZkEVMDeployer.NewDeterministicDeployment(tokenDeterministicAddr);
         polygonZkEVMDeployer.deployDeterministic(0, tokenSalt, creationCode);
     }
 
@@ -90,7 +86,7 @@ contract PolygonZkEVMDeployerTestPredeployment is Predeployment {
 
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectEmit();
-        emit NewDeterministicDeployment(tokenDeterministicAddr);
+        emit PolygonZkEVMDeployer.NewDeterministicDeployment(tokenDeterministicAddr);
         polygonZkEVMDeployer.deployDeterministicAndCall(0, tokenSalt, creationCode, initializeCallData);
         ERC20PresetFixedSupplyUpgradeable token = ERC20PresetFixedSupplyUpgradeable(tokenDeterministicAddr);
         assertEq(token.name(), tokenName);
@@ -159,7 +155,7 @@ contract PolygonZkEVMDeployerTestPostdeployment is Postdeployment {
         // only the polygonZkEVMDeployerOwner can initiate the function call
         vm.prank(polygonZkEVMDeployerOwner);
         vm.expectEmit();
-        emit FunctionCall();
+        emit PolygonZkEVMDeployer.FunctionCall();
         polygonZkEVMDeployer.functionCall(tokenDeterministicAddr, transferCallData, 0);
 
         uint256 receipientBalance = ERC20PresetFixedSupplyUpgradeable(tokenDeterministicAddr).balanceOf(receipient);
