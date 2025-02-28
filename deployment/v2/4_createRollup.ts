@@ -21,7 +21,7 @@ import updateVanillaGenesis from "./utils/updateVanillaGenesis";
 const dateStr = new Date().toISOString();
 const pathOutputJson = path.join(__dirname, `./create_rollup_output_${dateStr}.json`);
 import utilsECDSA from "../../src/utils-aggchain-ECDSA"
-const { encodeInitializeBytesPessimistic } = require("../../src/utils-common-aggchain");
+const { encodeInitializeBytesConsensus } = require("../../src/utils-common-aggchain");
 
 import {
     PolygonRollupManager,
@@ -331,7 +331,7 @@ async function main() {
             await verifierContract.waitForDeployment();
         }
         verifierAddress = verifierContract.target;
-        initializeBytesCustomChain = encodeInitializeBytesPessimistic(adminZkEVM, trustedSequencer, gasTokenAddress, trustedSequencerURL, networkName);
+        initializeBytesCustomChain = encodeInitializeBytesConsensus(adminZkEVM, trustedSequencer, gasTokenAddress, trustedSequencerURL, networkName);
         console.log("#######################\n");
         console.log("Verifier name:", verifierName);
         console.log("Verifier deployed to:", verifierAddress);

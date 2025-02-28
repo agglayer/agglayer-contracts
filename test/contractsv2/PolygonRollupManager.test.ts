@@ -20,7 +20,7 @@ type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-const { encodeInitializeBytesPessimistic } = require("../../src/utils-common-aggchain");
+const { encodeInitializeBytesConsensus } = require("../../src/utils-common-aggchain");
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
@@ -387,7 +387,7 @@ describe("Polygon Rollup Manager", () => {
         expect(expectedRollupType).to.be.deep.equal(await rollupManagerContract.rollupTypeMap(newRollupTypeID));
 
         // Only admin can create new zkEVMs
-        const initializeBytesCustomChain = encodeInitializeBytesPessimistic(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
+        const initializeBytesCustomChain = encodeInitializeBytesConsensus(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
         await expect(
             rollupManagerContract.attachAggchainToAL(
                 newRollupTypeID,
@@ -1364,7 +1364,7 @@ describe("Polygon Rollup Manager", () => {
         expect(expectedRollupType).to.be.deep.equal(await rollupManagerContract.rollupTypeMap(newRollupTypeID));
 
         // Only admin can create new zkEVMs
-        const initializeBytesCustomChain = encodeInitializeBytesPessimistic(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
+        const initializeBytesCustomChain = encodeInitializeBytesConsensus(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
         await expect(
             rollupManagerContract.attachAggchainToAL(
                 newRollupTypeID,
@@ -1965,7 +1965,7 @@ describe("Polygon Rollup Manager", () => {
         // Create a
 
         // Only admin can create new zkEVMs
-        const initializeBytesCustomChain = encodeInitializeBytesPessimistic(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
+        const initializeBytesCustomChain = encodeInitializeBytesConsensus(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
         await expect(
             rollupManagerContract.attachAggchainToAL(
                 newRollupTypeID,
@@ -2705,7 +2705,7 @@ describe("Polygon Rollup Manager", () => {
         const newZkEVMContract = PolygonValidiumPreviousVersion.attach(newZKEVMAddress) as PolygonValidiumEtrogPrevious;
         const newSequencedBatch = 1;
 
-        const initializeBytesCustomChain = encodeInitializeBytesPessimistic(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
+        const initializeBytesCustomChain = encodeInitializeBytesConsensus(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
 
         await expect(
             rollupManagerContract.connect(admin).attachAggchainToAL(

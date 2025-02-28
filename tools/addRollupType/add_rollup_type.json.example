@@ -12,6 +12,6 @@
     "maxFeePerGas":"",
     "maxPriorityFeePerGas":"",
     "multiplierGas": "",
-    "genesisRoot": "0x94b582467640b62fb5d97bcd4a84091c2e27948a77b8e68fe786b5b9a454a414",
+    "genesisRoot": "0x4e162206cf43dc25698089ff4183ab1ef31c56049d57bcb295e1fc7a734cfe8f",
     "programVKey": "0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
 }

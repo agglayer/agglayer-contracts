@@ -3,9 +3,9 @@
     "trustedSequencerURL": "http://zkevm-json-rpc:8123",
     "networkName": "zkevm",
     "trustedSequencer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "chainID": 1001,
+    "chainID": 1002,
     "rollupAdminAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "consensusContractName": "PolygonZkEVMEtrog",
+    "consensusContractName": "AggchainECDSA",
     "gasTokenAddress": "0x0000000000000000000000000000000000000000",
     "deployerPvtKey": "",
     "maxFeePerGas": "",
@@ -13,14 +13,20 @@
     "multiplierGas": "",
     "timelockDelay": 0,
     "timelockSalt": "",
-    "rollupManagerAddress": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+    "rollupManagerAddress": "0x9A676e781A523b5d0C0e43731313A708CB607508",
     "rollupTypeId": 1,
-    "isVanillaClient": false,
+    "isVanillaClient": true,
     "sovereignParams": {
         "bridgeManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "sovereignWETHAddress": "0x0000000000000000000000000000000000000000",
         "sovereignWETHAddressIsNotMintable": false,
         "globalExitRootUpdater": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "globalExitRootRemover": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+    },
+    "aggchainParams": {
+        "useDefaultGateway": true,
+        "ownedAggchainVKey": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "aggchainVKeySelector": "0x1234",
+        "vKeyManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     }
 }

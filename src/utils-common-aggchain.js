@@ -77,7 +77,7 @@ function getFinalAggchainVKeySelectorFromType(_aggchainVKeySelector, _aggchainTy
  * @param {String} networkName L2 network name
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeInitializeBytesPessimistic(
+function encodeInitializeBytesConsensus(
     admin,
     sequencer,
     gasTokenAddress,
@@ -101,5 +101,5 @@ module.exports = {
     AggchainsContracts,
     computeAggchainHash,
     getFinalAggchainVKeySelectorFromType,
-    encodeInitializeBytesPessimistic,
+    encodeInitializeBytesConsensus,
 };

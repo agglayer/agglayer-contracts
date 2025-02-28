@@ -17,7 +17,7 @@ import {
 } from "../../typechain-types";
 import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
 import { processorUtils, MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
-const { encodeInitializeBytesPessimistic } = require("../../src/utils-common-aggchain");
+const { encodeInitializeBytesConsensus } = require("../../src/utils-common-aggchain");
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
@@ -475,7 +475,7 @@ describe("Polygon Rollup manager upgraded", () => {
         expect(expectedRollupType).to.be.deep.equal(await rollupManagerContract.rollupTypeMap(newRollupTypeID));
 
         // Only admin can create new zkEVMs
-        const initializeBytesCustomChain = encodeInitializeBytesPessimistic(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
+        const initializeBytesCustomChain = encodeInitializeBytesConsensus(admin.address, trustedSequencer.address, gasTokenAddress, urlSequencer, networkName);
         await expect(
             rollupManagerContract.attachAggchainToAL(
                 newRollupTypeID,

@@ -19,7 +19,7 @@ const pathOutputJson = addRollupTypeParameters.outputPath
 import {PolygonRollupManager} from "../../typechain-types";
 import "../../deployment/helpers/utils";
 import {supportedBridgeContracts, transactionTypes, genOperation} from "../utils";
-import {AggchainContracts} from "../../src/utils-common-aggchain"
+import {AggchainsContracts} from "../../src/utils-common-aggchain";
 import {ConsensusContracts} from "../../src/pessimistic-utils";
 
 async function main() {
@@ -66,7 +66,7 @@ async function main() {
         programVKey
     } = addRollupTypeParameters;
 
-    const supportedConsensus = AggchainContracts.concat(ConsensusContracts);
+    const supportedConsensus = Object.values(ConsensusContracts).concat(Object.values(AggchainsContracts));
     const isPessimistic = consensusContract === "PolygonPessimisticConsensus";
 
     if (!supportedConsensus.includes(consensusContract)) {
