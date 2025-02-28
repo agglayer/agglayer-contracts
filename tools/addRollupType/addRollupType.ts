@@ -145,7 +145,7 @@ async function main() {
     const polTokenAddress = await rollupManagerContract.pol();
     const aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
 
-    if (!isPessimistic) {
+    if (!isPessimistic && !Object.values(AggchainsContracts).includes(consensusContract)) {
         // checks for rollups
         // Sanity checks genesisRoot
         if (genesisRoot !== genesis.root) {
