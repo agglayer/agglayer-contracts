@@ -17,6 +17,7 @@ import "contracts/consensus/zkEVM/PolygonZkEVMEtrog.sol";
 
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+// TODO: refactor according to the latest changes
 contract PolygonRollupManagerTest is Test, TestHelpers {
     error OnlyNotEmergencyState();
 
@@ -34,7 +35,6 @@ contract PolygonRollupManagerTest is Test, TestHelpers {
 
     mapping(string functionName => mapping(string snapshotName => uint256 snapshotId)) private snapshot;
 
-    AggLayerGateway internal aggLayerGateway;
     PolygonRollupManagerMock internal rollupManager;
     PolygonZkEVMGlobalExitRootV2 internal globalExitRoot;
     IPolygonZkEVMBridgeV2Extended internal bridge;
@@ -43,6 +43,7 @@ contract PolygonRollupManagerTest is Test, TestHelpers {
     VerifierRollupHelperMock internal verifier;
     PolygonZkEVMEtrog internal zkEvm;
 
+    address internal aggLayerGateway = makeAddr("aggLayerGateway");
     address internal trustedAggregator = makeAddr("trustedAggregator");
     address internal trustedSequencer = makeAddr("trustedAggregator");
     address internal admin = makeAddr("admin");
@@ -57,17 +58,12 @@ contract PolygonRollupManagerTest is Test, TestHelpers {
         globalExitRoot = new PolygonZkEVMGlobalExitRootV2(rollupManagerAddr, address(bridge));
         globalExitRoot = PolygonZkEVMGlobalExitRootV2(_proxify(address(globalExitRoot), bytes("")));
 
-        aggLayerGateway = new AggLayerGateway();
-        aggLayerGateway = AggLayerGateway(
-            _proxify(address(aggLayerGateway), abi.encodeCall(AggLayerGateway.initialize, (admin, admin, admin, admin)))
-        );
-
         token = new ERC20PermitMock("Polygon Ecosystem Token", "POL", address(this), 20_000_000 ether);
         rollupManager = new PolygonRollupManagerMock(
             globalExitRoot,
             IERC20Upgradeable(address(token)),
             IPolygonZkEVMBridge(address(bridge)),
-            AggLayerGateway(address(aggLayerGateway))
+            IAggLayerGateway(aggLayerGateway)
         );
         rollupManager = PolygonRollupManagerMock(
             _proxify(
@@ -430,7 +426,7 @@ contract PolygonRollupManagerTest is Test, TestHelpers {
         exe[1] = "inspect";
         exe[2] = "PolygonZkEVMBridgeV2";
         exe[3] = "bytecode";
-        exe[4] = "--contracts=contracts-ignored-originals/PolygonZkEVMBridgeV2.sol";
+        exe[4] = "--contracts=contracts/PolygonZkEVMBridgeV2.sol";
 
         bytes memory creationCode = vm.ffi(exe);
         implementation = makeAddr("PolygonZkEVMBridgeV2");

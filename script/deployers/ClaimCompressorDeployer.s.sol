@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 
-import {ClaimCompressor} from "contracts/utils/ClaimCompressor.sol";
+import {ClaimCompressor} from "contracts/periphery/ClaimCompressor.sol";
 
 abstract contract ClaimCompressorDeployer is Script {
     function deployClaimCompressorImplementation(address __bridgeAddress, uint32 __networkID)

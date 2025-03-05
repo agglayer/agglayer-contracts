@@ -803,7 +803,7 @@ contract PolygonValidiumEtrogTest is
         exe[1] = "inspect";
         exe[2] = "PolygonZkEVMBridgeV2";
         exe[3] = "bytecode";
-        exe[4] = "--contracts=contracts-ignored-originals/PolygonZkEVMBridgeV2.sol";
+        exe[4] = "--contracts=contracts/PolygonZkEVMBridgeV2.sol";
 
         bytes memory creationCode = vm.ffi(exe);
         implementation = makeAddr("PolygonZkEVMBridgeV2");

@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 
-import "contracts-ignored-originals/PolygonZkEVMBridgeV2.sol";
+import "contracts/PolygonZkEVMBridgeV2.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {
     TransparentUpgradeableProxy,

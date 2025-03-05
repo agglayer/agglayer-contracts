@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-import "../PolygonZkEVMBridgeV2.sol";
+import "../../contracts/PolygonZkEVMBridgeV2.sol";
 
 pragma solidity 0.8.28;
 
@@ -13,11 +13,9 @@ contract ClaimCompressor {
     // Indicate where's the mainnet flag bit in the global index
     uint256 private constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
 
-    bytes4 private constant _CLAIM_ASSET_SIGNATURE =
-        IPolygonZkEVMBridgeV2.claimAsset.selector;
+    bytes4 private constant _CLAIM_ASSET_SIGNATURE = IPolygonZkEVMBridgeV2.claimAsset.selector;
 
-    bytes4 private constant _CLAIM_MESSAGE_SIGNATURE =
-        IPolygonZkEVMBridgeV2.claimMessage.selector;
+    bytes4 private constant _CLAIM_MESSAGE_SIGNATURE = IPolygonZkEVMBridgeV2.claimMessage.selector;
 
     // Bytes that will be added to the snark input for every rollup aggregated
     // 4 bytes signature
@@ -25,8 +23,7 @@ contract ClaimCompressor {
     // 32*32 bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofRollupExitRoot
     // 32*8 Rest constant parameters
     // 32 bytes position, 32 bytes length, + length bytes = 4 + 32*32*2 + 32*8 + 32*2 + length metadata = totalLen
-    uint256 internal constant _CONSTANT_BYTES_PER_CLAIM =
-        4 + 32 * 32 * 2 + 8 * 32 + 32 * 2;
+    uint256 internal constant _CONSTANT_BYTES_PER_CLAIM = 4 + 32 * 32 * 2 + 8 * 32 + 32 * 2;
 
     // Bytes len of arrays of 32 positions, of 32 bytes bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH]
     uint256 internal constant _BYTE_LEN_CONSTANT_ARRAYS = 32 * 32;
@@ -96,16 +93,12 @@ contract ClaimCompressor {
         CompressClaimCallData[] calldata compressClaimCalldata
     ) external pure returns (bytes memory) {
         // common parameters for all the claims
-        bytes memory totalCompressedClaim = abi.encodePacked(
-            mainnetExitRoot,
-            rollupExitRoot
-        );
+        bytes memory totalCompressedClaim = abi.encodePacked(mainnetExitRoot, rollupExitRoot);
         bool isRollupSmtSet;
 
         // If the memory cost goes crazy, might need to do it in assembly D:
         for (uint256 i = 0; i < compressClaimCalldata.length; i++) {
-            CompressClaimCallData
-                memory currentCompressClaimCalldata = compressClaimCalldata[i];
+            CompressClaimCallData memory currentCompressClaimCalldata = compressClaimCalldata[i];
 
             // Compute Local Root compressed
 
@@ -117,41 +110,30 @@ contract ClaimCompressor {
             } else {
                 for (uint256 j = 0; j < _DEPOSIT_CONTRACT_TREE_DEPTH; j++) {
                     if (
-                        currentCompressClaimCalldata.smtProofLocalExitRoot[j] !=
-                        compressClaimCalldata[i - 1].smtProofLocalExitRoot[j]
+                        currentCompressClaimCalldata.smtProofLocalExitRoot[j]
+                            != compressClaimCalldata[i - 1].smtProofLocalExitRoot[j]
                     ) {
                         lastDifferentLevel = j + 1;
                     }
                 }
             }
-            bytes memory currentSmtCompressed = abi.encodePacked(
-                uint8(lastDifferentLevel)
-            );
+            bytes memory currentSmtCompressed = abi.encodePacked(uint8(lastDifferentLevel));
             for (uint256 j = 0; j < lastDifferentLevel; j++) {
-                currentSmtCompressed = abi.encodePacked(
-                    currentSmtCompressed,
-                    currentCompressClaimCalldata.smtProofLocalExitRoot[j]
-                );
+                currentSmtCompressed =
+                    abi.encodePacked(currentSmtCompressed, currentCompressClaimCalldata.smtProofLocalExitRoot[j]);
             }
 
             // Compute Rollup Root compressed
             lastDifferentLevel = 0;
-            if (
-                currentCompressClaimCalldata.smtProofRollupExitRoot[0] !=
-                bytes32(0)
-            ) {
+            if (currentCompressClaimCalldata.smtProofRollupExitRoot[0] != bytes32(0)) {
                 if (i == 0 || !isRollupSmtSet) {
                     // compare against hashes of zeroes, TODO
                     lastDifferentLevel = 32;
                 } else {
                     for (uint256 j = 0; j < _DEPOSIT_CONTRACT_TREE_DEPTH; j++) {
                         if (
-                            currentCompressClaimCalldata.smtProofRollupExitRoot[
-                                j
-                            ] !=
-                            compressClaimCalldata[i - 1].smtProofRollupExitRoot[
-                                j
-                            ]
+                            currentCompressClaimCalldata.smtProofRollupExitRoot[j]
+                                != compressClaimCalldata[i - 1].smtProofRollupExitRoot[j]
                         ) {
                             lastDifferentLevel = j + 1;
                         }
@@ -160,16 +142,11 @@ contract ClaimCompressor {
                 isRollupSmtSet = true;
             }
 
-            currentSmtCompressed = abi.encodePacked(
-                currentSmtCompressed,
-                uint8(lastDifferentLevel)
-            );
+            currentSmtCompressed = abi.encodePacked(currentSmtCompressed, uint8(lastDifferentLevel));
 
             for (uint256 j = 0; j < lastDifferentLevel; j++) {
-                currentSmtCompressed = abi.encodePacked(
-                    currentSmtCompressed,
-                    currentCompressClaimCalldata.smtProofRollupExitRoot[j]
-                );
+                currentSmtCompressed =
+                    abi.encodePacked(currentSmtCompressed, currentCompressClaimCalldata.smtProofRollupExitRoot[j]);
             }
 
             // currentSmtCompressed:
@@ -192,17 +169,12 @@ contract ClaimCompressor {
             );
 
             // Accumulate all claim calls
-            totalCompressedClaim = abi.encodePacked(
-                totalCompressedClaim,
-                compressedClaimCall
-            );
+            totalCompressedClaim = abi.encodePacked(totalCompressedClaim, compressedClaimCall);
         }
         return totalCompressedClaim;
     }
 
-    function sendCompressedClaims(
-        bytes calldata compressedClaimCalls
-    ) external {
+    function sendCompressedClaims(bytes calldata compressedClaimCalls) external {
         // TODO get metadata tokens ( max len metadata)
         // TODO first rollupExitRoot, instead of zeroes, could be zero hashes,  Codecopy?¿
 
@@ -294,17 +266,11 @@ contract ClaimCompressor {
             mstore(add(4, mul(72, 32)), _METADATA_OFSSET)
 
             // Start the calldata pointer after the constant parameters
-            let currentCalldataPointer := add(
-                compressedClaimCallsOffset,
-                _CONSTANT_VARIABLES_LENGTH
-            )
+            let currentCalldataPointer := add(compressedClaimCallsOffset, _CONSTANT_VARIABLES_LENGTH)
 
             for {
                 // initialization block, empty
-            } lt(
-                currentCalldataPointer,
-                add(compressedClaimCallsOffset, compressedClaimCallsLen)
-            ) {
+            } lt(currentCalldataPointer, add(compressedClaimCallsOffset, compressedClaimCallsLen)) {
                 // after iteration block, empty
             } {
                 // loop block, non empty ;)
@@ -348,13 +314,14 @@ contract ClaimCompressor {
                 let memPointer := 4
 
                 // load lastDifferentLevelLocal
-                let smtProofBytesToCopy := mul(
-                    shr(
-                        248, // 256 - 8(lastDifferentLevelLocal) = 248
-                        calldataload(currentCalldataPointer)
-                    ),
-                    32
-                )
+                let smtProofBytesToCopy :=
+                    mul(
+                        shr(
+                            248, // 256 - 8(lastDifferentLevelLocal) = 248
+                            calldataload(currentCalldataPointer)
+                        ),
+                        32
+                    )
 
                 // Add 1 byte of lastDifferentLevelLocal
                 currentCalldataPointer := add(currentCalldataPointer, 1)
@@ -366,21 +333,19 @@ contract ClaimCompressor {
                 )
 
                 // Add smtProofBytesToCopy bits of smtProofCompressed
-                currentCalldataPointer := add(
-                    currentCalldataPointer,
-                    smtProofBytesToCopy
-                )
+                currentCalldataPointer := add(currentCalldataPointer, smtProofBytesToCopy)
                 // mem pointer, add smtProofLocalExitRoot(current)
                 memPointer := add(memPointer, mul(32, 32))
 
                 // load lastDifferentLevelRollup
-                smtProofBytesToCopy := mul(
-                    shr(
-                        248, // 256 - 8(lastDifferentLevelRollup) = 248
-                        calldataload(currentCalldataPointer)
-                    ),
-                    32
-                )
+                smtProofBytesToCopy :=
+                    mul(
+                        shr(
+                            248, // 256 - 8(lastDifferentLevelRollup) = 248
+                            calldataload(currentCalldataPointer)
+                        ),
+                        32
+                    )
 
                 // Add 1 byte of lastDifferentLevelRollup
                 currentCalldataPointer := add(currentCalldataPointer, 1)
@@ -392,10 +357,7 @@ contract ClaimCompressor {
                 )
 
                 // Add smtProofBytesToCopy bits of smtProofCompressed
-                currentCalldataPointer := add(
-                    currentCalldataPointer,
-                    smtProofBytesToCopy
-                )
+                currentCalldataPointer := add(currentCalldataPointer, smtProofBytesToCopy)
 
                 // mem pointer, add smtProofRollupExitRoot(current)
                 memPointer := add(memPointer, mul(32, 32))
@@ -479,10 +441,11 @@ contract ClaimCompressor {
                 // Copy the next 4 bytes for the uint32(metadata[i].length)
 
                 // load metadataLen
-                let metadataLen := shr(
-                    224, // 256 - 32(uint32(metadata[i].length)) = 224
-                    calldataload(currentCalldataPointer)
-                )
+                let metadataLen :=
+                    shr(
+                        224, // 256 - 32(uint32(metadata[i].length)) = 224
+                        calldataload(currentCalldataPointer)
+                    )
 
                 mstore(memPointer, metadataLen)
 
@@ -500,10 +463,7 @@ contract ClaimCompressor {
                     metadataLen // Copy metadataLen bytes
                 )
 
-                currentCalldataPointer := add(
-                    currentCalldataPointer,
-                    metadataLen
-                )
+                currentCalldataPointer := add(currentCalldataPointer, metadataLen)
 
                 memPointer := add(memPointer, metadataLen)
 
@@ -511,25 +471,22 @@ contract ClaimCompressor {
                 mstore(memPointer, 0)
 
                 // metadata len should be a multiple of 32 bytes
-                let totalLenCall := add(
-                    _CONSTANT_BYTES_PER_CLAIM,
-                    add(metadataLen, mod(sub(32, mod(metadataLen, 32)), 32))
-                )
+                let totalLenCall :=
+                    add(_CONSTANT_BYTES_PER_CLAIM, add(metadataLen, mod(sub(32, mod(metadataLen, 32)), 32)))
 
-                if lt(gas(), 2500000) {
-                    revert(0, 0)
-                }
+                if lt(gas(), 2500000) { revert(0, 0) }
 
                 // SHould i limit the gas TODO of the call
-                let success := call(
-                    2000000, // gas // TODO gas Limited to 2M, could be better to check if it's created the token or not and limit later
-                    bridgeAddress, // address
-                    0, // value
-                    0, // args offset
-                    totalLenCall, // argsSize
-                    0, // retOffset
-                    0 // retSize
-                )
+                let success :=
+                    call(
+                        2000000, // gas // TODO gas Limited to 2M, could be better to check if it's created the token or not and limit later
+                        bridgeAddress, // address
+                        0, // value
+                        0, // args offset
+                        totalLenCall, // argsSize
+                        0, // retOffset
+                        0 // retSize
+                    )
             }
         }
     }

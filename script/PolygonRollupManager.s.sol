@@ -12,7 +12,7 @@ contract Deploy is Script, PolygonRollupManagerDeployer {
             IPolygonZkEVMGlobalExitRootV2(_globalExitRootManager),
             IERC20Upgradeable(_pol),
             IPolygonZkEVMBridge(_bridgeAddress),
-            AggLayerGateway(_aggLayerGateway)
+            IAggLayerGateway(_aggLayerGateway)
         );
         console.log("PolygonRollupManager implementation: ", implementation);
     }

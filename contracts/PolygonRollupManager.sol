@@ -1169,50 +1169,15 @@ contract PolygonRollupManager is
      * @dev A reentrancy measure has been applied because this function calls `onVerifyPessimistic`, is an open function implemented by the aggchains
      * @dev the function can not be a view because the nonReentrant uses a transient storage variable
      */
-    function _tryConsolidatePendingState(RollupData storage rollup) internal {
-        // Check if there's any state to consolidate
-        if (rollup.lastPendingState > rollup.lastPendingStateConsolidated) {
-            // Check if it's possible to consolidate the next pending state
-            uint64 nextPendingState = rollup.lastPendingStateConsolidated + 1;
-            if (_isPendingStateConsolidable(rollup, nextPendingState)) {
-                // Check middle pending state ( binary search of 1 step)
-                uint64 middlePendingState = nextPendingState +
-                    (rollup.lastPendingState - nextPendingState) /
-                    2;
-
-                // Try to consolidate it, and if not, consolidate the nextPendingState
-                if (_isPendingStateConsolidable(rollup, middlePendingState)) {
-                    _consolidatePendingState(rollup, middlePendingState);
-                } else {
-                    _consolidatePendingState(rollup, nextPendingState);
-                }
-            }
-        }
-    }
-
-    /**
-     * @notice Allows to consolidate any pending state that has already exceed the pendingStateTimeout
-     * Can be called by the trusted aggregator, which can consolidate any state without the timeout restrictions
-     * @param rollupID Rollup identifier
-     * @param l1InfoTreeLeafCount Count of the L1InfoTree leaf that will be used to verify imported bridge exits
-     * @param newLocalExitRoot New local exit root
-     * @param newPessimisticRoot New pessimistic information, Hash(localBalanceTreeRoot, nullifierTreeRoot)
-     * @param proof SP1 proof (Plonk)
-     * @param customChainData Specific custom data to verify Aggregation layer chains
-     * @dev A reentrancy measure has been applied because this function calls `getAggchainHash`, is an open function implemented by the aggchains
-     * @dev the function can not be a view because the nonReentrant uses a transient storage variable
-     */
     function verifyPessimisticTrustedAggregator(
         uint32 rollupID,
-        uint64 pendingStateNum
-    ) external {
-        RollupData storage rollup = rollupIDToRollupData[rollupID];
-        // Check if pending state can be consolidated
-        // If trusted aggregator is the sender, do not check the timeout or the emergency state
-        if (!hasRole(_TRUSTED_AGGREGATOR_ROLE, msg.sender)) {
-            if (isEmergencyState) {
-                revert OnlyNotEmergencyState();
-            }
+        uint32 l1InfoTreeLeafCount,
+        bytes32 newLocalExitRoot,
+        bytes32 newPessimisticRoot,
+        bytes calldata proof,
+        bytes calldata customChainData
+    ) external onlyRole(_TRUSTED_AGGREGATOR_ROLE) nonReentrant {
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
 
         // Not for state transition chains
         if (rollup.rollupVerifierType == VerifierType.StateTransition) {
@@ -1225,46 +1190,6 @@ contract PolygonRollupManager is
             customChainData.length != 0
         ) {
             revert CustomChainDataMustBeZeroForPessimisticVerifierType();
-        }
-
-        // Check l1InfoTreeLeafCount has a valid l1InfoTreeRoot
-        bytes32 l1InfoRoot = globalExitRootManager.l1InfoRootMap(
-            l1InfoTreeLeafCount
-        );
-    }
-
-    /////////////////////////////////
-    // Soundness protection functions
-    /////////////////////////////////
-
-    /**
-     * @notice Allows the trusted aggregator to override the pending state
-     * if it's possible to prove a different state root given the same batches
-     * @param rollupID Rollup identifier
-     * @param initPendingStateNum Init pending state, 0 if consolidated state is used
-     * @param finalPendingStateNum Final pending state, that will be used to compare with the newStateRoot
-     * @param initNumBatch Batch which the aggregator starts the verification
-     * @param finalNewBatch Last batch aggregator intends to verify
-     * @param newLocalExitRoot  New local exit root once the batch is processed
-     * @param newStateRoot New State root once the batch is processed
-     * @param proof Fflonk proof
-     */
-    function overridePendingState(
-        uint32 rollupID,
-        uint64 initPendingStateNum,
-        uint64 finalPendingStateNum,
-        uint64 initNumBatch,
-        uint64 finalNewBatch,
-        bytes32 newLocalExitRoot,
-        bytes32 newPessimisticRoot,
-        bytes calldata proof,
-        bytes calldata customChainData
-    ) external onlyRole(_TRUSTED_AGGREGATOR_ROLE) nonReentrant {
-        RollupData storage rollup = _rollupIDToRollupData[rollupID];
-
-        // Only for pessimistic verifiers
-        if (rollup.rollupVerifierType == VerifierType.StateTransition) {
-            revert StateTransitionChainsNotAllowed();
         }
 
         // Check l1InfoTreeLeafCount has a valid l1InfoTreeRoot
