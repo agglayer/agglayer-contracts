@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/governance/TimelockController.sol";
-import "./PolygonZkEVM.sol";
+import "./outdated/PolygonZkEVM.sol";
 
 /**
  * @dev Contract module which acts as a timelocked controller.
@@ -20,7 +20,8 @@ contract PolygonZkEVMTimelock is TimelockController {
      * @param executors accounts to be granted executor role
      * @param admin optional account to be granted admin role; disable with zero address
      * @param _polygonZkEVM polygonZkEVM address
-     **/
+     *
+     */
     constructor(
         uint256 minDelay,
         address[] memory proposers,
