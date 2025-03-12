@@ -24,11 +24,11 @@ const {
 } = require('@0xpolygonhermez/zkevm-commonjs');
 const contractsPolygonHermez = require('../index');
 
-// Example of use: node create-genesis.js --gen genesis-gen.json --out genesis.json
+// Example of use: node create-genesis.js --gen <input-genesis> --out <output-file>
 async function main() {
     // load generator
     const inputPath = (typeof argv.gen === 'undefined') ? undefined : argv.gen;
-    if (inputPath === undefined) { throw Error('Input genesis must be provided'); }
+    if (inputPath === undefined) { throw Error('Input genesis file must be provided'); }
 
     // load output file
     const outPath = (typeof argv.out === 'undefined') ? undefined : argv.out;
@@ -187,7 +187,7 @@ async function main() {
         accountsOutput.push(currentAccountOutput);
     }
 
-    // add accounts that has not been used
+    // Add accounts that have not been used
     for (let i = 0; i < genesis.length; i++) {
         const item = genesis[i];
         if (typeof updatedAccounts[item.address.toLowerCase()] === 'undefined') {
