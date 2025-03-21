@@ -30,7 +30,7 @@
     "homepage": "https://github.com/0xPolygonHermez/contracts-zkEVM#readme",
     "license": "pending",
     "devDependencies": {
-        "@0xpolygonhermez/zkevm-commonjs": "github:0xPolygonHermez/zkevm-commonjs#v8.0.0-fork.12",
+        "@0xpolygonhermez/zkevm-commonjs": "github:0xPolygonHermez/zkevm-commonjs#feature/frontier",
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
         "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
         "@nomiclabs/hardhat-solhint": "^4.0.1",

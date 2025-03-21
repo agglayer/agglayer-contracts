@@ -13,6 +13,11 @@ contract DepositContractBase {
      */
     error MerkleTreeFull();
 
+    /**
+     * @dev Cannot rollback to a higher depositCount than the current one
+     */
+    error NewDepositCountGreaterThanCurrent();
+
     // Merkle tree levels
     uint256 internal constant _DEPOSIT_CONTRACT_TREE_DEPTH = 32;
 
@@ -86,6 +91,23 @@ contract DepositContractBase {
         // As the loop should always end prematurely with the `return` statement,
         // this code should be unreachable. We assert `false` just to be safe.
         assert(false);
+    }
+
+    /**
+     * @notice Rollback the merkle tree to a previous state
+     * @param newDepositCount New deposit count
+     * @param newFrontier New frontier (branch array)
+     */
+    function _rollbackTree(uint256 newDepositCount, bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier) internal {
+        if (newDepositCount >= depositCount) {
+            revert NewDepositCountGreaterThanCurrent();
+        }
+
+        for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
+            _branch[i] = newFrontier[i];
+        }
+
+        depositCount = newDepositCount;
     }
 
     /**
