@@ -1142,7 +1142,7 @@ contract PolygonRollupManagerPrevious is
     }
 
     /**
-     * @notice Allows to consolidate any pending state that has already exceed the pendingStateTimeout
+     * @notice Allows to consolidate any pending state that has already exceeded the pendingStateTimeout
      * Can be called by the trusted aggregator, which can consolidate any state without the timeout restrictions
      * @param rollupID Rollup identifier
      * @param pendingStateNum Pending state to consolidate
@@ -1167,7 +1167,7 @@ contract PolygonRollupManagerPrevious is
     }
 
     /**
-     * @notice Internal function to consolidate any pending state that has already exceed the pendingStateTimeout
+     * @notice Internal function to consolidate any pending state that has already exceeded the pendingStateTimeout
      * @param rollup Rollup data storage pointer
      * @param pendingStateNum Pending state to consolidate
      */

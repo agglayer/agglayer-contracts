@@ -313,7 +313,7 @@ contract PolygonRollupManager is
     );
 
     /**
-     * @dev Emitted when a a rolup type is obsoleted
+     * @dev Emitted when a rolup type is obsoleted
      */
     event ObsoleteRollupType(uint32 indexed rollupTypeID);
 
@@ -342,7 +342,7 @@ contract PolygonRollupManager is
     );
 
     /**
-     * @dev Emitted when a rollup is udpated
+     * @dev Emitted when a rollup is updated
      */
     event UpdateRollup(
         uint32 indexed rollupID,
@@ -656,7 +656,7 @@ contract PolygonRollupManager is
 
     /**
      * @notice Upgrade an existing rollup from the rollup admin address
-     * This address is able to udpate the rollup with more restrictions that the _UPDATE_ROLLUP_ROLE
+     * This address is able to update the rollup with more restrictions that the _UPDATE_ROLLUP_ROLE
      * @param rollupContract Rollup consensus proxy address
      * @param newRollupTypeID New rolluptypeID to upgrade to
      */
@@ -1281,8 +1281,8 @@ contract PolygonRollupManager is
 
     /**
      * @notice Get batch fee
-     * This function is used instad of the automatic public view one,
-     * because in a future might change the behaviour and we will be able to mantain the interface
+     * This function is used instead of the automatic public view one,
+     * because in a future might change the behaviour and we will be able to maintain the interface
      */
     function getBatchFee() public view returns (uint256) {
         return _batchFee;

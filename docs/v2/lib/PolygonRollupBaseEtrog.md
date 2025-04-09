@@ -250,7 +250,7 @@ Emitted when the contract is initialized, contain the first sequenced transactio
   )
 ```
 
-Emitted when a aggregator verifies batches
+Emitted when an aggregator verifies batches
 
 ### RollbackBatches
 ```solidity
@@ -258,7 +258,7 @@ Emitted when a aggregator verifies batches
   )
 ```
 
-Emitted when a aggregator verifies batches
+Emitted when an aggregator verifies batches
 
 ### SetForceBatchTimeout
 ```solidity
