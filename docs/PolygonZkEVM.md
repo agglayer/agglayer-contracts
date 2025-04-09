@@ -153,7 +153,7 @@ It tries to consolidate the first and the middle pending state in the queue
     uint64 pendingStateNum
   ) external
 ```
-Allows to consolidate any pending state that has already exceed the pendingStateTimeout
+Allows to consolidate any pending state that has already exceeded the pendingStateTimeout
 Can be called by the trusted aggregator, which can consolidate any state without the timeout restrictions
 
 
@@ -168,7 +168,7 @@ Can be called by the trusted aggregator, which can consolidate any state without
     uint64 pendingStateNum
   ) internal
 ```
-Internal function to consolidate any pending state that has already exceed the pendingStateTimeout
+Internal function to consolidate any pending state that has already exceeded the pendingStateTimeout
 
 
 #### Parameters:
@@ -359,7 +359,7 @@ This action is not reversible
   ) external
 ```
 Starts the admin role transfer
-This is a two step process, the pending admin must accepted to finalize the process
+This is a two step process, the pending admin must accept to finalize the process
 
 
 #### Parameters:
@@ -587,7 +587,7 @@ Emitted when forced batches are sequenced by not the trusted sequencer
   )
 ```
 
-Emitted when a aggregator verifies batches
+Emitted when an aggregator verifies batches
 
 ### VerifyBatchesTrustedAggregator
 ```solidity

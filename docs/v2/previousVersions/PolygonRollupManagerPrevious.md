@@ -319,7 +319,7 @@ It tries to consolidate the first and the middle pending state in the queue
     uint64 pendingStateNum
   ) external
 ```
-Allows to consolidate any pending state that has already exceed the pendingStateTimeout
+Allows to consolidate any pending state that has already exceeded the pendingStateTimeout
 Can be called by the trusted aggregator, which can consolidate any state without the timeout restrictions
 
 
@@ -336,7 +336,7 @@ Can be called by the trusted aggregator, which can consolidate any state without
     uint64 pendingStateNum
   ) internal
 ```
-Internal function to consolidate any pending state that has already exceed the pendingStateTimeout
+Internal function to consolidate any pending state that has already exceeded the pendingStateTimeout
 
 
 #### Parameters:
