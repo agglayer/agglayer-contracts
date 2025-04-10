@@ -1,13 +1,13 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-const ethers = require('ethers');
+import ethers from 'ethers';
 
 /// ////////////////////////////////////
 /// // Constants for Aggchain ECDSA ////
 /// ////////////////////////////////////
 
 // aggchain type selector for ECDSA
-const AGGCHAIN_TYPE_ECDSA = '0x0000';
+export const AGGCHAIN_TYPE_ECDSA = '0x0000';
 
 /// ////////////////////////////////////
 /// // Functions for Aggchain ECDSA ////
@@ -26,7 +26,7 @@ const AGGCHAIN_TYPE_ECDSA = '0x0000';
  * @param {String} networkName L2 network name
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeInitializeBytesAggchainECDSAv0(
+export function encodeInitializeBytesAggchainECDSAv0(
     useDefaultGateway,
     ownedAggchainVKey,
     aggchainVKeySelector,
@@ -61,7 +61,7 @@ function encodeInitializeBytesAggchainECDSAv0(
  * @param {String} vKeyManager vkey manager address
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeInitializeBytesAggchainECDSAv1(
+export function encodeInitializeBytesAggchainECDSAv1(
     useDefaultGateway,
     ownedAggchainVKey,
     aggchainVKeySelector,
@@ -84,7 +84,7 @@ function encodeInitializeBytesAggchainECDSAv1(
  * @param {String} newStateRoot new state root
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeAggchainDataECDSA(aggchainVKeySelector, newStateRoot) {
+export function encodeAggchainDataECDSA(aggchainVKeySelector, newStateRoot) {
     return ethers.AbiCoder.defaultAbiCoder().encode(['bytes4', 'bytes32'], [aggchainVKeySelector, newStateRoot]);
 }
 
@@ -93,14 +93,6 @@ function encodeAggchainDataECDSA(aggchainVKeySelector, newStateRoot) {
  * @param {String} trustedSequencer Trusted sequencer address
  * @returns {String} hash of encoded value in hexadecimal string (32 bytes)
  */
-function computeHashAggchainParamsECDSA(trustedSequencer) {
+export function computeHashAggchainParamsECDSA(trustedSequencer) {
     return ethers.solidityPackedKeccak256(['address'], [trustedSequencer]);
 }
-
-module.exports = {
-    AGGCHAIN_TYPE_ECDSA,
-    encodeInitializeBytesAggchainECDSAv0,
-    encodeInitializeBytesAggchainECDSAv1,
-    encodeAggchainDataECDSA,
-    computeHashAggchainParamsECDSA,
-};
