@@ -1,10 +1,14 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-const ethers = require('ethers');
+import ethers from 'ethers';
 
-const supportedBridgeContracts = ['PolygonZkEVMBridgeV2 proxy', 'PolygonZkEVMBridge proxy', 'BridgeL2SovereignChain proxy'];
+export const supportedBridgeContracts = [
+    'PolygonZkEVMBridgeV2 proxy',
+    'PolygonZkEVMBridge proxy',
+    'BridgeL2SovereignChain proxy',
+];
 
-function genOperation(target, value, data, predecessor, salt) {
+export function genOperation(target, value, data, predecessor, salt) {
     const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
         ['address', 'uint256', 'bytes', 'uint256', 'bytes32'],
         [target, value, data, predecessor, salt],
@@ -20,14 +24,14 @@ function genOperation(target, value, data, predecessor, salt) {
     };
 }
 
-const transactionTypes = {
+export const transactionTypes = {
     EOA: 'EOA',
     MULTISIG: 'Multisig',
     TIMELOCK: 'Timelock',
 };
 
 // Function to recursively convert BigInts to Numbers
-function convertBigIntsToNumbers(obj) {
+export function convertBigIntsToNumbers(obj) {
     if (typeof obj === 'bigint') {
         if (obj > BigInt(Number.MAX_SAFE_INTEGER)) {
             throw new Error(`convertBigIntsToNumbers: BigInt exceeds maximum safe integer: ${obj}`);
@@ -52,10 +56,10 @@ function convertBigIntsToNumbers(obj) {
     return obj; // Return the value if it's not a BigInt, object, or array
 }
 
-function checkBridgeAddress(genesis, expectedBridgeAddress){
+export function checkBridgeAddress(genesis, expectedBridgeAddress) {
     // get bridge address in genesis file
     let genesisBridgeAddress = ethers.ZeroAddress;
-    let bridgeContractName = "";
+    let bridgeContractName = '';
 
     for (let i = 0; i < genesis.genesis.length; i++) {
         if (supportedBridgeContracts.includes(genesis.genesis[i].contractName)) {
@@ -67,15 +71,7 @@ function checkBridgeAddress(genesis, expectedBridgeAddress){
 
     if (expectedBridgeAddress.toLowerCase() !== genesisBridgeAddress.toLowerCase()) {
         throw new Error(
-            `checkBridgeAddress: '${bridgeContractName}' address in the 'genesis.json' does not match the 'expectedBridgeAddress'`
+            `checkBridgeAddress: '${bridgeContractName}' address in the 'genesis.json' does not match the 'expectedBridgeAddress'`,
         );
     }
 }
-
-module.exports = {
-    genOperation,
-    transactionTypes,
-    convertBigIntsToNumbers,
-    supportedBridgeContracts,
-    checkBridgeAddress,
-};

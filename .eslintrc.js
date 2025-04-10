@@ -18,6 +18,7 @@ module.exports = {
         'airbnb-base',
         'airbnb-typescript/base',
         'plugin:@typescript-eslint/recommended',
+        'plugin:prettier/recommended',
     ],
     rules: {
         '@typescript-eslint/indent': ['error', 4],
@@ -38,8 +39,8 @@ module.exports = {
         'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: true }],
         'import/no-extraneous-dependencies': 'off',
 
-        // Puedes ajustar reglas específicas de TS si quieres:
         '@typescript-eslint/no-unused-vars': ['error'],
         '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-explicit-any': 'warn',
     },
 };

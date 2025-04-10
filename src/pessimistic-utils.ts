@@ -1,20 +1,19 @@
-const ethers = require('ethers');
+import ethers from 'ethers';
 
-const VerifierType = {
+export const VerifierType = {
     StateTransition: 0,
     Pessimistic: 1,
     ALGateway: 2,
 };
 
-const ConsensusTypes = {
+export const ConsensusTypes = {
     Ecdsa: 0,
 };
 
-const ConsensusContracts = {
+export const ConsensusContracts = {
     PolygonZkEVMEtrog: 'PolygonZkEVMEtrog',
     PolygonValidiumEtrog: 'PolygonValidiumEtrog',
     PolygonPessimisticConsensus: 'PolygonPessimisticConsensus',
-
 };
 /**
  * Compute input for SNARK circuit: sha256(
@@ -30,7 +29,7 @@ const ConsensusContracts = {
  * @param {String} newLocalExitRoot - new LER
  * @param {String} newPessimisticRoot - new pessimistic root
  */
-function computeInputPessimisticBytes(
+export function computeInputPessimisticBytes(
     lastLocalExitRoot,
     lastPessimisticRoot,
     l1InfoTreeRoot,
@@ -58,7 +57,7 @@ function computeInputPessimisticBytes(
  * @param address - Signer of the message in the pessimsistic proof
  * @returns consensus hash
  */
-function computeConsensusHashEcdsa(address) {
+export function computeConsensusHashEcdsa(address) {
     return ethers.solidityPackedKeccak256(['uint32', 'address'], [ConsensusTypes.Ecdsa, address]);
 }
 
@@ -67,15 +66,6 @@ function computeConsensusHashEcdsa(address) {
  * @param {Number} length of the output random bytes
  * @returns random bytes as a hex string
  */
-function computeRandomBytes(length) {
+export function computeRandomBytes(length) {
     return `0x${Buffer.from(ethers.randomBytes(length)).toString('hex')}`;
 }
-
-module.exports = {
-    VerifierType,
-    ConsensusTypes,
-    computeInputPessimisticBytes,
-    computeConsensusHashEcdsa,
-    ConsensusContracts,
-    computeRandomBytes,
-};

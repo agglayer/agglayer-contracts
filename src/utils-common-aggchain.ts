@@ -1,26 +1,23 @@
-const ethers = require('ethers');
+import ethers from 'ethers';
 
 /// //////////////////////////////
 /// // Constants for Aggchain ////
 /// //////////////////////////////
 
 // aggchain type constant to define an aggchain using pessimistic proof v0.3.0
-const CONSENSUS_TYPE = {
+export const CONSENSUS_TYPE = {
     LEGACY: 0,
     GENERIC: 1,
 };
 
-const AGGCHAIN_CONTRACT_NAMES = {
+export const AGGCHAIN_CONTRACT_NAMES = {
     ECDSA: 'AggchainECDSA',
     FEP: 'AggchainFEP',
 };
 
-const ARRAY_AGGCHAIN_SUPPORTED_NAMES = [
-    'AggchainECDSA',
-    'AggchainFEP',
-];
+export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSA', 'AggchainFEP'];
 
-const GENESIS_CONTRACT_NAMES = {
+export const GENESIS_CONTRACT_NAMES = {
     WETH: 'WETH',
     WETH_PROXY: 'WETH proxy',
     TOKEN_WRAPPED_IMPLEMENTATION: 'TokenWrapped implementation',
@@ -50,11 +47,7 @@ const GENESIS_CONTRACT_NAMES = {
  * @param {String} hashAggchainParams hash aggchain params
  * @returns compute aggchain hash
  */
-function computeAggchainHash(
-    aggchainType,
-    aggchainVKey,
-    hashAggchainParams,
-) {
+export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainParams) {
     // sanity check
     if (Number(aggchainType) !== CONSENSUS_TYPE.GENERIC) {
         throw new Error(`Invalid aggchain type for v0.3.0. Must be ${CONSENSUS_TYPE.GENERIC}`);
@@ -73,7 +66,7 @@ function computeAggchainHash(
  * @param {String} _aggchainType aggchain selector type (ECDSA:0, FEP: 1)
  * @returns AggchainVKeySelector
  */
-function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {
+export function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {
     // remove "0x" if ot exist on aggchainSelector with startWith method
     const aggchainVKeyVersion = _aggchainVKeyVersion.startsWith('0x') ? _aggchainVKeyVersion.slice(2) : _aggchainVKeyVersion;
 
@@ -97,7 +90,7 @@ function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {
  * @param {String} _aggchainVKeySelector aggchain vkey selector
  * @returns AggchainType
  */
-function getAggchainTypeFromSelector(_aggchainVKeySelector) {
+export function getAggchainTypeFromSelector(_aggchainVKeySelector) {
     // remove "0x" if ot exist on aggchainVKeySelector with startWith method
     const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x') ? _aggchainVKeySelector.slice(2) : _aggchainVKeySelector;
 
@@ -114,7 +107,7 @@ function getAggchainTypeFromSelector(_aggchainVKeySelector) {
  * @param {String} _aggchainVKeySelector aggchain vkey selector
  * @returns AggchainType
  */
-function getAggchainVKeyVersionFromSelector(_aggchainVKeySelector) {
+export function getAggchainVKeyVersionFromSelector(_aggchainVKeySelector) {
     // remove "0x" if ot exist on aggchainVKeySelector with startWith method
     const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x') ? _aggchainVKeySelector.slice(2) : _aggchainVKeySelector;
 
@@ -135,22 +128,10 @@ function getAggchainVKeyVersionFromSelector(_aggchainVKeySelector) {
  * @param {String} networkName L2 network name
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeInitializeBytesLegacy(
-    admin,
-    sequencer,
-    gasTokenAddress,
-    sequencerURL,
-    networkName,
-) {
+export function encodeInitializeBytesLegacy(admin, sequencer, gasTokenAddress, sequencerURL, networkName) {
     return ethers.AbiCoder.defaultAbiCoder().encode(
         ['address', 'address', 'address', 'string', 'string'],
-        [
-            admin,
-            sequencer,
-            gasTokenAddress,
-            sequencerURL,
-            networkName,
-        ],
+        [admin, sequencer, gasTokenAddress, sequencerURL, networkName],
     );
 }
 
@@ -159,26 +140,6 @@ function encodeInitializeBytesLegacy(
  * @param {String} aggchainManager Aggchain manager address
  * @returns {String} Encoded value in hexadecimal string
  */
-function encodeInitAggchainManager(
-    aggchainManager,
-) {
-    return ethers.AbiCoder.defaultAbiCoder().encode(
-        ['address'],
-        [
-            aggchainManager,
-        ],
-    );
+export function encodeInitAggchainManager(aggchainManager) {
+    return ethers.AbiCoder.defaultAbiCoder().encode(['address'], [aggchainManager]);
 }
-
-module.exports = {
-    CONSENSUS_TYPE,
-    AGGCHAIN_CONTRACT_NAMES,
-    computeAggchainHash,
-    getAggchainVKeySelector,
-    encodeInitializeBytesLegacy,
-    encodeInitAggchainManager,
-    ARRAY_AGGCHAIN_SUPPORTED_NAMES,
-    getAggchainTypeFromSelector,
-    getAggchainVKeyVersionFromSelector,
-    GENESIS_CONTRACT_NAMES,
-};
