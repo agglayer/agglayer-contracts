@@ -21,10 +21,8 @@ process.env.HARDHAT_NETWORK = "hardhat";
 process.env.MNEMONIC = argv.test ? DEFAULT_MNEMONIC : process.env.MNEMONIC;
 import {ethers, upgrades} from "hardhat";
 import {MemDB, ZkEVMDB, getPoseidon, smtUtils} from "@0xpolygonhermez/zkevm-commonjs";
-
-import {deployPolygonZkEVMDeployer, create2Deployment, getCreate2Address} from "../helpers/deployment-helpers";
+import {deployPolygonZkEVMDeployer, create2Deployment, getAddressInfo} from "../helpers/deployment-helpers";
 import {ProxyAdmin} from "../../typechain-types";
-import {Addressable} from "ethers";
 import { GENESIS_CONTRACT_NAMES } from "../../src/utils-common-aggchain";
 import "../helpers/utils";
 
@@ -497,30 +495,3 @@ main().catch((e) => {
     console.error(e);
     process.exit(1);
 });
-
-async function getAddressInfo(address: string | Addressable) {
-    const nonce = await ethers.provider.getTransactionCount(address);
-    const bytecode = await ethers.provider.getCode(address);
-
-    const storage = {} as {
-        [key: string]: number | string;
-    };
-
-    for (let i = 0; i < 200; i++) {
-        const storageValue = await ethers.provider.getStorage(address, i);
-        if (storageValue !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
-            storage[ethers.toBeHex(i, 32)] = storageValue;
-        }
-    }
-
-    const valueAdminSlot = await ethers.provider.getStorage(address, _ADMIN_SLOT);
-    if (valueAdminSlot !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
-        storage[_ADMIN_SLOT] = valueAdminSlot;
-    }
-    const valueImplementationSlot = await ethers.provider.getStorage(address, _IMPLEMENTATION_SLOT);
-    if (valueImplementationSlot !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
-        storage[_IMPLEMENTATION_SLOT] = valueImplementationSlot;
-    }
-
-    return {nonce, bytecode, storage};
-}

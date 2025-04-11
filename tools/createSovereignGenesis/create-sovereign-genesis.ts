@@ -1,37 +1,37 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
 // external dependencies
-import path = require("path");
-import fs = require("fs");
+import path = require('path');
+import fs = require('fs');
 
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, hardhatArguments} from "hardhat";
+import * as dotenv from 'dotenv';
+import { ethers, hardhatArguments } from 'hardhat';
 
 // internal dependencies
-import {MemDB, ZkEVMDB, getPoseidon, smtUtils} from "@0xpolygonhermez/zkevm-commonjs";
-import updateVanillaGenesis from "../../deployment/v2/utils/updateVanillaGenesis";
-import { PolygonRollupManager, PolygonZkEVMBridgeV2} from "../../typechain-types";
-import "../../deployment/helpers/utils";
-import { initializeTimelockStorage } from "../../src/genesis/genesis-helpers";
+import { MemDB, ZkEVMDB, getPoseidon, smtUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis';
+import { PolygonRollupManager, PolygonZkEVMBridgeV2 } from '../../typechain-types';
+import '../../deployment/helpers/utils';
+import { initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
 import { checkParams } from '../../src/utils';
-import { logger } from "../../src/logger";
-import { formatGenesis, getGitInfo } from "./helpers";
-import { checkBridgeAddress } from "../utils";
+import { logger } from '../../src/logger';
+import { formatGenesis, getGitInfo } from './helpers';
+import { checkBridgeAddress } from '../utils';
+// read files
+import genesisBase from './genesis-base.json';
+import createGenesisSovereignParams from './create-genesis-sovereign-params.json';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // script utils
 const dateStr = new Date().toISOString();
 
-// read files
-const genesisBase = require("./genesis-base.json");
-const createGenesisSovereignParams = require("./create-genesis-sovereign-params.json");
-
 async function main() {
     logger.info('Start create-sovereign-genesis tool');
 
-    /////////////////////////////
+    /// //////////////////////////
     ///   CHECK TOOL PARAMS   ///
-    /////////////////////////////
+    /// //////////////////////////
     logger.info('Check initial parameters');
 
     const mandatoryParameters = [
@@ -56,51 +56,49 @@ async function main() {
 
     // check preMintedAccounts parameters
     if (createGenesisSovereignParams.setPreMintAccounts === true) {
-        if (createGenesisSovereignParams.preMintAccounts === undefined || createGenesisSovereignParams.preMintAccounts === '') {
+        if (
+            createGenesisSovereignParams.preMintAccounts === undefined ||
+            createGenesisSovereignParams.preMintAccounts === ''
+        ) {
             logger.error('setPreMintAccounts is set to true but missing parameter preMintAccounts');
             process.exit(1);
         }
 
         // Check all preMintAccounts parameters
-        for (const preMintAccount of createGenesisSovereignParams.preMintAccounts) {
-            const paramsPreMintAccount = [
-                'balance',
-                'address',
-            ];
-
+        createGenesisSovereignParams.preMintAccounts.forEach((preMintAccount) => {
+            const paramsPreMintAccount = ['balance', 'address'];
             checkParams(preMintAccount, paramsPreMintAccount);
-
-            if (ethers.isAddress(preMintAccount.address) == false) {
+            if (ethers.isAddress(preMintAccount.address) === false) {
                 logger.error(`preMintAccount.address ${preMintAccount.address}: not a valid address`);
                 process.exit(1);
             }
-        }
+        });
     }
 
     // check timelock parameters
     if (createGenesisSovereignParams.setTimelockParameters === true) {
-        if (createGenesisSovereignParams.timelockParameters === undefined || createGenesisSovereignParams.timelockParameters === '') {
+        if (
+            createGenesisSovereignParams.timelockParameters === undefined ||
+            createGenesisSovereignParams.timelockParameters === ''
+        ) {
             logger.error('setTimelockParameters is set to true but missing parameter timelockParameters');
             process.exit(1);
         }
 
-        const paramsTimelockParameters = [
-            'adminAddress',
-            'minDelay',
-        ];
+        const paramsTimelockParameters = ['adminAddress', 'minDelay'];
 
         checkParams(createGenesisSovereignParams.timelockParameters, paramsTimelockParameters);
     }
 
-    /////////////////////////////////////////////
+    /// //////////////////////////////////////////
     ///    CHECK SC PARAMS & ON-CHAIN DATA    ///
-    /////////////////////////////////////////////
+    /// //////////////////////////////////////////
     logger.info('Check SovereignBridge requirements for its correct initialization');
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager");
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
     const rollupManagerContract = PolygonRollupManagerFactory.attach(
-        createGenesisSovereignParams.rollupManagerAddress
+        createGenesisSovereignParams.rollupManagerAddress,
     ) as PolygonRollupManager;
 
     // Checks like in bridge contract
@@ -111,7 +109,7 @@ async function main() {
         createGenesisSovereignParams.sovereignWETHAddressIsNotMintable === true
     ) {
         throw new Error(
-            "InvalidSovereignWETHAddressParams: if gasTokenAddress is not 0x0, and sovereignWETHAddress is 0x0, sovereignWETHAddressIsNotMintable must be false"
+            'InvalidSovereignWETHAddressParams: if gasTokenAddress is not 0x0, and sovereignWETHAddress is 0x0, sovereignWETHAddressIsNotMintable must be false',
         );
     }
 
@@ -121,7 +119,7 @@ async function main() {
             createGenesisSovereignParams.sovereignWETHAddressIsNotMintable === true)
     ) {
         throw new Error(
-            "InvalidSovereignWETHAddressParams: If gasTokenAddress is 0x0, sovereignWETHAddress must be 0x0 and sovereignWETHAddressIsNotMintable must be false"
+            'InvalidSovereignWETHAddressParams: If gasTokenAddress is 0x0, sovereignWETHAddress must be 0x0 and sovereignWETHAddressIsNotMintable must be false',
         );
     }
 
@@ -129,10 +127,12 @@ async function main() {
     const outputJson = {} as any;
 
     // get token information
-    let gasTokenAddress, gasTokenNetwork, gasTokenMetadata;
+    let gasTokenAddress;
+    let gasTokenNetwork;
+    let gasTokenMetadata;
 
     // Get bridge instance
-    const bridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
+    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
     const bridgeContractAddress = await rollupManagerContract.bridgeAddress();
     const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as PolygonZkEVMBridgeV2;
 
@@ -148,13 +148,15 @@ async function main() {
         gasTokenMetadata = await rollupBridgeContract.getTokenMetadata(createGenesisSovereignParams.gasTokenAddress);
         outputJson.gasTokenMetadata = gasTokenMetadata;
         // If gas token metadata includes `0x124e4f545f56414c49445f454e434f44494e47 (NOT_VALID_ENCODING)` means there is no erc20 token deployed at the selected gas token network
-        if (gasTokenMetadata.includes("124e4f545f56414c49445f454e434f44494e47")) {
+        if (gasTokenMetadata.includes('124e4f545f56414c49445f454e434f44494e47')) {
             throw new Error(
-                `Invalid gas token address, no ERC20 token deployed at the selected gas token network ${createGenesisSovereignParams.gasTokenAddress}`
+                `Invalid gas token address, no ERC20 token deployed at the selected gas token network ${createGenesisSovereignParams.gasTokenAddress}`,
             );
         }
-        const wrappedData = await rollupBridgeContract.wrappedTokenToTokenInfo(createGenesisSovereignParams.gasTokenAddress);
-        if (wrappedData.originNetwork != 0n) {
+        const wrappedData = await rollupBridgeContract.wrappedTokenToTokenInfo(
+            createGenesisSovereignParams.gasTokenAddress,
+        );
+        if (wrappedData.originNetwork !== 0n) {
             // Wrapped token
             gasTokenAddress = wrappedData.originTokenAddress;
             gasTokenNetwork = wrappedData.originNetwork;
@@ -166,13 +168,12 @@ async function main() {
     } else {
         gasTokenAddress = ethers.ZeroAddress;
         gasTokenNetwork = 0;
-        gasTokenMetadata = "0x";
+        gasTokenMetadata = '0x';
     }
 
-
-    ////////////////////////////////////
+    /// /////////////////////////////////
     ///    FINAL GENESIS CREATION    ///
-    ////////////////////////////////////
+    /// /////////////////////////////////
 
     // start final genesis creation
     let finalGenesis = genesisBase;
@@ -205,9 +206,9 @@ async function main() {
         (createGenesisSovereignParams.sovereignWETHAddress === ethers.ZeroAddress ||
             !ethers.isAddress(createGenesisSovereignParams.sovereignWETHAddress))
     ) {
-        console.log("Rollup with custom gas token, adding WETH address to deployment output...");
-        const wethObject = genesisBase.genesis.find(function (obj: {contractName: string}) {
-            return obj.contractName == "WETH";
+        console.log('Rollup with custom gas token, adding WETH address to deployment output...');
+        const wethObject = genesisBase.genesis.find(function (obj: { contractName: string }) {
+            return obj.contractName === 'WETH';
         });
         outWETHAddress = wethObject.address;
     }
@@ -264,7 +265,7 @@ async function main() {
 
     // regenerate root with the zkEVM root
     const poseidon = await getPoseidon();
-    const {F} = poseidon;
+    const { F } = poseidon;
 
     const zkEVMDB = await ZkEVMDB.newZkEVM(
         new MemDB(F),
@@ -274,7 +275,7 @@ async function main() {
         finalGenesis.genesis,
         null,
         null,
-        createGenesisSovereignParams.chainID
+        createGenesisSovereignParams.chainID,
     );
 
     // update genesis root
@@ -306,7 +307,7 @@ async function main() {
     RollupManagerInfo.rollupData = {
         rollupID: createGenesisSovereignParams.rollupID,
         rollupAddress: rollupData[0],
-    }
+    };
 
     // Populate final output
     const gitInfo = getGitInfo();
@@ -345,26 +346,25 @@ async function main() {
         outputJson.formatGenesis = createGenesisSovereignParams.formatGenesis;
     }
 
-
-    ///////////////////////////////////
+    /// ////////////////////////////////
     ///      WRITE FINAL FILES      ///
-    ///////////////////////////////////
+    /// ////////////////////////////////
     logger.info('Writing final output files');
 
     // path output genesis
     const pathOutputGenesisJson = createGenesisSovereignParams.outputGenesisPath
-    ? path.join(__dirname, createGenesisSovereignParams.outputGenesisPath)
-    : path.join(__dirname, `./genesis-rollupID-${createGenesisSovereignParams.rollupID}__${dateStr}.json`);
+        ? path.join(__dirname, createGenesisSovereignParams.outputGenesisPath)
+        : path.join(__dirname, `./genesis-rollupID-${createGenesisSovereignParams.rollupID}__${dateStr}.json`);
 
     const pathOutputJson = createGenesisSovereignParams.outputPath
-    ? path.join(__dirname, createGenesisSovereignParams.outputPath)
-    : path.join(__dirname, `./output-rollupID-${createGenesisSovereignParams.rollupID}__${dateStr}.json`);
+        ? path.join(__dirname, createGenesisSovereignParams.outputPath)
+        : path.join(__dirname, `./output-rollupID-${createGenesisSovereignParams.rollupID}__${dateStr}.json`);
 
     // write files
     fs.writeFileSync(pathOutputGenesisJson, JSON.stringify(finalGenesis, null, 2));
     fs.writeFileSync(pathOutputJson, JSON.stringify(outputJson, null, 2));
 
-    logger.info("Output saved at:");
+    logger.info('Output saved at:');
     logger.info(`   output genesis: ${pathOutputGenesisJson}`);
     logger.info(`   output info   : ${pathOutputJson}`);
 }

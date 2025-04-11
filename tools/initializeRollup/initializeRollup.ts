@@ -1,27 +1,18 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
-import path = require("path");
-import fs = require("fs");
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, upgrades} from "hardhat";
-import {processorUtils, Constants} from "@0xpolygonhermez/zkevm-commonjs";
-import {VerifierType, ConsensusContracts} from "../../src/pessimistic-utils";
-const initializeRollupParameters = require("./initialize_rollup.json");
-import {genOperation, transactionTypes, convertBigIntsToNumbers} from "../utils";
-import {AGGCHAIN_CONTRACT_NAMES, encodeInitializeBytesLegacy} from "../../src/utils-common-aggchain";
-import utilsECDSA from "../../src/utils-aggchain-ECDSA";
-import utilsFEP from "../../src/utils-aggchain-FEP";
-import utilsAggchain from "../../src/utils-common-aggchain";
+import path = require('path');
+import fs = require('fs');
+import * as dotenv from 'dotenv';
+import { ethers } from 'hardhat';
+import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
+import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
+import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
+import { encodeInitializeBytesAggchainECDSAv0 } from '../../src/utils-aggchain-ECDSA';
+import { encodeInitializeBytesAggchainFEPv0 } from '../../src/utils-aggchain-FEP';
+import { PolygonRollupManager } from '../../typechain-types';
+import initializeRollupParameters from './initialize_rollup.json';
 
-import {
-    PolygonRollupManager,
-    PolygonZkEVMEtrog,
-    PolygonZkEVMBridgeV2,
-    PolygonValidiumEtrog,
-    PolygonPessimisticConsensus,
-} from "../../typechain-types";
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 async function main() {
     console.log(`Starting script to initialize new rollup from ${initializeRollupParameters.type}...`);
@@ -36,16 +27,16 @@ async function main() {
      * Check that every necessary parameter is fulfilled
      */
     const mandatoryDeploymentParameters = [
-        "trustedSequencerURL",
-        "networkName",
-        "trustedSequencer",
-        "chainID",
-        "rollupAdminAddress",
-        "consensusContractName",
-        "rollupManagerAddress",
-        "rollupTypeId",
-        "gasTokenAddress",
-        "type",
+        'trustedSequencerURL',
+        'networkName',
+        'trustedSequencer',
+        'chainID',
+        'rollupAdminAddress',
+        'consensusContractName',
+        'rollupManagerAddress',
+        'rollupTypeId',
+        'gasTokenAddress',
+        'type',
     ];
     // check create rollup type
     switch (initializeRollupParameters.type) {
@@ -53,19 +44,20 @@ async function main() {
         case transactionTypes.MULTISIG:
             break;
         case transactionTypes.TIMELOCK:
-            mandatoryDeploymentParameters.push("timelockDelay");
+            mandatoryDeploymentParameters.push('timelockDelay');
             break;
         default:
             throw new Error(`Invalid type ${initializeRollupParameters.type}`);
     }
-    for (const parameterName of mandatoryDeploymentParameters) {
+
+    mandatoryDeploymentParameters.forEach((parameterName) => {
         if (
             initializeRollupParameters[parameterName] === undefined ||
-            initializeRollupParameters[parameterName] === ""
+            initializeRollupParameters[parameterName] === ''
         ) {
             throw new Error(`Missing parameter: ${parameterName}`);
         }
-    }
+    });
 
     const {
         trustedSequencerURL,
@@ -84,37 +76,37 @@ async function main() {
 
     if (!supportedConsensus.includes(consensusContractName)) {
         throw new Error(
-            `Consensus contract ${consensusContractName} not supported, supported contracts are: ${supportedConsensus}`
+            `Consensus contract ${consensusContractName} not supported, supported contracts are: ${supportedConsensus}`,
         );
     }
 
     // Load provider
     let currentProvider = ethers.provider;
     if (initializeRollupParameters.multiplierGas || initializeRollupParameters.maxFeePerGas) {
-        if (process.env.HARDHAT_NETWORK !== "hardhat") {
+        if (process.env.HARDHAT_NETWORK !== 'hardhat') {
             currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
+                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
             ) as any;
             if (initializeRollupParameters.maxPriorityFeePerGas && initializeRollupParameters.maxFeePerGas) {
                 console.log(
-                    `Hardcoded gas used: MaxPriority${initializeRollupParameters.maxPriorityFeePerGas} gwei, MaxFee${initializeRollupParameters.maxFeePerGas} gwei`
+                    `Hardcoded gas used: MaxPriority${initializeRollupParameters.maxPriorityFeePerGas} gwei, MaxFee${initializeRollupParameters.maxFeePerGas} gwei`,
                 );
                 const FEE_DATA = new ethers.FeeData(
                     null,
-                    ethers.parseUnits(initializeRollupParameters.maxFeePerGas, "gwei"),
-                    ethers.parseUnits(initializeRollupParameters.maxPriorityFeePerGas, "gwei")
+                    ethers.parseUnits(initializeRollupParameters.maxFeePerGas, 'gwei'),
+                    ethers.parseUnits(initializeRollupParameters.maxPriorityFeePerGas, 'gwei'),
                 );
 
                 currentProvider.getFeeData = async () => FEE_DATA;
             } else {
-                console.log("Multiplier gas used: ", initializeRollupParameters.multiplierGas);
+                console.log('Multiplier gas used: ', initializeRollupParameters.multiplierGas);
                 async function overrideFeeData() {
                     const feeData = await ethers.provider.getFeeData();
                     return new ethers.FeeData(
                         null,
                         ((feeData.maxFeePerGas as bigint) * BigInt(initializeRollupParameters.multiplierGas)) / 1000n,
                         ((feeData.maxPriorityFeePerGas as bigint) * BigInt(initializeRollupParameters.multiplierGas)) /
-                            1000n
+                            1000n,
                     );
                 }
                 currentProvider.getFeeData = overrideFeeData;
@@ -129,16 +121,16 @@ async function main() {
     } else if (process.env.MNEMONIC) {
         deployer = ethers.HDNodeWallet.fromMnemonic(
             ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0"
+            "m/44'/60'/0'/0/0",
         ).connect(currentProvider);
     } else {
         [deployer] = await ethers.getSigners();
     }
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager", deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
     const rollupManagerContract = PolygonRollupManagerFactory.attach(
-        initializeRollupParameters.rollupManagerAddress
+        initializeRollupParameters.rollupManagerAddress,
     ) as PolygonRollupManager;
 
     const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
@@ -151,14 +143,14 @@ async function main() {
         Number(rollup.rollupVerifierType) !== VerifierType.ALGateway
     ) {
         throw new Error(
-            `Mismatch RollupTypeID: Verifier type should be ${VerifierType.ALGateway} for ${consensusContractName}`
+            `Mismatch RollupTypeID: Verifier type should be ${VerifierType.ALGateway} for ${consensusContractName}`,
         );
     }
 
     let initializeBytesAggchain;
 
-    if (consensusContractName == utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-        initializeBytesAggchain = utilsECDSA.encodeInitializeBytesAggchainECDSAv0(
+    if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
+        initializeBytesAggchain = encodeInitializeBytesAggchainECDSAv0(
             aggchainParams.useDefaultGateway,
             aggchainParams.initOwnedAggchainVKey,
             aggchainParams.initAggchainVKeySelector,
@@ -167,10 +159,10 @@ async function main() {
             trustedSequencer,
             initializeRollupParameters.gasTokenAddress,
             trustedSequencerURL,
-            networkName
+            networkName,
         );
-    } else if (consensusContractName == utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP) {
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
+    } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
+        initializeBytesAggchain = encodeInitializeBytesAggchainFEPv0(
             aggchainParams.initParams,
             aggchainParams.useDefaultGateway,
             aggchainParams.initOwnedAggchainVKey,
@@ -180,7 +172,7 @@ async function main() {
             trustedSequencer,
             initializeRollupParameters.gasTokenAddress,
             trustedSequencerURL,
-            networkName
+            networkName,
         );
     } else {
         throw new Error(`Aggchain ${consensusContractName} not supported`);
@@ -188,19 +180,19 @@ async function main() {
     const aggchainContract = await polygonConsensusFactory.attach(rollup.rollupContract);
 
     if (initializeRollupParameters.type === transactionTypes.TIMELOCK) {
-        console.log("Creating timelock txs for initialization...");
+        console.log('Creating timelock txs for initialization...');
         const salt = initializeRollupParameters.timelockSalt || ethers.ZeroHash;
         const predecessor = ethers.ZeroHash;
-        const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
+        const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
         const operation = genOperation(
             initializeRollupParameters.rollupManagerAddress,
             0, // value
             aggchainContract.interface.encodeFunctionData("initialize(bytes)", [initializeBytesAggchain]),
             predecessor, // predecessor
-            salt // salt
+            salt, // salt
         );
         // Schedule operation
-        const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
+        const scheduleData = timelockContractFactory.interface.encodeFunctionData('schedule', [
             operation.target,
             operation.value,
             operation.data,
@@ -209,19 +201,19 @@ async function main() {
             initializeRollupParameters.timelockDelay,
         ]);
         // Execute operation
-        const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
+        const executeData = timelockContractFactory.interface.encodeFunctionData('execute', [
             operation.target,
             operation.value,
             operation.data,
             operation.predecessor,
             operation.salt,
         ]);
-        console.log({scheduleData});
-        console.log({executeData});
+        console.log({ scheduleData });
+        console.log({ executeData });
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         // Decode the scheduleData for better readability
-        const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
+        const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
         const paramsArray = timelockTx?.fragment.inputs;
         const objectDecoded = {};
         for (let i = 0; i < paramsArray?.length; i++) {
@@ -229,7 +221,7 @@ async function main() {
 
             objectDecoded[currentParam.name] = timelockTx?.args[i];
 
-            if (currentParam.name == "data") {
+            if (currentParam.name === 'data') {
                 const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
                     data: timelockTx?.args[i],
                 });
@@ -237,43 +229,43 @@ async function main() {
                 const paramsArrayData = decodedRollupManagerData?.fragment.inputs;
 
                 for (let j = 0; j < paramsArrayData?.length; j++) {
-                    const currentParam = paramsArrayData[j];
-                    objectDecodedData[currentParam.name] = decodedRollupManagerData?.args[j];
+                    const currentParamData = paramsArrayData[j];
+                    objectDecodedData[currentParamData.name] = decodedRollupManagerData?.args[j];
                 }
-                objectDecoded["decodedData"] = objectDecodedData;
+                objectDecoded.decodedData = objectDecodedData;
             }
         }
 
         outputJson.decodedScheduleData = convertBigIntsToNumbers(objectDecoded);
         fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
-        console.log("Finished script, output saved at: ", destPath);
+        console.log('Finished script, output saved at: ', destPath);
         process.exit(0);
     } else if (initializeRollupParameters.type === transactionTypes.MULTISIG) {
-        console.log("Creating calldata for initializationfrom multisig...");
-        const txDeployRollupCalldata = aggchainContract.interface.encodeFunctionData("initialize", [
+        console.log('Creating calldata for initializationfrom multisig...');
+        const txDeployRollupCalldata = aggchainContract.interface.encodeFunctionData('initialize', [
             initializeBytesAggchain,
         ]);
 
         outputJson.txDeployRollupCalldata = txDeployRollupCalldata;
         fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
-        console.log("Finished script, output saved at: ", destPath);
+        console.log('Finished script, output saved at: ', destPath);
         process.exit(0);
     } else {
-        console.log("Initializing rollup....");
+        console.log('Initializing rollup....');
         // Create new rollup
         const txInitAggChain = await aggchainContract.initialize(initializeBytesAggchain);
         await txInitAggChain.wait();
 
         (await txInitAggChain.wait()) as any;
 
-        console.log("#######################\n");
+        console.log('#######################\n');
         console.log(`Initialized succesfully`);
     }
     // Update rollupId
     rollupID = await rollupManagerContract.chainIDToRollupID(chainID);
 
     fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
-    console.log("Finished script, output saved at: ", destPath);
+    console.log('Finished script, output saved at: ', destPath);
 }
 
 main().catch((e) => {

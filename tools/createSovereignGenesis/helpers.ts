@@ -1,26 +1,12 @@
-import { execSync } from "child_process";
-
-/**
- * Format genesis file to a specific format
- * @param genesis original legacy genesis file
- * @param format Format type
- * @returns new genesis format
- */
-function formatGenesis(genesis: { genesis: any[]; }, format: any){
-    switch (format) {
-        case "geth":
-            return _formatGeth(genesis);
-        default:
-            throw new Error(`formatGenesis: unknown format: ${format}`);
-    }
-}
+/* eslint-disable @typescript-eslint/naming-convention */
+import { execSync } from 'child_process';
 
 /**
  * Format legacy genesis file to geth format
  * @param genesis legacy genesis file
  * @returns Geth genesis format
  */
-function _formatGeth(genesis: { genesis: any[]; }) {
+function _formatGeth(genesis: { genesis: any[] }) {
     return genesis.genesis.reduce((acc, contract) => {
         acc[contract.address] = {};
 
@@ -45,24 +31,34 @@ function _formatGeth(genesis: { genesis: any[]; }) {
 }
 
 /**
+ * Format genesis file to a specific format
+ * @param genesis original legacy genesis file
+ * @param format Format type
+ * @returns new genesis format
+ */
+export function formatGenesis(genesis: { genesis: any[] }, format: any) {
+    switch (format) {
+        case 'geth':
+            return _formatGeth(genesis);
+        default:
+            throw new Error(`formatGenesis: unknown format: ${format}`);
+    }
+}
+
+/**
  * Retrieves the current Git commit hash and repository URL
  * @returns An object containing the commit hash and repository URL, or null if an error occurs
  */
-function getGitInfo(): { commit: string; repo: string } | null {
+export function getGitInfo(): { commit: string; repo: string } | null {
     try {
-      // Get the latest commit hash
-      const commit = execSync("git rev-parse HEAD").toString().trim();
+        // Get the latest commit hash
+        const commit = execSync('git rev-parse HEAD').toString().trim();
 
-      // Get the repository URL
-      const repo = execSync("git config --get remote.origin.url").toString().trim();
+        // Get the repository URL
+        const repo = execSync('git config --get remote.origin.url').toString().trim();
 
-      return { commit, repo };
+        return { commit, repo };
     } catch (error) {
         throw new Error(`getGitInfo: ${error}`);
     }
 }
-
-module.exports = {
-    formatGenesis,
-    getGitInfo,
-};

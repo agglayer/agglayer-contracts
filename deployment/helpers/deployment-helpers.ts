@@ -145,3 +145,39 @@ export function getCreate2Address(
     // Precalculate create2 address
     return ethers.getCreate2Address(polgonZKEVMDeployerContract.target as string, salt, hashInitCode);
 }
+
+export async function getAddressInfo(address: string | Addressable) {
+    
+    /*
+     * bytes32 internal constant _ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+     * bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+     */
+    const _ADMIN_SLOT = '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103' as any;
+    const _IMPLEMENTATION_SLOT = '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc' as any;
+
+    const nonce = await ethers.provider.getTransactionCount(address);
+    const bytecode = await ethers.provider.getCode(address);
+
+    const storage = {} as {
+        [key: string]: number | string;
+    };
+
+    for (let i = 0; i < 200; i++) {
+        const storageValue = await ethers.provider.getStorage(address, i);
+        if (storageValue !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
+            storage[ethers.toBeHex(i, 32)] = storageValue;
+        }
+    }
+
+    const valueAdminSlot = await ethers.provider.getStorage(address, _ADMIN_SLOT);
+    if (valueAdminSlot !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
+        storage[_ADMIN_SLOT] = valueAdminSlot;
+    }
+    const valueImplementationSlot = await ethers.provider.getStorage(address, _IMPLEMENTATION_SLOT);
+    if (valueImplementationSlot !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
+        storage[_IMPLEMENTATION_SLOT] = valueImplementationSlot;
+    }
+
+    return {nonce, bytecode, storage};
+}
+
