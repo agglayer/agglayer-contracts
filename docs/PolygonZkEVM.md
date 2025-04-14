@@ -359,7 +359,7 @@ This action is not reversible
   ) external
 ```
 Starts the admin role transfer
-This is a two step process, the pending admin must accepted to finalize the process
+This is a two step process, the pending admin must accept to finalize the process
 
 
 #### Parameters:
@@ -587,7 +587,7 @@ Emitted when forced batches are sequenced by not the trusted sequencer
   )
 ```
 
-Emitted when a aggregator verifies batches
+Emitted when an aggregator verifies batches
 
 ### VerifyBatchesTrustedAggregator
 ```solidity

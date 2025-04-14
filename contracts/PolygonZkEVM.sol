@@ -263,7 +263,7 @@ contract PolygonZkEVM is
     event SequenceForceBatches(uint64 indexed numBatch);
 
     /**
-     * @dev Emitted when a aggregator verifies batches
+     * @dev Emitted when an aggregator verifies batches
      */
     event VerifyBatches(
         uint64 indexed numBatch,
@@ -1310,7 +1310,7 @@ contract PolygonZkEVM is
 
     /**
      * @notice Starts the admin role transfer
-     * This is a two step process, the pending admin must accepted to finalize the process
+     * This is a two step process, the pending admin must accept to finalize the process
      * @param newPendingAdmin Address of the new pending admin
      */
     function transferAdminRole(address newPendingAdmin) external onlyAdmin {

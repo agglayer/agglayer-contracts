@@ -35,7 +35,7 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
         hex"df2a8080944d5cf5032b2a844602278b01199ed191a86c93ff8080821092808000000000000000000000000000000000000000000000000000000005ca1ab1e000000000000000000000000000000000000000000000000000000005ca1ab1e01bff";
 
     /**
-     * @dev Emitted when the system is updated to a etrog using this contract, contain the set up etrog transaction
+     * @dev Emitted when the system is updated to an etrog using this contract, contain the set up etrog transaction
      */
     event UpdateEtrogSequence(
         uint64 numBatch,
@@ -66,7 +66,7 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
 
     /**
      * note This initializer will be called instead of the PolygonRollupBase
-     * This is a especial initializer since the zkEVM it's an already created network
+     * This is a especial initializer since the zkEVM is an already created network
      * @param _admin Admin address
      * @param _trustedSequencer Trusted sequencer address
      * @param _trustedSequencerURL Trusted sequencer URL

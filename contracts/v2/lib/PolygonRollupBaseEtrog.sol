@@ -165,7 +165,7 @@ abstract contract PolygonRollupBaseEtrog is
     );
 
     /**
-     * @dev Emitted when a aggregator verifies batches
+     * @dev Emitted when an aggregator verifies batches
      */
     event VerifyBatches(
         uint64 indexed numBatch,
@@ -174,7 +174,7 @@ abstract contract PolygonRollupBaseEtrog is
     );
 
     /**
-     * @dev Emitted when a aggregator verifies batches
+     * @dev Emitted when an aggregator verifies batches
      */
     event RollbackBatches(
         uint64 indexed targetBatch,
