@@ -187,6 +187,7 @@ async function main() {
         sovereignWETHAddressIsNotMintable: createGenesisSovereignParams.sovereignWETHAddressIsNotMintable,
         globalExitRootUpdater: createGenesisSovereignParams.globalExitRootUpdater,
         globalExitRootRemover: createGenesisSovereignParams.globalExitRootRemover,
+        emergencyBridgePauser: createGenesisSovereignParams.emergencyBridgePauser,
     };
 
     logger.info('Update genesis-base to the SovereignContracts');
