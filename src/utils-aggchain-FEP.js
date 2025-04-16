@@ -108,7 +108,7 @@ function encodeInitializeBytesAggchainFEPv1(
  * @returns {String} encoded value in hexadecimal string
  */
 function encodeAggchainDataFEP(aggchainVKeyVersion, outputRoot, l2BlockNumber) {
-    return ethers.AbiCoder.defaultAbiCoder().encode(
+    return ethers.solidityPacked(
         ['bytes2', 'bytes32', 'uint256'],
         [aggchainVKeyVersion, outputRoot, l2BlockNumber],
     );

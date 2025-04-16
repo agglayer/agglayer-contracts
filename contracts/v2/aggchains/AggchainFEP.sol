@@ -429,18 +429,19 @@ contract AggchainFEP is AggchainBase {
     ///
     /// @return aggchainHash resulting aggchain hash
     function getAggchainHash(
-        bytes memory aggchainData
+        bytes calldata aggchainData
     ) external view returns (bytes32) {
-        if (aggchainData.length != 32 * 3) {
+        if (aggchainData.length != 2 + 32 * 2) {
             revert InvalidAggchainDataLength();
         }
+        bytes2 _aggchainVKeyVersion = bytes2(aggchainData[:2]);
+        bytes memory aggchainDataWithoutVKeyVersion = aggchainData[2:];
 
-        // decode the aggchainData
-        (
-            bytes2 _aggchainVKeyVersion,
-            bytes32 _outputRoot,
-            uint256 _l2BlockNumber
-        ) = abi.decode(aggchainData, (bytes2, bytes32, uint256));
+        // decode the aggchainDataWithoutVKeyVersion
+        (bytes32 _outputRoot, uint256 _l2BlockNumber) = abi.decode(
+            aggchainDataWithoutVKeyVersion,
+            (bytes32, uint256)
+        );
 
         // check blockNumber
         if (_l2BlockNumber < nextBlockNumber()) {
@@ -555,16 +556,17 @@ contract AggchainFEP is AggchainBase {
     ///         Stores the necessary chain data when the pessimistic proof is verified
     /// @param aggchainData Custom data provided by the chain
     function onVerifyPessimistic(
-        bytes memory aggchainData
+        bytes calldata aggchainData
     ) external onlyRollupManager {
-        if (aggchainData.length != 32 * 3) {
+        if (aggchainData.length != 2 + 32 * 2) {
             revert InvalidAggchainDataLength();
         }
+        bytes memory aggchainDataWithoutVKeyVersion = aggchainData[2:];
 
         // decode the aggchainData
-        (, bytes32 _outputRoot, uint256 _l2BlockNumber) = abi.decode(
-            aggchainData,
-            (bytes2, bytes32, uint256)
+        (bytes32 _outputRoot, uint256 _l2BlockNumber) = abi.decode(
+            aggchainDataWithoutVKeyVersion,
+            (bytes32, uint256)
         );
 
         emit OutputProposed(
