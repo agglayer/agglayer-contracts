@@ -68,6 +68,7 @@ async function main() {
 
     // verifierAddress only mandatory if consensusContract !== Aggchain
     let verifierAddress;
+    let finalForkId = forkID;
     if (!consensusContract.includes("Aggchain")) {
         verifierAddress = addRollupTypeParameters.verifierAddress;
         if (verifierAddress === undefined || verifierAddress === "") {
@@ -75,6 +76,8 @@ async function main() {
         }
     } else {
         verifierAddress = ethers.ZeroAddress;
+        // no fork id for Aggchain
+        finalForkId = 0;
     }
 
     // Load provider
@@ -314,10 +317,10 @@ async function main() {
     if (type === transactionTypes.EOA) {
         console.log(
             await (
-                await rollupManagerContract.addNewRollupType(
+                await rollupManagerContract.connect(deployer).addNewRollupType(
                     consensusContractAddress,
                     verifierAddress,
-                    forkID,
+                    finalForkId,
                     rollupVerifierType,
                     genesisFinal,
                     description,
@@ -325,7 +328,6 @@ async function main() {
                 )
             ).wait()
         );
-
         console.log("#######################\n");
         console.log("New Rollup Type deployed");
         const newRollupTypeID = await rollupManagerContract.rollupTypeCount();
@@ -348,7 +350,7 @@ async function main() {
             PolygonRollupManagerFactory.interface.encodeFunctionData("addNewRollupType", [
                 consensusContractAddress,
                 verifierAddress,
-                forkID,
+                finalForkId,
                 rollupVerifierType,
                 genesisFinal,
                 description,
