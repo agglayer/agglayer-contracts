@@ -61,7 +61,7 @@ contract PolygonZkEVMGlobalExitRootV2 is
     }
 
     /**
-     * @notice Reset the deposit tree since will be replace by a recursive one
+     * @notice Reset the deposit tree since will be replaced by a recursive one
      */
     function initialize() external virtual initializer {
         // Get the current historic root
