@@ -704,6 +704,95 @@ contract PolygonRollupManager is
      * @notice Add an already deployed rollup
      * note that this rollup does not follow any rollupType
      * @param rollupAddress Rollup address
+     * @param newRollupTypeID New rollupTypeID to upgrade to
+     * @param initPessimisticRoot Pessimistic root to init the chain.
+     * @param upgradeData Upgrade data
+     */
+    function updateStateTransistionToPP(
+        address rollupAddress,
+        uint32 newRollupTypeID,
+        bytes32 initPessimisticRoot,
+        bytes memory upgradeData
+    ) external onlyRole(_ADD_EXISTING_ROLLUP_ROLE) {
+        ////////////////////
+        /// Check inputs ///
+        ////////////////////
+
+        // Check rollup exist
+        uint32 rollupID = rollupAddressToID[rollupAddress];
+        if (rollupID == 0) {
+            revert RollupMustExist();
+        }
+
+        // get rollup data
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+
+        // check rollup is StateTransition
+        if (rollup.rollupVerifierType != VerifierType.StateTransition) {
+            revert InvalidRollupType();
+        }
+
+        // get destiny rollupType information
+        // Check that rollup type exists
+        if (newRollupTypeID == 0 || newRollupTypeID > rollupTypeCount) {
+            revert RollupTypeDoesNotExist();
+        }
+
+        RollupType storage newRollupType = rollupTypeMap[newRollupTypeID];
+
+        // check it is a Pessimstic Verififer type
+        if (newRollupType.rollupVerifierType != VerifierType.Pessimistic) {
+            revert InvalidRollupType();
+        }
+
+        // check zero on initPessimisticRoot
+        // ppRoot spec: https://github.com/agglayer/agglayer/blob/59a98e316f63246559708f4bc47904a179c77f3c/crates/pessimistic-proof-core/src/local_state/commitment.rs#L62-L78
+        if (initPessimisticRoot == bytes32(0)) {
+            revert("initPessimisticRoot is zero");
+        }
+
+        ////////////////////////////////////
+        /// Check StateTransition Rollup ///
+        ////////////////////////////////////
+
+        // Check all sequenced batches are verified
+        if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
+            revert AllSequencedMustBeVerified();
+        }
+
+        ///////////////////////////////////
+        /// Check Pessimistic RolupType ///
+        ///////////////////////////////////
+
+        // Check rollup type is not obsolete
+        if (newRollupType.obsolete) {
+            revert RollupTypeObsolete();
+        }
+
+        // Update rollup parameters
+        rollup.verifier = newRollupType.verifier;
+        rollup.forkID = newRollupType.forkID;
+        rollup.rollupTypeID = newRollupTypeID;
+        rollup.rollupVerifierType = newRollupType.rollupVerifierType;
+        rollup.lastPessimisticRoot = initPessimisticRoot;
+        rollup.programVKey = newRollupType.programVKey;
+
+        uint64 lastVerifiedBatch = getLastVerifiedBatch(rollupID);
+        rollup.lastVerifiedBatchBeforeUpgrade = lastVerifiedBatch;
+
+        // Upgrade rollup
+        ITransparentUpgradeableProxy(rollupAddress).upgradeToAndCall(
+            newRollupType.consensusImplementation,
+            upgradeData
+        );
+
+        emit UpdateRollup(rollupID, newRollupTypeID, lastVerifiedBatch);
+    }
+
+    /**
+     * @notice Add an already deployed rollup
+     * note that this rollup does not follow any rollupType
+     * @param rollupAddress Rollup address
      * @param verifier Verifier address, must be added before
      * @param forkID Fork id of the added rollup
      * @param chainID Chain id of the added rollup
