@@ -8,8 +8,8 @@ npm i
 
 ## Setup
 - Config file `deploy_verifier_parameters.json`:
-  - `realVerifier`: select between a real or a mock verifer
-  - `forkID`: Select fork to verifier to be deployed (if a real verfifier is selected)
+  - `realVerifier`: select between a real or a mock verifier
+  - `forkID`: Select fork to verifier to be deployed (if a real verifier is selected)
   - `deployerPvtKey`: private key deployer
     - First option will load `deployerPvtKey`. Otherwise, `process.env.MNEMONIC` will be loaded from the `.env` file
   - `maxFeePerGas`: set custom gas

@@ -22,7 +22,7 @@ Contract responsible for managing the exit roots across multiple networks
   function initialize(
   ) external
 ```
-Reset the deposit tree since will be replace by a recursive one
+Reset the deposit tree since will be replaced by a recursive one
 
 
 

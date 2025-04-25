@@ -70,7 +70,7 @@ This function is a "multi/batch call" to `setSovereignTokenAddress`
 | Name | Type | Description                                                          |
 | :--- | :--- | :------------------------------------------------------------------- |
 |`originNetworks` | uint32[] | Array of Origin networks
-|`originTokenAddresses` | address[] | Array od Origin token addresses, 0 address is reserved for ether
+|`originTokenAddresses` | address[] | Array of Origin token addresses, 0 address is reserved for ether
 |`sovereignTokenAddresses` | address[] | Array of Addresses of the sovereign wrapped token
 |`isNotMintable` | bool[] | Array of Flags to indicate if the wrapped token is not mintable
 
