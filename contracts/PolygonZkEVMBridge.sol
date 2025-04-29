@@ -69,6 +69,16 @@ contract PolygonZkEVMBridge is
     address public polygonZkEVMaddress;
 
     /**
+     * @dev Thrown when permit has expired
+     */
+    error PermitExpired();
+    
+    /**
+     * @dev Thrown when permission in permit is not valid
+     */
+    error NotValidPermission();
+
+    /**
      * @param _networkID networkID
      * @param _globalExitRootManager global exit root manager address
      * @param _polygonZkEVMaddress polygonZkEVM address
@@ -323,7 +333,7 @@ contract PolygonZkEVMBridge is
         address destinationAddress,
         uint256 amount,
         bytes calldata metadata
-    ) external ifNotEmergencyState {
+    ) external ifNotEmergencyState nonReentrant {
         // Verify leaf exist and it does not have been claimed
         _verifyLeaf(
             smtProof,
@@ -378,10 +388,7 @@ contract PolygonZkEVMBridge is
                         salt: tokenInfoHash
                     }(name, symbol, decimals);
 
-                    // Mint tokens for the destination address
-                    newWrappedToken.mint(destinationAddress, amount);
-
-                    // Create mappings
+                    // Create mappings first before any external calls
                     tokenInfoToWrappedToken[tokenInfoHash] = address(
                         newWrappedToken
                     );
@@ -390,6 +397,9 @@ contract PolygonZkEVMBridge is
                         address(newWrappedToken)
                     ] = TokenInformation(originNetwork, originTokenAddress);
 
+                    // Mint tokens for the destination address
+                    newWrappedToken.mint(destinationAddress, amount);
+
                     emit NewWrappedToken(
                         originNetwork,
                         originTokenAddress,
@@ -397,7 +407,7 @@ contract PolygonZkEVMBridge is
                         metadata
                     );
                 } else {
-                    // Use the existing wrapped erc20
+                    // Mint tokens for the destination address
                     TokenWrapped(wrappedToken).mint(destinationAddress, amount);
                 }
             }
@@ -439,7 +449,7 @@ contract PolygonZkEVMBridge is
         address destinationAddress,
         uint256 amount,
         bytes calldata metadata
-    ) external ifNotEmergencyState {
+    ) external ifNotEmergencyState nonReentrant {
         // Verify leaf exist and it does not have been claimed
         _verifyLeaf(
             smtProof,
@@ -676,9 +686,9 @@ contract PolygonZkEVMBridge is
     }
 
     /**
-     * @notice Function to call token permit method of extended ERC20
-     + @param token ERC20 token address
-     * @param amount Quantity that is expected to be allowed
+     * @notice Function to handle token permit (EIP-2612 / DAI permit) 
+     * @param token Token address
+     * @param amount Amount of tokens 
      * @param permitData Raw data of the call `permit` of the token
      */
     function _permit(
@@ -719,11 +729,14 @@ contract PolygonZkEVMBridge is
                 revert NotValidAmount();
             }
 
-            // we call without checking the result, in case it fails and he doesn't have enough balance
-            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-            // before the smartcontract call
+            // Ensure deadline is not expired
+            if (block.timestamp > deadline) {
+                revert PermitExpired();
+            }
+
+            // we call with checking the result now to prevent permit issues
             /* solhint-disable avoid-low-level-calls */
-            address(token).call(
+            (bool success, bytes memory returnData) = address(token).call(
                 abi.encodeWithSelector(
                     _PERMIT_SIGNATURE,
                     owner,
@@ -735,11 +748,16 @@ contract PolygonZkEVMBridge is
                     s
                 )
             );
-        } else {
-            if (sig != _PERMIT_SIGNATURE_DAI) {
-                revert NotValidSignature();
+            
+            // Permit can fail for various reasons (signature invalid, deadline expired, etc.)
+            // In those cases we should not proceed with transfer
+            if (!success) {
+                // Forward the revert reason
+                assembly {
+                    revert(add(returnData, 32), mload(returnData))
+                }
             }
-
+        } else if (sig == _PERMIT_SIGNATURE_DAI) {
             (
                 address holder,
                 address spender,
@@ -770,12 +788,20 @@ contract PolygonZkEVMBridge is
             if (spender != address(this)) {
                 revert NotValidSpender();
             }
+            
+            // Ensure expiry is not passed
+            if (block.timestamp > expiry) {
+                revert PermitExpired();
+            }
 
-            // we call without checking the result, in case it fails and he doesn't have enough balance
-            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-            // before the smartcontract call
+            // For DAI-like tokens, check if allowed is true when approving
+            if (!allowed) {
+                revert NotValidPermission();
+            }
+
+            // we call with checking the result now to prevent permit issues
             /* solhint-disable avoid-low-level-calls */
-            address(token).call(
+            (bool success, bytes memory returnData) = address(token).call(
                 abi.encodeWithSelector(
                     _PERMIT_SIGNATURE_DAI,
                     holder,
@@ -788,6 +814,17 @@ contract PolygonZkEVMBridge is
                     s
                 )
             );
+            
+            // Permit can fail for various reasons (signature invalid, expiry passed, etc.)
+            // In those cases we should not proceed with transfer
+            if (!success) {
+                // Forward the revert reason
+                assembly {
+                    revert(add(returnData, 32), mload(returnData))
+                }
+            }
+        } else {
+            revert NotValidSignature();
         }
     }
 
