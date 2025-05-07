@@ -188,6 +188,7 @@ async function main() {
         globalExitRootUpdater: createGenesisSovereignParams.globalExitRootUpdater,
         globalExitRootRemover: createGenesisSovereignParams.globalExitRootRemover,
         emergencyBridgePauser: createGenesisSovereignParams.emergencyBridgePauser,
+        proxiedTokensManager: createGenesisSovereignParams.proxiedTokensManager,
     };
 
     logger.info('Update genesis-base to the SovereignContracts');
