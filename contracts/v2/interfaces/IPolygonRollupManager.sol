@@ -358,17 +358,6 @@ interface IPolygonRollupManager {
         bytes memory initializeBytesAggchain
     ) external;
 
-    function addExistingRollup(
-        address rollupAddress,
-        address verifier,
-        uint64 forkID,
-        uint64 chainID,
-        bytes32 initRoot,
-        VerifierType rollupVerifierType,
-        bytes32 programVKey,
-        bytes32 initPessimisticRoot
-    ) external;
-
     function updateRollupByRollupAdmin(
         ITransparentUpgradeableProxy rollupContract,
         uint32 newRollupTypeID
