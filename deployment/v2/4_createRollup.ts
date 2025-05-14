@@ -584,7 +584,7 @@ async function main() {
             // Get last GER
             const lastGER = await globalExitRootManagerContract.getLastGlobalExitRoot();
 
-            const dataInjectedTx = await polygonZkEVMBridgeContract.interface.encodeFunctionData("initialize", [
+            const dataInjectedTx = await polygonZkEVMBridgeContract.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
                 rollupID,
                 gasTokenAddress,
                 gasTokenNetwork,
