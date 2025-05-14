@@ -44,6 +44,12 @@ cp ./docker/scripts/v2/create_rollup_parameters_docker-fork12.json ./deployment/
 npx hardhat run ./deployment/v2/4_createRollup.ts --network localhost
 # move rollup output to output folder
 mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output_fork12.json
+# copy new create rollup parameters (PolygonValidiumEtrog) to docker scripts to create new rollup PolygonValidiumEtrog
+cp ./docker/scripts/v2/create_rollup_parameters_docker-validium.json ./deployment/v2/create_rollup_parameters.json
+# create new rollup PolygonValidiumEtrog
+npx hardhat run ./deployment/v2/4_createRollup.ts --network localhost
+# move rollup output to output folder
+mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output_validium.json
 # move deployment output to output folder
 sudo mv deployment/v2/deploy_output.json docker/deploymentOutput
 sudo mv deployment/v2/genesis.json docker/deploymentOutput
