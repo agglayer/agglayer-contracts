@@ -1,13 +1,13 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-const ethers = require('ethers');
+import ethers from 'ethers';
 
 /// //////////////////////////////////
 /// // Constants for Aggchain FEP ////
 /// //////////////////////////////////
 
 // aggchain type selector for FEP
-const AGGCHAIN_TYPE_FEP = '0x0001';
+export const AGGCHAIN_TYPE_FEP = '0x0001';
 
 /// //////////////////////////////////
 /// // Functions for Aggchain FEP ////
@@ -27,7 +27,7 @@ const AGGCHAIN_TYPE_FEP = '0x0001';
  * @param {String} networkName network name
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeInitializeBytesAggchainFEPv0(
+export function encodeInitializeBytesAggchainFEPv0(
     initParams,
     useDefaultGateway,
     initOwnedAggchainVKey,
@@ -75,7 +75,7 @@ function encodeInitializeBytesAggchainFEPv0(
  * @param {String} initAggchainVKeySelector initial aggchain Vkey version
  * @param {String} vKeyManager vkey manager address
  */
-function encodeInitializeBytesAggchainFEPv1(
+export function encodeInitializeBytesAggchainFEPv1(
     initParams,
     useDefaultGateway,
     initOwnedAggchainVKey,
@@ -107,7 +107,7 @@ function encodeInitializeBytesAggchainFEPv1(
  * @param {Number} l2BlockNumber L2 block number
  * @returns {String} encoded value in hexadecimal string
  */
-function encodeAggchainDataFEP(aggchainVKeySelector, outputRoot, l2BlockNumber) {
+export function encodeAggchainDataFEP(aggchainVKeySelector, outputRoot, l2BlockNumber) {
     return ethers.AbiCoder.defaultAbiCoder().encode(
         ['bytes4', 'bytes32', 'uint256'],
         [aggchainVKeySelector, outputRoot, l2BlockNumber],
@@ -126,7 +126,7 @@ function encodeAggchainDataFEP(aggchainVKeySelector, outputRoot, l2BlockNumber) 
  * @param {String} aggregationVkey aggregationVkey
  * @returns aggchain param hash
  */
-function computeHashAggchainParamsFEP(
+export function computeHashAggchainParamsFEP(
     oldOutputRoot,
     newOutputRoot,
     l2BlockNumber,
@@ -158,11 +158,3 @@ function computeHashAggchainParamsFEP(
         ],
     );
 }
-
-module.exports = {
-    AGGCHAIN_TYPE_FEP,
-    encodeInitializeBytesAggchainFEPv0,
-    encodeInitializeBytesAggchainFEPv1,
-    encodeAggchainDataFEP,
-    computeHashAggchainParamsFEP,
-};
