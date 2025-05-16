@@ -65,7 +65,7 @@ contract PolygonZkEVMBridgeV2 is
     uint256 internal constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
 
     // Current bridge version
-    string public constant BRIDGE_VERSION = "al-v10.1.0";
+    string public constant BRIDGE_VERSION = "al-v0.3.0";
 
     // Network identifier
     uint32 public networkID;

@@ -18,7 +18,7 @@ contract BridgeL2SovereignChain is
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Current bridge version
-    string public constant BRIDGE_SOVEREIGN_VERSION = "al-v10.1.0";
+    string public constant BRIDGE_SOVEREIGN_VERSION = "v10.1.0-rc.5";
 
     // Map to store wrappedAddresses that are not mintable
     mapping(address wrappedAddress => bool isNotMintable)
