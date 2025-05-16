@@ -704,6 +704,10 @@ contract PolygonZkEVMBridgeV2 is
      * If the receiving address is an EOA, the call will result as a success
      * Which means that the amount of ether will be transferred correctly, but the message
      * will not trigger any execution
+     * @dev any modification to this function must be done with caution, since this function has no re-entrancy check
+     * @dev function has not reentrancy check in purpose to not stop potential functionalities:
+     *   - give funds back in case a message fails
+     *   - composability on claimMessage and claimAsset
      * @param smtProofLocalExitRoot Smt proof to proof the leaf against the exit root
      * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot against the rollups exit root
      * @param globalIndex Global index is defined as:
