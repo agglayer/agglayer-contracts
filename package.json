@@ -40,6 +40,8 @@
         "@openzeppelin/contracts5": "npm:@openzeppelin/contracts@5.0.0",
         "@openzeppelin/contracts52": "npm:@openzeppelin/contracts@5.2.0",
         "@openzeppelin/hardhat-upgrades": "^2.5.1",
+        "@typechain/ethers-v6": "^0.5.1",
+        "@typechain/hardhat": "^9.1.0",
         "@types/yargs": "^17.0.28",
         "circomlibjs": "0.1.1",
         "dotenv": "^8.6.0",
@@ -58,6 +60,7 @@
         "solc-0.8": "npm:solc@0.8.20",
         "solidity-coverage": "^0.8.14",
         "solidity-docgen": "^0.5.17",
+        "typechain": "^8.3.2",
         "winston": "^3.17.0"
     },
     "scripts": {

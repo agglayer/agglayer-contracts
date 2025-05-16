@@ -1,0 +1,13 @@
+{
+    "proxiedTokensManagerAddress": "0x..",
+    "emergencyBridgePauserAddress": "0x..",
+    "emergencyBridgeUnpauserAddress": "0x..",
+    "rpc": "rpc url",
+    "globalExitRootManagerL2SovereignChainAddress": "0x..",
+    "deployerPvtKey": "0x...",
+    "timelockDelay": 3600,
+    "forkParams": {
+        "rpc": "rpc url",
+        "timelockAdmin": "0x.."
+    }
+}

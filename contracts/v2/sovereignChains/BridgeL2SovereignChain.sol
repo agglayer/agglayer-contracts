@@ -322,8 +322,7 @@ contract BridgeL2SovereignChain is
         proxiedTokensManager = _proxiedTokensManager;
         emit AcceptProxiedTokensManagerRole(address(0), proxiedTokensManager);
 
-        // Initialize OZ contracts
-        __ReentrancyGuard_init();
+        // OZ contract already initialized
     }
 
     /**

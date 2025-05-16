@@ -111,4 +111,14 @@ async function decodeScheduleData(scheduleData: any, contractFactory: any) {
     return convertBigIntsToNumbers(objectDecoded);
 }
 
+
+// This is a workaround to fix the BigInt serialization issue in JSON
+// when using JSON.stringify on BigInt values, which is common in Ethers
+Object.defineProperty(BigInt.prototype, "toJSON", {
+    get() {
+        "use strict";
+        return () => String(this);
+    },
+});
+
 export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData };
