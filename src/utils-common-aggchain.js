@@ -20,6 +20,25 @@ const ARRAY_AGGCHAIN_SUPPORTED_NAMES = [
     'AggchainFEP',
 ];
 
+const GENESIS_CONTRACT_NAMES = {
+    WETH: 'WETH',
+    WETH_PROXY: 'WETH proxy',
+    TOKEN_WRAPPED_IMPLEMENTATION: 'TokenWrapped implementation',
+    SOVEREIGN_BRIDGE: 'BridgeL2SovereignChain',
+    SOVEREIGN_BRIDGE_IMPLEMENTATION: 'BridgeL2SovereignChain implementation',
+    SOVEREIGN_BRIDGE_PROXY: 'BridgeL2SovereignChain proxy',
+    BYTECODE_STORER: 'BytecodeStorer',
+    BRIDGE_V2: 'PolygonZkEVMBridgeV2',
+    GER_L2_SOVEREIGN: 'GlobalExitRootManagerL2SovereignChain',
+    GER_L2_SOVEREIGN_IMPLEMENTATION: 'GlobalExitRootManagerL2SovereignChain implementation',
+    GER_L2_SOVEREIGN_PROXY: 'GlobalExitRootManagerL2SovereignChain proxy',
+    GER_L2: 'PolygonZkEVMGlobalExitRootL2',
+    GER_L2_IMPLEMENTATION: 'PolygonZkEVMGlobalExitRootL2 implementation',
+    GER_L2_PROXY: 'PolygonZkEVMGlobalExitRootL2 proxy',
+    PROXY_ADMIN: 'ProxyAdmin',
+    POLYGON_TIMELOCK: 'PolygonZkEVMTimelock',
+    POLYGON_DEPLOYER: 'PolygonZkEVMDeployer',
+};
 /// //////////////////////////////
 /// // Functions for Aggchain ////
 /// //////////////////////////////
@@ -161,4 +180,5 @@ module.exports = {
     ARRAY_AGGCHAIN_SUPPORTED_NAMES,
     getAggchainTypeFromSelector,
     getAggchainVKeyVersionFromSelector,
+    GENESIS_CONTRACT_NAMES,
 };

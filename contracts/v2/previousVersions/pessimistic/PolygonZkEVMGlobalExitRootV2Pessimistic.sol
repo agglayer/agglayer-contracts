@@ -6,7 +6,7 @@ import "../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 import "../../lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 import "./DepositContractBasePessimistic.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
  * Contract responsible for managing the exit roots across multiple networks

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.20;
 
-import "@openzeppelin/contracts/governance/TimelockController.sol";
+import "@openzeppelin/contracts4/governance/TimelockController.sol";
 import "./PolygonZkEVM.sol";
 
 /**

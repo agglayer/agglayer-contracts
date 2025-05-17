@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "../../interfaces/IPolygonDataCommitteeErrors.sol";
 import "../../interfaces/IDataAvailabilityProtocol.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable4/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts4/utils/cryptography/ECDSA.sol";
 
 /*
  * Contract responsible managing the data committee that will verify that the data sent for a validium is singed by a committee

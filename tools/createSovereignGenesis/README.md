@@ -40,6 +40,7 @@ cp ./tools/createSovereignGenesis/genesis-base.json.example ./tools/createSovere
   - `globalExitRootUpdater`: Address of globalExitRootUpdater for sovereign chains
   - `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
   - `emergencyBridgePauser`: emergency bridge pauser address, can stop the bridge, recommended to be a multisig
+  - `emergencyBridgeUnpauser`: emergency bridge unpauser address, can unpause the bridge, recommended to be a multisig
   - `setPreMintAccount`: indicates if a preMint accounts going to be added
     - `preMintAccount.address`: ethereum address to receive an initial balance
     - `preMintAccount.balance`: balance credited to the preminted address

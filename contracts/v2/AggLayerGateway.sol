@@ -2,12 +2,8 @@
 pragma solidity 0.8.28;
 import {ISP1Verifier} from "./interfaces/ISP1Verifier.sol";
 import {IAggLayerGateway} from "./interfaces/IAggLayerGateway.sol";
-/// @dev same contract as contracts-upgradable(v5.2.0) -> https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/v5.2.0/contracts/proxy/utils/Initializable.sol
-import "@openzeppelin/contracts52/proxy/utils/Initializable.sol";
-/// @dev AccessControl.sol in @openzeppelin/contracts52: @openzeppelin/contracts52/access/AccessControl.sol
-/// has a different storage layout in comparison with the AccessControlUpgradeable.sol in contracts-upgradeable(v5.2.0): https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/v5.2.0/contracts/access/AccessControlUpgradeable.sol
-/// Warning to emphasize that AccessControl.sol (@openzeppelin/contracts52) cannot be upgraded to AccessControlUpgradeable.sol(contracts-upgradeable(v5.2.0))
-import "@openzeppelin/contracts52/access/AccessControl.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable5/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/AccessControlUpgradeable.sol";
 
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
@@ -17,7 +13,11 @@ import "@openzeppelin/contracts52/access/AccessControl.sol";
  * It supports adding and freezing PP verification keys and verifying the PP.
  * Also maintains the default verification keys of aggchains
  */
-contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
+contract AggLayerGateway is
+    Initializable,
+    AccessControlUpgradeable,
+    IAggLayerGateway
+{
     ////////////////////////////////////////////////////////////
     //                  Constants & Immutables                //
     ////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[50] private _gap;
+    uint256[50] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                       Constructor                      //
@@ -241,6 +241,8 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
         if (defaultAggchainVKeys[defaultAggchainSelector] != bytes32(0)) {
             revert AggchainVKeyAlreadyExists();
         }
+
+        // Check new key is non-zero
         if (newAggchainVKey == bytes32(0)) {
             revert VKeyCannotBeZero();
         }
@@ -265,6 +267,11 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
             revert AggchainVKeyNotFound();
         }
 
+        // Check new key is non-zero
+        if (newDefaultAggchainVKey == bytes32(0)) {
+            revert VKeyCannotBeZero();
+        }
+
         // Update the VKey
         bytes32 previousVKey = defaultAggchainVKeys[defaultAggchainSelector];
         defaultAggchainVKeys[defaultAggchainSelector] = newDefaultAggchainVKey;
@@ -274,6 +281,24 @@ contract AggLayerGateway is Initializable, AccessControl, IAggLayerGateway {
             previousVKey,
             newDefaultAggchainVKey
         );
+    }
+
+    /**
+     * @notice Function to unset a default aggchain verification key from the mapping
+     * @param defaultAggchainSelector The 4 bytes selector to update the default aggchain verification keys.
+     */
+    function unsetDefaultAggchainVKey(
+        bytes4 defaultAggchainSelector
+    ) external onlyRole(AGGCHAIN_DEFAULT_VKEY_ROLE) {
+        // Check if the key exists
+        if (defaultAggchainVKeys[defaultAggchainSelector] == bytes32(0)) {
+            revert AggchainVKeyNotFound();
+        }
+
+        // Set key to zero
+        defaultAggchainVKeys[defaultAggchainSelector] = bytes32(0);
+
+        emit UnsetDefaultAggchainVKey(defaultAggchainSelector);
     }
 
     /**

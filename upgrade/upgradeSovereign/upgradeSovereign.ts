@@ -4,12 +4,13 @@ import { expect } from "chai";
 import path = require("path");
 import fs = require("fs");
 import { utils } from "ffjavascript";
+import { logger } from "../../src/logger";
 
 import * as dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 import { ethers, upgrades, run } from "hardhat";
 import { GlobalExitRootManagerL2SovereignChainPessimistic } from "../../typechain-types";
-import { genTimelockOperation } from "../utils";
+import { genTimelockOperation, decodeScheduleData } from "../utils";
 import { checkParams, getDeployerFromParameters } from "../../src/utils";
 
 const pathOutputJson = path.join(__dirname, "./upgrade_output.json");
@@ -21,10 +22,10 @@ async function main() {
      * Check upgrade parameters
      * Check that every necessary parameter is fulfilled
      */
-    const mandatoryUpgradeParameters = ["timelockDelay"];
+    const mandatoryUpgradeParameters = ["timelockDelay", "proxiedTokensManagerAddress", "emergencyBridgePauserAddress", "emergencyBridgeUnpauserAddress"];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    const { timelockDelay } = upgradeParameters;
+    const { timelockDelay, emergencyBridgePauserAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress } = upgradeParameters;
 
     // In case globalExitRootManagerL2SovereignChainAddress is not provided, use the default one, used by most chains in the genesis
     const globalExitRootManagerL2SovereignChainAddress = typeof upgradeParameters.globalExitRootManagerL2SovereignChainAddress === "undefined" ? "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa" : upgradeParameters.globalExitRootManagerL2SovereignChainAddress;
@@ -42,7 +43,7 @@ async function main() {
 
     // Load deployer
     const deployer = await getDeployerFromParameters(ethers.provider, upgradeParameters, ethers);
-    console.log("Upgrading with: ", deployer.address);
+    logger.info(`Upgrading with: ${deployer.address}`);
 
     // As this contract is deployed in the genesis of a L2 network, no open zeppelin network file is created, we need to force import it
     await upgrades.forceImport(
@@ -75,10 +76,10 @@ async function main() {
         }
     );
 
-    console.log("#######################\n");
-    console.log(`GERManagerL2Sovereign implementation: ${gerManagerL2SovereignChainImplementation}`);
+    logger.info("#######################\n");
+    logger.info(`GERManagerL2Sovereign implementation: ${gerManagerL2SovereignChainImplementation}`);
     try {
-        console.log("Trying to verify the new implementation contract");
+        logger.info("Trying to verify the new implementation contract");
         // wait a few seconds before trying etherscan verification
         await new Promise((r) => setTimeout(r, 5000));
         // verify
@@ -87,15 +88,15 @@ async function main() {
             constructorArguments: [bridgeAddress],
         });
     } catch (error) {
-        console.log("Error verifying the new implementation contract: ", error);
-        console.log("you can verify the new impl address with:");
-        console.log(
+        logger.info("Error verifying the new implementation contract: ", error);
+        logger.info("you can verify the new impl address with:");
+        logger.info(
             `npx hardhat verify --constructor-args upgrade/arguments.js ${gerManagerL2SovereignChainImplementation} --network ${process.env.HARDHAT_NETWORK}\n`
         );
-        console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [bridgeAddress]);
+        logger.info("Copy the following constructor arguments on: upgrade/arguments.js \n", [bridgeAddress]);
     }
     // gerManagerL2SovereignChainImplementation is upgraded but not initialized
-    const timelockOperation = genTimelockOperation(
+    const operationGER = genTimelockOperation(
         proxyAdmin.target,
         0, // value
         proxyAdmin.interface.encodeFunctionData("upgrade", [
@@ -106,27 +107,57 @@ async function main() {
         salt // salt
     );
 
+    // Upgrade BridgeL2SovereignChain
+    const bridgeFactory = await ethers.getContractFactory("BridgeL2SovereignChain", deployer);
+    await upgrades.forceImport(
+        bridgeAddress,
+        bridgeFactory,
+        {
+            constructorArgs: [],
+            kind: "transparent",
+        }
+    );
+
+    const impBridge = await upgrades.prepareUpgrade(bridgeAddress, bridgeFactory, {
+        unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+        redeployImplementation: "always",
+    });
+    logger.info("#######################\n");
+    logger.info(`Polygon sovereign bridge implementation deployed at: ${impBridge}`);
+
+    const operationBridge = genTimelockOperation(
+        proxyAdmin.target,
+        0, // value
+        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+            bridgeAddress,
+            impBridge,
+            bridgeFactory.interface.encodeFunctionData("initialize(bytes32[],uint256[],address,address,address)", [[], [], emergencyBridgePauserAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress])
+        ]), // data
+        ethers.ZeroHash, // predecessor
+        salt // salt
+    );
+
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
-        timelockOperation.target,
-        timelockOperation.value,
-        timelockOperation.data,
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData("scheduleBatch", [
+        [operationGER.target, operationBridge.target],
+        [operationGER.value, operationBridge.value],
+        [operationGER.data, operationBridge.data],
         ethers.ZeroHash, // predecessor
         salt, // salt
         timelockDelay,
     ]);
 
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
-        timelockOperation.target,
-        timelockOperation.value,
-        timelockOperation.data,
+    const executeData = timelockContractFactory.interface.encodeFunctionData("executeBatch", [
+        [operationGER.target, operationBridge.target],
+        [operationGER.value, operationBridge.value],
+        [operationGER.data, operationBridge.data],
         ethers.ZeroHash, // predecessor
         salt, // salt
     ]);
 
-    console.log({ scheduleData });
-    console.log({ executeData });
+    logger.info({ scheduleData });
+    logger.info({ executeData });
 
     // Get current block number, used in the shallow fork tests
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -135,39 +166,15 @@ async function main() {
         executeData,
         timelockContractAddress: timelockAddress,
         implementationDeployBlockNumber: blockNumber,
+        bridgeImplementationAddress: impBridge,
     };
 
     // Decode the scheduleData for better readability
-    const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
-    const paramsArray = timelockTx?.fragment.inputs as any;
-    const objectDecoded = {} as any;
-
-    for (let i = 0; i < paramsArray?.length; i++) {
-        const currentParam = paramsArray[i];
-        objectDecoded[currentParam.name] = timelockTx?.args[i];
-
-        if (currentParam.name == "data") {
-            const decodedProxyAdmin = proxyAdmin.interface.parseTransaction({
-                data: timelockTx?.args[i],
-            });
-            const objectDecodedData = {} as any;
-            const paramsArrayData = decodedProxyAdmin?.fragment.inputs as any;
-
-            objectDecodedData.signature = decodedProxyAdmin?.signature;
-            objectDecodedData.selector = decodedProxyAdmin?.selector;
-
-            for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedProxyAdmin?.args[j];
-            }
-            objectDecoded["decodedData"] = objectDecodedData;
-        }
-    }
-
+    const objectDecoded = await decodeScheduleData(scheduleData, proxyAdmin);
     outputJson.decodedScheduleData = objectDecoded;
 
     fs.writeFileSync(pathOutputJson, JSON.stringify(utils.stringifyBigInts(outputJson), null, 1));
-    console.log(`Output saved to: ${pathOutputJson}`);
+    logger.info(`Output saved to: ${pathOutputJson}`);
 }
 
 main().catch((e) => {

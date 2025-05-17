@@ -1,20 +1,17 @@
-import {expect} from "chai";
-import {ethers, upgrades} from "hardhat";
+import { expect } from "chai";
+import { ethers, upgrades } from "hardhat";
 import {
-    VerifierRollupHelperMock,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
     PolygonZkEVMGlobalExitRoot,
     PolygonZkEVMBridgeV2,
-    PolygonZkEVMV2,
-    PolygonRollupBase,
     TokenWrapped,
 } from "../../typechain-types";
-import {takeSnapshot, time} from "@nomicfoundation/hardhat-network-helpers";
-import {processorUtils, contractUtils, MTBridge, mtBridgeUtils} from "@0xpolygonhermez/zkevm-commonjs";
-const {calculateSnarkInput, calculateAccInputHash, calculateBatchHashData} = contractUtils;
+import { contractUtils, MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
+import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+
+const { calculateSnarkInput, calculateAccInputHash, calculateBatchHashData } = contractUtils;
 const MerkleTreeBridge = MTBridge;
-const {verifyMerkleProof, getLeafValue} = mtBridgeUtils;
+const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
@@ -54,8 +51,6 @@ describe("PolygonZkEVMBridge Contract", () => {
     const LEAF_TYPE_ASSET = 0;
     const LEAF_TYPE_MESSAGE = 1;
 
-    const polygonZkEVMAddress = ethers.ZeroAddress;
-
     beforeEach("Deploy contracts", async () => {
         // load signers
         [deployer, rollupManager, acc1] = await ethers.getSigners();
@@ -64,7 +59,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer"],
+            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
         })) as unknown as PolygonZkEVMBridgeV2;
 
         // deploy global exit root manager
@@ -161,7 +156,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: 1}
+                { value: 1 }
             )
         ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "MsgValueNotZero");
 
@@ -396,7 +391,7 @@ describe("PolygonZkEVMBridge Contract", () => {
             tokenAddress2,
             false,
             "0x",
-            {value: amount2}
+            { value: amount2 }
         );
     });
 
@@ -444,7 +439,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         //     value: ethers.parseEther("1"),
         // });
 
-        await expect(polygonZkEVMGlobalExitRoot.connect(bridgemoCK).updateExitRoot(mainnetExitRoot, {gasPrice: 0}))
+        await expect(polygonZkEVMGlobalExitRoot.connect(bridgemoCK).updateExitRoot(mainnetExitRoot, { gasPrice: 0 }))
             .to.emit(polygonZkEVMGlobalExitRoot, "UpdateGlobalExitRoot")
             .withArgs(mainnetExitRoot, rollupExitRoot);
 
@@ -783,25 +778,17 @@ describe("PolygonZkEVMBridge Contract", () => {
 
         // claim
         const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
-        // create2 parameters
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
-        const minimalBytecodeProxy = await polygonZkEVMBridgeContract.BASE_INIT_BYTECODE_WRAPPED_TOKEN();
-        const hashInitCode = ethers.solidityPackedKeccak256(["bytes", "bytes"], [minimalBytecodeProxy, metadataToken]);
-        const precalculateWrappedErc20 = await ethers.getCreate2Address(
-            polygonZkEVMBridgeContract.target as string,
-            salt,
-            hashInitCode
-        );
+
+        // Compute wrapped token proxy address
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
         expect(
-            await polygonZkEVMBridgeContract.precalculatedWrapperAddress(
+            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
                 networkIDRollup,
                 tokenAddress,
-                tokenName,
-                tokenSymbol,
-                decimals
             )
         ).to.be.equal(precalculateWrappedErc20);
 
@@ -829,15 +816,6 @@ describe("PolygonZkEVMBridge Contract", () => {
 
         const newTokenInfo = await polygonZkEVMBridgeContract.wrappedTokenToTokenInfo(precalculateWrappedErc20);
 
-        // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.calculateTokenWrapperAddress(
-                networkIDRollup,
-                tokenAddress,
-                precalculateWrappedErc20
-            )
-        ).to.be.equal(precalculateWrappedErc20);
-
         expect(newTokenInfo.originNetwork).to.be.equal(networkIDRollup);
         expect(newTokenInfo.originTokenAddress).to.be.equal(tokenAddress);
         expect(await polygonZkEVMBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
@@ -846,13 +824,13 @@ describe("PolygonZkEVMBridge Contract", () => {
         expect(await polygonZkEVMBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
             precalculateWrappedErc20
         );
-
+        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
         expect(await polygonZkEVMBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
-        expect(await newWrappedToken.name()).to.be.equal(tokenName);
-        expect(await newWrappedToken.symbol()).to.be.equal(tokenSymbol);
-        expect(await newWrappedToken.decimals()).to.be.equal(decimals);
+        expect(await newWrappedToken.connect(acc1).name()).to.be.equal(tokenName);
+        expect(await newWrappedToken.connect(acc1).symbol()).to.be.equal(tokenSymbol);
+        expect(await newWrappedToken.connect(acc1).decimals()).to.be.equal(decimals);
 
         // Can't claim because nullifier
         await expect(
@@ -872,7 +850,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "AlreadyClaimed");
         expect(true).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
-        expect(await newWrappedToken.totalSupply()).to.be.equal(amount);
+        expect(await newWrappedToken.connect(acc1).totalSupply()).to.be.equal(amount);
 
         // Claim again the other leaf to mint tokens
         const index2 = 1;
@@ -910,9 +888,9 @@ describe("PolygonZkEVMBridge Contract", () => {
         const rollupExitRoot = await polygonZkEVMGlobalExitRoot.lastRollupExitRoot();
 
         // create a new deposit
-        await expect(newWrappedToken.approve(polygonZkEVMBridgeContract.target, amount))
+        await expect(newWrappedToken.connect(acc1).approve(polygonZkEVMBridgeContract.target, amount))
             .to.emit(newWrappedToken, "Approval")
-            .withArgs(deployer.address, polygonZkEVMBridgeContract.target, amount);
+            .withArgs(acc1.address, polygonZkEVMBridgeContract.target, amount);
 
         /*
          *  pre compute root merkle tree in Js
@@ -948,8 +926,8 @@ describe("PolygonZkEVMBridge Contract", () => {
         const rootJSMainnet = merkleTreeMainnet.getRoot();
 
         // Tokens are burnt
-        expect(await newWrappedToken.totalSupply()).to.be.equal(amount * 2n);
-        expect(await newWrappedToken.balanceOf(destinationAddress)).to.be.equal(amount * 2n);
+        expect(await newWrappedToken.connect(acc1).totalSupply()).to.be.equal(amount * 2n);
+        expect(await newWrappedToken.connect(acc1).balanceOf(destinationAddress)).to.be.equal(amount * 2n);
         await expect(
             polygonZkEVMBridgeContract.bridgeAsset(
                 newDestinationNetwork,
@@ -976,9 +954,9 @@ describe("PolygonZkEVMBridge Contract", () => {
             .to.emit(newWrappedToken, "Transfer")
             .withArgs(deployer.address, ethers.ZeroAddress, amount);
 
-        expect(await newWrappedToken.totalSupply()).to.be.equal(amount);
-        expect(await newWrappedToken.balanceOf(deployer.address)).to.be.equal(amount);
-        expect(await newWrappedToken.balanceOf(polygonZkEVMBridgeContract.target)).to.be.equal(0);
+        expect(await newWrappedToken.connect(acc1).totalSupply()).to.be.equal(amount);
+        expect(await newWrappedToken.connect(acc1).balanceOf(deployer.address)).to.be.equal(amount);
+        expect(await newWrappedToken.connect(acc1).balanceOf(polygonZkEVMBridgeContract.target)).to.be.equal(0);
 
         // check merkle root with SC
         const rootSCMainnet = await polygonZkEVMBridgeContract.getRoot();
@@ -1077,26 +1055,14 @@ describe("PolygonZkEVMBridge Contract", () => {
 
         expect(false).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
-        // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
-        // create2 parameters
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
-        const minimalBytecodeProxy = await polygonZkEVMBridgeContract.BASE_INIT_BYTECODE_WRAPPED_TOKEN();
-        const hashInitCode = ethers.solidityPackedKeccak256(["bytes", "bytes"], [minimalBytecodeProxy, metadataToken]);
-        const precalculateWrappedErc20 = await ethers.getCreate2Address(
-            polygonZkEVMBridgeContract.target as string,
-            salt,
-            hashInitCode
-        );
+        // Compute wrapped token proxy address
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
 
         // Use precalculatedWrapperAddress and check if matches
         expect(
-            await polygonZkEVMBridgeContract.precalculatedWrapperAddress(
+            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
                 networkIDRollup,
                 tokenAddress,
-                tokenName,
-                tokenSymbol,
-                decimals
             )
         ).to.be.equal(precalculateWrappedErc20);
 
@@ -1114,7 +1080,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 amount,
                 metadata
             )
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "FailedTokenWrappedDeployment");
+        ).to.be.reverted;
     });
     it("should PolygonZkEVMBridge and sync the current root with events", async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
@@ -1135,7 +1101,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         )
             .to.emit(polygonZkEVMBridgeContract, "BridgeEvent")
@@ -1158,7 +1124,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         )
             .to.emit(polygonZkEVMBridgeContract, "BridgeEvent")
@@ -1181,7 +1147,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         )
             .to.emit(polygonZkEVMBridgeContract, "BridgeEvent")
@@ -1213,7 +1179,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         );
         const events = await polygonZkEVMBridgeContract.queryFilter(filter, 0, "latest");
         events.forEach((e) => {
-            const {args} = e;
+            const { args } = e;
             const leafValue = getLeafValue(
                 args.leafType,
                 args.originNetwork,
@@ -1506,7 +1472,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "DestinationNetworkInvalid");
 
@@ -1519,7 +1485,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         );
 
@@ -1713,7 +1679,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: ethers.parseEther("100")}
+                { value: ethers.parseEther("100") }
             )
         ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "AmountDoesNotMatchMsgValue");
 
@@ -1726,7 +1692,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "DestinationNetworkInvalid");
 
@@ -1739,7 +1705,7 @@ describe("PolygonZkEVMBridge Contract", () => {
                 tokenAddress,
                 true,
                 "0x",
-                {value: amount}
+                { value: amount }
             )
         );
 

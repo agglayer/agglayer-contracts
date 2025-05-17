@@ -18,7 +18,7 @@ contract BridgeL2SovereignChain is
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Current bridge version
-    string public constant BRIDGE_SOVEREIGN_VERSION = "al-v0.3.0";
+    string public constant BRIDGE_SOVEREIGN_VERSION = "al-v10.1.0";
 
     // Map to store wrappedAddresses that are not mintable
     mapping(address wrappedAddress => bool isNotMintable)
@@ -42,18 +42,24 @@ contract BridgeL2SovereignChain is
     // Map to store wrappedAddresses that are not mintable
     mapping(bytes32 tokenInfoHash => uint256 amount) public localBalanceTree;
 
-    /// @notice Value to detect if the contract has been initialized previously.
-    ///         This mechanism is used to properly select the initializer
-    uint8 private _initializerVersion;
+    /// @dev Deprecated in favor of _initializerVersion at PolygonZkEVMBridgeV2
+    /// @custom:oz-renamed-from _initializerVersion
+    uint8 private _initializerVersionLegacy;
 
     //  This account will be able to accept the emergencyBridgePauser role
     address public pendingEmergencyBridgePauser;
+
+    // Emergency bridge unpauser address: can unpause the bridge, both bridges and claims
+    address public emergencyBridgeUnpauser;
+
+    //  This account will be able to accept the emergencyBridgeUnpauser role
+    address public pendingEmergencyBridgeUnpauser;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[50] private _gap;
+    uint256[48] private __gap;
 
     /**
      * @dev Emitted when a bridge manager is updated
@@ -78,6 +84,26 @@ contract BridgeL2SovereignChain is
     event AcceptEmergencyBridgePauserRole(
         address oldEmergencyBridgePauser,
         address newEmergencyBridgePauser
+    );
+
+    /**
+     * @notice Emitted when the emergencyBridgeUnpauser starts the two-step transfer role setting a new pending emergencyBridgeUnpauser.
+     * @param currentEmergencyBridgeUnpauser The current emergencyBridgeUnpauser.
+     * @param newEmergencyBridgeUnpauser The new pending emergencyBridgeUnpauser.
+     */
+    event TransferEmergencyBridgeUnpauserRole(
+        address currentEmergencyBridgeUnpauser,
+        address newEmergencyBridgeUnpauser
+    );
+
+    /**
+     * @notice Emitted when the pending emergencyBridgeUnpauser accepts the emergencyBridgeUnpauser role.
+     * @param oldEmergencyBridgeUnpauser The previous emergencyBridgeUnpauser.
+     * @param newEmergencyBridgeUnpauser The new emergencyBridgeUnpauser.
+     */
+    event AcceptEmergencyBridgeUnpauserRole(
+        address oldEmergencyBridgeUnpauser,
+        address newEmergencyBridgeUnpauser
     );
 
     /**
@@ -141,12 +167,6 @@ contract BridgeL2SovereignChain is
         uint256 amount
     );
 
-    /// @dev Modifier to retrieve initializer version value previous on using the reinitializer modifier, its used in the initialize function.
-    modifier getInitializedVersion() {
-        _initializerVersion = _getInitializedVersion();
-        _;
-    }
-
     /**
      * Disable initializers on the implementation following the best practices
      */
@@ -155,7 +175,7 @@ contract BridgeL2SovereignChain is
     }
 
     /**
-     * @dev initilaizer function to set the initial values of the contract when the contract is deployed for the first time
+     * @dev initializer function to set the initial values of the contract when the contract is deployed for the first time
      * @param _networkID networkID
      * @param _gasTokenAddress gas token address
      * @param _gasTokenNetwork gas token network
@@ -167,7 +187,9 @@ contract BridgeL2SovereignChain is
      * @param _bridgeManager bridge manager address
      * @param _sovereignWETHAddress sovereign WETH address
      * @param _sovereignWETHAddressIsNotMintable Flag to indicate if the wrapped ETH is not mintable
-     * @param _emergencyBridgePauser emergency bridge pauser address, allowed to be zero if the chain wants to disable the feature to stop de bridge
+     * @param _emergencyBridgePauser emergency bridge pauser address, allowed to be zero if the chain wants to disable the feature to stop the bridge
+     * @param _emergencyBridgeUnpauser emergency bridge unpauser address, allowed to be zero if the chain wants to disable the feature to unpause the bridge
+     * @param _proxiedTokensManager address of the proxied tokens manager
      */
     function initialize(
         uint32 _networkID,
@@ -179,11 +201,21 @@ contract BridgeL2SovereignChain is
         address _bridgeManager,
         address _sovereignWETHAddress,
         bool _sovereignWETHAddressIsNotMintable,
-        address _emergencyBridgePauser
-    ) public virtual getInitializedVersion reinitializer(2) {
+        address _emergencyBridgePauser,
+        address _emergencyBridgeUnpauser,
+        address _proxiedTokensManager
+    ) public virtual getInitializedVersion reinitializer(3) {
         if (_initializerVersion != 0) {
             revert InvalidInitializeFunction();
         }
+
+        require(
+            address(_globalExitRootManager) != address(0),
+            InvalidZeroAddress()
+        );
+
+        // Network ID must be different from 0 for sovereign chains
+        require(_networkID != 0, "InvalidZeroNetworkID");
 
         networkID = _networkID;
         globalExitRootManager = _globalExitRootManager;
@@ -191,6 +223,24 @@ contract BridgeL2SovereignChain is
         bridgeManager = _bridgeManager;
         emergencyBridgePauser = _emergencyBridgePauser;
         emit AcceptEmergencyBridgePauserRole(address(0), emergencyBridgePauser);
+        emergencyBridgeUnpauser = _emergencyBridgeUnpauser;
+        emit AcceptEmergencyBridgeUnpauserRole(
+            address(0),
+            emergencyBridgeUnpauser
+        );
+
+        // Set proxied tokens manager
+        require(
+            _proxiedTokensManager != address(this),
+            BridgeAddressNotAllowed()
+        );
+
+        // It's not allowed proxiedTokensManager to be zero address. If disabling token upgradability is required, add a not owned account like 0xffff...fffff
+        require(_proxiedTokensManager != address(0), InvalidZeroAddress());
+
+        proxiedTokensManager = _proxiedTokensManager;
+
+        emit AcceptProxiedTokensManagerRole(address(0), proxiedTokensManager);
 
         // Set gas token
         if (_gasTokenAddress == address(0)) {
@@ -225,7 +275,9 @@ contract BridgeL2SovereignChain is
                     abi.encode("Wrapped Ether", "WETH", 18)
                 );
             } else {
-                WETHToken = TokenWrapped(_sovereignWETHAddress);
+                WETHToken = ITokenWrappedBridgeUpgradeable(
+                    _sovereignWETHAddress
+                );
                 wrappedAddressIsNotMintable[
                     _sovereignWETHAddress
                 ] = _sovereignWETHAddressIsNotMintable;
@@ -241,12 +293,15 @@ contract BridgeL2SovereignChain is
      * Allow to initialize the LocalBalanceTree with the initial balances
      * @param tokenInfoHash Array of tokenInfoHash
      * @param amount Array of amount
+     * @param _emergencyBridgeUnpauser Address of the emergencyBridgeUnpauser role
+     * @param _proxiedTokensManager Address of the proxiedTokensManager role
      */
     function initialize(
         bytes32[] calldata tokenInfoHash,
         uint256[] calldata amount,
-        address _emergencyBridgePauser
-    ) public getInitializedVersion reinitializer(2) {
+        address _emergencyBridgeUnpauser,
+        address _proxiedTokensManager
+    ) public getInitializedVersion reinitializer(3) {
         if (_initializerVersion == 0) {
             revert InvalidInitializeFunction();
         }
@@ -259,9 +314,16 @@ contract BridgeL2SovereignChain is
             _setInitialLocalBalanceTreeAmount(tokenInfoHash[i], amount[i]);
         }
 
-        // Set emergency bridge pauser
-        emergencyBridgePauser = _emergencyBridgePauser;
-        emit AcceptEmergencyBridgePauserRole(address(0), emergencyBridgePauser);
+        // Set emergency bridge unpauser
+        emergencyBridgeUnpauser = _emergencyBridgeUnpauser;
+        emit AcceptEmergencyBridgeUnpauserRole(
+            address(0),
+            emergencyBridgeUnpauser
+        );
+
+        // set proxied tokens manager
+        proxiedTokensManager = _proxiedTokensManager;
+        emit AcceptProxiedTokensManagerRole(address(0), proxiedTokensManager);
 
         // Initialize OZ contracts
         __ReentrancyGuard_init();
@@ -299,6 +361,13 @@ contract BridgeL2SovereignChain is
         revert InvalidInitializeFunction();
     }
 
+    /**
+     * @notice Override the function to prevent the usage, only allowed for L1 bridge, not sovereign chains
+     */
+    function initialize() public pure override(PolygonZkEVMBridgeV2) {
+        revert InvalidInitializeFunction();
+    }
+
     modifier onlyBridgeManager() {
         if (bridgeManager != msg.sender) {
             revert OnlyBridgeManager();
@@ -309,6 +378,13 @@ contract BridgeL2SovereignChain is
     modifier onlyEmergencyBridgePauser() {
         if (emergencyBridgePauser != msg.sender) {
             revert OnlyEmergencyBridgePauser();
+        }
+        _;
+    }
+
+    modifier onlyEmergencyBridgeUnpauser() {
+        if (emergencyBridgeUnpauser != msg.sender) {
+            revert OnlyEmergencyBridgeUnpauser();
         }
         _;
     }
@@ -366,6 +442,8 @@ contract BridgeL2SovereignChain is
      * this will override the previous calls and only keep the last sovereignTokenAddress.
      * @notice The tokenInfoToWrappedToken mapping  value is replaced by the new sovereign address but it's not the case for the wrappedTokenToTokenInfo map where the value is added, this way user will always be able to withdraw their tokens
      * @notice The number of decimals between sovereign token and origin token is not checked, it doesn't affect the bridge functionality but the UI.
+     * @notice  if you set multiple sovereign token addresses for the same pair of originNetwork/originTokenAddress, means you are remapping the same tokenInfoHash
+     * to different sovereignTokenAddress so all those sovereignTokenAddresses will can bridge the mapped tokenInfoHash.
      * @param originNetwork Origin network
      * @param originTokenAddress Origin token address, 0 address is reserved for gas token address. If WETH address is zero, means this gas token is ether, else means is a custom erc20 gas token
      * @param sovereignTokenAddress Address of the sovereign wrapped token
@@ -452,7 +530,7 @@ contract BridgeL2SovereignChain is
     /**
      * @notice Set the custom wrapper for weth
      * @notice If this function is called multiple times this will override the previous calls and only keep the last WETHToken.
-     * @notice WETH will not maintain legacy versions.Users easily should be able to unwrapp the legacy WETH and unwrapp it with the new one.
+     * @notice WETH will not maintain legacy versions.Users easily should be able to unwrap the legacy WETH and unwrapp it with the new one.
      * @param sovereignWETHTokenAddress Address of the sovereign weth token
      * @param isNotMintable Flag to indicate if the wrapped token is not mintable
      */
@@ -463,7 +541,7 @@ contract BridgeL2SovereignChain is
         if (gasTokenAddress == address(0)) {
             revert WETHRemappingNotSupportedOnGasTokenNetworks();
         }
-        WETHToken = TokenWrapped(sovereignWETHTokenAddress);
+        WETHToken = ITokenWrappedBridgeUpgradeable(sovereignWETHTokenAddress);
         wrappedAddressIsNotMintable[sovereignWETHTokenAddress] = isNotMintable;
         emit SetSovereignWETHAddress(sovereignWETHTokenAddress, isNotMintable);
     }
@@ -480,7 +558,7 @@ contract BridgeL2SovereignChain is
     ) external {
         // Use permit if any
         if (permitData.length != 0) {
-            _permit(legacyTokenAddress, amount, permitData);
+            _permit(legacyTokenAddress, permitData);
         }
 
         // Get current wrapped token address
@@ -488,7 +566,7 @@ contract BridgeL2SovereignChain is
             legacyTokenAddress
         ];
         if (legacyTokenInfo.originTokenAddress == address(0)) {
-            revert TokenNotMapped();
+            revert TokenNotMapped(legacyTokenAddress);
         }
 
         // Check current token mapped is proposed updatedTokenAddress
@@ -507,11 +585,11 @@ contract BridgeL2SovereignChain is
 
         // Proceed to migrate the token
         uint256 amountToClaim = _bridgeWrappedAsset(
-            TokenWrapped(legacyTokenAddress),
+            ITokenWrappedBridgeUpgradeable(legacyTokenAddress),
             amount
         );
         _claimWrappedAsset(
-            TokenWrapped(currentTokenAddress),
+            ITokenWrappedBridgeUpgradeable(currentTokenAddress),
             msg.sender,
             amountToClaim
         );
@@ -574,6 +652,50 @@ contract BridgeL2SovereignChain is
     }
 
     /**
+     * @notice Function to deploy an upgradeable wrapped token without having to claim asset. It is used to upgrade legacy tokens to the new upgradeable token. After deploying the token it is remapped to be the new functional wtoken
+     * @param originNetwork Origin network of the token
+     * @param originTokenAddress Origin token address, 0 address is reserved for gas token address. If WETH address is zero, means this gas token is ether, else means is a custom erc20 gas token
+     */
+    function deployWrappedTokenAndRemap(
+        uint32 originNetwork,
+        address originTokenAddress
+    ) external onlyBridgeManager {
+        // Compute tokenInfoHash
+        bytes32 tokenInfoHash = keccak256(
+            abi.encodePacked(originNetwork, originTokenAddress)
+        );
+
+        // Only allow to deploy a wrapped token if the token is mapped, meaning is legacy and there is a plan to remap it to the new one
+        ITokenWrappedBridgeUpgradeable wrappedToken = ITokenWrappedBridgeUpgradeable(
+                tokenInfoToWrappedToken[tokenInfoHash]
+            );
+        require(
+            address(wrappedToken) != address(0),
+            TokenNotMapped(address(wrappedToken))
+        );
+
+        // Deploy the wrapped token
+        address wrappedTokenProxy = address(
+            _deployWrappedToken(
+                tokenInfoHash,
+                abi.encode(
+                    wrappedToken.name(),
+                    wrappedToken.symbol(),
+                    wrappedToken.decimals()
+                )
+            )
+        );
+
+        // Remap the deployed wrapped token
+        _setSovereignTokenAddress(
+            originNetwork,
+            originTokenAddress,
+            wrappedTokenProxy,
+            false
+        );
+    }
+
+    /**
      * @notice Updated bridge manager address, recommended to set a timelock at this address after bootstrapping phase
      * @param _bridgeManager Bridge manager address
      */
@@ -590,8 +712,8 @@ contract BridgeL2SovereignChain is
     }
 
     /////////////////////////////////////////
-    //   EmergencyBridgePauser functions   //
-    ////////////////////////////////////////
+    //   EmergencyBridge      functions   //
+    ///////////////////////////////////////
 
     /**
      * @notice Starts the emergencyBridgePauser role transfer
@@ -613,9 +735,10 @@ contract BridgeL2SovereignChain is
      * @notice Allow the current pending emergencyBridgePauser to accept the emergencyBridgePauser role
      */
     function acceptEmergencyBridgePauserRole() external {
-        if (pendingEmergencyBridgePauser != msg.sender) {
-            revert OnlyPendingEmergencyBridgePauser();
-        }
+        require(
+            pendingEmergencyBridgePauser == msg.sender,
+            OnlyPendingEmergencyBridgePauser()
+        );
 
         address oldEmergencyBridgePauser = emergencyBridgePauser;
         emergencyBridgePauser = pendingEmergencyBridgePauser;
@@ -627,6 +750,41 @@ contract BridgeL2SovereignChain is
         );
     }
 
+    /**
+     * @notice Starts the emergencyBridgeUnpauser role transfer
+     * This is a two step process, the pending emergencyBridgeUnpauser must accepted to finalize the process
+     * @param newEmergencyBridgeUnpauser Address of the new pending emergencyBridgeUnpauser
+     */
+    function transferEmergencyBridgeUnpauserRole(
+        address newEmergencyBridgeUnpauser
+    ) external onlyEmergencyBridgeUnpauser {
+        pendingEmergencyBridgeUnpauser = newEmergencyBridgeUnpauser;
+
+        emit TransferEmergencyBridgeUnpauserRole(
+            emergencyBridgeUnpauser,
+            newEmergencyBridgeUnpauser
+        );
+    }
+
+    /**
+     * @notice Allow the current pending emergencyBridgeUnpauser to accept the emergencyBridgeUnpauser role
+     */
+    function acceptEmergencyBridgeUnpauserRole() external {
+        require(
+            pendingEmergencyBridgeUnpauser == msg.sender,
+            OnlyPendingEmergencyBridgeUnpauser()
+        );
+
+        address oldEmergencyBridgeUnpauser = emergencyBridgeUnpauser;
+        emergencyBridgeUnpauser = pendingEmergencyBridgeUnpauser;
+        delete pendingEmergencyBridgeUnpauser;
+
+        emit AcceptEmergencyBridgePauserRole(
+            oldEmergencyBridgeUnpauser,
+            emergencyBridgeUnpauser
+        );
+    }
+
     ////////////////////////////
     //   Private functions   //
     ///////////////////////////
@@ -634,7 +792,7 @@ contract BridgeL2SovereignChain is
     /**
      * @notice Burn tokens from wrapped token to execute the bridge, if the token is not mintable it will be transferred
      * note This function has been extracted to be able to override it by other contracts like Bridge2SovereignChain
-     * @param tokenWrapped Wrapped token to burnt
+     * @param tokenWrapped Proxied Wrapped token to burnt
      * @param amount Amount of tokens
      * @return Amount of tokens that must be added to the leaf after the bridge operation
      * @dev in case of tokens with non-standard transfers behavior like fee-on-transfer tokens or Max-value amount transfers user balance tokens,
@@ -642,20 +800,24 @@ contract BridgeL2SovereignChain is
      * added to the leaf has to be the amount received by the bridge
      */
     function _bridgeWrappedAsset(
-        TokenWrapped tokenWrapped,
+        ITokenWrappedBridgeUpgradeable tokenWrapped,
         uint256 amount
     ) internal override returns (uint256) {
         // The token is either (1) a correctly wrapped token from another network
         // or (2) wrapped with custom contract from origin network
         if (wrappedAddressIsNotMintable[address(tokenWrapped)]) {
-            uint256 balanceBefore = tokenWrapped.balanceOf(address(this));
+            // Swap interface from ITokenWrappedBridgeUpgradeable to IERC20Upgradeable for ERC20 functions access.
+            IERC20Upgradeable tokenWrappedERC20 = IERC20Upgradeable(
+                address(tokenWrapped)
+            );
+            uint256 balanceBefore = tokenWrappedERC20.balanceOf(address(this));
             // Don't use burn but transfer to bridge
-            IERC20Upgradeable(address(tokenWrapped)).safeTransferFrom(
+            tokenWrappedERC20.safeTransferFrom(
                 msg.sender,
                 address(this),
                 amount
             );
-            uint256 balanceAfter = tokenWrapped.balanceOf(address(this));
+            uint256 balanceAfter = tokenWrappedERC20.balanceOf(address(this));
 
             return balanceAfter - balanceBefore;
         } else {
@@ -668,12 +830,12 @@ contract BridgeL2SovereignChain is
     /**
      * @notice Mints tokens from wrapped token to proceed with the claim, if the token is not mintable it will be transferred
      * note This function has been extracted to be able to override it by other contracts like BridgeL2SovereignChain
-     * @param tokenWrapped Wrapped token to mint
+     * @param tokenWrapped Proxied wrapped token to mint
      * @param destinationAddress Minted token receiver
      * @param amount Amount of tokens
      */
     function _claimWrappedAsset(
-        TokenWrapped tokenWrapped,
+        ITokenWrappedBridgeUpgradeable tokenWrapped,
         address destinationAddress,
         uint256 amount
     ) internal override {
@@ -754,109 +916,6 @@ contract BridgeL2SovereignChain is
         }
     }
 
-    /**
-     * @notice Function to call token permit method of extended ERC20
-     * @dev function overridden from PolygonZkEVMBridgeV2 to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
-     + @param token ERC20 token address
-     * @param amount Quantity that is expected to be allowed
-     * @param permitData Raw data of the call `permit` of the token
-     */
-    function _permit(
-        address token,
-        uint256 amount,
-        bytes calldata permitData
-    ) internal override {
-        bytes4 sig = bytes4(permitData[:4]);
-        if (sig == _PERMIT_SIGNATURE) {
-            (
-                address owner,
-                address spender,
-                uint256 value,
-                uint256 deadline,
-                uint8 v,
-                bytes32 r,
-                bytes32 s
-            ) = abi.decode(
-                    permitData[4:],
-                    (
-                        address,
-                        address,
-                        uint256,
-                        uint256,
-                        uint8,
-                        bytes32,
-                        bytes32
-                    )
-                );
-
-            if (value != amount) {
-                revert NotValidAmount();
-            }
-
-            // we call without checking the result, in case it fails and he doesn't have enough balance
-            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-            // before the smartcontract call
-            /* solhint-disable avoid-low-level-calls */
-            address(token).call(
-                abi.encodeWithSelector(
-                    _PERMIT_SIGNATURE,
-                    owner,
-                    spender,
-                    value,
-                    deadline,
-                    v,
-                    r,
-                    s
-                )
-            );
-        } else {
-            if (sig != _PERMIT_SIGNATURE_DAI) {
-                revert NotValidSignature();
-            }
-
-            (
-                address holder,
-                address spender,
-                uint256 nonce,
-                uint256 expiry,
-                bool allowed,
-                uint8 v,
-                bytes32 r,
-                bytes32 s
-            ) = abi.decode(
-                    permitData[4:],
-                    (
-                        address,
-                        address,
-                        uint256,
-                        uint256,
-                        bool,
-                        uint8,
-                        bytes32,
-                        bytes32
-                    )
-                );
-
-            // we call without checking the result, in case it fails and he doesn't have enough balance
-            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-            // before the smartcontract call
-            /* solhint-disable avoid-low-level-calls */
-            address(token).call(
-                abi.encodeWithSelector(
-                    _PERMIT_SIGNATURE_DAI,
-                    holder,
-                    spender,
-                    nonce,
-                    expiry,
-                    allowed,
-                    v,
-                    r,
-                    s
-                )
-            );
-        }
-    }
-
     // @note This function is not used in the current implementation. We overwrite it to improve deployed bytecode size
     function activateEmergencyState()
         external
@@ -869,7 +928,7 @@ contract BridgeL2SovereignChain is
     function deactivateEmergencyState()
         external
         override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
-        onlyEmergencyBridgePauser
+        onlyEmergencyBridgeUnpauser
     {
         _deactivateEmergencyState();
     }
@@ -900,7 +959,7 @@ contract BridgeL2SovereignChain is
         );
 
         // revert due to an underflow explicitly
-        // custom error added to not wait for the EVM to revert when substracting from uint256
+        // custom error added to not wait for the EVM to revert when subtracting from uint256
         if (amount > localBalanceTree[tokenInfoHash]) {
             revert LocalBalanceTreeUnderflow(
                 originNetwork,

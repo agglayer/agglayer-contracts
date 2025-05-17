@@ -9,6 +9,8 @@
     "globalExitRootUpdater": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
     "globalExitRootRemover": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
     "emergencyBridgePauser": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
+    "emergencyBridgeUnpauser": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
+    "proxiedTokensManager": "0xB55B27Cca633A73108893985350bc26B8A00C43a",
     "setPreMintAccounts": true,
     "preMintAccounts": [
         {

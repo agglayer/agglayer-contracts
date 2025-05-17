@@ -158,7 +158,10 @@ contract BridgeL2SovereignChainPessimistic is
         bytes memory //_gasTokenMetadata
     )
         external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2Pessimistic)
+        override(
+            IPolygonZkEVMBridgeV2Pessimistic,
+            PolygonZkEVMBridgeV2Pessimistic
+        )
         initializer
     {
         revert InvalidInitializeFunction();
@@ -610,7 +613,10 @@ contract BridgeL2SovereignChainPessimistic is
     function activateEmergencyState()
         external
         pure
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2Pessimistic)
+        override(
+            IPolygonZkEVMBridgeV2Pessimistic,
+            PolygonZkEVMBridgeV2Pessimistic
+        )
     {
         revert EmergencyStateNotAllowed();
     }
@@ -618,7 +624,10 @@ contract BridgeL2SovereignChainPessimistic is
     function deactivateEmergencyState()
         external
         pure
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2Pessimistic)
+        override(
+            IPolygonZkEVMBridgeV2Pessimistic,
+            PolygonZkEVMBridgeV2Pessimistic
+        )
     {
         revert EmergencyStateNotAllowed();
     }

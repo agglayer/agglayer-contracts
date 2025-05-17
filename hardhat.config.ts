@@ -21,9 +21,9 @@ const DEFAULT_MNEMONIC = "test test test test test test test test test test test
 const config: HardhatUserConfig = {
     dependencyCompiler: {
         paths: [
-            "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetFixedSupply.sol",
-            "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol",
-            "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
+            "@openzeppelin/contracts4/token/ERC20/presets/ERC20PresetFixedSupply.sol",
+            "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol",
+            "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol",
         ], // ,
         // keep: true
     },
@@ -99,7 +99,7 @@ const config: HardhatUserConfig = {
                     //viaIR: true,
                 },
             },
-            "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol": {
+            "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol": {
                 version: "0.8.28",
                 settings: {
                     optimizer: {
@@ -109,7 +109,7 @@ const config: HardhatUserConfig = {
                     evmVersion: "shanghai",
                 }, // try yul optimizer
             },
-            "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol": {
+            "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol": {
                 version: "0.8.28",
                 settings: {
                     optimizer: {
@@ -124,22 +124,12 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 999, // should have same runs than BridgeL2SovereignChain
+                        runs: 500, // should have same runs than BridgeL2SovereignChain
                     },
                     evmVersion: "shanghai",
                 },
             },
-            "contracts/v2/lib/TokenWrappedBridgeInitCode.sol": {
-                version: "0.8.28",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999, // should have same runs than PolygonZkEVMBridgeV2
-                    },
-                    evmVersion: "shanghai",
-                },
-            },
-            "contracts/v2/lib/TokenWrappedBridgeInitCode.sol": {
+            "contracts/v2/lib/BytecodeStorer.sol": {
                 version: "0.8.28",
                 settings: {
                     optimizer: {
@@ -154,7 +144,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 999, // should have same runs than PolygonZkEVMBridgeV2
+                        runs: 500, // should have same runs than PolygonZkEVMBridgeV2
                     },
                     evmVersion: "shanghai",
                 }, // try yul optimizer
@@ -221,6 +211,37 @@ const config: HardhatUserConfig = {
                         runs: 500,
                     },
                     evmVersion: "cancun",
+                }, // try yul optimizer
+            },
+            "contracts/v2/lib/TransparentUpgradeableProxy.sol": {
+                version: "0.8.28",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 999,
+                    },
+                    evmVersion: "shanghai", // Same evm version than BridgeL2SovereignChain
+                },
+            },
+            "contracts/v2/lib/TokenWrappedBridgeUpgradeable.sol": {
+                version: "0.8.28",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 999999,
+                    },
+                    evmVersion: "shanghai", // Same evm version than BridgeL2SovereignChain
+                },
+            },
+            "contracts/v2/lib/TokenWrappedTransparentProxy.sol": {
+                version: "0.8.28",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 999999,
+                    },
+                    evmVersion: "shanghai",// Same evm version than BridgeL2SovereignChain
+                    metadata: { bytecodeHash: "none" }, // Get always same bytecode
                 }, // try yul optimizer
             }
         },
@@ -321,15 +342,6 @@ const config: HardhatUserConfig = {
         },
         zkevmDevnet: {
             url: "http://123:123:123:123:123",
-            accounts: {
-                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
-                path: "m/44'/60'/0'/0",
-                initialIndex: 0,
-                count: 20,
-            },
-        },
-        katanaBali: {
-            url: "https://rpc-katana-apex.t.conduit.xyz/39z55WFDLN4KjxEWmey3sFZ2PoK8gQ99x",
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",

@@ -17,7 +17,7 @@ const upgradeOutput = require("../upgrade_output.json");
 describe('Should shallow fork network, execute upgrade and validate Upgrade', () => {
     it('Should shallow fork network, execute upgrade and validate Upgrade', async () => {
         const AL_VERSION = "al-v0.3.0";
-        const mandatoryParameters = ["network", "rollupManagerAddress"];
+        const mandatoryParameters = ["network", "rollupManagerAddress", "proxiedTokensManagerAddress"];
         checkParams(upgradeParams, mandatoryParameters);
         if (!["mainnet", "sepolia"].includes(upgradeParams.network)) {
             throw new Error("Invalid network");
@@ -143,6 +143,7 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         };
         await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
         logger.info(`✓ Sent execute transaction`);
+
         // Check rollup manager contract
         const rollupMangerFactory = await ethers.getContractFactory("PolygonRollupManager");
         const rollupManagerContract = rollupMangerFactory.attach(
@@ -179,6 +180,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         expect(await bridgeContract.gasTokenAddress()).to.equal(bridgeGasTokenAddress);
         expect(await bridgeContract.gasTokenNetwork()).to.equal(bridgeGasTokenNetwork);
         expect(await bridgeContract.gasTokenMetadata()).to.equal(bridgeGasTokenMetadata);
+        expect(await bridgeContract.getProxiedTokensManager()).to.equal(upgradeParams.proxiedTokensManagerAddress);
+
         logger.info(`✓ Checked bridge contract storage parameters`);
 
         // Check ger contract

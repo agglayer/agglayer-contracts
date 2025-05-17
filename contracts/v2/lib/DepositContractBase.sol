@@ -31,7 +31,8 @@ contract DepositContractBase {
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[10] private _gap;
+    /// @custom:oz-renamed-from _gap
+    uint256[10] private __gap;
 
     /**
      * @notice Computes and returns the merkle root

@@ -6,11 +6,6 @@ import "./IPolygonZkEVMBridgeV2.sol";
 
 interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     /**
-     * @dev Thrown when try to set a zero address to a non valid zero address field
-     */
-    error InvalidZeroAddress();
-
-    /**
      * @dev Thrown when the origin network is invalid
      */
     error OriginNetworkInvalid();
@@ -24,7 +19,7 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     /**
      * @dev Thrown when trying to remove a token mapping that has not been updated by a new one
      */
-    error TokenNotMapped();
+    error TokenNotMapped(address tokenAddress);
 
     /**
      * @dev Thrown when trying to migrate a legacy token that is already the current token
@@ -35,11 +30,6 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
      * @dev Thrown when initializing sovereign bridge with invalid sovereign WETH token params
      */
     error InvalidSovereignWETHAddressParams();
-
-    /**
-     * @dev Thrown when initializing sovereign bridge with invalid sovereign WETH token params
-     */
-    error InvalidInitializeFunction();
 
     /**
      * @dev Thrown when initializing calling a function with invalid arrays length
@@ -101,9 +91,19 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error OnlyEmergencyBridgePauser();
 
     /**
-     * @dev Thrown when trying to call a function that only the pending VKeyManager can call.
+     * @dev Thrown when trying to call a function that only the pending bridge pauser can call.
      */
     error OnlyPendingEmergencyBridgePauser();
+
+    /**
+     * @dev Thrown when the caller is not the emergencyBridgeUnpauser address
+     */
+    error OnlyEmergencyBridgeUnpauser();
+
+    /**
+     * @dev Thrown when trying to call a function that only pending bridge unpauser can call.
+     */
+    error OnlyPendingEmergencyBridgeUnpauser();
 
     function initialize(
         uint32 _networkID,
@@ -115,6 +115,8 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
         address _bridgeManager,
         address sovereignWETHAddress,
         bool _sovereignWETHAddressIsNotMintable,
-        address _emergencyBridgePauser
+        address _emergencyBridgePauser,
+        address _emergencyBridgeUnpauser,
+        address _proxiedTokensManager
     ) external;
 }

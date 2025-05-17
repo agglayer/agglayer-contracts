@@ -170,7 +170,7 @@ async function main() {
 
     // Deploy proxy admin:
     const proxyAdminFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+        "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
         deployer
     );
     const deployTransactionAdmin = (await proxyAdminFactory.getDeployTransaction()).data;
@@ -204,7 +204,7 @@ async function main() {
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;
     const dataCallNull = null;
     // Mandatory to override the gasLimit since the estimation with create are mess up D:
-    const overrideGasLimit = 5500000n;
+    const overrideGasLimit = 10500000n;
     const [bridgeImplementationAddress, isBridgeImplDeployed] = await create2Deployment(
         zkEVMDeployerContract,
         salt,
@@ -289,7 +289,7 @@ async function main() {
      * Do not initialize directly the proxy since we want to deploy the same code on L2 and this will alter the bytecode deployed of the proxy
      */
     const transparentProxyFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+        "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
         deployer
     );
     const initializeEmptyDataProxy = "0x";
@@ -301,7 +301,7 @@ async function main() {
         )
     ).data;
 
-    const dataCallProxy = polygonZkEVMBridgeFactory.interface.encodeFunctionData("initialize", [
+    const dataCallProxy = polygonZkEVMBridgeFactory.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
         networkIDMainnet,
         gasTokenAddressMainnet,
         gasTokenNetworkMainnet,

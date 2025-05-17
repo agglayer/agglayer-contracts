@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.20;
 import "./PolygonZkEVMGlobalExitRootL2Pessimistic.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
  * Contract responsible for managing the exit roots for the Sovereign chains and global exit roots

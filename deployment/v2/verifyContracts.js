@@ -113,7 +113,7 @@ async function main() {
         await hre.run(
             'verify:verify',
             {
-                contract: '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+                contract: '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
                 address: deployOutputParameters.polygonZkEVMBridgeAddress,
                 constructorArguments: [
                     await upgrades.erc1967.getImplementationAddress(deployOutputParameters.polygonZkEVMBridgeAddress),

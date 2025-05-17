@@ -37,6 +37,7 @@ cp ./upgrade/upgradeAL/upgrade_parameters.json.example ./upgrade/upgradeAL/upgra
     - "multiplierGas": "", -> Optional: Gas multiplier with 3 decimals. If `maxFeePerGas` and `maxPriorityFeePerGas` are set, this will not take effect
     - "timelockAdminAddress": "0x..", -> Optional: The address of the timelock admin, only used at the shallow fork tests
     - "rpc": "rpc url" -> Optional: only used for shallow fork testing, is the rpc of the node to fork
+    - "proxiedTokensManagerAddress": "0x.." -> Address of the proxied tokens manager role
 
 - Run tool:
 

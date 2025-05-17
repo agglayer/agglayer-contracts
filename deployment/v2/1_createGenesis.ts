@@ -25,7 +25,7 @@ import {MemDB, ZkEVMDB, getPoseidon, smtUtils} from "@0xpolygonhermez/zkevm-comm
 import {deployPolygonZkEVMDeployer, create2Deployment, getCreate2Address} from "../helpers/deployment-helpers";
 import {ProxyAdmin} from "../../typechain-types";
 import {Addressable} from "ethers";
-
+import { GENESIS_CONTRACT_NAMES } from "../../src/utils-common-aggchain";
 import "../helpers/utils";
 
 const deployParameters = require(argv.input);
@@ -144,7 +144,7 @@ async function main() {
 
     // Deploy proxy admin:
     const proxyAdminFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+        "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
         deployer
     );
     const deployTransactionAdmin = (await proxyAdminFactory.getDeployTransaction()).data;
@@ -163,11 +163,11 @@ async function main() {
     }
 
     // Deploy implementation PolygonZkEVMBridge
-    const bridgeContractName = "PolygonZkEVMBridgeV2";
+    const bridgeContractName = GENESIS_CONTRACT_NAMES.BRIDGE_V2;
     const polygonZkEVMBridgeFactory = await ethers.getContractFactory(bridgeContractName, deployer);
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;
     // Mandatory to override the gasLimit since the estimation with create are mess up D:
-    const overrideGasLimit = BigInt(5500000);
+    const overrideGasLimit = BigInt(10500000);
     [bridgeImplementationAddress] = await create2Deployment(
         zkEVMDeployerContract,
         salt,
@@ -177,21 +177,32 @@ async function main() {
         overrideGasLimit
     );
 
-    // Retrieve TokenWrappedBridgeInitCode contract to add it to the genesis, necessary for token wrapped deployments from the bridge
+    // Retrieve wrappedTokenBytecodeStorer contract to add it to the genesis, necessary for token wrapped deployments from the bridge
     const bridgeContract = polygonZkEVMBridgeFactory.attach(bridgeImplementationAddress) as PolygonZkEVMBridgeV2;
     const wrappedTokenBytecodeStorer = await bridgeContract.wrappedTokenBytecodeStorer();
 
-    const tokenWrappedBridgeInitCodeInfo = await getAddressInfo(wrappedTokenBytecodeStorer as string);
+    const bytecodeStorerInfo = await getAddressInfo(wrappedTokenBytecodeStorer as string);
     genesis.push({
-        contractName: `TokenWrappedBridgeInitCode`,
+        contractName: GENESIS_CONTRACT_NAMES.BYTECODE_STORER,
         balance: "0",
-        nonce: tokenWrappedBridgeInitCodeInfo.nonce.toString(),
+        nonce: bytecodeStorerInfo.nonce.toString(),
         address: wrappedTokenBytecodeStorer,
-        bytecode: tokenWrappedBridgeInitCodeInfo.bytecode,
+        bytecode: bytecodeStorerInfo.bytecode,
     });
     if (isMainnet === false) {
         finalBridgeImplAddress = bridgeImplementationAddress;
     }
+    // Retrieve wrappedTokenBridgeImplementation contract to add it to the genesis, necessary for token wrapped deployments from the bridge
+    const wrappedTokenImplementationAddress = await bridgeContract.getWrappedTokenBridgeImplementation();
+
+    const wrappedTokenImplementationInfo = await getAddressInfo(wrappedTokenImplementationAddress as string);
+    genesis.push({
+        contractName: `TokenWrapped Implementation`,
+        balance: "0",
+        nonce: wrappedTokenImplementationInfo.nonce.toString(),
+        address: wrappedTokenImplementationAddress,
+        bytecode: wrappedTokenImplementationInfo.bytecode,
+    });
     // Do not initialize the bridge!
 
     /*
@@ -199,7 +210,7 @@ async function main() {
      * Do not initialize directly the proxy since we want to deploy the same code on L2 and this will alter the bytecode deployed of the proxy
      */
     const transparentProxyFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+        "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
         deployer
     );
     const initializeEmptyDataProxy = "0x";
@@ -230,7 +241,7 @@ async function main() {
     /*
      *Deployment Global exit root manager
      */
-    const globalExitRootContractName = "PolygonZkEVMGlobalExitRootL2";
+    const globalExitRootContractName = GENESIS_CONTRACT_NAMES.GER_L2;
     const PolygonZkEVMGlobalExitRootL2Factory = await ethers.getContractFactory(
         globalExitRootContractName,
         deployer
@@ -243,7 +254,7 @@ async function main() {
             //  - 'proxyAdminAddress' will be used a the ProxyAdmin
             // TransparentUpgradeableProxy:
             //   - internally it uses the following artifact when deploying the 'TransparentUpgradeableProxy'
-            //   - artifact: @openzeppelin/upgrades-core/artifacts/@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json
+            //   - artifact: @openzeppelin/upgrades-core/artifacts/@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json
             //   - build-info: @openzeppelin/upgrades-core/artifacts/build-info.json
             //      - "solcVersion": "0.8.9",
             //      - "solcLongVersion": "0.8.9+commit.e5eed63a",

@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.20;
 import "../../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
-import "../../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "./IPolygonZkEVMBridgeV2Pessimistic.sol";
 
-interface IBridgeL2SovereignChainsPessimistic is IPolygonZkEVMBridgeV2 {
+interface IBridgeL2SovereignChainsPessimistic is
+    IPolygonZkEVMBridgeV2Pessimistic
+{
     /**
      * @dev Thrown when try to set a zero address to a non valid zero address field
      */

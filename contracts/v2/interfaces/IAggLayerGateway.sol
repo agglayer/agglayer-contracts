@@ -41,6 +41,12 @@ interface IAggLayerGatewayEvents {
         bytes32 previousVKey,
         bytes32 newVKey
     );
+
+    /**
+     * Emitted when a default aggchain verification key is set to zero
+     * @param selector The 4 bytes selector of the updated default aggchain verification key.
+     */
+    event UnsetDefaultAggchainVKey(bytes4 selector);
 }
 
 /// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol

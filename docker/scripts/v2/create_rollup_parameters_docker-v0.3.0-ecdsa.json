@@ -13,6 +13,7 @@
     "maxPriorityFeePerGas": "",
     "multiplierGas": "",
     "programVKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "proxiedTokensManager": "0xB55B27Cca633A73108893985350bc26B8A00C43a",
     "isVanillaClient": true,
     "sovereignParams": {
         "bridgeManager": "0xC7899Ff6A3aC2FF59261bD960A8C880DF06E1041",
@@ -20,7 +21,8 @@
         "sovereignWETHAddressIsNotMintable": false,
         "globalExitRootUpdater": "0xB55B27Cca633A73108893985350bc26B8A00C43a",
         "globalExitRootRemover": "0xB55B27Cca633A73108893985350bc26B8A00C43a",
-        "emergencyBridgePauser": "0xB55B27Cca633A73108893985350bc26B8A00C43a"
+        "emergencyBridgePauser": "0xB55B27Cca633A73108893985350bc26B8A00C43a",
+        "emergencyBridgeUnpauser": "0xB55B27Cca633A73108893985350bc26B8A00C43a"
     },
     "aggchainParams": {
         "aggchainManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",

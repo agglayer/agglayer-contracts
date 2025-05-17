@@ -10,5 +10,6 @@
     "multiplierGas": "",
     "deployerPvtKey": "0x..",
     "rpc": "...",
-    "timelockAdminAddress": "0x.."
+    "timelockAdminAddress": "0x..",
+    "proxiedTokensManagerAddress":"0x.."
 }

@@ -4,15 +4,8 @@ import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChain,
-    BridgeL2SovereignChainPessimistic,
-    TokenWrapped,
-    ERC20Decimals,
 } from "../../typechain-types";
-import { MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
-import { valueTo32BytesHex } from "../../src/utils";
 import { claimBeforeBridge, createClaimAndAddGER } from "./helpers/helpers-sovereign-bridge";
-
-const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
 describe("BridgeL2SovereignChain: LBT & upgrade", () => {
     upgrades.silenceWarnings();
@@ -26,6 +19,7 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
     let bridgeManager: any;
     let acc1: any;
     let emergencyBridgePauser: any;
+    let proxiedTokensManager: any;
 
     const tokenName = "Matic Token";
     const tokenSymbol = "MATIC";
@@ -44,7 +38,7 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
 
     beforeEach("Deploy contracts", async () => {
         // load signers
-        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser] = await ethers.getSigners();
+        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send("hardhat_setCoinbase", [deployer.address]);
         // deploy BridgeL2SovereignChain
@@ -70,7 +64,7 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
 
         // cannot initialize bridgeV2 initializer from Sovereign bridge
         await expect(
-            sovereignChainBridgeContract.initialize(
+            sovereignChainBridgeContract["initialize(uint32,address,uint32,address,address,bytes)"](
                 networkIDMainnet,
                 ethers.ZeroAddress, // zero for ether
                 ethers.ZeroAddress, // zero for ether
@@ -123,13 +117,13 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
 
         // call invalid legacy initialize function
         await expect(
-            sovereignChainBridgeContract.initialize(
+            sovereignChainBridgeContract["initialize(uint32,address,uint32,address,address,bytes)"](
                 networkIDMainnet,
                 ethers.ZeroAddress, // zero for ether
                 ethers.ZeroAddress, // zero for ether
                 sovereignChainGlobalExitRootContract.target,
                 rollupManager.address,
-                "0x"
+                "0x",
             )
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
@@ -145,7 +139,9 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
                 ethers.Typed.address(bridgeManager),
                 ethers.ZeroAddress,
                 false,
-                emergencyBridgePauser.address
+                emergencyBridgePauser.address,
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address
             )
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidInitializeFunction");
 
@@ -157,6 +153,7 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
                 arrayTokeInfoHash,
                 arrayAmount,
                 emergencyBridgePauser.address,
+                proxiedTokensManager.address
             )
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InputArraysLengthMismatch");
 
@@ -168,6 +165,7 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
                 arrayTokeInfoHashOk,
                 arrayAmountOk,
                 emergencyBridgePauser.address,
+                proxiedTokensManager.address
             )
         ).to.emit(sovereignChainBridgeContract, "SetInitialLocalBalanceTreeAmount")
             .withArgs(arrayTokeInfoHashOk[0], arrayAmountOk[0])
@@ -194,6 +192,13 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
             }
         );
 
+        // Initialize bridge
+        await sovereignChainBridgeContract.initialize(
+            [],
+            [],
+            emergencyBridgePauser.address,
+            proxiedTokensManager.address
+        )
         // claim before bridge
         const originNetwork = 0; // mainnet
         const tokenAddress = polTokenContract.target;
@@ -216,7 +221,7 @@ describe("BridgeL2SovereignChain: LBT & upgrade", () => {
             0
         );
 
-        // checl LBT balance
+        // check LBT balance
         const tokenInfoHash = await ethers.solidityPackedKeccak256(["uint32", "address"], [originNetwork, tokenAddress]);
         const balance = await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash);
         expect(balance).to.be.equal(amount);

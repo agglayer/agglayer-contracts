@@ -22,10 +22,10 @@ async function main() {
      * Check upgrade parameters
      * Check that every necessary parameter is fulfilled
      */
-    const mandatoryUpgradeParameters = ["rollupManagerAddress", "aggLayerGatewayAddress", "timelockDelay"];
+    const mandatoryUpgradeParameters = ["rollupManagerAddress", "aggLayerGatewayAddress", "timelockDelay", "proxiedTokensManagerAddress"];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    const { rollupManagerAddress, timelockDelay, aggLayerGatewayAddress } = upgradeParameters;
+    const { rollupManagerAddress, timelockDelay, aggLayerGatewayAddress, proxiedTokensManagerAddress } = upgradeParameters;
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
 
     // Load onchain parameters
@@ -85,7 +85,7 @@ async function main() {
     // Upgrade bridge
     const bridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2", deployer);
     const impBridge = await upgrades.prepareUpgrade(bridgeAddress, bridgeFactory, {
-        unsafeAllow: ["constructor", "missing-initializer"],
+        unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
     });
     logger.info("#######################\n");
     logger.info(`Polygon bridge implementation deployed at: ${impBridge}`);
@@ -95,7 +95,11 @@ async function main() {
     const operationBridge = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgrade", [bridgeAddress, impBridge]), // data
+        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+            bridgeAddress,
+            impBridge,
+            bridgeFactory.interface.encodeFunctionData("initialize(address)", [proxiedTokensManagerAddress])
+        ]), // data
         ethers.ZeroHash, // predecessor
         salt // salt
     );
@@ -155,7 +159,7 @@ async function main() {
 
     outputJson.decodedScheduleData = objectDecoded;
 
-    fs.writeFileSync(pathOutputJson, JSON.stringify(utils.stringifyBigInts(outputJson), null, 1));
+    fs.writeFileSync(pathOutputJson, JSON.stringify(utils.stringifyBigInts(outputJson), null, 2));
 }
 
 main().catch((e) => {

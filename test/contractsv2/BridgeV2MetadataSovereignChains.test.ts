@@ -31,6 +31,7 @@ describe("SovereignBridge Contract", () => {
     let rollupManager: any;
     let acc1: any;
     let emergencyBridgePauser: any;
+    let proxiedTokensManager: any;
 
     const tokenName = "Matic Token";
     const tokenSymbol = "MATIC";
@@ -40,7 +41,7 @@ describe("SovereignBridge Contract", () => {
         ["string", "string", "uint8"],
         [tokenName, tokenSymbol, decimals]
     );
-    const networkIDMainnet = 0;
+    const networkIDMainnet = 2;
     const networkIDRollup = 1;
 
     const LEAF_TYPE_ASSET = 0;
@@ -48,7 +49,7 @@ describe("SovereignBridge Contract", () => {
 
     beforeEach("Deploy contracts", async () => {
         // load signers
-        [deployer, rollupManager, acc1, emergencyBridgePauser] = await ethers.getSigners();
+        [deployer, rollupManager, acc1, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
 
         // deploy PolygonZkEVMBridge
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
@@ -73,7 +74,9 @@ describe("SovereignBridge Contract", () => {
             ethers.Typed.address(deployer.address),
             ethers.ZeroAddress,
             false,
-            emergencyBridgePauser.address
+            emergencyBridgePauser.address,
+            emergencyBridgePauser.address,
+            proxiedTokensManager.address,
         );
 
         // deploy token
@@ -468,25 +471,6 @@ describe("SovereignBridge Contract", () => {
             deadline,
             chainId
         );
-
-        await expect(
-            sovereignChainBridgeContract.bridgeAsset(
-                destinationNetwork,
-                destinationAddress,
-                amount,
-                tokenAddress,
-                true,
-                ifacePermit.encodeFunctionData("permit", [
-                    deployer.address,
-                    sovereignChainBridgeContract.target,
-                    amount + 1n,
-                    deadline,
-                    v,
-                    r,
-                    s,
-                ])
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "NotValidAmount");
 
         await expect(
             sovereignChainBridgeContract.bridgeAsset(

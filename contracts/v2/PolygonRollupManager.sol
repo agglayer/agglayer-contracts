@@ -7,7 +7,7 @@ import "../interfaces/IPolygonZkEVMBridge.sol";
 import "./interfaces/IPolygonRollupBase.sol";
 import "../interfaces/IVerifierRollup.sol";
 import "../lib/EmergencyManager.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 // @dev For ReentrancyGuardTransient there is no difference between upgradable and not upgradable contracts
 import "@openzeppelin/contracts52/utils/ReentrancyGuardTransient.sol";
 import "./lib/PolygonTransparentProxy.sol";

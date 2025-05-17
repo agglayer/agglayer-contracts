@@ -69,28 +69,4 @@ describe("PolygonZkEVMBridge Contract", () => {
             "0x"
         );
     });
-
-    it("should claim tokens from Rollup to Mainnet", async () => {
-        // create2 parameters
-        const mainnetBridgeAddress = "0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe";
-        const mainnetMaticAddress = "0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0";
-        const mainnetWrappedMaticAddress = "0xa2036f0538221a77A3937F1379699f44945018d0";
-
-        // Matic params
-        const tokenName = "Matic Token";
-        const tokenSymbol = "MATIC";
-        const decimals = 18;
-        const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [tokenName, tokenSymbol, decimals]
-        );
-
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [0, mainnetMaticAddress]);
-
-        const minimalBytecodeProxy = await polygonZkEVMBridgeContract.BASE_INIT_BYTECODE_WRAPPED_TOKEN();
-        const hashInitCode = ethers.solidityPackedKeccak256(["bytes", "bytes"], [minimalBytecodeProxy, metadataToken]);
-        const precalculateWrappedErc20 = await ethers.getCreate2Address(mainnetBridgeAddress, salt, hashInitCode);
-
-        expect(precalculateWrappedErc20).to.be.equal(mainnetWrappedMaticAddress); // mainnet b
-    });
 });

@@ -225,6 +225,10 @@ describe("AggchainFEP", () => {
 
         await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, {gasPrice: 0});
 
+        // Check initialized selector
+        expect(await aggchainFEPContract.getAggchainVKeySelector(aggchainVKeySelector.slice(0,6), `0x${aggchainVKeySelector.slice(6)}`)).to.equal(aggchainVKeySelector)
+        expect(await aggchainFEPContract.getAggchainVKeyVersionFromSelector(aggchainVKeySelector)).to.equal(aggchainVKeySelector.slice(0,6))
+
         // check all SC storage slots are correctly initialized
         // aggchain
         expect(await aggchainFEPContract.aggchainManager()).to.be.equal(aggchainManager.address);

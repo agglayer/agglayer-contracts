@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "./PolygonConsensusBase.sol";
 import "../interfaces/IAggLayerGateway.sol";
 import "../interfaces/IAggchainBase.sol";
@@ -54,7 +54,8 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[50] private _gap;
+    /// @custom:oz-renamed-from _gap
+    uint256[50] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //

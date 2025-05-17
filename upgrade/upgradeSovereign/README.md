@@ -1,6 +1,6 @@
 # Upgrade GlobalExitRootManagerL2SovereignChain
 
-Script to create schedule and execute transaction for upgrading GlobalExitRootManagerL2SovereignChain
+Script to create schedule and execute transaction for upgrading GlobalExitRootManagerL2SovereignChain and BridgeL2SovereignChain
 
 ## Setup
 
@@ -32,11 +32,14 @@ cp ./upgrade/upgradeSovereign/upgrade_parameters.json.example ./upgrade/upgradeS
     - "deployerPvtKey": "0x...", -> Optional: The private key of the wallet used to deploy the new implementation
     - "rpc": "rpc url" -> Optional: only used for shallow fork testing, is the rpc of the node to fork
     - "globalExitRootManagerL2SovereignChainAddress": "0x.." -> Optional: the address of the proxy to upgrade, if not set the hardcoded value used in most chains is used (0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa)
+    - "proxiedTokensManagerAddress": "0x.." -> Address of the proxied tokens manager role
+    -"emergencyBridgePauserAddress": "0x.." -> Address of the emergency bridge pauser role
+    -"emergencyBridgeUnpauserAddress": "0x.." -> Address of the emergency bridge unpauser role
 
 - Run tool:
 
 ```
-npx hardhat run ./upgrade/upgradeSovereign/upgradeSovereignGER.ts --network sepolia
+npx hardhat run ./upgrade/upgradeSovereign/upgradeSovereign.ts --network sepolia
 ```
 
 - OutputFile: `upgrade_output.json`

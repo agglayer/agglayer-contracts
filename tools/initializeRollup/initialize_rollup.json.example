@@ -16,7 +16,7 @@
     "rollupManagerAddress": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
     "rollupTypeId": 1,
     "aggchainParams": {
-        "aggchainManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+        "aggchainManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "initParams": {
             "l2BlockTime": 1,
             "rollupConfigHash": "0x1111111111111111111111111111111111111111111111111111111111111111",

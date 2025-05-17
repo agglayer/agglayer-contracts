@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.28;
 
-interface ITokenWrappedBridgeInitCode {
-    function BASE_INIT_BYTECODE_WRAPPED_TOKEN()
+interface IBytecodeStorer {
+    function INIT_BYTECODE_TRANSPARENT_PROXY()
         external
         pure
         returns (bytes memory);

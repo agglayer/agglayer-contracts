@@ -3,12 +3,12 @@
 pragma solidity 0.8.20;
 
 import "../../lib/DepositContractV2.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "../../../lib/TokenWrapped.sol";
 import "../../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 import "../../../interfaces/IBridgeMessageReceiver.sol";
-import "../../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "./IPolygonZkEVMBridgeV2Pessimistic.sol";
 import "../../../lib/EmergencyManager.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 
@@ -19,7 +19,7 @@ import "./GlobalExitRootLibPessimistic.sol";
 contract PolygonZkEVMBridgeV2Pessimistic is
     DepositContractV2,
     EmergencyManager,
-    IPolygonZkEVMBridgeV2
+    IPolygonZkEVMBridgeV2Pessimistic
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -97,7 +97,7 @@ contract PolygonZkEVMBridgeV2Pessimistic is
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[50] private _gap;
+    uint256[50] private __gap;
 
     /**
      * @dev Emitted when bridge assets or messages to another network

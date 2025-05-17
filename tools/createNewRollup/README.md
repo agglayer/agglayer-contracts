@@ -40,7 +40,16 @@ cp ./tools/createNewRollup/create_new_rollup.json.example ./tools/createNewRollu
     - `timelockSalt(optional)`: timelock salt, only required on timelock type
     -   `rollupManagerAddress`: Address of deployed rollupManager contract
     -   `rollupTypeId`: The id of the rollup type of the rollup to deploy. WARNING: the type must match with the `consensusContractName`. Example: if the type is validium, the contract name has to be `PolygonValidiumEtrog`
-    - `isVanillaClient`: Flag for vanilla/sovereign clients handling
+    -   `proxiedTokensManager`:  Address of proxiedTokensManager role
+    -   `isVanillaClient`: Flag for vanilla/sovereign clients handling
+    -   `sovereignParams`:
+        -   `bridgeManager`: bridge manager address
+        -   `sovereignWETHAddress`: sovereign WETH address
+        -   `sovereignWETHAddressIsNotMintable`: Flag to indicate if the wrapped ETH is not mintable
+        -   `globalExitRootUpdater`: Address of globalExitRootUpdater for sovereign chains
+        -   `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
+        -   `emergencyBridgePauser`: Address of emergencyBridgePauser role
+        -   `emergencyBridgeUnpauser`: Address of emergencyBridgeUnpauser role
     - `aggchainParams`:
         -   `aggchainManager`: Address that manages all the functionalities related to the aggchain
 

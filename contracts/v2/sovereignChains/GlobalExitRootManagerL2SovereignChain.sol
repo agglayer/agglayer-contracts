@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import "../../PolygonZkEVMGlobalExitRootL2.sol";
 import "../lib/Hashes.sol";
 import "../../v2/interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
  * Contract responsible for managing the exit roots for the Sovereign chains and global exit roots
@@ -44,7 +44,7 @@ contract GlobalExitRootManagerL2SovereignChain is
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[50] private _gap;
+    uint256[50] private __gap;
 
     /**
      * @dev Emitted when a new global exit root is inserted and added to the hash chain

@@ -1,8 +1,10 @@
-import {expect} from "chai";
-import {ethers} from "hardhat";
-import {MTBridge, mtBridgeUtils} from "@0xpolygonhermez/zkevm-commonjs";
+import { ethers } from "hardhat";
+import { MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
+import {
+    PolygonZkEVMBridgeV2,
+} from "../../../typechain-types";
 
-const {verifyMerkleProof, getLeafValue} = mtBridgeUtils;
+const { getLeafValue } = mtBridgeUtils;
 const MerkleTreeBridge = MTBridge;
 
 // Constants
@@ -102,7 +104,7 @@ async function createClaimAndAddGER(
             }
         }
         mainnetLER = merkleTreeLocal.getRoot();
-    } else  {
+    } else {
         // build GER
         indexRollup = originNetwork - 1;
         //   - mainnet LER
@@ -130,13 +132,13 @@ async function createClaimAndAddGER(
 
     // merkle tree rollups
     const merkleTreeRollupLERS = new MerkleTreeBridge(height);
-        for (let i = 0; i < 10; i++) {
-            if (i == indexRollup) {
-                merkleTreeRollupLERS.add(rollupLER);
-            } else {
-                merkleTreeRollupLERS.add(ethers.toBeHex(ethers.toQuantity(ethers.randomBytes(32)), 32));
-            }
+    for (let i = 0; i < 10; i++) {
+        if (i == indexRollup) {
+            merkleTreeRollupLERS.add(rollupLER);
+        } else {
+            merkleTreeRollupLERS.add(ethers.toBeHex(ethers.toQuantity(ethers.randomBytes(32)), 32));
         }
+    }
     const rootRollupsLERS = merkleTreeRollupLERS.getRoot();
     const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetLER, rootRollupsLERS);
 
@@ -161,14 +163,14 @@ async function createClaimAndAddGER(
         await ethers.provider.send("hardhat_setBalance", [
             sovereignChainBridgeContract.target,
             ethers.toBeHex(amount)
-          ]);
+        ]);
     } else if (tokenAddress != ethers.ZeroAddress) {
         await tokenContract.transfer(sovereignChainBridgeContract.target, amount);
     } else {
         await ethers.provider.send("hardhat_setBalance", [
             sovereignChainBridgeContract.target,
             ethers.toBeHex(amount)
-          ]);
+        ]);
     }
 
     return {
@@ -185,9 +187,24 @@ function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
 }
 
+async function computeWrappedTokenProxyAddress(networkId: any, tokenAddress: string, bridgeContract: any, isWETH: boolean) {
+    const salt = isWETH ? ethers.ZeroHash : ethers.solidityPackedKeccak256(["uint32", "address"], [networkId, tokenAddress]);
+
+    const minimalBytecodeProxy = await bridgeContract.INIT_BYTECODE_TRANSPARENT_PROXY();
+
+    const hashInitCode = ethers.solidityPackedKeccak256(["bytes"], [minimalBytecodeProxy]);
+
+    return await ethers.getCreate2Address(
+        bridgeContract.target as string,
+        salt,
+        hashInitCode
+    );
+}
+
 module.exports = {
     claimBeforeBridge,
     calculateGlobalExitRoot,
     computeGlobalIndex,
-    createClaimAndAddGER
+    createClaimAndAddGER,
+    computeWrappedTokenProxyAddress
 }

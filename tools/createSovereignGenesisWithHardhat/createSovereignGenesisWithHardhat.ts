@@ -8,7 +8,7 @@ import * as dotenv from "dotenv";
 dotenv.config({path: path.resolve(__dirname, "../../.env")});
 import yargs from "yargs/yargs";
 import {getStorageAt, setCode, setNonce, setStorageAt} from "@nomicfoundation/hardhat-network-helpers";
-
+import { GENESIS_CONTRACT_NAMES } from "../../src/utils-common-aggchain"
 const argv = yargs(process.argv.slice(2))
     .options({
         test: {type: "boolean", default: false},
@@ -84,7 +84,7 @@ async function main() {
 
     // Deploy proxy admin:
     const proxyAdminFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+        "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
         deployer
     );
     const deployTransactionAdmin = (await proxyAdminFactory.getDeployTransaction()).data;
@@ -99,11 +99,11 @@ async function main() {
     );
 
     // Deploy implementation SovereignBridge
-    const bridgeContractName = "BridgeL2SovereignChain";
+    const bridgeContractName = GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE;
     const sovereignBridgeFactory = await ethers.getContractFactory(bridgeContractName, deployer);
     const deployTransactionBridge = (await sovereignBridgeFactory.getDeployTransaction()).data;
     // Mandatory to override the gasLimit since the estimation with create are mess up D:
-    const overrideGasLimit = BigInt(5500000);
+    const overrideGasLimit = BigInt(10500000);
     let [bridgeImplementationAddress] = await create2Deployment(
         zkEVMDeployerContract,
         salt,
@@ -114,16 +114,16 @@ async function main() {
     );
     // Get genesis params
     const sovereignGenesisBridgeProxy = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == "BridgeL2SovereignChain proxy";
+        return obj.contractName == GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_PROXY;
     });
     const sovereignGenesisBridgeImplementation = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == "BridgeL2SovereignChain";
+        return obj.contractName == GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE;
     });
     const sovereignGenesisGERProxy = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == "GlobalExitRootManagerL2SovereignChain proxy";
+        return obj.contractName == GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN_PROXY;
     });
     const sovereignGenesisGERImplementation = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == "GlobalExitRootManagerL2SovereignChain";
+        return obj.contractName == GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN;
     });
     const sovereignDeployerAccount = genesisSovereign.genesis.find(function (obj) {
         return obj.accountName == "deployer";
@@ -137,7 +137,7 @@ async function main() {
      * deploy bridge proxy and initialize
      */
     const transparentProxyFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
+        "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
         deployer
     );
     const initializeEmptyDataProxy = "0x";
@@ -163,7 +163,7 @@ async function main() {
      *Deployment Global exit root manager implementation, proxy and initialize
      */
     const {sovereignParams} = createRollupParameters;
-    const globalExitRootContractName = "GlobalExitRootManagerL2SovereignChain";
+    const globalExitRootContractName = GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN;
     const GERSovereignFactory = await ethers.getContractFactory(globalExitRootContractName, deployer);
     const proxyGERContract = await upgrades.deployProxy(GERSovereignFactory, [sovereignParams.globalExitRootUpdater], {
         constructorArgs: [proxyBridgeAddress as string],
@@ -270,7 +270,7 @@ async function main() {
         const wethAddress = await sovereignBridgeProxyContract.WETHToken()
         const wethBytecode = await ethers.provider.getCode(wethAddress)
         const sovereignWETH = genesisSovereign.genesis.find(function (obj) {
-            return obj.contractName == "WETH";
+            return obj.contractName == GENESIS_CONTRACT_NAMES.WETH_PROXY;
         });
         // Check storage
         for (const key in sovereignWETH.storage) {

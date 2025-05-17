@@ -2,7 +2,7 @@
 // Implementation of permit based on https://github.com/WETH10/WETH10/blob/main/contracts/WETH10.sol
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts4/token/ERC20/ERC20.sol";
 
 contract TokenWrapped is ERC20 {
     // Domain typehash
