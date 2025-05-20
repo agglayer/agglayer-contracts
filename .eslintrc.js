@@ -22,6 +22,7 @@ module.exports = {
         'plugin:prettier/recommended',
     ],
     rules: {
+        'prettier/prettier': ['error'],
         'mocha/no-exclusive-tests': 'error',
         'max-len': ['error', {
             code: 140, comments: 200, ignoreStrings: true, ignoreTemplateLiterals: true,

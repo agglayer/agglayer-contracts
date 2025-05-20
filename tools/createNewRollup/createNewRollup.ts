@@ -1,20 +1,17 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
-import path = require("path");
-import fs = require("fs");
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, upgrades} from "hardhat";
-import {processorUtils, Constants} from "@0xpolygonhermez/zkevm-commonjs";
-import {VerifierType, ConsensusContracts} from "../../src/pessimistic-utils";
-const createRollupParameters = require("./create_new_rollup.json");
-import {genOperation, transactionTypes, convertBigIntsToNumbers} from "../utils";
+import { expect } from 'chai';
+import path = require('path');
+import fs = require('fs');
+import * as dotenv from 'dotenv';
+import { ethers, upgrades } from 'hardhat';
+import { processorUtils, Constants } from '@0xpolygonhermez/zkevm-commonjs';
+import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
+import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
+import { AGGCHAIN_CONTRACT_NAMES, encodeInitializeBytesLegacy, encodeInitAggchainManager } from '../../src/utils-common-aggchain';
+import * as createRollupParameters from './create_new_rollup.json';
 import updateVanillaGenesis from "../../deployment/v2/utils/updateVanillaGenesis";
-import {AGGCHAIN_CONTRACT_NAMES, encodeInitializeBytesLegacy, GENESIS_CONTRACT_NAMES} from "../../src/utils-common-aggchain";
-import utilsAggchain from "../../src/utils-common-aggchain";
 import { logger } from "../../src/logger";
-
 import {
     PolygonRollupManager,
     PolygonZkEVMEtrog,
@@ -265,7 +262,7 @@ async function main() {
         );
     } else if (supportedAggchainsArray.includes(consensusContractName)) {
         // if consensusContractName is a AggchainECDSA
-        initializeBytes = utilsAggchain.encodeInitAggchainManager(
+        initializeBytes = encodeInitAggchainManager(
             createRollupParameters.aggchainParams.aggchainManager,
         );
     }

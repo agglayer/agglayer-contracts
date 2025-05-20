@@ -1,61 +1,50 @@
-import {expect} from "chai";
-import {ethers} from "hardhat";
-import fs from "fs";
-import path from "path";
-import {
-    PolygonRollupManager,
-    PolygonZkEVMGlobalExitRootV2,
-    AggchainFEP,
-} from "../typechain-types";
-const { computeRandomBytes } = require("../src/pessimistic-utils");
-const {
-    encodeAggchainDataFEP
-} = require("../src/utils-aggchain-FEP");
+import { expect } from 'chai';
+import { ethers } from 'hardhat';
+import fs from 'fs';
+import path from 'path';
+import { PolygonRollupManager, PolygonZkEVMGlobalExitRootV2, AggchainFEP } from '../typechain-types';
 
-describe("Docker verifyProof test", () => {
+import { computeRandomBytes } from '../src/pessimistic-utils';
+import { encodeAggchainDataFEP } from '../src/utils-aggchain-FEP';
 
+describe('Docker verifyProof test', () => {
     // Read docker deployment output
     const dockerCreateRollupOutput = JSON.parse(
-        fs.readFileSync(path.join(__dirname, "./deploymentOutput/create_rollup_output.json"), "utf8")
+        fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'),
     );
-    const dockerDeploymentOutput = JSON.parse(
-        fs.readFileSync(path.join(__dirname, "./deploymentOutput/deploy_output.json"), "utf8")
-    );
+    const dockerDeploymentOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
     const dockerCreateRollup = JSON.parse(
-        fs.readFileSync(path.join(__dirname, "./scripts/v2/create_rollup_parameters_docker.json"), "utf8")
+        fs.readFileSync(path.join(__dirname, './scripts/v2/create_rollup_parameters_docker.json'), 'utf8'),
     );
 
-    it("should check AggchainFEP", async () => {
-
+    it('should check AggchainFEP', async () => {
         // Load deployer & trustedAggregator
-        let [_, trustedAggregator] = await ethers.getSigners();
+        const [, trustedAggregator] = await ethers.getSigners();
 
         // Check trustedAggregator
         const trustedAggregatorDeploy = dockerDeploymentOutput.trustedAggregator;
         expect(trustedAggregator.address).to.equal(trustedAggregatorDeploy);
 
-        const rollupID = dockerCreateRollupOutput.rollupID;
+        const { rollupID } = dockerCreateRollupOutput;
 
         // Load contracts
-        const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager");
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
         const rollupManagerContract = PolygonRollupManagerFactory.attach(
-            dockerDeploymentOutput.polygonRollupManagerAddress
+            dockerDeploymentOutput.polygonRollupManagerAddress,
         ) as PolygonRollupManager;
         await rollupManagerContract.connect(trustedAggregator);
 
         expect(rollupManagerContract.target).to.equal(dockerDeploymentOutput.polygonRollupManagerAddress);
 
-        const PolygonZkEVMGlobalExitRootV2Factory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2");
+        const PolygonZkEVMGlobalExitRootV2Factory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
         const polygonZkEVMGlobalExitRoot = PolygonZkEVMGlobalExitRootV2Factory.attach(
-            dockerDeploymentOutput.polygonZkEVMGlobalExitRootAddress
+            dockerDeploymentOutput.polygonZkEVMGlobalExitRootAddress,
         ) as PolygonZkEVMGlobalExitRootV2;
 
         expect(polygonZkEVMGlobalExitRoot.target).to.equal(dockerDeploymentOutput.polygonZkEVMGlobalExitRootAddress);
 
-        const AggchainFEPFactory = await ethers.getContractFactory("AggchainFEP");
-        const aggchainFEP = AggchainFEPFactory.attach(
-            dockerCreateRollupOutput.rollupAddress
-        ) as AggchainFEP;
+        const AggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+        const aggchainFEP = AggchainFEPFactory.attach(dockerCreateRollupOutput.rollupAddress) as AggchainFEP;
 
         expect(aggchainFEP.target).to.equal(dockerCreateRollupOutput.rollupAddress);
 
@@ -64,7 +53,7 @@ describe("Docker verifyProof test", () => {
 
         // Verify pessimist proof with the new FEP rollup
         const newl2BlockNumber = 105;
-        const newStateRoot = ethers.id("newStateRoot");
+        const newStateRoot = ethers.id('newStateRoot');
         const randomNewLocalExitRoot = computeRandomBytes(32);
         const randomNewPessimisticRoot = computeRandomBytes(32);
         const randomProof = computeRandomBytes(128);
@@ -78,43 +67,34 @@ describe("Docker verifyProof test", () => {
         );
 
         // check Role
-        const TRUSTED_AGGREGATOR_ROLE = ethers.id("TRUSTED_AGGREGATOR_ROLE")
-        expect(await rollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator.address)).to.be.true;
+        const TRUSTED_AGGREGATOR_ROLE = ethers.id('TRUSTED_AGGREGATOR_ROLE');
+        expect(await rollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator.address)).to.be.equal(true);
 
         // verify pessimistic proof
-        const onVerifyPessimisticTx = await rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
-            rollupID,
-            lastL1InfoTreeLeafCount,
-            randomNewLocalExitRoot,
-            randomNewPessimisticRoot,
-            proofWithSelector,
-            CUSTOM_DATA_FEP
-        );
+        const onVerifyPessimisticTx = await rollupManagerContract
+            .connect(trustedAggregator)
+            .verifyPessimisticTrustedAggregator(
+                rollupID,
+                lastL1InfoTreeLeafCount,
+                randomNewLocalExitRoot,
+                randomNewPessimisticRoot,
+                proofWithSelector,
+                CUSTOM_DATA_FEP,
+            );
         await onVerifyPessimisticTx.wait();
 
         // get timestamp
-        const lastBlock = await ethers.provider.getBlock("latest");
+        const lastBlock = await ethers.provider.getBlock('latest');
         const blockDataTimestamp = lastBlock?.timestamp;
 
         // check events
         await expect(onVerifyPessimisticTx)
-        .to.emit(rollupManagerContract, "VerifyBatchesTrustedAggregator")
-        .withArgs(
-            rollupID,
-            0,
-            ethers.ZeroHash,
-            randomNewLocalExitRoot,
-            trustedAggregator
-        )
-        .to.emit(aggchainFEP, "OutputProposed")
-        .withArgs(
-            newStateRoot,
-            1,
-            newl2BlockNumber,
-            blockDataTimestamp,
-        );
+            .to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
+            .withArgs(rollupID, 0, ethers.ZeroHash, randomNewLocalExitRoot, trustedAggregator)
+            .to.emit(aggchainFEP, 'OutputProposed')
+            .withArgs(newStateRoot, 1, newl2BlockNumber, blockDataTimestamp);
 
-        console.log("Transaction verifyPessimisticTrustedAggregator completed");
-
+        // eslint-disable-next-line no-console
+        console.log('Transaction verifyPessimisticTrustedAggregator completed');
     });
 });
