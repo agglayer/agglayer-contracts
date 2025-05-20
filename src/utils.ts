@@ -1,6 +1,6 @@
 /* eslint-disable no-inner-declarations */
 /* eslint-disable no-console */
-const { ethers } = require('ethers');
+import * as ethers from 'ethers';
 
 /**
  * Adjusts the multiplier gas and/or the maxFeePer gas of the provider depending on the parameters values and returns the adjusted provider
@@ -8,7 +8,7 @@ const { ethers } = require('ethers');
  * @returns {Object} The adjusted provider or `ethers.provider` if no parameters applied
  * @param {Object} connectedEthers current ethers instance connected to a network
  */
-function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
+export function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
     let currentProvider = connectedEthers.provider;
     if (parameters.multiplierGas || parameters.maxFeePerGas) {
         if (process.env.HARDHAT_NETWORK !== 'hardhat') {
@@ -32,8 +32,8 @@ function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
                     const feedata = await connectedEthers.provider.getFeeData();
                     return new connectedEthers.FeeData(
                         null,
-                        ((feedata.maxFeePerGas) * BigInt(parameters.multiplierGas)) / BigInt(1000),
-                        ((feedata.maxPriorityFeePerGas) * BigInt(parameters.multiplierGas)) / BigInt(1000),
+                        (feedata.maxFeePerGas * BigInt(parameters.multiplierGas)) / BigInt(1000),
+                        (feedata.maxPriorityFeePerGas * BigInt(parameters.multiplierGas)) / BigInt(1000),
                     );
                 }
                 currentProvider.getFeeData = overrideFeeData;
@@ -50,7 +50,7 @@ function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
  * @param {Object} connectedEthers current ethers instance connected to a network
  * @returns The resolved deployer
  */
-async function getDeployerFromParameters(currentProvider, parameters, connectedEthers) {
+export async function getDeployerFromParameters(currentProvider, parameters, connectedEthers) {
     let deployer;
     if (parameters.deployerPvtKey) {
         deployer = new connectedEthers.Wallet(parameters.deployerPvtKey, currentProvider);
@@ -70,7 +70,7 @@ async function getDeployerFromParameters(currentProvider, parameters, connectedE
  * @param {Array} expectedParams - array of expected parameters in string
  * @param {Boolean} checkAddresses - check if the parameter is a correct address in case has Address string in param name
  */
-function checkParams(objParams, expectedParams, checkAddresses = false) {
+export function checkParams(objParams, expectedParams, checkAddresses = false) {
     // eslint-disable-next-line no-restricted-syntax
     for (const parameterName of expectedParams) {
         if (objParams[parameterName] === undefined || objParams[parameterName] === '') {
@@ -78,7 +78,7 @@ function checkParams(objParams, expectedParams, checkAddresses = false) {
         }
 
         if (checkAddresses) {
-        // Check addresses
+            // Check addresses
             if (parameterName.includes('Address') && !ethers.isAddress(objParams[parameterName])) {
                 throw new Error(`Invalid parameter address: ${parameterName}`);
             }
@@ -91,7 +91,7 @@ function checkParams(objParams, expectedParams, checkAddresses = false) {
  * @param {Number | BigInt} _value - value to encode
  * @returns {String} encoded value in hexadecimal string
  */
-function valueToStorageBytes(_value) {
+export function valueToStorageBytes(_value) {
     return ethers.toBeHex(_value, 32);
 }
 
@@ -101,7 +101,7 @@ function valueToStorageBytes(_value) {
  * @param {Object} trace
  * @returns {Object} - storage writes: {"key": "value"}
  */
-function getStorageWrites(trace) {
+export function getStorageWrites(trace) {
     const writes = trace.structLogs
         .filter((log) => log.op === 'SSTORE')
         .map((log) => {
@@ -123,16 +123,6 @@ function getStorageWrites(trace) {
  * @param {Object} trace
  * @returns {Object} - storage read and writes: {"key": "value"}
  */
-function getStorageReadWrites(trace) {
+export function getStorageReadWrites(trace) {
     return trace.structLogs[trace.structLogs.length - 1].storage;
 }
-
-module.exports = {
-    getStorageWrites,
-    getStorageReadWrites,
-    valueToStorageBytes,
-    valueTo32BytesHex: valueToStorageBytes,
-    checkParams,
-    getProviderAdjustingMultiplierGas,
-    getDeployerFromParameters,
-};

@@ -2,8 +2,8 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { Address, AggchainECDSA, AggLayerGateway } from "../../typechain-types";
-import utilsECDSA from "../../src/utils-aggchain-ECDSA";
-import utilsAggchain from "../../src/utils-common-aggchain";
+import * as utilsECDSA from "../../src/utils-aggchain-ECDSA";
+import * as utilsAggchain from "../../src/utils-common-aggchain";
 
 describe("AggchainECDSA", () => {
     let deployer: any;

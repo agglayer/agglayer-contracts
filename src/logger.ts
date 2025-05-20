@@ -1,7 +1,7 @@
-const winston = require('winston');
+import * as winston from 'winston';
 
 // Create Winston logger with console transport only
-const logger = winston.createLogger({
+export const logger = winston.createLogger({
     level: 'debug', // Set log level (error, warn, info, debug)
     format: winston.format.combine(
         winston.format.colorize(), // Adds color to console logs
@@ -17,5 +17,3 @@ const logger = winston.createLogger({
         new winston.transports.Console({ forceConsole: true }), // Logs only to the terminal and in debug terminal with force console
     ],
 });
-
-module.exports.logger = logger;

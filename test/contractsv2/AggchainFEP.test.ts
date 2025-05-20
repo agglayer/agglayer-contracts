@@ -6,8 +6,8 @@ import {
     AggchainFEP,
     PolygonPessimisticConsensus
 } from "../../typechain-types";
-import utilsFEP from "../../src/utils-aggchain-FEP";
-import utilsAggchain from "../../src/utils-common-aggchain";
+import * as utilsFEP from "../../src/utils-aggchain-FEP";
+import * as utilsAggchain from "../../src/utils-common-aggchain";
 
 describe("AggchainFEP", () => {
     let deployer: any;

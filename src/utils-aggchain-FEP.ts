@@ -1,6 +1,6 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-import ethers from 'ethers';
+import * as ethers from 'ethers';
 
 /// //////////////////////////////////
 /// // Constants for Aggchain FEP ////
@@ -113,20 +113,8 @@ export function encodeInitializeBytesAggchainFEPv1(
     vKeyManager,
 ) {
     return ethers.AbiCoder.defaultAbiCoder().encode(
-        [
-            'tuple(uint256, bytes32, bytes32, uint256, uint256, uint256, address, bytes32, bytes32)',
-            'bool',
-            'bytes32',
-            'bytes4',
-            'address',
-        ],
-        [
-            Object.values(initParams),
-            useDefaultGateway,
-            initOwnedAggchainVKey,
-            initAggchainVKeySelector,
-            vKeyManager,
-        ],
+        ['tuple(uint256, bytes32, bytes32, uint256, uint256, uint256, address, bytes32, bytes32)', 'bool', 'bytes32', 'bytes4', 'address'],
+        [Object.values(initParams), useDefaultGateway, initOwnedAggchainVKey, initAggchainVKeySelector, vKeyManager],
     );
 }
 
@@ -138,10 +126,7 @@ export function encodeInitializeBytesAggchainFEPv1(
  * @returns {String} encoded value in hexadecimal string
  */
 export function encodeAggchainDataFEP(aggchainVKeySelector, outputRoot, l2BlockNumber) {
-    return ethers.AbiCoder.defaultAbiCoder().encode(
-        ['bytes4', 'bytes32', 'uint256'],
-        [aggchainVKeySelector, outputRoot, l2BlockNumber],
-    );
+    return ethers.AbiCoder.defaultAbiCoder().encode(['bytes4', 'bytes32', 'uint256'], [aggchainVKeySelector, outputRoot, l2BlockNumber]);
 }
 
 /**
@@ -168,16 +153,9 @@ export function computeHashAggchainParamsFEP(
 ) {
     // solidity lkeccak
     return ethers.solidityPackedKeccak256(
-        ['bytes32',
-            'bytes32',
-            'uint256',
-            'uint256',
-            'bool',
-            'address',
-            'bytes32',
-            'bytes32',
-        ],
-        [oldOutputRoot,
+        ['bytes32', 'bytes32', 'uint256', 'uint256', 'bool', 'address', 'bytes32', 'bytes32'],
+        [
+            oldOutputRoot,
             newOutputRoot,
             l2BlockNumber,
             rollupConfigHash,

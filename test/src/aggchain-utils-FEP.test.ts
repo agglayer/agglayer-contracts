@@ -1,16 +1,17 @@
-import {expect} from "chai";
-import fs = require("fs");
-import path = require("path");
+/* eslint-disable import/no-dynamic-require, @typescript-eslint/no-var-requires, no-console */
+import { expect } from 'chai';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as utilsFEP from '../../src/utils-aggchain-FEP';
 
-const pathTestvectors = path.join(__dirname, "../test-vectors/aggchainFEP");
-const aggchainDataTestvectors = require(path.join(pathTestvectors, "aggchain-data.json"));
-const aggchainInitBytesV0 = require(path.join(pathTestvectors, "aggchain-initBytesv0.json"));
-const aggchainInitBytesV1 = require(path.join(pathTestvectors, "aggchain-initBytesv1.json"));
-const aggchainHashParams = require(path.join(pathTestvectors, "hash-aggchain-params.json"));
-const utilsFEP = require("../../src/utils-aggchain-FEP");
+const pathTestvectors = path.join(__dirname, '../test-vectors/aggchainFEP');
+const aggchainDataTestvectors = require(path.join(pathTestvectors, 'aggchain-data.json'));
+const aggchainInitBytesV0 = require(path.join(pathTestvectors, 'aggchain-initBytesv0.json'));
+const aggchainInitBytesV1 = require(path.join(pathTestvectors, 'aggchain-initBytesv1.json'));
+const aggchainHashParams = require(path.join(pathTestvectors, 'hash-aggchain-params.json'));
 
-describe("Test vectors aggchain FEP utils", () => {
-    const update = process.env.UPDATE === "true";
+describe('Test vectors aggchain FEP utils', () => {
+    const update = process.env.UPDATE === 'true';
 
     for (let i = 0; i < aggchainDataTestvectors.length; i++) {
         it(`Check test-vectors compute aggchain data ID=${i}`, async () => {
@@ -18,16 +19,16 @@ describe("Test vectors aggchain FEP utils", () => {
             const aggchainData = utilsFEP.encodeAggchainDataFEP(
                 testVector.aggchainVKeySelector,
                 testVector.outputRoot,
-                testVector.l2BlockNumber
+                testVector.l2BlockNumber,
             );
 
             if (update) {
                 aggchainDataTestvectors[i].output = {};
                 aggchainDataTestvectors[i].output.aggchainData = aggchainData;
-                console.log(`WRITE: ${path.join(pathTestvectors, "aggchain-data.json")}`);
+                console.log(`WRITE: ${path.join(pathTestvectors, 'aggchain-data.json')}`);
                 fs.writeFileSync(
-                    path.join(pathTestvectors, "aggchain-data.json"),
-                    JSON.stringify(aggchainDataTestvectors, null, 2)
+                    path.join(pathTestvectors, 'aggchain-data.json'),
+                    JSON.stringify(aggchainDataTestvectors, null, 2),
                 );
             } else {
                 expect(aggchainData).to.equal(aggchainDataTestvectors[i].output.aggchainData);
@@ -48,15 +49,15 @@ describe("Test vectors aggchain FEP utils", () => {
                 testVector.trustedSequencer,
                 testVector.gasTokenAddress,
                 testVector.trustedSequencerURL,
-                testVector.networkName
+                testVector.networkName,
             );
             if (update) {
                 aggchainInitBytesV0[i].output = {};
                 aggchainInitBytesV0[i].output.initBytesAggchainECDSAv0 = initBytesAggchainECDSAv0;
-                console.log(`WRITE: ${path.join(pathTestvectors, "aggchain-initBytesv0.json")}`);
+                console.log(`WRITE: ${path.join(pathTestvectors, 'aggchain-initBytesv0.json')}`);
                 fs.writeFileSync(
-                    path.join(pathTestvectors, "aggchain-initBytesv0.json"),
-                    JSON.stringify(aggchainInitBytesV0, null, 2)
+                    path.join(pathTestvectors, 'aggchain-initBytesv0.json'),
+                    JSON.stringify(aggchainInitBytesV0, null, 2),
                 );
             } else {
                 expect(initBytesAggchainECDSAv0).to.equal(aggchainInitBytesV0[i].output.initBytesAggchainECDSAv0);
@@ -72,15 +73,15 @@ describe("Test vectors aggchain FEP utils", () => {
                 testVector.useDefaultGateway,
                 testVector.initOwnedAggchainVKey,
                 testVector.initAggchainVKeySelector,
-                testVector.vKeyManager
+                testVector.vKeyManager,
             );
             if (update) {
                 aggchainInitBytesV1[i].output = {};
                 aggchainInitBytesV1[i].output.initBytesAggchainECDSAv1 = initBytesAggchainECDSAv1;
-                console.log(`WRITE: ${path.join(pathTestvectors, "aggchain-initBytesv1.json")}`);
+                console.log(`WRITE: ${path.join(pathTestvectors, 'aggchain-initBytesv1.json')}`);
                 fs.writeFileSync(
-                    path.join(pathTestvectors, "aggchain-initBytesv1.json"),
-                    JSON.stringify(aggchainInitBytesV1, null, 2)
+                    path.join(pathTestvectors, 'aggchain-initBytesv1.json'),
+                    JSON.stringify(aggchainInitBytesV1, null, 2),
                 );
             } else {
                 expect(initBytesAggchainECDSAv1).to.equal(aggchainInitBytesV1[i].output.initBytesAggchainECDSAv1);
@@ -99,16 +100,16 @@ describe("Test vectors aggchain FEP utils", () => {
                 testVector.optimisticMode,
                 testVector.trustedSequencer,
                 testVector.rangeVkeyCommitment,
-                testVector.aggregationVkey
+                testVector.aggregationVkey,
             );
 
             if (update) {
                 aggchainHashParams[i].output = {};
                 aggchainHashParams[i].output.hashAggchainParams = hashAggchainParams;
-                console.log(`WRITE: ${path.join(pathTestvectors, "hash-aggchain-params.json")}`);
+                console.log(`WRITE: ${path.join(pathTestvectors, 'hash-aggchain-params.json')}`);
                 fs.writeFileSync(
-                    path.join(pathTestvectors, "hash-aggchain-params.json"),
-                    JSON.stringify(aggchainHashParams, null, 2)
+                    path.join(pathTestvectors, 'hash-aggchain-params.json'),
+                    JSON.stringify(aggchainHashParams, null, 2),
                 );
             } else {
                 expect(hashAggchainParams).to.equal(aggchainHashParams[i].output.hashAggchainParams);

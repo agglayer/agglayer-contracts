@@ -1,13 +1,14 @@
-import {ethers, upgrades} from "hardhat";
-import {Address, AggchainECDSA} from "../../typechain-types";
-import {expect} from "chai";
-import fs = require("fs");
-import path = require("path");
+import { ethers, upgrades } from 'hardhat';
+import { expect } from 'chai';
+import fs = require('fs');
+import path = require('path');
+import { Address, AggchainECDSA } from '../../typechain-types';
 
-const dataECDSA = require("../test-vectors/aggchainECDSA/aggchainECDSA.json");
-const pathTestVector = path.join(__dirname, "../test-vectors/aggchainECDSA/aggchainECDSA.json");
-const utilsECDSA = require("../../src/utils-aggchain-ECDSA");
-const utilsCommon = require("../../src/utils-common-aggchain");
+const dataECDSA = require('../test-vectors/aggchainECDSA/aggchainECDSA.json');
+
+const pathTestVector = path.join(__dirname, '../test-vectors/aggchainECDSA/aggchainECDSA.json');
+const utilsECDSA = require('../../src/utils-aggchain-ECDSA');
+const utilsCommon = require('../../src/utils-common-aggchain');
 
 // SIGNERS
 let admin: any;
@@ -15,15 +16,15 @@ let aggchainManager: any;
 let vKeyManager: any;
 let aggchainECDSAContract: AggchainECDSA;
 
-const gerManagerAddress = "0xA00000000000000000000000000000000000000A" as unknown as Address;
-const polTokenAddress = "0xB00000000000000000000000000000000000000B" as unknown as Address;
-const rollupManagerAddress = "0xC00000000000000000000000000000000000000C" as unknown as Address;
-const bridgeAddress = "0xD00000000000000000000000000000000000000D" as unknown as Address;
-const aggLayerGatewayAddress = "0xE00000000000000000000000000000000000000E" as unknown as Address;
+const gerManagerAddress = '0xA00000000000000000000000000000000000000A' as unknown as Address;
+const polTokenAddress = '0xB00000000000000000000000000000000000000B' as unknown as Address;
+const rollupManagerAddress = '0xC00000000000000000000000000000000000000C' as unknown as Address;
+const bridgeAddress = '0xD00000000000000000000000000000000000000D' as unknown as Address;
+const aggLayerGatewayAddress = '0xE00000000000000000000000000000000000000E' as unknown as Address;
 
-describe("Test vectors aggchain ECDSA", () => {
+describe('Test vectors aggchain ECDSA', () => {
     upgrades.silenceWarnings();
-    const update = process.env.UPDATE === "true";
+    const update = process.env.UPDATE === 'true';
 
     for (let i = 0; i < dataECDSA.length; i++) {
         let initializeBytesAggchainV0: string;
@@ -46,7 +47,7 @@ describe("Test vectors aggchain ECDSA", () => {
 
             // deploy aggchain
             // create aggchainECDSA implementation
-            const aggchainECDSAFactory = await ethers.getContractFactory("AggchainECDSA");
+            const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSA');
             aggchainECDSAContract = await upgrades.deployProxy(aggchainECDSAFactory, [], {
                 initializer: false,
                 constructorArgs: [
@@ -56,7 +57,7 @@ describe("Test vectors aggchain ECDSA", () => {
                     rollupManagerAddress,
                     aggLayerGatewayAddress,
                 ],
-                unsafeAllow: ["constructor", "state-variable-immutable", "missing-initializer-call"],
+                unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
             });
             await aggchainECDSAContract.waitForDeployment();
 
@@ -70,15 +71,17 @@ describe("Test vectors aggchain ECDSA", () => {
                 data.trustedSequencer,
                 data.gasTokenAddress,
                 data.trustedSequencerURL,
-                data.networkName
+                data.networkName,
             );
 
             // initialize using rollup manager & initializeBytesAggchain
-            await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerAddress]);
+            await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
             const rollupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
-            await aggchainECDSAContract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, {gasPrice: 0});
+            await aggchainECDSAContract
+                .connect(rollupManagerSigner)
+                .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
-            await aggchainECDSAContract.connect(aggchainManager).initialize(initializeBytesAggchainV0, {gasPrice: 0});
+            await aggchainECDSAContract.connect(aggchainManager).initialize(initializeBytesAggchainV0, { gasPrice: 0 });
 
             // check initializeBytesAggchain
             expect(await aggchainECDSAContract.admin()).to.be.equal(admin.address);
@@ -88,7 +91,7 @@ describe("Test vectors aggchain ECDSA", () => {
             expect(await aggchainECDSAContract.networkName()).to.be.equal(data.networkName);
             expect(await aggchainECDSAContract.gasTokenAddress()).to.be.equal(data.gasTokenAddress);
             expect(await aggchainECDSAContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(
-                data.initOwnedAggchainVKey
+                data.initOwnedAggchainVKey,
             );
 
             // encode aggchainParams
@@ -98,7 +101,7 @@ describe("Test vectors aggchain ECDSA", () => {
             if (data.useDefaultGateway) {
                 await expect(aggchainECDSAContract.connect(vKeyManager).disableUseDefaultGatewayFlag()).to.emit(
                     aggchainECDSAContract,
-                    "DisableUseDefaultGatewayFlag"
+                    'DisableUseDefaultGatewayFlag',
                 );
             }
 
@@ -108,13 +111,14 @@ describe("Test vectors aggchain ECDSA", () => {
             aggchainHash = utilsCommon.computeAggchainHash(
                 utilsCommon.CONSENSUS_TYPE.GENERIC,
                 data.initOwnedAggchainVKey,
-                aggchainParams
+                aggchainParams,
             );
             // get aggchainHash from contract
             // Check InvalidAggchainDataLength
-            await expect(
-                aggchainECDSAContract.getAggchainHash("0x", {gasPrice: 0})
-            ).to.be.revertedWithCustomError(aggchainECDSAContract, "InvalidAggchainDataLength");
+            await expect(aggchainECDSAContract.getAggchainHash('0x', { gasPrice: 0 })).to.be.revertedWithCustomError(
+                aggchainECDSAContract,
+                'InvalidAggchainDataLength',
+            );
 
             const aggchainHashContract = await aggchainECDSAContract.getAggchainHash(aggchainData, {
                 gasPrice: 0,
@@ -127,11 +131,11 @@ describe("Test vectors aggchain ECDSA", () => {
 
             // deploy polygonPessimisticConsensus
             // create polygonPessimisticConsensus implementation
-            const ppConsensusFactory = await ethers.getContractFactory("PolygonPessimisticConsensus");
+            const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
             let ppConsensusContract = await upgrades.deployProxy(ppConsensusFactory, [], {
                 initializer: false,
                 constructorArgs: [gerManagerAddress, polTokenAddress, bridgeAddress, rollupManagerAddress],
-                unsafeAllow: ["constructor", "state-variable-immutable"],
+                unsafeAllow: ['constructor', 'state-variable-immutable'],
             });
             await ppConsensusContract.waitForDeployment();
 
@@ -146,7 +150,7 @@ describe("Test vectors aggchain ECDSA", () => {
                     data.networkName,
                     {
                         gasPrice: 0,
-                    }
+                    },
                 );
 
             // upgrade to aggchainECDSA (reinitialize)
@@ -159,12 +163,12 @@ describe("Test vectors aggchain ECDSA", () => {
                     aggLayerGatewayAddress,
                 ],
                 unsafeAllow: [
-                    "constructor",
-                    "state-variable-immutable",
-                    "enum-definition",
-                    "struct-definition",
-                    "missing-initializer",
-                    "missing-initializer-call",
+                    'constructor',
+                    'state-variable-immutable',
+                    'enum-definition',
+                    'struct-definition',
+                    'missing-initializer',
+                    'missing-initializer-call',
                 ],
             });
 
@@ -173,11 +177,13 @@ describe("Test vectors aggchain ECDSA", () => {
                 data.useDefaultGateway,
                 data.initOwnedAggchainVKey,
                 data.initAggchainVKeySelector,
-                vKeyManager.address
+                vKeyManager.address,
             );
 
-            await ppConsensusContract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, {gasPrice: 0});
-            await ppConsensusContract.connect(aggchainManager).initialize(initializeBytesAggchainV1, {gasPrice: 0});
+            await ppConsensusContract
+                .connect(rollupManagerSigner)
+                .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+            await ppConsensusContract.connect(aggchainManager).initialize(initializeBytesAggchainV1, { gasPrice: 0 });
 
             // check initializeBytesAggchain
             expect(await aggchainECDSAContract.admin()).to.be.equal(admin.address);
@@ -187,7 +193,7 @@ describe("Test vectors aggchain ECDSA", () => {
             expect(await aggchainECDSAContract.networkName()).to.be.equal(data.networkName);
             expect(await aggchainECDSAContract.gasTokenAddress()).to.be.equal(data.gasTokenAddress);
             expect(await aggchainECDSAContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(
-                data.initOwnedAggchainVKey
+                data.initOwnedAggchainVKey,
             );
 
             // add data to test-vector

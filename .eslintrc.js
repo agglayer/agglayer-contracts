@@ -8,6 +8,7 @@ module.exports = {
     plugins: [
         'mocha',
         '@typescript-eslint',
+        'prettier'
     ],
     env: {
         node: true,
@@ -21,7 +22,6 @@ module.exports = {
         'plugin:prettier/recommended',
     ],
     rules: {
-        '@typescript-eslint/indent': ['error', 4],
         'mocha/no-exclusive-tests': 'error',
         'max-len': ['error', {
             code: 140, comments: 200, ignoreStrings: true, ignoreTemplateLiterals: true,

@@ -1,4 +1,4 @@
-import ethers from 'ethers';
+import * as ethers from 'ethers';
 
 /// //////////////////////////////
 /// // Constants for Aggchain ////
@@ -54,10 +54,7 @@ export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainPara
     }
 
     // solidity keccak
-    return ethers.solidityPackedKeccak256(
-        ['uint32', 'bytes32', 'bytes32'],
-        [aggchainType, aggchainVKey, hashAggchainParams],
-    );
+    return ethers.solidityPackedKeccak256(['uint32', 'bytes32', 'bytes32'], [aggchainType, aggchainVKey, hashAggchainParams]);
 }
 
 /**

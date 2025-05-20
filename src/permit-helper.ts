@@ -1,5 +1,5 @@
-const { ethers } = require('ethers');
-const { expect } = require('chai');
+import * as ethers from 'ethers';
+import { expect } from 'chai';
 
 /**
  * Create a permit signature with the EIP-2612 standard
@@ -11,7 +11,7 @@ const { expect } = require('chai');
  * @param {String} deadline - Deadline of the permit
  * @returns {Object} - Signature object, { v, r, s}
  */
-async function createPermitSignature(tokenContractInstance, wallet, spenderAddress, value, nonce, deadline, chainId) {
+export async function createPermitSignature(tokenContractInstance, wallet, spenderAddress, value, nonce, deadline, chainId) {
     const name = await tokenContractInstance.name();
 
     // The domain
@@ -62,7 +62,7 @@ async function createPermitSignature(tokenContractInstance, wallet, spenderAddre
  * @param {Number} chainId - expiry of the permit
  * @returns {Object} - Signature object, { v, r, s}
  */
-async function createPermitSignatureDaiType(tokenContractInstance, wallet, spenderAddress, nonce, expiry, chainId) {
+export async function createPermitSignatureDaiType(tokenContractInstance, wallet, spenderAddress, nonce, expiry, chainId) {
     const name = await tokenContractInstance.name();
     const version = await tokenContractInstance.version();
 
@@ -113,7 +113,7 @@ async function createPermitSignatureDaiType(tokenContractInstance, wallet, spend
  * @param {Number} chainId - expiry of the permit
  * @returns {Object} - Signature object, { v, r, s}
  */
-async function createPermitSignatureUniType(tokenContractInstance, wallet, spenderAddress, value, nonce, deadline, chainId) {
+export async function createPermitSignatureUniType(tokenContractInstance, wallet, spenderAddress, value, nonce, deadline, chainId) {
     const name = await tokenContractInstance.name();
 
     // The domain
@@ -154,17 +154,9 @@ async function createPermitSignatureUniType(tokenContractInstance, wallet, spend
 /**
  * Permit interface
  */
-const ifacePermit = new ethers.Interface(['function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)']);
+export const ifacePermit = new ethers.Interface(['function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)']);
 
 /**
  * Permit interface DAI
  */
-const ifacePermitDAI = new ethers.Interface(['function permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)']);
-
-module.exports = {
-    createPermitSignature,
-    createPermitSignatureDaiType,
-    ifacePermit,
-    ifacePermitDAI,
-    createPermitSignatureUniType,
-};
+export const ifacePermitDAI = new ethers.Interface(['function permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)']);
