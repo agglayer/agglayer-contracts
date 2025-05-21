@@ -215,7 +215,9 @@ async function main() {
             console.log({ executeData });
 
             // Decode the scheduleData for better readibility
-            const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
+            const timelockTx = timelockContractFactory.interface.parseTransaction({
+                data: scheduleData,
+            });
             const paramsArray = timelockTx?.fragment.inputs;
             const objectDecoded = {};
 

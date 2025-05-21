@@ -7,7 +7,7 @@ import {
     TokenWrapped,
 } from "../../typechain-types";
 import { MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
-import { valueTo32BytesHex } from "../../src/utils";
+import { valueToStorageBytes } from "../../src/utils";
 import { claimBeforeBridge } from "./helpers/helpers-sovereign-bridge";
 import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
 
@@ -32,7 +32,7 @@ function newHashChainValue(prevHashChainValue: any, valueToAdd: any) {
 }
 
 function newClaimedGlobalIndexValue(globalIndex: any, leafValue: any) {
-    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [valueTo32BytesHex(globalIndex), leafValue]);
+    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [valueToStorageBytes(globalIndex), leafValue]);
 }
 
 describe("BridgeL2SovereignChain Contract", () => {

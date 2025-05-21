@@ -213,7 +213,9 @@ async function main() {
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         // Decode the scheduleData for better readability
-        const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
+        const timelockTx = timelockContractFactory.interface.parseTransaction({
+            data: scheduleData,
+        });
         const paramsArray = timelockTx?.fragment.inputs;
         const objectDecoded = {};
         for (let i = 0; i < paramsArray?.length; i++) {

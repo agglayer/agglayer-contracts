@@ -8,7 +8,11 @@ import { ethers, upgrades } from 'hardhat';
 import { processorUtils, Constants } from '@0xpolygonhermez/zkevm-commonjs';
 import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
 import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
-import { AGGCHAIN_CONTRACT_NAMES, encodeInitializeBytesLegacy, encodeInitAggchainManager } from '../../src/utils-common-aggchain';
+import {
+    AGGCHAIN_CONTRACT_NAMES,
+    encodeInitializeBytesLegacy,
+    encodeInitAggchainManager,
+} from '../../src/utils-common-aggchain';
 import * as createRollupParameters from './create_new_rollup.json';
 import updateVanillaGenesis from "../../deployment/v2/utils/updateVanillaGenesis";
 import { logger } from "../../src/logger";
@@ -262,9 +266,7 @@ async function main() {
         );
     } else if (supportedAggchainsArray.includes(consensusContractName)) {
         // if consensusContractName is a AggchainECDSA
-        initializeBytes = encodeInitAggchainManager(
-            createRollupParameters.aggchainParams.aggchainManager,
-        );
+        initializeBytes = encodeInitAggchainManager(createRollupParameters.aggchainParams.aggchainManager);
     }
 
     if (createRollupParameters.type === transactionTypes.TIMELOCK) {
@@ -305,7 +307,9 @@ async function main() {
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         // Decode the scheduleData for better readability
-        const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
+        const timelockTx = timelockContractFactory.interface.parseTransaction({
+            data: scheduleData,
+        });
         const paramsArray = timelockTx?.fragment.inputs;
         const objectDecoded = {};
         for (let i = 0; i < paramsArray?.length; i++) {

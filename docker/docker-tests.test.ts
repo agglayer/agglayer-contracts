@@ -2,7 +2,13 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
-import { PolygonRollupManager, PolygonZkEVMGlobalExitRootV2, PolygonZkEVMBridgeV2, AggchainFEP, AggLayerGateway } from '../typechain-types';
+import {
+    PolygonRollupManager,
+    PolygonZkEVMGlobalExitRootV2,
+    PolygonZkEVMBridgeV2,
+    AggchainFEP,
+    AggLayerGateway,
+} from '../typechain-types';
 
 const deployOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
 const {
@@ -13,7 +19,9 @@ const {
     aggLayerGatewayAddress,
     admin,
 } = deployOutput;
-const createRollupOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'));
+const createRollupOutput = JSON.parse(
+    fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'),
+);
 const { rollupAddress } = createRollupOutput;
 
 describe('Docker build tests Contract', () => {
@@ -32,7 +40,9 @@ describe('Docker build tests Contract', () => {
 
     it('should check RollupManager', async () => {
         const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
-        const rollupManagerContract = PolygonRollupManagerFactory.attach(polygonRollupManagerAddress) as PolygonRollupManager;
+        const rollupManagerContract = PolygonRollupManagerFactory.attach(
+            polygonRollupManagerAddress,
+        ) as PolygonRollupManager;
         expect(rollupManagerContract.target).to.equal(polygonRollupManagerAddress);
         expect(await rollupManagerContract.bridgeAddress()).to.equal(polygonZkEVMBridgeAddress);
         expect(await rollupManagerContract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
@@ -55,7 +65,9 @@ describe('Docker build tests Contract', () => {
 
     it('should check PolygonZkEVMBridgeV2', async () => {
         const PolygonZkEVMBridgeV2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const PolygonZkEVMBridgeV2Contract = PolygonZkEVMBridgeV2Factory.attach(polygonZkEVMBridgeAddress) as PolygonZkEVMBridgeV2;
+        const PolygonZkEVMBridgeV2Contract = PolygonZkEVMBridgeV2Factory.attach(
+            polygonZkEVMBridgeAddress,
+        ) as PolygonZkEVMBridgeV2;
         expect(PolygonZkEVMBridgeV2Contract.target).to.equal(polygonZkEVMBridgeAddress);
         expect(await PolygonZkEVMBridgeV2Contract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
         expect(await PolygonZkEVMBridgeV2Contract.polygonRollupManager()).to.equal(polygonRollupManagerAddress);

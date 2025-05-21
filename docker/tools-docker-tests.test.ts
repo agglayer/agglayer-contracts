@@ -21,7 +21,9 @@ describe('Tooling docker build tests Contract', () => {
         const dockerCreateRollupOutput = JSON.parse(
             fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'),
         );
-        const dockerDeploymentOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
+        const dockerDeploymentOutput = JSON.parse(
+            fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'),
+        );
         // Read create rollup config file
         const createRollupConfig = JSON.parse(
             fs.readFileSync(path.join(__dirname, '../tools/createNewRollup/create_new_rollup.json.example'), 'utf8'),
@@ -47,13 +49,17 @@ describe('Tooling docker build tests Contract', () => {
         );
         // Check output values with current docker environment
         const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
-        const rollupManagerContract = PolygonRollupManagerFactory.attach(createRollupOutput.rollupManagerAddress) as PolygonRollupManager;
+        const rollupManagerContract = PolygonRollupManagerFactory.attach(
+            createRollupOutput.rollupManagerAddress,
+        ) as PolygonRollupManager;
 
         expect(createRollupConfig.rollupManagerAddress).to.equal(rollupManagerContract.target);
         // Get rollup data
         const rollupId = await rollupManagerContract.rollupAddressToID(createRollupOutput.rollupAddress);
         expect(Number(rollupId)).to.equal(createRollupOutput.rollupID);
-        expect(await rollupManagerContract.chainIDToRollupID(createRollupConfig.chainID)).to.equal(createRollupOutput.rollupID);
+        expect(await rollupManagerContract.chainIDToRollupID(createRollupConfig.chainID)).to.equal(
+            createRollupOutput.rollupID,
+        );
         const rollupFactory = (await ethers.getContractFactory(createRollupConfig.consensusContractName)) as any;
         let rollupContract;
         switch (createRollupConfig.consensusContractName) {
@@ -84,7 +90,9 @@ describe('Tooling docker build tests Contract', () => {
         const dockerCreateRollupOutput = JSON.parse(
             fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'),
         );
-        const dockerDeploymentOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
+        const dockerDeploymentOutput = JSON.parse(
+            fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'),
+        );
         // Read create rollup config file
         const createRollupTypeConfig = JSON.parse(
             fs.readFileSync(path.join(__dirname, '../tools/addRollupType/add_rollup_type.json.example'), 'utf8'),

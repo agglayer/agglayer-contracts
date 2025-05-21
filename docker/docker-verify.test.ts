@@ -12,7 +12,9 @@ describe('Docker verifyProof test', () => {
     const dockerCreateRollupOutput = JSON.parse(
         fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'),
     );
-    const dockerDeploymentOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
+    const dockerDeploymentOutput = JSON.parse(
+        fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'),
+    );
     const dockerCreateRollup = JSON.parse(
         fs.readFileSync(path.join(__dirname, './scripts/v2/create_rollup_parameters_docker.json'), 'utf8'),
     );
@@ -68,7 +70,9 @@ describe('Docker verifyProof test', () => {
 
         // check Role
         const TRUSTED_AGGREGATOR_ROLE = ethers.id('TRUSTED_AGGREGATOR_ROLE');
-        expect(await rollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator.address)).to.be.equal(true);
+        expect(await rollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator.address)).to.be.equal(
+            true,
+        );
 
         // verify pessimistic proof
         const onVerifyPessimisticTx = await rollupManagerContract

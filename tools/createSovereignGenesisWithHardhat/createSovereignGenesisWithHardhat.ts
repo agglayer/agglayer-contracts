@@ -26,7 +26,10 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const argv = yargs(process.argv.slice(2))
     .options({
         test: { type: 'boolean', default: false },
-        input: { type: 'string', default: '../../deployment/v2/deploy_parameters.json' },
+        input: {
+            type: 'string',
+            default: '../../deployment/v2/deploy_parameters.json',
+        },
         out: { type: 'string', default: './genesis-sovereign_hardhat.json' },
     })
     .parse() as any;

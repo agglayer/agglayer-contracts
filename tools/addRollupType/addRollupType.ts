@@ -317,15 +317,17 @@ async function main() {
     if (type === transactionTypes.EOA) {
         console.log(
             await (
-                await rollupManagerContract.connect(deployer).addNewRollupType(
-                    consensusContractAddress,
-                    verifierAddress,
-                    finalForkId,
-                    rollupVerifierType,
-                    genesisFinal,
-                    description,
-                    programVKeyFinal,
-                )
+                await rollupManagerContract
+                    .connect(deployer)
+                    .addNewRollupType(
+                        consensusContractAddress,
+                        verifierAddress,
+                        finalForkId,
+                        rollupVerifierType,
+                        genesisFinal,
+                        description,
+                        programVKeyFinal,
+                    )
             ).wait(),
         );
 
@@ -390,7 +392,9 @@ async function main() {
         outputJson.id = operation.id;
 
         // Decode the scheduleData for better readability
-        const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
+        const timelockTx = timelockContractFactory.interface.parseTransaction({
+            data: scheduleData,
+        });
         const paramsArray = timelockTx?.fragment.inputs;
         const objectDecoded = {};
 

@@ -3,7 +3,10 @@ import { TIMELOCK, STORAGE_ONE_VALUE } from '../constants';
 import { valueToStorageBytes } from '../utils';
 
 export function setupRole(storage, address, roleHash) {
-    const storagePosition = ethers.solidityPackedKeccak256(['uint256', 'uint256'], [roleHash, TIMELOCK.ROLES_MAPPING_STORAGE_POS]);
+    const storagePosition = ethers.solidityPackedKeccak256(
+        ['uint256', 'uint256'],
+        [roleHash, TIMELOCK.ROLES_MAPPING_STORAGE_POS],
+    );
 
     const storagePositionRole = ethers.solidityPackedKeccak256(['uint256', 'uint256'], [address, storagePosition]);
 
