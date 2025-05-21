@@ -1,18 +1,35 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
-import path = require("path");
-import fs = require("fs");
-import {utils} from "ffjavascript";
+import { expect } from 'chai';
+import path = require('path');
+import fs = require('fs');
+import { utils } from 'ffjavascript';
 
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, upgrades} from "hardhat";
-import {PolygonRollupManager} from "../../typechain-types";
+import * as dotenv from 'dotenv';
+import { ethers, upgrades } from 'hardhat';
+import { PolygonRollupManager } from '../../typechain-types';
+import * as upgradeParameters from './upgrade_parameters.json';
 
-const pathOutputJson = path.join(__dirname, "./upgrade_output.json");
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const upgradeParameters = require("./upgrade_parameters.json");
+const pathOutputJson = path.join(__dirname, './upgrade_output.json');
+
+// OZ test functions
+function genOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
+    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256', 'bytes', 'uint256', 'bytes32'],
+        [target, value, data, predecessor, salt],
+    );
+    const id = ethers.keccak256(abiEncoded);
+    return {
+        id,
+        target,
+        value,
+        data,
+        predecessor,
+        salt,
+    };
+}
 
 async function main() {
     upgrades.silenceWarnings();
@@ -21,18 +38,19 @@ async function main() {
      * Check upgrade parameters
      * Check that every necessary parameter is fulfilled
      */
-    const mandatoryUpgradeParameters = ["rollupManagerAddress", "timelockDelay"];
+    const mandatoryUpgradeParameters = ['rollupManagerAddress', 'timelockDelay'];
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const parameterName of mandatoryUpgradeParameters) {
-        if (upgradeParameters[parameterName] === undefined || upgradeParameters[parameterName] === "") {
+        if (upgradeParameters[parameterName] === undefined || upgradeParameters[parameterName] === '') {
             throw new Error(`Missing parameter: ${parameterName}`);
         }
     }
-    const {rollupManagerAddress, timelockDelay} = upgradeParameters;
+    const { rollupManagerAddress, timelockDelay } = upgradeParameters;
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
 
     // Load onchain parameters
-    const polygonRMFactory = await ethers.getContractFactory("PolygonRollupManagerPrevious");
+    const polygonRMFactory = await ethers.getContractFactory('PolygonRollupManagerPrevious');
     const polygonRMContract = (await polygonRMFactory.attach(rollupManagerAddress)) as PolygonRollupManager;
 
     const globalExitRootManagerAddress = await polygonRMContract.globalExitRootManager();
@@ -42,29 +60,29 @@ async function main() {
     // Load provider
     const currentProvider = ethers.provider;
     if (upgradeParameters.multiplierGas || upgradeParameters.maxFeePerGas) {
-        if (process.env.HARDHAT_NETWORK !== "hardhat") {
+        if (process.env.HARDHAT_NETWORK !== 'hardhat') {
             currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
+                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
             ) as any;
             if (upgradeParameters.maxPriorityFeePerGas && upgradeParameters.maxFeePerGas) {
                 console.log(
-                    `Hardcoded gas used: MaxPriority${upgradeParameters.maxPriorityFeePerGas} gwei, MaxFee${upgradeParameters.maxFeePerGas} gwei`
+                    `Hardcoded gas used: MaxPriority${upgradeParameters.maxPriorityFeePerGas} gwei, MaxFee${upgradeParameters.maxFeePerGas} gwei`,
                 );
                 const FEE_DATA = new ethers.FeeData(
                     null,
-                    ethers.parseUnits(upgradeParameters.maxFeePerGas, "gwei"),
-                    ethers.parseUnits(upgradeParameters.maxPriorityFeePerGas, "gwei")
+                    ethers.parseUnits(upgradeParameters.maxFeePerGas, 'gwei'),
+                    ethers.parseUnits(upgradeParameters.maxPriorityFeePerGas, 'gwei'),
                 );
 
                 currentProvider.getFeeData = async () => FEE_DATA;
             } else {
-                console.log("Multiplier gas used: ", upgradeParameters.multiplierGas);
+                console.log('Multiplier gas used: ', upgradeParameters.multiplierGas);
                 async function overrideFeeData() {
                     const feeData = await ethers.provider.getFeeData();
                     return new ethers.FeeData(
                         null,
                         ((feeData.maxFeePerGas as bigint) * BigInt(upgradeParameters.multiplierGas)) / 1000n,
-                        ((feeData.maxPriorityFeePerGas as bigint) * BigInt(upgradeParameters.multiplierGas)) / 1000n
+                        ((feeData.maxPriorityFeePerGas as bigint) * BigInt(upgradeParameters.multiplierGas)) / 1000n,
                     );
                 }
                 currentProvider.getFeeData = overrideFeeData;
@@ -79,13 +97,13 @@ async function main() {
     } else if (process.env.MNEMONIC) {
         deployer = ethers.HDNodeWallet.fromMnemonic(
             ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0"
+            "m/44'/60'/0'/0/0",
         ).connect(currentProvider);
     } else {
         [deployer] = await ethers.getSigners();
     }
 
-    console.log("deploying with: ", deployer.address);
+    console.log('deploying with: ', deployer.address);
 
     const proxyAdmin = await upgrades.admin.getInstance();
 
@@ -95,29 +113,29 @@ async function main() {
     const timelockAddress = await proxyAdmin.owner();
 
     // load timelock
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
 
     // prepare upgrades
 
     // Upgrade to rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager", deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
 
     const implRollupManager = await upgrades.prepareUpgrade(rollupManagerAddress, PolygonRollupManagerFactory, {
         constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress],
-        unsafeAllow: ["constructor", "state-variable-immutable", "enum-definition", "struct-definition"],
+        unsafeAllow: ['constructor', 'state-variable-immutable', 'enum-definition', 'struct-definition'],
         unsafeAllowRenames: true,
         unsafeAllowCustomTypes: true,
         unsafeSkipStorageCheck: true,
     });
 
-    console.log("#######################\n");
+    console.log('#######################\n');
     console.log(`Polygon rollup manager: ${implRollupManager}`);
 
-    console.log("you can verify the new impl address with:");
+    console.log('you can verify the new impl address with:');
     console.log(
-        `npx hardhat verify --constructor-args upgrade/arguments.js ${implRollupManager} --network ${process.env.HARDHAT_NETWORK}\n`
+        `npx hardhat verify --constructor-args upgrade/arguments.js ${implRollupManager} --network ${process.env.HARDHAT_NETWORK}\n`,
     );
-    console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", [
+    console.log('Copy the following constructor arguments on: upgrade/arguments.js \n', [
         globalExitRootManagerAddress,
         polAddress,
         bridgeAddress,
@@ -126,17 +144,17 @@ async function main() {
     const operationRollupManager = genOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+        proxyAdmin.interface.encodeFunctionData('upgradeAndCall', [
             rollupManagerAddress,
             implRollupManager,
-            PolygonRollupManagerFactory.interface.encodeFunctionData("initialize", []),
+            PolygonRollupManagerFactory.interface.encodeFunctionData('initialize', []),
         ]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData('schedule', [
         operationRollupManager.target,
         operationRollupManager.value,
         operationRollupManager.data,
@@ -146,7 +164,7 @@ async function main() {
     ]);
 
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
+    const executeData = timelockContractFactory.interface.encodeFunctionData('execute', [
         operationRollupManager.target,
         operationRollupManager.value,
         operationRollupManager.data,
@@ -154,8 +172,8 @@ async function main() {
         salt, // salt
     ]);
 
-    console.log({scheduleData});
-    console.log({executeData});
+    console.log({ scheduleData });
+    console.log({ executeData });
 
     const outputJson = {
         scheduleData,
@@ -164,7 +182,7 @@ async function main() {
     };
 
     // Decode the scheduleData for better readability
-    const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
+    const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
     const paramsArray = timelockTx?.fragment.inputs as any;
     const objectDecoded = {} as any;
 
@@ -172,7 +190,7 @@ async function main() {
         const currentParam = paramsArray[i];
         objectDecoded[currentParam.name] = timelockTx?.args[i];
 
-        if (currentParam.name == "data") {
+        if (currentParam.name === 'data') {
             const decodedProxyAdmin = proxyAdmin.interface.parseTransaction({
                 data: timelockTx?.args[i],
             });
@@ -183,10 +201,10 @@ async function main() {
             objectDecodedData.selector = decodedProxyAdmin?.selector;
 
             for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedProxyAdmin?.args[j];
+                const currentParamData = paramsArrayData[j];
+                objectDecodedData[currentParamData.name] = decodedProxyAdmin?.args[j];
             }
-            objectDecoded["decodedData"] = objectDecodedData;
+            objectDecoded.decodedData = objectDecodedData;
         }
     }
 
@@ -199,20 +217,3 @@ main().catch((e) => {
     console.error(e);
     process.exit(1);
 });
-
-// OZ test functions
-function genOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
-    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "bytes", "uint256", "bytes32"],
-        [target, value, data, predecessor, salt]
-    );
-    const id = ethers.keccak256(abiEncoded);
-    return {
-        id,
-        target,
-        value,
-        data,
-        predecessor,
-        salt,
-    };
-}

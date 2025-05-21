@@ -70,7 +70,7 @@ async function decodeScheduleData(scheduleData: any, contractFactory: any) {
         const currentParam = paramsArray[i];
         objectDecoded[currentParam.name] = timelockTx?.args[i];
 
-        if (currentParam.name == "data") {
+        if (currentParam.name === 'data') {
             const decodedData = contractFactory.interface.parseTransaction({
                 data: timelockTx?.args[i],
             });
@@ -81,12 +81,11 @@ async function decodeScheduleData(scheduleData: any, contractFactory: any) {
             objectDecodedData.selector = decodedData?.selector;
 
             for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedData?.args[j];
+                const currentParamData = paramsArrayData[j];
+                objectDecodedData[currentParamData.name] = decodedData?.args[j];
             }
-            objectDecoded["decodedData"] = objectDecodedData;
-
-        } else if (currentParam.name == "payloads") {
+            objectDecoded.decodedData = objectDecodedData;
+        } else if (currentParam.name === 'payloads') {
             // for each payload
             const payloads = timelockTx?.args[i];
             for (let j = 0; j < payloads.length; j++) {
@@ -102,8 +101,8 @@ async function decodeScheduleData(scheduleData: any, contractFactory: any) {
                 const paramsArrayData = decodedProxyAdmin?.fragment.inputs;
 
                 for (let n = 0; n < paramsArrayData?.length; n++) {
-                    const currentParam = paramsArrayData[n];
-                    resultDecodeProxyAdmin[currentParam.name] = decodedProxyAdmin?.args[n];
+                    const currentParamData = paramsArrayData[n];
+                    resultDecodeProxyAdmin[currentParamData.name] = decodedProxyAdmin?.args[n];
                 }
                 objectDecoded[`decodePayload_${j}`] = resultDecodeProxyAdmin;
             }

@@ -11,10 +11,11 @@ import { ethers, upgrades } from "hardhat";
 import { PolygonRollupManagerPessimistic, PolygonZkEVMBridgeV2 } from "../../typechain-types";
 import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, getGitInfo } from "../utils";
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from "../../src/utils";
+import * as upgradeParameters from './upgrade_parameters.json';
 
-const pathOutputJson = path.join(__dirname, "./upgrade_output.json");
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const upgradeParameters = require("./upgrade_parameters.json");
+const pathOutputJson = path.join(__dirname, './upgrade_output.json');
 
 async function main() {
     /*
@@ -28,9 +29,9 @@ async function main() {
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
 
     // Load onchain parameters
-    let polygonRMPreviousFactory = await ethers.getContractFactory("PolygonRollupManagerPessimistic");
+    const polygonRMPreviousFactory = await ethers.getContractFactory('PolygonRollupManagerPessimistic');
     const rollupManagerPessimisticContract = (await polygonRMPreviousFactory.attach(
-        rollupManagerAddress
+        rollupManagerAddress,
     )) as PolygonRollupManagerPessimistic;
 
     const globalExitRootManagerAddress = await rollupManagerPessimisticContract.globalExitRootManager();
@@ -52,37 +53,42 @@ async function main() {
     const timelockAddress = await proxyAdmin.owner();
 
     // load timelock
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
 
     // prepare upgrades
 
     // Upgrade to rollup manager v3
-    const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager", deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
 
     const implRollupManager = await upgrades.prepareUpgrade(rollupManagerAddress, PolygonRollupManagerFactory, {
         constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress],
-        unsafeAllow: ["constructor"],
+        unsafeAllow: ['constructor'],
     });
 
-    logger.info("#######################\n");
+    logger.info('#######################\n');
     logger.info(`Polygon rollup manager implementation deployed at: ${implRollupManager}`);
 
-    await verifyContractEtherscan(implRollupManager as string, [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress]);
+    await verifyContractEtherscan(implRollupManager as string, [
+        globalExitRootManagerAddress,
+        polAddress,
+        bridgeAddress,
+        aggLayerGatewayAddress,
+    ]);
 
     const operationRollupManager = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+        proxyAdmin.interface.encodeFunctionData('upgradeAndCall', [
             rollupManagerAddress,
             implRollupManager,
-            PolygonRollupManagerFactory.interface.encodeFunctionData("initialize", []),
+            PolygonRollupManagerFactory.interface.encodeFunctionData('initialize', []),
         ]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Upgrade bridge
-    const bridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2", deployer);
+    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
     const impBridge = await upgrades.prepareUpgrade(bridgeAddress, bridgeFactory, {
         unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
     }) as string;
@@ -113,16 +119,20 @@ async function main() {
             bridgeFactory.interface.encodeFunctionData("initialize()", [])
         ]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     /// Upgrade PolygonZkEVMGlobalExitRootV2
-    const globalExitRootManagerFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2", deployer);
-    const globalExitRootManagerImp = await upgrades.prepareUpgrade(globalExitRootManagerAddress, globalExitRootManagerFactory, {
-        constructorArgs: [rollupManagerAddress, bridgeAddress],
-        unsafeAllow: ["constructor", "missing-initializer"],
-    });
-    logger.info("#######################\n");
+    const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    const globalExitRootManagerImp = await upgrades.prepareUpgrade(
+        globalExitRootManagerAddress,
+        globalExitRootManagerFactory,
+        {
+            constructorArgs: [rollupManagerAddress, bridgeAddress],
+            unsafeAllow: ['constructor', 'missing-initializer'],
+        },
+    );
+    logger.info('#######################\n');
     logger.info(`Polygon global exit root manager implementation deployed at: ${globalExitRootManagerImp}`);
 
     await verifyContractEtherscan(globalExitRootManagerImp as string, [rollupManagerAddress, bridgeAddress]);
@@ -130,13 +140,13 @@ async function main() {
     const operationGlobalExitRoot = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgrade", [globalExitRootManagerAddress, globalExitRootManagerImp]), // data
+        proxyAdmin.interface.encodeFunctionData('upgrade', [globalExitRootManagerAddress, globalExitRootManagerImp]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("scheduleBatch", [
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData('scheduleBatch', [
         [operationRollupManager.target, operationBridge.target, operationGlobalExitRoot.target],
         [operationRollupManager.value, operationBridge.value, operationGlobalExitRoot.value],
         [operationRollupManager.data, operationBridge.data, operationGlobalExitRoot.data],
@@ -146,7 +156,7 @@ async function main() {
     ]);
 
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("executeBatch", [
+    const executeData = timelockContractFactory.interface.encodeFunctionData('executeBatch', [
         [operationRollupManager.target, operationBridge.target, operationGlobalExitRoot.target],
         [operationRollupManager.value, operationBridge.value, operationGlobalExitRoot.value],
         [operationRollupManager.data, operationBridge.data, operationGlobalExitRoot.data],
@@ -169,7 +179,6 @@ async function main() {
 
     // Decode the scheduleData for better readability
     const objectDecoded = await decodeScheduleData(scheduleData, proxyAdmin);
-
 
     outputJson.decodedScheduleData = objectDecoded;
 

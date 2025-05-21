@@ -6,16 +6,17 @@ import fs = require("fs");
 import { utils } from "ffjavascript";
 import { logger } from "../../src/logger";
 
-import * as dotenv from "dotenv";
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 import { ethers, upgrades, run } from "hardhat";
 import { GlobalExitRootManagerL2SovereignChainPessimistic } from "../../typechain-types";
 import { genTimelockOperation, decodeScheduleData } from "../utils";
 import { checkParams, getDeployerFromParameters } from "../../src/utils";
 
-const pathOutputJson = path.join(__dirname, "./upgrade_output.json");
+import * as dotenv from 'dotenv';
+import * as upgradeParameters from './upgrade_parameters.json';
 
-const upgradeParameters = require("./upgrade_parameters.json");
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+const pathOutputJson = path.join(__dirname, './upgrade_output.json');
 
 async function main() {
     /*
@@ -28,15 +29,18 @@ async function main() {
     const { timelockDelay, emergencyBridgePauserAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress } = upgradeParameters;
 
     // In case globalExitRootManagerL2SovereignChainAddress is not provided, use the default one, used by most chains in the genesis
-    const globalExitRootManagerL2SovereignChainAddress = typeof upgradeParameters.globalExitRootManagerL2SovereignChainAddress === "undefined" ? "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa" : upgradeParameters.globalExitRootManagerL2SovereignChainAddress;
+    const globalExitRootManagerL2SovereignChainAddress =
+        typeof upgradeParameters.globalExitRootManagerL2SovereignChainAddress === 'undefined'
+            ? '0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa'
+            : upgradeParameters.globalExitRootManagerL2SovereignChainAddress;
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
 
     // Load onchain parameters
     const gerManagerL2SovereignChainPessimisticFactory = await ethers.getContractFactory(
-        "GlobalExitRootManagerL2SovereignChainPessimistic"
+        'GlobalExitRootManagerL2SovereignChainPessimistic',
     );
     const gerManagerL2SovereignChainContract = (await gerManagerL2SovereignChainPessimisticFactory.attach(
-        globalExitRootManagerL2SovereignChainAddress
+        globalExitRootManagerL2SovereignChainAddress,
     )) as GlobalExitRootManagerL2SovereignChainPessimistic;
 
     const bridgeAddress = await gerManagerL2SovereignChainContract.bridgeAddress();
@@ -51,29 +55,34 @@ async function main() {
         gerManagerL2SovereignChainPessimisticFactory,
         {
             constructorArgs: [bridgeAddress],
-            kind: "transparent",
-        }
+            kind: 'transparent',
+        },
     );
 
     const proxyAdmin = await upgrades.admin.getInstance();
     // Assert correct admin
-    expect(await upgrades.erc1967.getAdminAddress(globalExitRootManagerL2SovereignChainAddress as string)).to.be.equal(proxyAdmin.target);
+    expect(await upgrades.erc1967.getAdminAddress(globalExitRootManagerL2SovereignChainAddress as string)).to.be.equal(
+        proxyAdmin.target,
+    );
 
     const timelockAddress = await proxyAdmin.owner();
 
     // load timelock
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
 
     // prepare upgrades
     // Upgrade to GlobalExitRootManagerL2SovereignChain
-    const gerManagerL2SovereignChainFactory = await ethers.getContractFactory("GlobalExitRootManagerL2SovereignChain", deployer);
+    const gerManagerL2SovereignChainFactory = await ethers.getContractFactory(
+        'GlobalExitRootManagerL2SovereignChain',
+        deployer,
+    );
     const gerManagerL2SovereignChainImplementation = await upgrades.prepareUpgrade(
         globalExitRootManagerL2SovereignChainAddress,
         gerManagerL2SovereignChainFactory,
         {
             constructorArgs: [bridgeAddress],
-            unsafeAllow: ["constructor"],
-        }
+            unsafeAllow: ['constructor'],
+        },
     );
 
     logger.info("#######################\n");
@@ -81,9 +90,11 @@ async function main() {
     try {
         logger.info("Trying to verify the new implementation contract");
         // wait a few seconds before trying etherscan verification
-        await new Promise((r) => setTimeout(r, 5000));
+        await new Promise((r) => {
+            setTimeout(r, 5000);
+        });
         // verify
-        await run("verify:verify", {
+        await run('verify:verify', {
             address: gerManagerL2SovereignChainImplementation,
             constructorArguments: [bridgeAddress],
         });
@@ -99,12 +110,12 @@ async function main() {
     const operationGER = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgrade", [
+        proxyAdmin.interface.encodeFunctionData('upgrade', [
             globalExitRootManagerL2SovereignChainAddress,
             gerManagerL2SovereignChainImplementation,
         ]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Upgrade BridgeL2SovereignChain
