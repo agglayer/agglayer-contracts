@@ -115,6 +115,7 @@ describe('AggchainECDSA', () => {
         )
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AGGCHAIN_DEFAULT_VKEY_ROLE, defaultAdminAgglayer.address, defaultAdminAgglayer.address);
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, defaultAdminAgglayer.address)).to.be
             .true;
 

@@ -1,7 +1,8 @@
+/* eslint-disable no-unsafe-optional-chaining */
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { takeSnapshot, time } from '@nomicfoundation/hardhat-network-helpers';
+import { takeSnapshot } from '@nomicfoundation/hardhat-network-helpers';
 import { processorUtils, contractUtils, MTBridge, mtBridgeUtils, utils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     VerifierRollupHelperMock,
@@ -15,19 +16,50 @@ import {
     Address,
     PolygonDataCommittee,
 } from "../../typechain-types";
-import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
-import { processorUtils, contractUtils, MTBridge, mtBridgeUtils, utils } from "@0xpolygonhermez/zkevm-commonjs";
 import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
 import { computeRandomBytes } from '../../src/pessimistic-utils';
+import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
+
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
+}
+
+/**
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, seqAddress)
+ * @param {String} oldAccInputHash - old accumulateInputHash
+ * @param {String} batchHashData - Batch hash data
+ * @param {String} globalExitRoot - Global Exit Root
+ * @param {Number} timestamp - Block timestamp
+ * @param {String} sequencerAddress - Sequencer address
+ * @returns {String} - accumulateInputHash in hex encoding
+ */
+function calculateAccInputHashetrog(
+    oldAccInputHash: any,
+    batchHashData: any,
+    l1InfoTreeRoot: any,
+    timestamp: any,
+    sequencerAddress: any,
+    forcedBlockHash: any,
+) {
+    const hashKeccak = ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
+        [oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, sequencerAddress, forcedBlockHash],
+    );
+
+    return hashKeccak;
+}
+
+function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
+    return ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'uint64'],
+        [newGlobalExitRoot, lastBlockHash, timestamp],
+    );
 }
 
 describe('Polygon Rollup Manager', () => {
@@ -575,7 +607,6 @@ describe('Polygon Rollup Manager', () => {
 
         // Sequence Batches
         const currentTime = Number((await ethers.provider.getBlock('latest'))?.timestamp);
-        const currentLastBatchSequenced = 1;
         const l1InfoTreeLeafCount = 0;
 
         const height = 32;
@@ -626,10 +657,6 @@ describe('Polygon Rollup Manager', () => {
                     trustedSequencer.address,
                 ),
         ).to.emit(newZkEVMContract, 'SequenceBatches');
-
-        const lastBlock = await ethers.provider.getBlock('latest');
-        const lastBlockHash = lastBlock?.parentHash;
-        const lastGlobalExitRootS = await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot();
 
         // calculate accInputHash
         expect(await newZkEVMContract.lastAccInputHash()).to.be.equal(expectedAccInputHash2);
@@ -1549,6 +1576,7 @@ describe('Polygon Rollup Manager', () => {
         const receipt = await txSequenceBatches.wait();
         const logs = receipt?.logs;
 
+        // eslint-disable-next-line no-restricted-syntax
         for (const log of logs) {
             const parsedLog = newZkEVMContract.interface.parseLog(log);
             if (parsedLog != null) {
@@ -1674,7 +1702,6 @@ describe('Polygon Rollup Manager', () => {
             lastBlock2?.timestamp + 5,
         );
         merkleTreeGLobalExitRoot.add(leafValueUpdateGER2);
-        const currentL1InfoRoot = merkleTreeGLobalExitRoot.getRoot();
         await ethers.provider.send('evm_setNextBlockTimestamp', [lastBlock2?.timestamp + 5]);
 
         // Verify batch
@@ -1823,7 +1850,6 @@ describe('Polygon Rollup Manager', () => {
         const rollupVerifierType = 0;
         const description = 'zkevm test';
         const programVKey = '0x0000000000000000000000000000000000000000000000000000000000000000';
-        const lastPessimisticRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         // Native token will be ether
 
@@ -2082,7 +2108,6 @@ describe('Polygon Rollup Manager', () => {
         // try verify batches
         const l2txData = '0x123456';
         const maticAmount = await rollupManagerContract.getBatchFee();
-        const currentTimestamp = (await ethers.provider.getBlock('latest'))?.timestamp;
 
         const sequence = {
             transactions: l2txData,
@@ -2239,7 +2264,6 @@ describe('Polygon Rollup Manager', () => {
         );
         const merkleTreeGLobalExitRoot = new MerkleTreeBridge(height);
         merkleTreeGLobalExitRoot.add(leafValueUpdateGER2);
-        const currentL1InfoRoot = merkleTreeGLobalExitRoot.getRoot();
 
         await ethers.provider.send('evm_setNextBlockTimestamp', [lastBlock2?.timestamp + 5]);
 
@@ -2572,7 +2596,6 @@ describe('Polygon Rollup Manager', () => {
         const rollupVerifierType = 0;
         const description = 'zkevm test';
         const programVKey = '0x0000000000000000000000000000000000000000000000000000000000000000';
-        const lastPessimisticRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         // Native token will be ether
 
@@ -2760,7 +2783,6 @@ describe('Polygon Rollup Manager', () => {
         // try verify batches
         const l2txData = '0x123456';
         const maticAmount = await rollupManagerContract.getBatchFee();
-        const currentTimestamp = (await ethers.provider.getBlock('latest'))?.timestamp;
 
         const sequence = {
             transactionsHash: ethers.keccak256(l2txData),
@@ -2777,7 +2799,6 @@ describe('Polygon Rollup Manager', () => {
 
         // Sequence Batches
         const currentTime = Number((await ethers.provider.getBlock('latest'))?.timestamp);
-        const currentLastBatchSequenced = 0;
 
         // Setup commitee
         // Create CdkCommitee
@@ -2791,7 +2812,6 @@ describe('Polygon Rollup Manager', () => {
         expect(await newZkEVMContract.dataAvailabilityProtocol()).to.be.equal(PolygonDataCommitee.target);
         await PolygonDataCommitee.setupCommittee(0, [], '0x');
         const l1InfoTreeLeafCount = 0;
-        const lastBlock = await ethers.provider.getBlock('latest');
 
         const rootSC = await polygonZkEVMGlobalExitRoot.getRoot();
         const expectedAccInputHash2 = calculateAccInputHashetrog(
@@ -2843,7 +2863,6 @@ describe('Polygon Rollup Manager', () => {
         const height = 32;
         const merkleTreeGLobalExitRoot = new MerkleTreeBridge(height);
         merkleTreeGLobalExitRoot.add(leafValueUpdateGER2);
-        const currentL1InfoRoot = merkleTreeGLobalExitRoot.getRoot();
         await ethers.provider.send('evm_setNextBlockTimestamp', [lastBlock2?.timestamp + 5]);
 
         // Verify batch
@@ -2895,13 +2914,9 @@ describe('Polygon Rollup Manager', () => {
         const forkID = 0;
         const genesisRandom = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const rollupVerifierType = 0;
-        const description = 'zkevm test';
         const programVKey = '0x0000000000000000000000000000000000000000000000000000000000000000';
-        const lastPessimisticRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         // Native token will be ether
-        const gasTokenAddress = ethers.ZeroAddress;
-        const gasTokenNetwork = 0;
 
         // In order to create a new rollup type, create an implementation of the contract
 
@@ -2923,7 +2938,6 @@ describe('Polygon Rollup Manager', () => {
         // Add a new rollup type with timelock
         const RollupID = 1;
 
-        const intializeTimestmap = (await ethers.provider.getBlock('latest'))?.timestamp as any;
         const initializeAccInputHash = ethers.hexlify(ethers.randomBytes(32));
 
         // Initialize:
@@ -3153,7 +3167,6 @@ describe('Polygon Rollup Manager', () => {
         // try verify batches
         const l2txData = '0x123456';
         const maticAmount = await rollupManagerContract.getBatchFee();
-        const currentTimestamp = (await ethers.provider.getBlock('latest'))?.timestamp;
 
         const sequence = {
             transactions: l2txData,
@@ -3189,7 +3202,6 @@ describe('Polygon Rollup Manager', () => {
         ).to.emit(PolygonZKEVMV2Contract, 'SequenceBatches');
 
         const rootSC = await polygonZkEVMGlobalExitRoot.getRoot();
-        const currentTimestampSequenced = (await ethers.provider.getBlock('latest'))?.timestamp;
 
         const expectedAccInputHash2 = calculateAccInputHashetrog(
             expectedAccInputHashInitial,
@@ -3305,10 +3317,11 @@ describe('Polygon Rollup Manager', () => {
         const leafValueUpdateGER2 = calculateGlobalExitRootLeaf(
             lastGlobalExitRootS2,
             lastBlockHash2,
+            // eslint-disable-next-line no-unsafe-optional-chaining
             lastBlock2?.timestamp + 5,
         );
         merkleTreeGLobalExitRoot.add(leafValueUpdateGER2);
-        const currentL1InfoRoot = merkleTreeGLobalExitRoot.getRoot();
+        // eslint-disable-next-line no-unsafe-optional-chaining
         await ethers.provider.send('evm_setNextBlockTimestamp', [lastBlock2?.timestamp + 5]);
 
         // Verify batch
@@ -3455,7 +3468,6 @@ describe('Polygon Rollup Manager', () => {
         const rollupVerifierType = 0;
         const description = 'zkevm test';
         const programVKey = '0x0000000000000000000000000000000000000000000000000000000000000000';
-        const lastPessimisticRoot = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
         // In order to create a new rollup type, create an implementation of the contract
 
@@ -3565,35 +3577,3 @@ describe('Polygon Rollup Manager', () => {
         }
     });
 });
-
-/**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, seqAddress)
- * @param {String} oldAccInputHash - old accumulateInputHash
- * @param {String} batchHashData - Batch hash data
- * @param {String} globalExitRoot - Global Exit Root
- * @param {Number} timestamp - Block timestamp
- * @param {String} sequencerAddress - Sequencer address
- * @returns {String} - accumulateInputHash in hex encoding
- */
-function calculateAccInputHashetrog(
-    oldAccInputHash: any,
-    batchHashData: any,
-    l1InfoTreeRoot: any,
-    timestamp: any,
-    sequencerAddress: any,
-    forcedBlockHash: any,
-) {
-    const hashKeccak = ethers.solidityPackedKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-        [oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, sequencerAddress, forcedBlockHash],
-    );
-
-    return hashKeccak;
-}
-
-function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
-    return ethers.solidityPackedKeccak256(
-        ['bytes32', 'bytes32', 'uint64'],
-        [newGlobalExitRoot, lastBlockHash, timestamp],
-    );
-}

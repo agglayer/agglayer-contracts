@@ -1,10 +1,6 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import {
-    ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
-    BridgeL2SovereignChain,
-} from "../../typechain-types";
+import { ERC20PermitMock, GlobalExitRootManagerL2SovereignChain, BridgeL2SovereignChain } from '../../typechain-types';
 import { claimBeforeBridge, createClaimAndAddGER } from './helpers/helpers-sovereign-bridge';
 
 describe('BridgeL2SovereignChain: LBT & upgrade', () => {
@@ -17,7 +13,6 @@ describe('BridgeL2SovereignChain: LBT & upgrade', () => {
     let deployer: any;
     let rollupManager: any;
     let bridgeManager: any;
-    let acc1: any;
     let emergencyBridgePauser: any;
     let proxiedTokensManager: any;
 
@@ -30,15 +25,13 @@ describe('BridgeL2SovereignChain: LBT & upgrade', () => {
         [tokenName, tokenSymbol, decimals],
     );
     const networkIDMainnet = 0;
-    const networkIDRollup = 1;
     const networkIDRollup2 = 2;
 
     const LEAF_TYPE_ASSET = 0;
-    const LEAF_TYPE_MESSAGE = 1;
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
+        [deployer, rollupManager, , bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
         // deploy BridgeL2SovereignChain

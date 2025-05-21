@@ -57,7 +57,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, admin, timelock, emergencyCouncil, beneficiary] = await ethers.getSigners();
+        [deployer, trustedAggregator, admin, timelock, emergencyCouncil] = await ethers.getSigners();
         trustedSequencer = inputProof.signer;
         // deploy mock verifier
         const VerifierRollupHelperFactory = await ethers.getContractFactory('SP1VerifierPlonk');

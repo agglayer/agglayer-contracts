@@ -148,6 +148,7 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
 
         // check PPSelectorCannotBeZero
@@ -200,6 +201,7 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
 
         // add pessimistic vkey route
@@ -224,6 +226,7 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
 
         // check RouteNotFound
@@ -257,6 +260,7 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address)).to.be.true;
         // check VKeyCannotBeZero
         await expect(
@@ -372,6 +376,7 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
 
         await expect(
@@ -392,6 +397,7 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
 
         // frozen route

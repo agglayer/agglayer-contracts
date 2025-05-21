@@ -1,7 +1,7 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { Address, AggchainFEP, PolygonPessimisticConsensus } from '../../typechain-types';
+import { Address, AggchainFEP } from '../../typechain-types';
 import * as utilsFEP from '../../src/utils-aggchain-FEP';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
 
@@ -262,10 +262,8 @@ describe('AggchainFEP', () => {
         const networkID = 1;
 
         // Deploy previous ECDSA pessimistic contract
-        let PolygonPPConsensusContract: PolygonPessimisticConsensus;
-
         const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
-        PolygonPPConsensusContract = await upgrades.deployProxy(ppConsensusFactory, [], {
+        const PolygonPPConsensusContract = await upgrades.deployProxy(ppConsensusFactory, [], {
             initializer: false,
             constructorArgs: [gerManagerAddress, polTokenAddress, bridgeAddress, rollupManagerAddress],
             unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],

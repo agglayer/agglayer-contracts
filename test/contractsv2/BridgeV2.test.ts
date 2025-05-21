@@ -1,13 +1,8 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import {
-    ERC20PermitMock,
-    PolygonZkEVMGlobalExitRoot,
-    PolygonZkEVMBridgeV2,
-    TokenWrapped,
-} from "../../typechain-types";
 import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, TokenWrapped } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
@@ -15,6 +10,7 @@ const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
 function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
@@ -591,7 +587,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         // Try claim with 10 rollup leafs
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
-            if (i == indexRollup) {
+            if (i === indexRollup) {
                 merkleTreeRollup.add(rootLocalRollup);
             } else {
                 merkleTreeRollup.add(ethers.toBeHex(ethers.toQuantity(ethers.randomBytes(32)), 32));

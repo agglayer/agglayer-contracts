@@ -1,39 +1,20 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { takeSnapshot, time } from '@nomicfoundation/hardhat-network-helpers';
-import { processorUtils, contractUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2 } from '../../typechain-types';
 import {
-    VerifierRollupHelperMock,
-    ERC20PermitMock,
-    PolygonRollupManagerMock,
-    PolygonZkEVMGlobalExitRoot,
-    PolygonZkEVMBridgeV2,
-    PolygonZkEVMV2,
-    PolygonRollupBase,
-    TokenWrapped,
-} from '../../typechain-types';
-
-const { calculateSnarkInput, calculateAccInputHash, calculateBatchHashData } = contractUtils;
-const MerkleTreeBridge = MTBridge;
-const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-const {
     createPermitSignature,
     ifacePermit,
     createPermitSignatureDaiType,
     ifacePermitDAI,
     createPermitSignatureUniType,
-} = require('../../src/permit-helper');
+} from '../../src/permit-helper';
+
+const MerkleTreeBridge = MTBridge;
+const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
-}
-const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
-
-function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
-    if (isMainnet === true) {
-        return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
-    }
-    return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
 describe('PolygonZkEVMBridge Contract', () => {
@@ -59,9 +40,6 @@ describe('PolygonZkEVMBridge Contract', () => {
     const networkIDRollup = 1;
 
     const LEAF_TYPE_ASSET = 0;
-    const LEAF_TYPE_MESSAGE = 1;
-
-    const polygonZkEVMAddress = ethers.ZeroAddress;
 
     beforeEach('Deploy contracts', async () => {
         // load signers

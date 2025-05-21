@@ -1,14 +1,10 @@
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import {
-    ERC20PermitMock,
-    PolygonZkEVMGlobalExitRoot,
-    PolygonZkEVMBridgeV2,
-    TokenWrapped,
-} from "../../typechain-types";
-import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, TokenWrapped } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
@@ -16,6 +12,7 @@ const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
 function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
@@ -49,8 +46,6 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
 
     const LEAF_TYPE_ASSET = 0;
     const LEAF_TYPE_MESSAGE = 1;
-
-    const polygonZkEVMAddress = ethers.ZeroAddress;
 
     let gasTokenAddress: any;
     let gasTokenNetwork: any;
@@ -697,7 +692,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         // Try claim with 10 rollup leafs
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
-            if (i == indexRollup) {
+            if (i === indexRollup) {
                 merkleTreeRollup.add(rootLocalRollup);
             } else {
                 merkleTreeRollup.add(ethers.toBeHex(ethers.toQuantity(ethers.randomBytes(32)), 32));
@@ -1088,8 +1083,6 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
-
-        const metadata = '0x'; // since is ether does not have metadata
 
         // create 3 new deposit
         await expect(
@@ -1539,8 +1532,6 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
                 metadata,
             ),
         ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'InvalidSmtProof');
-
-        const balanceDeployer = await ethers.provider.getBalance(deployer.address);
 
         // Check mainnet destination assert
         await expect(

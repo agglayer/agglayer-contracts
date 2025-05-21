@@ -17,6 +17,7 @@ const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
 function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
@@ -203,7 +204,6 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         // Check burnt balance is 1 SIX
         const balanceOfSIX = await sixDecimalsTokenContract.balanceOf(deployer.address);
-        const balanceOfEIGHTEEN = await sovereignTokenContract.balanceOf(deployer.address);
         expect(balanceOfSIX).to.be.equal(ethers.parseUnits(String(10 - amountSIXBridged), 6));
         const metadata = '0x'; // since is ether does not have metadata
         const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
@@ -301,12 +301,12 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         // Check balance is with 6 decimals and check is from sovereign token
         const sovereignTokenAmount = await sovereignTokenContract.balanceOf(destinationAddress);
-        const sixDecimalsTokenAmount = await sixDecimalsTokenContract.balanceOf(destinationAddress);
         expect(String(sovereignTokenAmount)).to.be.equal(ethers.parseUnits(String(amountSIXBridged), sixDecimal));
     });
 
     it('should check the initialize function', async () => {
         // deploy PolygonZkEVMBridge
+        // eslint-disable-next-line @typescript-eslint/no-shadow
         const sovereignChainBridgeContract = await ethers.getContractFactory('BridgeL2SovereignChain');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
             initializer: false,
@@ -1360,7 +1360,7 @@ describe('BridgeL2SovereignChain Contract', () => {
         // Try claim with 10 rollup leafs
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
-            if (i == indexRollup) {
+            if (i === indexRollup) {
                 merkleTreeRollup.add(rootLocalRollup);
             } else {
                 merkleTreeRollup.add(ethers.toBeHex(ethers.toQuantity(ethers.randomBytes(32)), 32));

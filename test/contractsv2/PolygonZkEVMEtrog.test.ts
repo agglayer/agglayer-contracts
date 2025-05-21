@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
-    VerifierRollupHelperMock,
     ERC20PermitMock,
     PolygonRollupManagerMock,
     PolygonZkEVMGlobalExitRootV2,
@@ -24,6 +24,31 @@ function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
+/**
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
+ * @param {String} oldAccInputHash - old accumulateInputHash
+ * @param {String} batchHashData - Batch hash data
+ * @param {String} globalExitRoot - Global Exit Root
+ * @param {Number} timestamp - Block timestamp
+ * @param {String} sequencerAddress - Sequencer address
+ * @returns {String} - accumulateInputHash in hex encoding
+ */
+function calculateAccInputHashetrog(
+    oldAccInputHash: any,
+    batchHashData: any,
+    globalExitRoot: any,
+    timestamp: any,
+    sequencerAddress: any,
+    forcedBlockHash: any,
+) {
+    const hashKeccak = ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
+        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
+    );
+
+    return hashKeccak;
+}
+
 describe('PolygonZkEVMEtrog', () => {
     let deployer: any;
     let trustedAggregator: any;
@@ -31,7 +56,6 @@ describe('PolygonZkEVMEtrog', () => {
     let admin: any;
     let beneficiary: any;
 
-    let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
@@ -1177,28 +1201,3 @@ describe('PolygonZkEVMEtrog', () => {
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash3);
     });
 });
-
-/**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
- * @param {String} oldAccInputHash - old accumulateInputHash
- * @param {String} batchHashData - Batch hash data
- * @param {String} globalExitRoot - Global Exit Root
- * @param {Number} timestamp - Block timestamp
- * @param {String} sequencerAddress - Sequencer address
- * @returns {String} - accumulateInputHash in hex encoding
- */
-function calculateAccInputHashetrog(
-    oldAccInputHash: any,
-    batchHashData: any,
-    globalExitRoot: any,
-    timestamp: any,
-    sequencerAddress: any,
-    forcedBlockHash: any,
-) {
-    const hashKeccak = ethers.solidityPackedKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
-    );
-
-    return hashKeccak;
-}

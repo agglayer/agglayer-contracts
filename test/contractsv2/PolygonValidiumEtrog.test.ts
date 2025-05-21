@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-plusplus, no-await-in-loop */
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
 import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
-    VerifierRollupHelperMock,
     ERC20PermitMock,
     PolygonRollupManagerMock,
     PolygonZkEVMGlobalExitRootV2,
@@ -26,16 +26,38 @@ function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
+/**
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
+ * @param {String} oldAccInputHash - old accumulateInputHash
+ * @param {String} batchHashData - Batch hash data
+ * @param {String} globalExitRoot - Global Exit Root
+ * @param {Number} timestamp - Block timestamp
+ * @param {String} sequencerAddress - Sequencer address
+ * @returns {String} - accumulateInputHash in hex encoding
+ */
+function calculateAccInputHashetrog(
+    oldAccInputHash: any,
+    batchHashData: any,
+    globalExitRoot: any,
+    timestamp: any,
+    sequencerAddress: any,
+    forcedBlockHash: any,
+) {
+    const hashKeccak = ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
+        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
+    );
+
+    return hashKeccak;
+}
+
 describe('PolygonValidiumEtrog', () => {
     let deployer: any;
-    let timelock: any;
-    let emergencyCouncil: any;
     let trustedAggregator: any;
     let trustedSequencer: any;
     let admin: any;
     let beneficiary: any;
 
-    let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
@@ -47,8 +69,6 @@ describe('PolygonValidiumEtrog', () => {
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
 
-    const pendingStateTimeoutDefault = 100;
-    const trustedAggregatorTimeout = 100;
     const FORCE_BATCH_TIMEOUT = 60 * 60 * 24 * 5; // 5 days
     const _MAX_VERIFY_BATCHES = 1000;
     const _MAX_TRANSACTIONS_BYTE_LENGTH = 120000;
@@ -75,12 +95,7 @@ describe('PolygonValidiumEtrog', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary] =
-            await ethers.getSigners();
-
-        // deploy mock verifier
-        const VerifierRollupHelperFactory = await ethers.getContractFactory('VerifierRollupHelperMock');
-        verifierContract = await VerifierRollupHelperFactory.deploy();
+        [deployer, trustedAggregator, trustedSequencer, admin, , , beneficiary] = await ethers.getSigners();
 
         // deploy pol
         const polTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
@@ -671,8 +686,6 @@ describe('PolygonValidiumEtrog', () => {
             ),
         ).to.emit(PolygonZKEVMV2Contract, 'SequenceBatches');
 
-        const currentTimestampSequenced = (await ethers.provider.getBlock('latest'))?.timestamp;
-
         // calcualte accINputHash
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash2);
     });
@@ -1242,7 +1255,6 @@ describe('PolygonValidiumEtrog', () => {
         const requiredAmountOfSignatures = 3;
         const urls = ['onurl', 'twourl', 'threeurl'];
         const walletsDataCommitee = [] as any;
-        let unsortedAddrBytes = '0x';
 
         for (let i = 0; i < 3; i++) {
             const newWallet = ethers.HDNodeWallet.fromMnemonic(
@@ -1250,7 +1262,6 @@ describe('PolygonValidiumEtrog', () => {
                 `m/44'/60'/0'/0/${i}`,
             );
             walletsDataCommitee.push(newWallet);
-            unsortedAddrBytes += newWallet.address.slice(2);
         }
         // sort wallets
         walletsDataCommitee.sort((walleta: any, walletb: any) => {
@@ -1266,15 +1277,6 @@ describe('PolygonValidiumEtrog', () => {
         }
 
         const commiteeHash = ethers.keccak256(addrBytes);
-        const signedData = ethers.solidityPackedKeccak256(
-            ['bytes32', 'bytes32'],
-            [ethers.ZeroHash, ethers.keccak256(l2txData)],
-        );
-        let message = '0x';
-        for (let i = 0; i < walletsDataCommitee.length; i++) {
-            const newSignature = walletsDataCommitee[i].signingKey.sign(signedData);
-            message += newSignature.serialized.slice(2);
-        }
         await expect(PolygonDataCommitee.setupCommittee(requiredAmountOfSignatures, urls, addrBytes))
             .to.emit(PolygonDataCommitee, 'CommitteeUpdated')
             .withArgs(commiteeHash);
@@ -1661,28 +1663,3 @@ describe('PolygonValidiumEtrog', () => {
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash3);
     });
 });
-
-/**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
- * @param {String} oldAccInputHash - old accumulateInputHash
- * @param {String} batchHashData - Batch hash data
- * @param {String} globalExitRoot - Global Exit Root
- * @param {Number} timestamp - Block timestamp
- * @param {String} sequencerAddress - Sequencer address
- * @returns {String} - accumulateInputHash in hex encoding
- */
-function calculateAccInputHashetrog(
-    oldAccInputHash: any,
-    batchHashData: any,
-    globalExitRoot: any,
-    timestamp: any,
-    sequencerAddress: any,
-    forcedBlockHash: any,
-) {
-    const hashKeccak = ethers.solidityPackedKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
-    );
-
-    return hashKeccak;
-}

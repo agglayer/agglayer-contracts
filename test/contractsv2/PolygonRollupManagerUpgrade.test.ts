@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-shadow */
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
@@ -28,6 +29,7 @@ const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
 function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
@@ -37,10 +39,33 @@ function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolea
     return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
+/**
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
+ * @param {String} oldAccInputHash - old accumulateInputHash
+ * @param {String} batchHashData - Batch hash data
+ * @param {String} globalExitRoot - Global Exit Root
+ * @param {Number} timestamp - Block timestamp
+ * @param {String} sequencerAddress - Sequencer address
+ * @returns {String} - accumulateInputHash in hex encoding
+ */
+function calculateAccInputHashetrog(
+    oldAccInputHash: any,
+    batchHashData: any,
+    globalExitRoot: any,
+    timestamp: any,
+    sequencerAddress: any,
+    forcedBlockHash: any,
+) {
+    const hashKeccak = ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
+        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
+    );
+
+    return hashKeccak;
+}
+
 const SIGNATURE_BYTES = 32 + 32 + 1;
 const EFFECTIVE_PERCENTAGE_BYTES = 1;
-const _MAX_VERIFY_BATCHES = 1000;
-const _HALT_AGGREGATION_TIMEOUT = 60 * 60 * 24 * 7;
 
 describe('Polygon Rollup manager upgraded', () => {
     let deployer: any;
@@ -236,74 +261,62 @@ describe('Polygon Rollup manager upgraded', () => {
         })) as any as PolygonZkEVMExistentEtrog;
 
         // upgrade from V1 to V2
-        const txRollupManager = await upgrades.upgradeProxy(
-            polygonZkEVMContract.target,
-            PolygonRollupManagerFactoryV1toV2,
-            {
-                constructorArgs: [
-                    polygonZkEVMGlobalExitRoot.target,
-                    polTokenContract.target,
-                    polygonZkEVMBridgeContract.target,
+        await upgrades.upgradeProxy(polygonZkEVMContract.target, PolygonRollupManagerFactoryV1toV2, {
+            constructorArgs: [
+                polygonZkEVMGlobalExitRoot.target,
+                polTokenContract.target,
+                polygonZkEVMBridgeContract.target,
+            ],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllowRenames: true,
+            call: {
+                fn: 'initialize',
+                args: [
+                    trustedAggregator.address,
+                    pendingStateTimeoutDefault,
+                    trustedAggregatorTimeout,
+                    admin.address,
+                    timelock.address,
+                    emergencyCouncil.address,
+                    newPolygonZkEVMContract.target,
+                    verifierContract.target,
+                    forkID,
+                    chainID,
                 ],
-                unsafeAllow: ['constructor', 'state-variable-immutable'],
-                unsafeAllowRenames: true,
-                call: {
-                    fn: 'initialize',
-                    args: [
-                        trustedAggregator.address,
-                        pendingStateTimeoutDefault,
-                        trustedAggregatorTimeout,
-                        admin.address,
-                        timelock.address,
-                        emergencyCouncil.address,
-                        newPolygonZkEVMContract.target,
-                        verifierContract.target,
-                        forkID,
-                        chainID,
-                    ],
-                },
             },
-        );
+        });
 
         // upgrade from V2 to Banana
-        const txRollupManager2 = await upgrades.upgradeProxy(
-            polygonZkEVMContract.target,
-            PolygonRollupManagerFactoryPrevious,
-            {
-                constructorArgs: [
-                    polygonZkEVMGlobalExitRoot.target,
-                    polTokenContract.target,
-                    polygonZkEVMBridgeContract.target,
-                ],
-                unsafeAllow: ['constructor', 'missing-initializer', 'state-variable-immutable'],
-                unsafeAllowRenames: true,
-                unsafeAllowCustomTypes: true,
-                unsafeSkipStorageCheck: true,
-            },
-        );
+        await upgrades.upgradeProxy(polygonZkEVMContract.target, PolygonRollupManagerFactoryPrevious, {
+            constructorArgs: [
+                polygonZkEVMGlobalExitRoot.target,
+                polTokenContract.target,
+                polygonZkEVMBridgeContract.target,
+            ],
+            unsafeAllow: ['constructor', 'missing-initializer', 'state-variable-immutable'],
+            unsafeAllowRenames: true,
+            unsafeAllowCustomTypes: true,
+            unsafeSkipStorageCheck: true,
+        });
 
         // upgrade Banana to pessimistic
-        const txRollupManager3 = await upgrades.upgradeProxy(
-            polygonZkEVMContract.target,
-            PolygonRollupManagerFactoryPessimistic,
-            {
-                constructorArgs: [
-                    polygonZkEVMGlobalExitRoot.target,
-                    polTokenContract.target,
-                    polygonZkEVMBridgeContract.target,
-                ],
-                unsafeAllow: [
-                    'constructor',
-                    'missing-initializer-call',
-                    'state-variable-immutable',
-                    'enum-definition',
-                    'struct-definition',
-                ],
-                unsafeAllowRenames: true,
-                unsafeAllowCustomTypes: true,
-                unsafeSkipStorageCheck: true,
-            },
-        );
+        await upgrades.upgradeProxy(polygonZkEVMContract.target, PolygonRollupManagerFactoryPessimistic, {
+            constructorArgs: [
+                polygonZkEVMGlobalExitRoot.target,
+                polTokenContract.target,
+                polygonZkEVMBridgeContract.target,
+            ],
+            unsafeAllow: [
+                'constructor',
+                'missing-initializer-call',
+                'state-variable-immutable',
+                'enum-definition',
+                'struct-definition',
+            ],
+            unsafeAllowRenames: true,
+            unsafeAllowCustomTypes: true,
+            unsafeSkipStorageCheck: true,
+        });
 
         // deploy AggLayerGateway
         const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
@@ -313,30 +326,21 @@ describe('Polygon Rollup manager upgraded', () => {
         })) as unknown as AggLayerGateway;
 
         // upgrade pessimistic to ALv3
-        const txRollupManager4 = await upgrades.upgradeProxy(
-            polygonZkEVMContract.target,
-            PolygonRollupManagerFactoryCurrent,
-            {
-                constructorArgs: [
-                    polygonZkEVMGlobalExitRoot.target,
-                    polTokenContract.target,
-                    polygonZkEVMBridgeContract.target,
-                    aggLayerGatewayContract.target,
-                ],
-                unsafeAllow: [
-                    'constructor',
-                    'missing-initializer',
-                    'missing-initializer-call',
-                    'state-variable-immutable',
-                ],
-                unsafeAllowRenames: true,
-                unsafeAllowCustomTypes: true,
-                unsafeSkipStorageCheck: true,
-                call: {
-                    fn: 'initialize',
-                },
+        await upgrades.upgradeProxy(polygonZkEVMContract.target, PolygonRollupManagerFactoryCurrent, {
+            constructorArgs: [
+                polygonZkEVMGlobalExitRoot.target,
+                polTokenContract.target,
+                polygonZkEVMBridgeContract.target,
+                aggLayerGatewayContract.target,
+            ],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'state-variable-immutable'],
+            unsafeAllowRenames: true,
+            unsafeAllowCustomTypes: true,
+            unsafeSkipStorageCheck: true,
+            call: {
+                fn: 'initialize',
             },
-        );
+        });
     });
 
     it('should check the initialized parameters', async () => {
@@ -650,7 +654,6 @@ describe('Polygon Rollup manager upgraded', () => {
 
         // Sequence Batches
         const currentTime = Number((await ethers.provider.getBlock('latest'))?.timestamp);
-        const currentLastBatchSequenced = 1;
         const l1InfoTreeLeafCount = 0;
 
         const height = 32;
@@ -1192,35 +1195,3 @@ describe('Polygon Rollup manager upgraded', () => {
         }
     });
 });
-
-/**
- * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
- * @param {String} oldAccInputHash - old accumulateInputHash
- * @param {String} batchHashData - Batch hash data
- * @param {String} globalExitRoot - Global Exit Root
- * @param {Number} timestamp - Block timestamp
- * @param {String} sequencerAddress - Sequencer address
- * @returns {String} - accumulateInputHash in hex encoding
- */
-function calculateAccInputHashetrog(
-    oldAccInputHash: any,
-    batchHashData: any,
-    globalExitRoot: any,
-    timestamp: any,
-    sequencerAddress: any,
-    forcedBlockHash: any,
-) {
-    const hashKeccak = ethers.solidityPackedKeccak256(
-        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
-    );
-
-    return hashKeccak;
-}
-
-function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
-    return ethers.solidityPackedKeccak256(
-        ['bytes32', 'bytes32', 'uint64'],
-        [newGlobalExitRoot, lastBlockHash, timestamp],
-    );
-}

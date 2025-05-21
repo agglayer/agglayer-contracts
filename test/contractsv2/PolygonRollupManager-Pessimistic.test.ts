@@ -13,13 +13,13 @@ import {
     PolygonPessimisticConsensus,
 } from '../../typechain-types';
 
-const {
+import {
     VerifierType,
     computeInputPessimisticBytes,
     computeConsensusHashEcdsa,
     computeRandomBytes,
-} = require('../../src/pessimistic-utils');
-const { encodeInitializeBytesLegacy } = require('../../src/utils-common-aggchain');
+} from '../../src/pessimistic-utils';
+import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 
 describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let deployer: any;
@@ -59,9 +59,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     const STOP_EMERGENCY_ROLE = ethers.id('STOP_EMERGENCY_ROLE');
     const EMERGENCY_COUNCIL_ROLE = ethers.id('EMERGENCY_COUNCIL_ROLE');
     const EMERGENCY_COUNCIL_ADMIN = ethers.id('EMERGENCY_COUNCIL_ADMIN');
-
-    const SIGNATURE_BYTES = 32 + 32 + 1;
-    const EFFECTIVE_PERCENTAGE_BYTES = 1;
 
     beforeEach('Deploy contract', async () => {
         upgrades.silenceWarnings();
@@ -217,7 +214,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const invalidVerifierType = 5;
         const forkID = 11; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
@@ -492,7 +488,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const gasTokenAddress = ethers.ZeroAddress;
         const urlSequencer = 'https://pessimistic:8545';
         const networkName = 'testPessimistic';
-        const pessimisticRollupID = 1;
 
         // create new pessimistic
         const initializeBytesAggchain = encodeInitializeBytesLegacy(
@@ -557,7 +552,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
             .attachAggchainToAL(newRollupTypeID2, chainID2, initializeBytesAggchain);
 
         // get rollup data
-        const rollupPessimistic = await rollupManagerContract.rollupIDToRollupDataV2(pessimisticRollupID);
         const rollupStateTransition = await rollupManagerContract.rollupIDToRollupData(stateTransistionRollupID);
 
         // try to update rollup from Pessimistic to stateTransition

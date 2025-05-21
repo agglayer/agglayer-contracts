@@ -2,20 +2,16 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import { ERC20PermitMock, GlobalExitRootManagerL2SovereignChain, BridgeL2SovereignChain } from '../../typechain-types';
-
-const MerkleTreeBridge = MTBridge;
-const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-const {
+import {
     createPermitSignature,
     ifacePermit,
     createPermitSignatureDaiType,
     ifacePermitDAI,
     createPermitSignatureUniType,
-} = require('../../src/permit-helper');
+} from '../../src/permit-helper';
 
-function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
-}
+const MerkleTreeBridge = MTBridge;
+const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 
 describe('SovereignBridge Contract', () => {
     upgrades.silenceWarnings();
@@ -26,7 +22,6 @@ describe('SovereignBridge Contract', () => {
 
     let deployer: any;
     let rollupManager: any;
-    let acc1: any;
     let emergencyBridgePauser: any;
     let proxiedTokensManager: any;
 
@@ -45,7 +40,7 @@ describe('SovereignBridge Contract', () => {
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, rollupManager, acc1, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
+        [deployer, rollupManager, , emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
 
         // deploy PolygonZkEVMBridge
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
@@ -427,8 +422,6 @@ describe('SovereignBridge Contract', () => {
         const balanceDeployer = await polTokenContract.balanceOf(deployer.address);
         const balanceBridge = await polTokenContract.balanceOf(sovereignChainBridgeContract.target);
 
-        const rollupExitRoot = await sovereignChainGlobalExitRootContract.lastRollupExitRoot();
-
         // pre compute root merkle tree in Js
         const height = 32;
         const merkleTree = new MerkleTreeBridge(height);
@@ -556,8 +549,6 @@ describe('SovereignBridge Contract', () => {
         const balanceDeployer = await daiContract.balanceOf(deployer.address);
         const balanceBridge = await daiContract.balanceOf(sovereignChainBridgeContract.target);
 
-        const rollupExitRoot = await sovereignChainGlobalExitRootContract.lastRollupExitRoot();
-
         // pre compute root merkle tree in Js
         const height = 32;
         const merkleTree = new MerkleTreeBridge(height);
@@ -674,8 +665,6 @@ describe('SovereignBridge Contract', () => {
 
         const balanceDeployer = await uniContract.balanceOf(deployer.address);
         const balanceBridge = await uniContract.balanceOf(sovereignChainBridgeContract.target);
-
-        const rollupExitRoot = await sovereignChainGlobalExitRootContract.lastRollupExitRoot();
 
         // pre compute root merkle tree in Js
         const height = 32;

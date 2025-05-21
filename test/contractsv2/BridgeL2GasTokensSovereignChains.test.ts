@@ -16,6 +16,7 @@ const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
 function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
@@ -141,7 +142,6 @@ describe('SovereignChainBridge Gas tokens tests', () => {
     it('should claim message from not mintable remapped gas (WETH) token', async () => {
         // Add a claim leaf to rollup exit tree
         const originNetwork = networkIDRollup;
-        const tokenAddress = polTokenContract.target;
         const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = deployer.address;
@@ -313,8 +313,6 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         const balanceDeployer = await polTokenContract.balanceOf(deployer.address);
         const balanceBridge = await polTokenContract.balanceOf(sovereignChainBridgeContract.target);
 
-        const mainnetExitRoot = ethers.ZeroHash;
-
         // create a new deposit
         await expect(polTokenContract.approve(sovereignChainBridgeContract.target, amount))
             .to.emit(polTokenContract, 'Approval')
@@ -400,7 +398,6 @@ describe('SovereignChainBridge Gas tokens tests', () => {
 
         const metadata = metadataToken;
         const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
-        const mainnetExitRoot = ethers.ZeroHash;
 
         // pre compute root merkle tree in Js
         const height = 32;
@@ -731,7 +728,7 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         // Try claim with 10 rollup leafs
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
-            if (i == indexRollup) {
+            if (i === indexRollup) {
                 merkleTreeRollup.add(rootLocalRollup);
             } else {
                 merkleTreeRollup.add(ethers.toBeHex(ethers.toQuantity(ethers.randomBytes(32)), 32));
@@ -1044,8 +1041,6 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         const wrappedTokenAddress = newWrappedToken.target;
         const newDestinationNetwork = networkIDRollup;
 
-        const rollupExitRoot = await sovereignChainGlobalExitRootContract.lastRollupExitRoot();
-
         // create a new deposit
         await expect(newWrappedToken.approve(sovereignChainBridgeContract.target, amount))
             .to.emit(newWrappedToken, 'Approval')
@@ -1082,7 +1077,6 @@ describe('SovereignChainBridge Gas tokens tests', () => {
 
         expect(leafValueMainnet).to.be.equal(leafValueMainnetSC);
         merkleTreeMainnet.add(leafValueMainnet);
-        const rootJSMainnet = ethers.ZeroHash;
 
         // Tokens are burnt
         expect(await newWrappedToken.totalSupply()).to.be.equal(amount * 2n);
@@ -1628,8 +1622,6 @@ describe('SovereignChainBridge Gas tokens tests', () => {
                 metadata,
             ),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSmtProof');
-
-        const balanceDeployer = await ethers.provider.getBalance(deployer.address);
 
         // Check mainnet destination assert
         await expect(

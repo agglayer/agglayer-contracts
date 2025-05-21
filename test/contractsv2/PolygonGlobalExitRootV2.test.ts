@@ -1,39 +1,13 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { takeSnapshot, time } from '@nomicfoundation/hardhat-network-helpers';
-import { processorUtils, contractUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import {
-    VerifierRollupHelperMock,
-    ERC20PermitMock,
-    PolygonRollupManagerMock,
-    PolygonZkEVMGlobalExitRoot,
-    PolygonZkEVMGlobalExitRootV2,
-    PolygonZkEVMBridgeV2,
-    PolygonZkEVMV2,
-    PolygonRollupBase,
-    TokenWrapped,
-    Address,
-    PolygonZkEVM,
-} from '../../typechain-types';
-
-const { calculateSnarkInput, calculateAccInputHash, calculateBatchHashData } = contractUtils;
-
-type BatchDataStruct = PolygonRollupBase.BatchDataStruct;
+import { MTBridge } from '@0xpolygonhermez/zkevm-commonjs';
+import { PolygonZkEVMGlobalExitRoot, PolygonZkEVMGlobalExitRootV2 } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
-const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
-}
-const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
-
-function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
-    if (isMainnet === true) {
-        return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
-    }
-    return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
 function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
@@ -43,7 +17,6 @@ function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any,
     );
 }
 describe('Polygon Global exit root v2', () => {
-    let deployer: any;
     let rollupManager: any;
     let bridge: any;
 
@@ -54,7 +27,7 @@ describe('Polygon Global exit root v2', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, bridge, rollupManager] = await ethers.getSigners();
+        [, bridge, rollupManager] = await ethers.getSigners();
 
         // deploy globalExitRoot
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot');
@@ -80,6 +53,7 @@ describe('Polygon Global exit root v2', () => {
     it('should check the initialized parameters', async () => {
         expect(await polygonZkEVMGlobalExitRootV2.bridgeAddress()).to.be.equal(bridge.address);
         expect(await polygonZkEVMGlobalExitRootV2.rollupManager()).to.be.equal(rollupManager.address);
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(polygonZkEVMGlobalExitRoot.rollupAddress()).to.be.reverted;
 
         expect(await polygonZkEVMGlobalExitRootV2.lastRollupExitRoot()).to.be.equal(ethers.ZeroHash);
@@ -155,6 +129,7 @@ describe('Polygon Global exit root v2', () => {
         const height = 32;
         const merkleTree = new MerkleTreeBridge(height);
 
+        // eslint-disable-next-line no-restricted-syntax
         for (const blockStruct of blockUpdates) {
             const { block, globalExitRoot } = blockStruct as any;
             const currentBlockNumber = block?.number;
@@ -174,10 +149,6 @@ describe('Polygon Global exit root v2', () => {
         const rootJS = merkleTree.getRoot();
 
         expect(rootSC).to.be.equal(rootJS);
-
-        // check merkle proof
-        const index = 0;
-        const proof = merkleTree.getProofTreeByIndex(index);
     });
     it('should synch every root through events', async () => {});
 });
