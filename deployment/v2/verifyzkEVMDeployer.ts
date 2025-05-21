@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable import/no-dynamic-require, no-await-in-loop, no-restricted-syntax, guard-for-in */
-require('dotenv').config();
-const path = require('path');
-const hre = require('hardhat');
-const { expect } = require('chai');
+import * as path from 'path';
+import * as hre from 'hardhat';
+import { expect } from 'chai';
 
 const pathDeployParameters = path.join(__dirname, './deploy_parameters.json');
 const deployParameters = require(pathDeployParameters);
+require('dotenv').config();
 
 async function main() {
     // load deployer account
@@ -15,15 +16,10 @@ async function main() {
 
     // verify zkEVM deployer
     try {
-        await hre.run(
-            'verify:verify',
-            {
-                address: deployParameters.zkEVMDeployerAddress,
-                constructorArguments: [
-                    deployParameters.initialZkEVMDeployerOwner,
-                ],
-            },
-        );
+        await hre.run('verify:verify', {
+            address: deployParameters.zkEVMDeployerAddress,
+            constructorArguments: [deployParameters.initialZkEVMDeployerOwner],
+        });
     } catch (error) {
         expect(error.message.toLowerCase().includes('already verified')).to.be.equal(true);
     }

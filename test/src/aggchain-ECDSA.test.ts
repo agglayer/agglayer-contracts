@@ -4,11 +4,11 @@ import fs = require('fs');
 import path = require('path');
 import { Address, AggchainECDSA } from '../../typechain-types';
 
-const dataECDSA = require('../test-vectors/aggchainECDSA/aggchainECDSA.json');
+import * as dataECDSA from '../test-vectors/aggchainECDSA/aggchainECDSA.json';
+import * as utilsECDSA from '../../src/utils-aggchain-ECDSA';
+import * as utilsCommon from '../../src/utils-common-aggchain';
 
 const pathTestVector = path.join(__dirname, '../test-vectors/aggchainECDSA/aggchainECDSA.json');
-const utilsECDSA = require('../../src/utils-aggchain-ECDSA');
-const utilsCommon = require('../../src/utils-common-aggchain');
 
 // SIGNERS
 let admin: any;
@@ -36,6 +36,7 @@ describe('Test vectors aggchain ECDSA', () => {
 
         const data = dataECDSA[i].input;
 
+        // eslint-disable-next-line @typescript-eslint/no-loop-func
         it(`generate id: ${i}`, async function () {
             // load signers
             [vKeyManager, admin, aggchainManager] = await ethers.getSigners();
@@ -209,6 +210,7 @@ describe('Test vectors aggchain ECDSA', () => {
                 dataECDSA[i].output.aggchainHash = aggchainHash;
                 dataECDSA[i].output.aggchainParams = aggchainParams;
 
+                // eslint-disable-next-line no-console
                 console.log(`Writing data to test-vector: ${i}. Path: ${pathTestVector}`);
                 await fs.writeFileSync(pathTestVector, JSON.stringify(dataECDSA, null, 2));
             } else {

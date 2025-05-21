@@ -2,10 +2,10 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { MemDB, ZkEVMDB, getPoseidon, smtUtils, processorUtils } from "@0xpolygonhermez/zkevm-commonjs";
-const { getContractAddress } = require("@ethersproject/address");
-const { GENESIS_CONTRACT_NAMES } = require("../../../src/utils-common-aggchain")
+import { GENESIS_CONTRACT_NAMES } from "../../../src/utils-common-aggchain";
 import { padTo32Bytes, padTo20Bytes } from "./deployment-utils";
 import { checkParams } from "../../../src/utils";
+import { getContractAddress } from '@ethersproject/address';
 
 // constants
 // Those contracts names came from the genesis creation:
@@ -51,7 +51,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         genesis.genesis,
         null,
         null,
-        chainID
+        chainID,
     );
     const batch = await zkEVMDB.buildBatch(
         1000, //limitTimestamp
@@ -71,8 +71,8 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         deltaTimestamp: 3,
         l1Info: {
             globalExitRoot: ethers.ZeroAddress, // Can be any value
-            blockHash: "0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb", // Can be any value
-            timestamp: "42",
+            blockHash: '0x24a5871d68723340d9eadc674aa8ad75f3e33b61d5a9db7db92af856a19270bb', // Can be any value
+            timestamp: '42',
         },
         indexL1InfoTree: 0,
     };
@@ -80,7 +80,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     batch.addRawTx(`0x${rawChangeL2BlockTx}`);
 
     // Create deploy bridge transaction
-    const sovereignBridgeFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
+    const sovereignBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
     // Get deploy transaction for bridge
     const deployBridgeData = await sovereignBridgeFactory.getDeployTransaction();
     const injectedTx = {
@@ -93,9 +93,9 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         nonce: 0,
         data: deployBridgeData.data,
         signature: {
-            v: "0x1b",
-            r: "0x00000000000000000000000000000000000000000000000000000005ca1ab1e0",
-            s: "0x000000000000000000000000000000000000000000000000000000005ca1ab1e",
+            v: '0x1b',
+            r: '0x00000000000000000000000000000000000000000000000000000005ca1ab1e0',
+            s: '0x000000000000000000000000000000000000000000000000000000005ca1ab1e',
         },
     };
     let txObject = ethers.Transaction.from(injectedTx);
@@ -228,7 +228,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         genesis.genesis,
         null,
         null,
-        chainID
+        chainID,
     );
     const batch2 = await zkEVMDB2.buildBatch(
         1000, //limitTimestamp
@@ -289,7 +289,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     batch2.addRawTx(txInitializeBridge);
 
     // Initialize GER Manager
-    const initializeGERData = gerFactory.interface.encodeFunctionData("initialize", [
+    const initializeGERData = gerFactory.interface.encodeFunctionData('initialize', [
         globalExitRootUpdater,
         globalExitRootRemover,
     ]);
@@ -312,7 +312,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     bridgeProxy.storage = await zkEVMDB2.dumpStorage(bridgeProxy.address);
 
     // Update nonce, in case weth is deployed at initialize, it is increased
-    const bridgeProxyState = await zkEVMDB2.getCurrentAccountState(bridgeProxy.address)
+    const bridgeProxyState = await zkEVMDB2.getCurrentAccountState(bridgeProxy.address);
     bridgeProxy.nonce = String(Number(bridgeProxyState.nonce));
     // If bridge initialized with a zero sovereign weth address and a non zero gas token, we should add created erc20 weth contract implementation and proxy to the genesis
     let wethAddress;
@@ -324,7 +324,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     ) {
         // Add proxy
         wethAddress = padTo20Bytes(
-            bridgeProxy.storage["0x000000000000000000000000000000000000000000000000000000000000006f"]
+            bridgeProxy.storage['0x000000000000000000000000000000000000000000000000000000000000006f'],
         );
         const wethGenesisProxy = {
             contractName: WETHProxyContractName,
@@ -358,8 +358,8 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
     // CHECK BRIDGE PROXY STORAGE
     // Storage value pointing bridge implementation
-    expect(bridgeProxy.storage["0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"]).to.include(
-        oldBridge.address.toLowerCase().slice(2)
+    expect(bridgeProxy.storage['0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc']).to.include(
+        oldBridge.address.toLowerCase().slice(2),
     );
     // rollup manager address in bridge storage, storage slot 0x6c, always zero (undefined)
      expect(bridgeProxy.storage["0x000000000000000000000000000000000000000000000000000000000000006c"]).to.be.undefined;
@@ -374,29 +374,33 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     const proxyAdminObject = genesis.genesis.find(function (obj) {
         return obj.contractName == GENESIS_CONTRACT_NAMES.PROXY_ADMIN;
     });
-    expect(bridgeProxy.storage["0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103"]).to.include(
-        proxyAdminObject.address.toLowerCase().slice(2)
+    expect(bridgeProxy.storage['0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103']).to.include(
+        proxyAdminObject.address.toLowerCase().slice(2),
     );
 
     // Storage value of bridge manager
-    expect(bridgeProxy.storage["0x00000000000000000000000000000000000000000000000000000000000000a3"]).to.include(
-        bridgeManager.toLowerCase().slice(2)
+    expect(bridgeProxy.storage['0x00000000000000000000000000000000000000000000000000000000000000a3']).to.include(
+        bridgeManager.toLowerCase().slice(2),
     );
 
-    // Storage value for the _initialized uint8 variable of Initializable.sol contract, incremented each time the contract is successfully initialized. It also stores the _initializing param set to true when an initialization function is being executed, and it reverts to false once the initialization completed.
+    // Storage value for the _initialized uint8 variable of Initializable.sol contract,
+    // incremented each time the contract is successfully initialized. It also stores the
+    // initializing param set to true when an initialization function is being executed,
+    // and it reverts to false once the initialization completed.
     // This is used to initialize the contract only once,and it depends if the contract is already deployed or not.
     expect(bridgeProxy.storage["0x0000000000000000000000000000000000000000000000000000000000000000"]).to.equal(
         "0x0000000000000000000000000000000000000000000000000000000000000003"
     );
 
-    // Storage value for the _status variable of ReentrancyGuardUpgradeable contract. Tracks the current "status" of the contract to enforce the non-reentrant behavior. Default value is 1 (_NOT_ENTERED)
-    expect(bridgeProxy.storage["0x0000000000000000000000000000000000000000000000000000000000000001"]).to.equal(
-        "0x0000000000000000000000000000000000000000000000000000000000000001"
+    // Storage value for the _status variable of ReentrancyGuardUpgradeable contract.
+    // Tracks the current "status" of the contract to enforce the non-reentrant behavior. Default value is 1 (_NOT_ENTERED)
+    expect(bridgeProxy.storage['0x0000000000000000000000000000000000000000000000000000000000000001']).to.equal(
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
     );
 
     // Storage value for global exit root manager (proxy) address
-    expect(bridgeProxy.storage["0x0000000000000000000000000000000000000000000000000000000000000068"]).to.include(
-        gerProxy.address.toLowerCase().slice(2)
+    expect(bridgeProxy.storage['0x0000000000000000000000000000000000000000000000000000000000000068']).to.include(
+        gerProxy.address.toLowerCase().slice(2),
     );
 
     // Check bridge implementation bytecode contains bytecodeStorer contract address
@@ -411,23 +415,23 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     // Storage value for rollup/network id
     // RollupID value is stored at position 68 with globalExitRootManager address. Slice from byte 2 to 2-8 to get the rollupID
     expect(
-        bridgeProxy.storage["0x0000000000000000000000000000000000000000000000000000000000000068"].slice(
+        bridgeProxy.storage['0x0000000000000000000000000000000000000000000000000000000000000068'].slice(
             2 + 54,
-            2 + 54 + 8
-        )
+            2 + 54 + 8,
+        ),
     ).to.include(rollupID.toString(16));
 
     // Storage value for gas token address
     if (gasTokenAddress !== ethers.ZeroAddress && ethers.isAddress(gasTokenAddress)) {
         expect(
-            ethers.toBigInt(bridgeProxy.storage["0x000000000000000000000000000000000000000000000000000000000000006d"])
+            ethers.toBigInt(bridgeProxy.storage['0x000000000000000000000000000000000000000000000000000000000000006d']),
         ).to.equal(
-            ethers.toBigInt(`${ethers.toBeHex(gasTokenNetwork)}${gasTokenAddress.replace(/^0x/, "")}`.toLowerCase())
+            ethers.toBigInt(`${ethers.toBeHex(gasTokenNetwork)}${gasTokenAddress.replace(/^0x/, '')}`.toLowerCase()),
         );
         if (ethers.isAddress(sovereignWETHAddress) && sovereignWETHAddress !== ethers.ZeroAddress) {
             // Storage value for sovereignWETH address (only if network with native gas token) and sovereignWethAddress is set
             expect(
-                bridgeProxy.storage["0x000000000000000000000000000000000000000000000000000000000000006f"]
+                bridgeProxy.storage['0x000000000000000000000000000000000000000000000000000000000000006f'],
             ).to.include(sovereignWETHAddress.toLowerCase().slice(2));
 
             // Storage address for sovereignWETHAddressIsNotMintable mapping
@@ -441,7 +445,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
             );
             if (sovereignWETHAddressIsNotMintable) {
                 expect(bridgeProxy.storage[key]).to.equal(
-                    "0x0000000000000000000000000000000000000000000000000000000000000001"
+                    '0x0000000000000000000000000000000000000000000000000000000000000001',
                 );
             } else {
                 expect(bridgeProxy.storage[key]).to.be.undefined;
@@ -449,7 +453,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         } else {
             // Storage value for WETH address (only if network with native gas token), deployed at bridge initialization
             expect(
-                bridgeProxy.storage["0x000000000000000000000000000000000000000000000000000000000000006f"]
+                bridgeProxy.storage['0x000000000000000000000000000000000000000000000000000000000000006f'],
             ).to.include(wethAddress.toLowerCase().slice(2));
 
             // CHECK WETH STORAGE
@@ -474,31 +478,31 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         }
         // Storage values for gasTokenMetadata, its a bytes variable
         let offset = 2 + 64;
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142a"]).to.include(
-            gasTokenMetadata.slice(2, offset)
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142a']).to.include(
+            gasTokenMetadata.slice(2, offset),
         );
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142b"]).to.include(
-            gasTokenMetadata.slice(offset, offset + 64)
-        );
-        offset += 64;
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142c"]).to.include(
-            gasTokenMetadata.slice(offset, offset + 64)
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142b']).to.include(
+            gasTokenMetadata.slice(offset, offset + 64),
         );
         offset += 64;
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142d"]).to.include(
-            gasTokenMetadata.slice(offset, offset + 64)
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142c']).to.include(
+            gasTokenMetadata.slice(offset, offset + 64),
         );
         offset += 64;
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142e"]).to.include(
-            gasTokenMetadata.slice(offset, offset + 64)
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142d']).to.include(
+            gasTokenMetadata.slice(offset, offset + 64),
         );
         offset += 64;
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142f"]).to.include(
-            gasTokenMetadata.slice(offset, offset + 64)
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142e']).to.include(
+            gasTokenMetadata.slice(offset, offset + 64),
         );
         offset += 64;
-        expect(bridgeProxy.storage["0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db71430"]).to.include(
-            gasTokenMetadata.slice(offset, offset + 64)
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db7142f']).to.include(
+            gasTokenMetadata.slice(offset, offset + 64),
+        );
+        offset += 64;
+        expect(bridgeProxy.storage['0x9930d9ff0dee0ef5ca2f7710ea66b8f84dd0f5f5351ecffe72b952cd9db71430']).to.include(
+            gasTokenMetadata.slice(offset, offset + 64),
         );
     }
 
@@ -518,18 +522,18 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
     // CHECK GER PROXY STORAGE
     // Storage value of proxy implementation
-    expect(gerProxy.storage["0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"]).to.include(
-        oldGer.address.toLowerCase().slice(2)
+    expect(gerProxy.storage['0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc']).to.include(
+        oldGer.address.toLowerCase().slice(2),
     );
 
     // Storage value of proxyAdmin
-    expect(gerProxy.storage["0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103"]).to.include(
-        proxyAdminObject.address.toLowerCase().slice(2)
+    expect(gerProxy.storage['0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103']).to.include(
+        proxyAdminObject.address.toLowerCase().slice(2),
     );
 
     // Storage value of global exit root updater
-    expect(gerProxy.storage["0x0000000000000000000000000000000000000000000000000000000000000034"]).to.include(
-        globalExitRootUpdater.toLowerCase().slice(2)
+    expect(gerProxy.storage['0x0000000000000000000000000000000000000000000000000000000000000034']).to.include(
+        globalExitRootUpdater.toLowerCase().slice(2),
     );
     // Check ger proxy initialized value
     expect(gerProxy.storage["0x0000000000000000000000000000000000000000000000000000000000000034"].slice(-2)).to.equal("01");
@@ -577,7 +581,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         genesis.genesis,
         null,
         null,
-        chainID
+        chainID,
     );
     // update genesis root
     genesis.root = smtUtils.h4toString(zkEVMDB3.getCurrentStateRoot());

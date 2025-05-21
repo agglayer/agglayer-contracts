@@ -1,15 +1,19 @@
 /* eslint-disable no-console */
 
-const ethers = require('ethers');
+import * as ethers from 'ethers';
+import * as rollupManager from '../../../compiled-contracts/PolygonRollupManager.json';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
-
-const rollupManagerAbi = require('../../../compiled-contracts/PolygonRollupManager.json').abi;
 
 async function main() {
     const currentProvider = ethers.getDefaultProvider('http://localhost:8545');
     const signerNode = await currentProvider.getSigner();
 
-    const rollupManagerContract = new ethers.Contract('0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e', rollupManagerAbi, signerNode);
+    const rollupManagerContract = new ethers.Contract(
+        '0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e',
+        rollupManager.abi,
+        signerNode,
+    );
     const infoContract = await rollupManagerContract.rollupIDToRollupDataV2(1);
     const info = {
         rollupContract: infoContract[0],

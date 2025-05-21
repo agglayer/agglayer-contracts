@@ -1,6 +1,6 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
 import {
     SP1VerifierPlonk,
     ERC20PermitMock,
@@ -8,23 +8,19 @@ import {
     PolygonZkEVMGlobalExitRootV2Mock,
     PolygonZkEVMBridgeV2,
     PolygonPessimisticConsensus,
-} from "../../../typechain-types";
-const {
-    VerifierType,
-    computeInputPessimisticBytes,
-    computeConsensusHashEcdsa,
-} = require("../../../src/pessimistic-utils");
-const inputProof = require("./test-inputs/input.json");
-const { encodeInitializeBytesLegacy } = require("../../../src/utils-common-aggchain");
+} from '../../../typechain-types';
 
-describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
+import { VerifierType, computeInputPessimisticBytes, computeConsensusHashEcdsa } from '../../../src/pessimistic-utils';
+import * as inputProof from './test-inputs/input.json';
+import { encodeInitializeBytesLegacy } from '../../../src/utils-common-aggchain';
+
+describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let deployer: any;
     let timelock: any;
     let emergencyCouncil: any;
     let trustedAggregator: any;
     let trustedSequencer: any;
     let admin: any;
-    let beneficiary: any;
 
     let verifierContract: SP1VerifierPlonk;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
@@ -33,57 +29,47 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
     let rollupManagerContract: PolygonRollupManagerMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
 
-    const polTokenName = "POL Token";
-    const polTokenSymbol = "POL";
-    const polTokenInitialBalance = ethers.parseEther("20000000");
-
-    const pendingStateTimeoutDefault = 100;
-    const trustedAggregatorTimeout = 100;
+    const polTokenName = 'POL Token';
+    const polTokenSymbol = 'POL';
+    const polTokenInitialBalance = ethers.parseEther('20000000');
 
     // BRidge constants
     const networkIDMainnet = 0;
-    const networkIDRollup = 1;
-
-    const LEAF_TYPE_ASSET = 0;
-    const LEAF_TYPE_MESSAGE = 1;
 
     let firstDeployment = true;
 
-    //roles
+    // roles
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
-    const ADD_ROLLUP_TYPE_ROLE = ethers.id("ADD_ROLLUP_TYPE_ROLE");
-    const OBSOLETE_ROLLUP_TYPE_ROLE = ethers.id("OBSOLETE_ROLLUP_TYPE_ROLE");
-    const CREATE_ROLLUP_ROLE = ethers.id("CREATE_ROLLUP_ROLE");
-    const ADD_EXISTING_ROLLUP_ROLE = ethers.id("ADD_EXISTING_ROLLUP_ROLE");
-    const UPDATE_ROLLUP_ROLE = ethers.id("UPDATE_ROLLUP_ROLE");
-    const TRUSTED_AGGREGATOR_ROLE = ethers.id("TRUSTED_AGGREGATOR_ROLE");
-    const TRUSTED_AGGREGATOR_ROLE_ADMIN = ethers.id("TRUSTED_AGGREGATOR_ROLE_ADMIN");
-    const TWEAK_PARAMETERS_ROLE = ethers.id("TWEAK_PARAMETERS_ROLE");
-    const SET_FEE_ROLE = ethers.id("SET_FEE_ROLE");
-    const STOP_EMERGENCY_ROLE = ethers.id("STOP_EMERGENCY_ROLE");
-    const EMERGENCY_COUNCIL_ROLE = ethers.id("EMERGENCY_COUNCIL_ROLE");
-    const EMERGENCY_COUNCIL_ADMIN = ethers.id("EMERGENCY_COUNCIL_ADMIN");
+    const ADD_ROLLUP_TYPE_ROLE = ethers.id('ADD_ROLLUP_TYPE_ROLE');
+    const OBSOLETE_ROLLUP_TYPE_ROLE = ethers.id('OBSOLETE_ROLLUP_TYPE_ROLE');
+    const CREATE_ROLLUP_ROLE = ethers.id('CREATE_ROLLUP_ROLE');
+    const ADD_EXISTING_ROLLUP_ROLE = ethers.id('ADD_EXISTING_ROLLUP_ROLE');
+    const UPDATE_ROLLUP_ROLE = ethers.id('UPDATE_ROLLUP_ROLE');
+    const TRUSTED_AGGREGATOR_ROLE = ethers.id('TRUSTED_AGGREGATOR_ROLE');
+    const TRUSTED_AGGREGATOR_ROLE_ADMIN = ethers.id('TRUSTED_AGGREGATOR_ROLE_ADMIN');
+    const TWEAK_PARAMETERS_ROLE = ethers.id('TWEAK_PARAMETERS_ROLE');
+    const SET_FEE_ROLE = ethers.id('SET_FEE_ROLE');
+    const STOP_EMERGENCY_ROLE = ethers.id('STOP_EMERGENCY_ROLE');
+    const EMERGENCY_COUNCIL_ROLE = ethers.id('EMERGENCY_COUNCIL_ROLE');
+    const EMERGENCY_COUNCIL_ADMIN = ethers.id('EMERGENCY_COUNCIL_ADMIN');
 
-    const SIGNATURE_BYTES = 32 + 32 + 1;
-    const EFFECTIVE_PERCENTAGE_BYTES = 1;
-
-    beforeEach("Deploy contract", async () => {
+    beforeEach('Deploy contract', async () => {
         upgrades.silenceWarnings();
 
         // load signers
         [deployer, trustedAggregator, admin, timelock, emergencyCouncil, beneficiary] = await ethers.getSigners();
         trustedSequencer = inputProof.signer;
         // deploy mock verifier
-        const VerifierRollupHelperFactory = await ethers.getContractFactory("SP1VerifierPlonk");
+        const VerifierRollupHelperFactory = await ethers.getContractFactory('SP1VerifierPlonk');
         verifierContract = await VerifierRollupHelperFactory.deploy();
 
         // deploy pol
-        const polTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        const polTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         polTokenContract = await polTokenFactory.deploy(
             polTokenName,
             polTokenSymbol,
             deployer.address,
-            polTokenInitialBalance
+            polTokenInitialBalance,
         );
 
         /*
@@ -92,16 +78,16 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
          */
         await upgrades.deployProxyAdmin();
 
-        if ((await upgrades.admin.getInstance()).target !== "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0") {
+        if ((await upgrades.admin.getInstance()).target !== '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0') {
             firstDeployment = false;
         }
 
         // deploy AggLayerGateway
-        const AggLayerGatewayFactory = await ethers.getContractFactory("AggLayerGateway");
-        const aggLayerGatewayContract = (await upgrades.deployProxy(AggLayerGatewayFactory, [], {
+        const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const aggLayerGatewayContract = await upgrades.deployProxy(AggLayerGatewayFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor"],
-        }))
+            unsafeAllow: ['constructor'],
+        });
 
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
@@ -119,21 +105,21 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         firstDeployment = false;
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2Mock");
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2Mock');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
         });
 
         // deploy polygon rollup manager mock
-        const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManagerMock");
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
@@ -143,7 +129,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
                 polygonZkEVMBridgeContract.target,
                 aggLayerGatewayContract.target,
             ],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as unknown as PolygonRollupManagerMock;
 
         await rollupManagerContract.waitForDeployment();
@@ -158,28 +144,30 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
             ethers.ZeroAddress, // zero for ether
             polygonZkEVMGlobalExitRoot.target,
             rollupManagerContract.target,
-            "0x"
+            '0x',
         );
 
         // Initialize Mock
-        await expect(rollupManagerContract.initializeMock(
-            trustedAggregator.address,
-            admin.address,
-            timelock.address,
-            emergencyCouncil.address
-        )).to.emit(rollupManagerContract, "UpdateRollupManagerVersion");
+        await expect(
+            rollupManagerContract.initializeMock(
+                trustedAggregator.address,
+                admin.address,
+                timelock.address,
+                emergencyCouncil.address,
+            ),
+        ).to.emit(rollupManagerContract, 'UpdateRollupManagerVersion');
 
         // fund sequencer address with Matic tokens
-        await polTokenContract.transfer(trustedSequencer, ethers.parseEther("1000"));
+        await polTokenContract.transfer(trustedSequencer, ethers.parseEther('1000'));
     });
 
-    it("should check the initalized parameters", async () => {
+    it('should check the initalized parameters', async () => {
         expect(await rollupManagerContract.globalExitRootManager()).to.be.equal(polygonZkEVMGlobalExitRoot.target);
         expect(await rollupManagerContract.pol()).to.be.equal(polTokenContract.target);
         expect(await rollupManagerContract.bridgeAddress()).to.be.equal(polygonZkEVMBridgeContract.target);
 
-        expect(await rollupManagerContract.getBatchFee()).to.be.equal(ethers.parseEther("0.1"));
-        expect(await rollupManagerContract.getForcedBatchFee()).to.be.equal(ethers.parseEther("10"));
+        expect(await rollupManagerContract.getBatchFee()).to.be.equal(ethers.parseEther('0.1'));
+        expect(await rollupManagerContract.getForcedBatchFee()).to.be.equal(ethers.parseEther('10'));
         expect(await rollupManagerContract.calculateRewardPerBatch()).to.be.equal(0);
 
         // Check roles
@@ -189,7 +177,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
         expect(await rollupManagerContract.hasRole(ADD_EXISTING_ROLLUP_ROLE, timelock.address)).to.be.equal(true);
 
         expect(await rollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE, trustedAggregator.address)).to.be.equal(
-            true
+            true,
         );
 
         expect(await rollupManagerContract.hasRole(OBSOLETE_ROLLUP_TYPE_ROLE, admin.address)).to.be.equal(true);
@@ -201,26 +189,26 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
 
         expect(await rollupManagerContract.hasRole(EMERGENCY_COUNCIL_ROLE, emergencyCouncil.address)).to.be.equal(true);
         expect(await rollupManagerContract.hasRole(EMERGENCY_COUNCIL_ADMIN, emergencyCouncil.address)).to.be.equal(
-            true
+            true,
         );
     });
 
-    it("should verify pessimistic proof: pessimistic type, with a real verifier (not mock)", async () => {
+    it('should verify pessimistic proof: pessimistic type, with a real verifier (not mock)', async () => {
         // deploy consensus
         // create polygonPessimisticConsensus implementation
-        const ppConsensusFactory = await ethers.getContractFactory("PolygonPessimisticConsensus");
+        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
         PolygonPPConsensusContract = await ppConsensusFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
             polygonZkEVMBridgeContract.target,
-            rollupManagerContract.target
+            rollupManagerContract.target,
         );
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
         const forkID = 11; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
-        const description = "new pessimistic consensus";
+        const description = 'new pessimistic consensus';
         const programVKey = inputProof.vkey;
         const rollupTypeID = 1;
 
@@ -234,34 +222,34 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
                 VerifierType.Pessimistic,
                 genesis,
                 description,
-                programVKey
+                programVKey,
             );
 
         // create new pessimistic: only admin
         const chainID = 1;
         const gasTokenAddress = ethers.ZeroAddress;
-        const urlSequencer = "https://pessimistic:8545";
-        const networkName = "testPessimistic";
-        const pessimisticRollupID = inputProof["pp-inputs"]["origin-network"];
-        const initializeBytesAggchain = encodeInitializeBytesLegacy(admin.address, trustedSequencer, gasTokenAddress, urlSequencer, networkName);
+        const urlSequencer = 'https://pessimistic:8545';
+        const networkName = 'testPessimistic';
+        const pessimisticRollupID = inputProof['pp-inputs']['origin-network'];
+        const initializeBytesAggchain = encodeInitializeBytesLegacy(
+            admin.address,
+            trustedSequencer,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+        );
         // create new pessimistic
         const newZKEVMAddress = ethers.getCreateAddress({
             from: rollupManagerContract.target as string,
             nonce: 1,
         });
 
-        await rollupManagerContract
-            .connect(admin)
-            .attachAggchainToAL(
-                rollupTypeID,
-                chainID,
-                initializeBytesAggchain
-            );
+        await rollupManagerContract.connect(admin).attachAggchainToAL(rollupTypeID, chainID, initializeBytesAggchain);
 
         // select not existent global exit root
         const l1InfoTreeLeafCount = 2;
-        const newLER = inputProof["pp-inputs"]["new-local-exit-root"];
-        const newPPRoot = inputProof["pp-inputs"]["new-pessimistic-root"];
+        const newLER = inputProof['pp-inputs']['new-local-exit-root'];
+        const newPPRoot = inputProof['pp-inputs']['new-pessimistic-root'];
         const proofPP = inputProof.proof;
 
         // not trusted aggregator
@@ -272,32 +260,30 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
                 newLER,
                 newPPRoot,
                 proofPP,
-                "0x" // aggchainData
-            )
-        ).to.be.revertedWithCustomError(rollupManagerContract, "AddressDoNotHaveRequiredRole");
+                '0x', // aggchainData
+            ),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'AddressDoNotHaveRequiredRole');
 
         // global exit root does not exist
         await expect(
-            rollupManagerContract
-                .connect(trustedAggregator)
-                .verifyPessimisticTrustedAggregator(
-                    pessimisticRollupID,
-                    l1InfoTreeLeafCount,
-                    newLER,
-                    newPPRoot,
-                    proofPP,
-                    "0x" // aggchainData
-                )
-        ).to.be.revertedWithCustomError(rollupManagerContract, "L1InfoTreeLeafCountInvalid");
+            rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
+                pessimisticRollupID,
+                l1InfoTreeLeafCount,
+                newLER,
+                newPPRoot,
+                proofPP,
+                '0x', // aggchainData
+            ),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'L1InfoTreeLeafCountInvalid');
 
-        const l1InfoRoot = inputProof["pp-inputs"]["l1-info-root"];
+        const l1InfoRoot = inputProof['pp-inputs']['l1-info-root'];
         // check JS function computeInputPessimisticBytes
         const inputPessimisticBytes = await rollupManagerContract.getInputPessimisticBytes(
             pessimisticRollupID,
             l1InfoRoot,
-            inputProof["pp-inputs"]["new-local-exit-root"],
-            inputProof["pp-inputs"]["new-pessimistic-root"],
-            "0x" // aggchainData
+            inputProof['pp-inputs']['new-local-exit-root'],
+            inputProof['pp-inputs']['new-pessimistic-root'],
+            '0x', // aggchainData
         );
 
         const infoRollup = await rollupManagerContract.rollupIDToRollupDataV2(pessimisticRollupID);
@@ -311,7 +297,7 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
             pessimisticRollupID,
             consensusHash,
             newLER,
-            newPPRoot
+            newPPRoot,
         );
 
         expect(inputPessimisticBytes).to.be.equal(expectedInputPessimisticBytes);
@@ -320,18 +306,16 @@ describe("Polygon Rollup Manager with Polygon Pessimistic Consensus", () => {
 
         // verify pessimistic
         await expect(
-            rollupManagerContract
-                .connect(trustedAggregator)
-                .verifyPessimisticTrustedAggregator(
-                    pessimisticRollupID,
-                    l1InfoTreeLeafCount,
-                    newLER,
-                    newPPRoot,
-                    proofPP,
-                    "0x" // aggchainData
-                )
+            rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
+                pessimisticRollupID,
+                l1InfoTreeLeafCount,
+                newLER,
+                newPPRoot,
+                proofPP,
+                '0x', // aggchainData
+            ),
         )
-            .to.emit(rollupManagerContract, "VerifyBatchesTrustedAggregator")
+            .to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
             .withArgs(pessimisticRollupID, 0, ethers.ZeroHash, newLER, trustedAggregator.address);
 
         // assert rollup data

@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
-
-const ethers = require('ethers');
+import ethers from 'ethers';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
 
 const DEFAULT_MNEMONIC = 'test test test test test test test test test test test junk';
@@ -14,16 +14,15 @@ async function main() {
 
     for (let i = 0; i < numAccountsToFund; i++) {
         const pathWallet = `m/44'/60'/0'/0/${i}`;
-        const accountWallet = ethers.HDNodeWallet.fromMnemonic(
-            ethers.Mnemonic.fromPhrase(MNEMONIC),
-            pathWallet,
-        );
+        const accountWallet = ethers.HDNodeWallet.fromMnemonic(ethers.Mnemonic.fromPhrase(MNEMONIC), pathWallet);
 
-        const params = [{
-            from: await signerNode.getAddress(),
-            to: accountWallet.address,
-            value: '0x3635C9ADC5DEA00000',
-        }];
+        const params = [
+            {
+                from: await signerNode.getAddress(),
+                to: accountWallet.address,
+                value: '0x3635C9ADC5DEA00000',
+            },
+        ];
         const tx = await currentProvider.send('eth_sendTransaction', params);
         if (i === numAccountsToFund - 1) {
             await currentProvider.waitForTransaction(tx);
