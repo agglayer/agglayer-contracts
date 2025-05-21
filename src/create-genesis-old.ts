@@ -48,7 +48,16 @@ async function main() {
     const db = new MemDB(F);
 
     // create a zkEVMDB and build a batch
-    const zkEVMDB = await ZkEVMDB.newZkEVM(db, poseidon, genesisRoot, accHashInput, genesis, null, null, defaultChainId);
+    const zkEVMDB = await ZkEVMDB.newZkEVM(
+        db,
+        poseidon,
+        genesisRoot,
+        accHashInput,
+        genesis,
+        null,
+        null,
+        defaultChainId,
+    );
 
     /*
      * build, sign transaction and generate rawTxs
@@ -121,7 +130,13 @@ async function main() {
     }
 
     const options = { skipUpdateSystemStorage: true };
-    const batch = await zkEVMDB.buildBatch(timestamp, sequencerAddress, smtUtils.stringToH4(globalExitRoot), undefined, options);
+    const batch = await zkEVMDB.buildBatch(
+        timestamp,
+        sequencerAddress,
+        smtUtils.stringToH4(globalExitRoot),
+        undefined,
+        options,
+    );
     for (let j = 0; j < rawTxs.length; j++) {
         batch.addRawTx(rawTxs[j]);
     }
@@ -199,7 +214,9 @@ async function main() {
             return {
                 rawTx,
                 receipt,
-                createAddress: decodedTxs[index].createdAddress ? `${decodedTxs[index].createdAddress.toString('hex')}` : null,
+                createAddress: decodedTxs[index].createdAddress
+                    ? `${decodedTxs[index].createdAddress.toString('hex')}`
+                    : null,
             };
         }
         return {

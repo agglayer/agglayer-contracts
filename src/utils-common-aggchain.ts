@@ -54,7 +54,10 @@ export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainPara
     }
 
     // solidity keccak
-    return ethers.solidityPackedKeccak256(['uint32', 'bytes32', 'bytes32'], [aggchainType, aggchainVKey, hashAggchainParams]);
+    return ethers.solidityPackedKeccak256(
+        ['uint32', 'bytes32', 'bytes32'],
+        [aggchainType, aggchainVKey, hashAggchainParams],
+    );
 }
 
 /**
@@ -65,7 +68,9 @@ export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainPara
  */
 export function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {
     // remove "0x" if ot exist on aggchainSelector with startWith method
-    const aggchainVKeyVersion = _aggchainVKeyVersion.startsWith('0x') ? _aggchainVKeyVersion.slice(2) : _aggchainVKeyVersion;
+    const aggchainVKeyVersion = _aggchainVKeyVersion.startsWith('0x')
+        ? _aggchainVKeyVersion.slice(2)
+        : _aggchainVKeyVersion;
 
     // remove "0x" if ot exist on _aggchainType with startWith method
     const aggchainType = _aggchainType.startsWith('0x') ? _aggchainType.slice(2) : _aggchainType;
@@ -89,7 +94,9 @@ export function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {
  */
 export function getAggchainTypeFromSelector(_aggchainVKeySelector) {
     // remove "0x" if ot exist on aggchainVKeySelector with startWith method
-    const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x') ? _aggchainVKeySelector.slice(2) : _aggchainVKeySelector;
+    const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x')
+        ? _aggchainVKeySelector.slice(2)
+        : _aggchainVKeySelector;
 
     // check lenght is 8 bytes
     if (aggchainVKeySelector.length !== 8) {
@@ -106,7 +113,9 @@ export function getAggchainTypeFromSelector(_aggchainVKeySelector) {
  */
 export function getAggchainVKeyVersionFromSelector(_aggchainVKeySelector) {
     // remove "0x" if ot exist on aggchainVKeySelector with startWith method
-    const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x') ? _aggchainVKeySelector.slice(2) : _aggchainVKeySelector;
+    const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x')
+        ? _aggchainVKeySelector.slice(2)
+        : _aggchainVKeySelector;
 
     // check lenght is 4 bytes
     if (aggchainVKeySelector.length !== 8) {

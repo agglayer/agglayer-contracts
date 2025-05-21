@@ -13,8 +13,8 @@ import { convertBigIntsToNumbers } from "../tools/utils";
  */
 function genTimelockOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
     const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "bytes", "uint256", "bytes32"],
-        [target, value, data, predecessor, salt]
+        ['address', 'uint256', 'bytes', 'uint256', 'bytes32'],
+        [target, value, data, predecessor, salt],
     );
     const id = ethers.keccak256(abiEncoded);
     return {
@@ -35,23 +35,27 @@ function genTimelockOperation(target: any, value: any, data: any, predecessor: a
  */
 async function verifyContractEtherscan(implementationAddress: string, constructorArguments: Array<string>) {
     try {
-        console.log(`Trying to verify implementation contract ${implementationAddress} with arguments ${constructorArguments}`);
+        console.log(
+            `Trying to verify implementation contract ${implementationAddress} with arguments ${constructorArguments}`,
+        );
         // wait a few seconds before trying etherscan verification
-        console.log("Waiting 1 minute before verifying on Etherscan");
-        await new Promise((r) => setTimeout(r, 60000));
-        console.log("Verifying...")
+        console.log('Waiting 1 minute before verifying on Etherscan');
+        await new Promise((r) => {
+            setTimeout(r, 60000);
+        });
+        console.log('Verifying...');
         // verify
-        await run("verify:verify", {
+        await run('verify:verify', {
             address: implementationAddress,
-            constructorArguments: constructorArguments,
+            constructorArguments,
         });
     } catch (error) {
-        console.log("Error verifying the new implementation contract: ", error);
-        console.log("you can verify the new impl address with:");
+        console.log('Error verifying the new implementation contract: ', error);
+        console.log('you can verify the new impl address with:');
         console.log(
-            `npx hardhat verify --constructor-args upgrade/arguments.js ${implementationAddress} --network ${process.env.HARDHAT_NETWORK}\n`
+            `npx hardhat verify --constructor-args upgrade/arguments.js ${implementationAddress} --network ${process.env.HARDHAT_NETWORK}\n`,
         );
-        console.log("Copy the following constructor arguments on: upgrade/arguments.js \n", constructorArguments);
+        console.log('Copy the following constructor arguments on: upgrade/arguments.js \n', constructorArguments);
     }
 }
 
@@ -62,7 +66,7 @@ async function verifyContractEtherscan(implementationAddress: string, constructo
  * @returns The decoded data
  */
 async function decodeScheduleData(scheduleData: any, contractFactory: any) {
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock");
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock');
     const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
     const objectDecoded = {} as any;
     const paramsArray = timelockTx?.fragment.inputs as any;

@@ -18,21 +18,23 @@ import {
 import { time, reset, setBalance, mine } from "@nomicfoundation/hardhat-network-helpers";
 import { checkParams } from "../../../src/utils";
 
-const upgradeParams = require("../upgrade_parameters.json");
-const upgradeOutput = require("../upgrade_output.json");
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 async function main() {
 
     const AL_VERSION = "al-v0.3.1";
     const mandatoryParameters = ["timelockAdminAddress", "rpc"];
     checkParams(upgradeParams, mandatoryParameters);
-    const rpc = typeof upgradeParams.rpc === "undefined" ? `https://${upgradeParams.network}.infura.io/v3/${process.env.INFURA_PROJECT_ID}` : upgradeParams.rpc;
+    const rpc =
+        typeof upgradeParams.rpc === 'undefined'
+            ? `https://${upgradeParams.network}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
+            : upgradeParams.rpc;
 
     // hard fork
     logger.info(`Shallow forking ${upgradeParams.rpc}`);
     await reset(rpc, upgradeOutput.implementationDeployBlockNumber + 1);
     await mine();
-    let forkedBlock = await ethers.provider.getBlockNumber();
+    const forkedBlock = await ethers.provider.getBlockNumber();
     // If forked block is lower than implementation deploy block, wait until it is reached
     while (forkedBlock <= upgradeOutput.implementationDeployBlockNumber) {
         logger.info(`Forked block is ${forkedBlock}, waiting until ${upgradeOutput.implementationDeployBlockNumber}, wait 1 minute...`);
@@ -46,15 +48,15 @@ async function main() {
     expect(bridgeImpCode.length).to.be.greaterThan(2);
     // In case globalExitRootManagerL2SovereignChainAddress is not provided, use the default one, used by most chains in the genesis
     const globalExitRootManagerL2SovereignChainAddress =
-        typeof upgradeParams.globalExitRootManagerL2SovereignChainAddress === "undefined"
-            ? "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa"
+        typeof upgradeParams.globalExitRootManagerL2SovereignChainAddress === 'undefined'
+            ? '0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa'
             : upgradeParams.globalExitRootManagerL2SovereignChainAddress;
     // Get contracts
     const gerManagerL2SovereignChainPessimisticFactory = await ethers.getContractFactory(
-        "GlobalExitRootManagerL2SovereignChainPessimistic"
+        'GlobalExitRootManagerL2SovereignChainPessimistic',
     );
     const gerManagerL2SovereignContractPessimistic = gerManagerL2SovereignChainPessimisticFactory.attach(
-        globalExitRootManagerL2SovereignChainAddress
+        globalExitRootManagerL2SovereignChainAddress,
     ) as GlobalExitRootManagerL2SovereignChainPessimistic;
 
     const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(gerManagerL2SovereignContractPessimistic.target);
@@ -67,15 +69,15 @@ async function main() {
     logger.info("✓ proxy admin role is same as upgrade output file timelock address");
 
     // Check proposed timelock admin address has proposer and executor role
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock");
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock');
     const timelockContract = (await timelockContractFactory.attach(ownerAddress)) as PolygonZkEVMTimelock;
-    const PROPOSER_ROLE = ethers.id("PROPOSER_ROLE");
-    const EXECUTOR_ROLE = ethers.id("EXECUTOR_ROLE");
+    const PROPOSER_ROLE = ethers.id('PROPOSER_ROLE');
+    const EXECUTOR_ROLE = ethers.id('EXECUTOR_ROLE');
     const proposerRoleAddress = upgradeParams.timelockAdminAddress;
     const hasProposerRole = await timelockContract.hasRole(PROPOSER_ROLE, proposerRoleAddress);
     const hasExecutorRole = await timelockContract.hasRole(EXECUTOR_ROLE, proposerRoleAddress);
     if (!hasProposerRole || !hasExecutorRole) {
-        throw new Error("Timelock admin address does not have proposer and executor role");
+        throw new Error('Timelock admin address does not have proposer and executor role');
     }
     logger.info(`Proposer/executor timelock role address: ${proposerRoleAddress}`);
     await ethers.provider.send("hardhat_impersonateAccount", [proposerRoleAddress]);
@@ -121,7 +123,7 @@ async function main() {
     logger.info(`✓ Sent execute transaction`);
     const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory("GlobalExitRootManagerL2SovereignChain");
     const gerManagerL2SovereignContract = GlobalExitRootManagerL2SovereignChainFactory.attach(
-        globalExitRootManagerL2SovereignChainAddress
+        globalExitRootManagerL2SovereignChainAddress,
     ) as GlobalExitRootManagerL2SovereignChain;
     expect(await gerManagerL2SovereignContract.globalExitRootUpdater()).to.equal(globalExitRootUpdater);
     expect(await gerManagerL2SovereignContract.globalExitRootRemover()).to.equal(globalExitRootRemover);

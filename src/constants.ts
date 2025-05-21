@@ -19,7 +19,12 @@ export const TIMELOCK = {
         EXECUTOR_ROLE: ethers.id('EXECUTOR_ROLE'),
         CANCELLER_ROLE: ethers.id('CANCELLER_ROLE'),
     },
-    ROLES_HASH: [ethers.id('TIMELOCK_ADMIN_ROLE'), ethers.id('PROPOSER_ROLE'), ethers.id('EXECUTOR_ROLE'), ethers.id('CANCELLER_ROLE')],
+    ROLES_HASH: [
+        ethers.id('TIMELOCK_ADMIN_ROLE'),
+        ethers.id('PROPOSER_ROLE'),
+        ethers.id('EXECUTOR_ROLE'),
+        ethers.id('CANCELLER_ROLE'),
+    ],
     // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.8.2/contracts/governance/TimelockController.sol#L27
     // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.8.2/contracts/access/AccessControl.sol#L55
     ROLES_MAPPING_STORAGE_POS: 0,

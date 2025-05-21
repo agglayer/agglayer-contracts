@@ -11,7 +11,15 @@ import { expect } from 'chai';
  * @param {String} deadline - Deadline of the permit
  * @returns {Object} - Signature object, { v, r, s}
  */
-export async function createPermitSignature(tokenContractInstance, wallet, spenderAddress, value, nonce, deadline, chainId) {
+export async function createPermitSignature(
+    tokenContractInstance,
+    wallet,
+    spenderAddress,
+    value,
+    nonce,
+    deadline,
+    chainId,
+) {
     const name = await tokenContractInstance.name();
 
     // The domain
@@ -62,7 +70,14 @@ export async function createPermitSignature(tokenContractInstance, wallet, spend
  * @param {Number} chainId - expiry of the permit
  * @returns {Object} - Signature object, { v, r, s}
  */
-export async function createPermitSignatureDaiType(tokenContractInstance, wallet, spenderAddress, nonce, expiry, chainId) {
+export async function createPermitSignatureDaiType(
+    tokenContractInstance,
+    wallet,
+    spenderAddress,
+    nonce,
+    expiry,
+    chainId,
+) {
     const name = await tokenContractInstance.name();
     const version = await tokenContractInstance.version();
 
@@ -113,7 +128,15 @@ export async function createPermitSignatureDaiType(tokenContractInstance, wallet
  * @param {Number} chainId - expiry of the permit
  * @returns {Object} - Signature object, { v, r, s}
  */
-export async function createPermitSignatureUniType(tokenContractInstance, wallet, spenderAddress, value, nonce, deadline, chainId) {
+export async function createPermitSignatureUniType(
+    tokenContractInstance,
+    wallet,
+    spenderAddress,
+    value,
+    nonce,
+    deadline,
+    chainId,
+) {
     const name = await tokenContractInstance.name();
 
     // The domain
@@ -154,9 +177,13 @@ export async function createPermitSignatureUniType(tokenContractInstance, wallet
 /**
  * Permit interface
  */
-export const ifacePermit = new ethers.Interface(['function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)']);
+export const ifacePermit = new ethers.Interface([
+    'function permit(address,address,uint256,uint256,uint8,bytes32,bytes32)',
+]);
 
 /**
  * Permit interface DAI
  */
-export const ifacePermitDAI = new ethers.Interface(['function permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)']);
+export const ifacePermitDAI = new ethers.Interface([
+    'function permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)',
+]);

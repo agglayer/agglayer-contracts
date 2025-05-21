@@ -40,7 +40,15 @@ export function computeInputPessimisticBytes(
 ) {
     return ethers.solidityPacked(
         ['bytes32', 'bytes32', 'bytes32', 'uint32', 'bytes32', 'bytes32', 'bytes32'],
-        [lastLocalExitRoot, lastPessimisticRoot, l1InfoTreeRoot, rollupID, consensusHash, newLocalExitRoot, newPessimisticRoot],
+        [
+            lastLocalExitRoot,
+            lastPessimisticRoot,
+            l1InfoTreeRoot,
+            rollupID,
+            consensusHash,
+            newLocalExitRoot,
+            newPessimisticRoot,
+        ],
     );
 }
 

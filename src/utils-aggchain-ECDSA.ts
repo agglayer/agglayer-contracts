@@ -61,7 +61,12 @@ export function encodeInitializeBytesAggchainECDSAv0(
  * @param {String} vKeyManager vkey manager address
  * @returns {String} encoded value in hexadecimal string
  */
-export function encodeInitializeBytesAggchainECDSAv1(useDefaultGateway, ownedAggchainVKey, aggchainVKeySelector, vKeyManager) {
+export function encodeInitializeBytesAggchainECDSAv1(
+    useDefaultGateway,
+    ownedAggchainVKey,
+    aggchainVKeySelector,
+    vKeyManager,
+) {
     return ethers.AbiCoder.defaultAbiCoder().encode(
         ['bool', 'bytes32', 'bytes4', 'address'],
         [useDefaultGateway, ownedAggchainVKey, aggchainVKeySelector, vKeyManager],
