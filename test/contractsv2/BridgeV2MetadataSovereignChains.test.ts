@@ -1,26 +1,23 @@
-import {expect} from "chai";
-import {ethers, upgrades} from "hardhat";
-import {
-    ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
-    BridgeL2SovereignChain,
-} from "../../typechain-types";
-import { MTBridge, mtBridgeUtils} from "@0xpolygonhermez/zkevm-commonjs";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { ERC20PermitMock, GlobalExitRootManagerL2SovereignChain, BridgeL2SovereignChain } from '../../typechain-types';
+
 const MerkleTreeBridge = MTBridge;
-const {verifyMerkleProof, getLeafValue} = mtBridgeUtils;
+const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 const {
     createPermitSignature,
     ifacePermit,
     createPermitSignatureDaiType,
     ifacePermitDAI,
     createPermitSignatureUniType,
-} = require("../../src/permit-helper");
+} = require('../../src/permit-helper');
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
+    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-describe("SovereignBridge Contract", () => {
+describe('SovereignBridge Contract', () => {
     upgrades.silenceWarnings();
 
     let sovereignChainBridgeContract: BridgeL2SovereignChain;
@@ -33,35 +30,36 @@ describe("SovereignBridge Contract", () => {
     let emergencyBridgePauser: any;
     let proxiedTokensManager: any;
 
-    const tokenName = "Matic Token";
-    const tokenSymbol = "MATIC";
+    const tokenName = 'Matic Token';
+    const tokenSymbol = 'MATIC';
     const decimals = 18;
-    const tokenInitialBalance = ethers.parseEther("20000000");
+    const tokenInitialBalance = ethers.parseEther('20000000');
     const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["string", "string", "uint8"],
-        [tokenName, tokenSymbol, decimals]
+        ['string', 'string', 'uint8'],
+        [tokenName, tokenSymbol, decimals],
     );
     const networkIDMainnet = 2;
     const networkIDRollup = 1;
 
     const LEAF_TYPE_ASSET = 0;
 
-
-    beforeEach("Deploy contracts", async () => {
+    beforeEach('Deploy contracts', async () => {
         // load signers
         [deployer, rollupManager, acc1, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
 
         // deploy PolygonZkEVMBridge
-        const BridgeL2SovereignChainFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
+        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as BridgeL2SovereignChain;
 
         // deploy global exit root manager
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory("GlobalExitRootManagerL2SovereignChain");
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
+            'GlobalExitRootManagerL2SovereignChain',
+        );
         sovereignChainGlobalExitRootContract = await GlobalExitRootManagerL2SovereignChainFactory.deploy(
-            sovereignChainBridgeContract.target
+            sovereignChainBridgeContract.target,
         );
 
         await sovereignChainBridgeContract.initialize(
@@ -70,7 +68,7 @@ describe("SovereignBridge Contract", () => {
             ethers.ZeroAddress, // zero for ether
             sovereignChainGlobalExitRootContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(deployer.address),
             ethers.ZeroAddress,
             false,
@@ -80,20 +78,20 @@ describe("SovereignBridge Contract", () => {
         );
 
         // deploy token
-        const maticTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         polTokenContract = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
     });
 
-    it("should PolygonZkEVMBridge with weird token metadata", async () => {
-        const weirdErc20Metadata = await ethers.getContractFactory("ERC20WeirdMetadata");
+    it('should PolygonZkEVMBridge with weird token metadata', async () => {
+        const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
-        const nameWeird = "nameToken";
-        const symbolWeird = "NTK";
+        const nameWeird = 'nameToken';
+        const symbolWeird = 'NTK';
 
         const nameWeirdBytes32 = ethers.encodeBytes32String(nameWeird);
         const symbolWeirdBytes = ethers.toUtf8Bytes(symbolWeird);
@@ -102,7 +100,7 @@ describe("SovereignBridge Contract", () => {
         const weirdTokenContract = await weirdErc20Metadata.deploy(
             nameWeirdBytes32, // bytes32
             symbolWeirdBytes, // bytes
-            decimalsWeird
+            decimalsWeird,
         );
         await weirdTokenContract.waitForDeployment();
 
@@ -113,16 +111,16 @@ describe("SovereignBridge Contract", () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = weirdTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [nameWeird, symbolWeird, decimalsWeird]
+            ['string', 'string', 'uint8'],
+            [nameWeird, symbolWeird, decimalsWeird],
         );
 
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // pre compute root merkle tree in Js
         const height = 32;
@@ -134,7 +132,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -146,10 +144,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -158,17 +156,17 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it("should PolygonZkEVMBridge with weird token metadata with reverts", async () => {
-        const weirdErc20Metadata = await ethers.getContractFactory("ERC20WeirdMetadata");
+    it('should PolygonZkEVMBridge with weird token metadata with reverts', async () => {
+        const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
-        const nameWeird = "nameToken";
-        const symbolWeird = "NTK";
+        const nameWeird = 'nameToken';
+        const symbolWeird = 'NTK';
 
         const nameWeirdBytes32 = ethers.encodeBytes32String(nameWeird);
         const symbolWeirdBytes = ethers.toUtf8Bytes(symbolWeird);
@@ -177,7 +175,7 @@ describe("SovereignBridge Contract", () => {
         const weirdTokenContract = await weirdErc20Metadata.deploy(
             nameWeirdBytes32, // bytes32
             symbolWeirdBytes, // bytes
-            decimalsWeird
+            decimalsWeird,
         );
         await weirdTokenContract.waitForDeployment();
 
@@ -188,7 +186,7 @@ describe("SovereignBridge Contract", () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = weirdTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
@@ -200,22 +198,22 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         ).to.be.reverted;
 
         // toogle revert
         await weirdTokenContract.toggleIsRevert();
         // Use revert strings
-        const nameRevert = "NO_NAME";
-        const symbolRevert = "NO_SYMBOL";
+        const nameRevert = 'NO_NAME';
+        const symbolRevert = 'NO_SYMBOL';
         const decimalsTooRevert = 18;
         const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [nameRevert, symbolRevert, decimalsTooRevert]
+            ['string', 'string', 'uint8'],
+            [nameRevert, symbolRevert, decimalsTooRevert],
         );
 
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // pre compute root merkle tree in Js
         const height = 32;
@@ -227,7 +225,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -239,10 +237,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -251,17 +249,17 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it("should PolygonZkEVMBridge with weird token metadata with empty data", async () => {
-        const weirdErc20Metadata = await ethers.getContractFactory("ERC20WeirdMetadata");
+    it('should PolygonZkEVMBridge with weird token metadata with empty data', async () => {
+        const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
-        const nameWeird = "";
-        const symbolWeird = "";
+        const nameWeird = '';
+        const symbolWeird = '';
 
         const nameWeirdBytes32 = ethers.encodeBytes32String(nameWeird);
         const symbolWeirdBytes = ethers.toUtf8Bytes(symbolWeird);
@@ -270,7 +268,7 @@ describe("SovereignBridge Contract", () => {
         const weirdTokenContract = await weirdErc20Metadata.deploy(
             nameWeirdBytes32, // bytes32
             symbolWeirdBytes, // bytes
-            decimalsWeird
+            decimalsWeird,
         );
         await weirdTokenContract.waitForDeployment();
 
@@ -281,20 +279,20 @@ describe("SovereignBridge Contract", () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = weirdTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         // Empty bytes32 is a not valid encoding
-        const nameEmpty = "NOT_VALID_ENCODING"; // bytes32 empty
-        const symbolEmpty = "";
+        const nameEmpty = 'NOT_VALID_ENCODING'; // bytes32 empty
+        const symbolEmpty = '';
 
         const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [nameEmpty, symbolEmpty, decimalsWeird]
+            ['string', 'string', 'uint8'],
+            [nameEmpty, symbolEmpty, decimalsWeird],
         );
 
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // pre compute root merkle tree in Js
         const height = 32;
@@ -306,7 +304,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -318,10 +316,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -330,17 +328,17 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it("should PolygonZkEVMBridge with weird token metadata with invalid data", async () => {
-        const weirdErc20Metadata = await ethers.getContractFactory("ERC20InvalidMetadata");
+    it('should PolygonZkEVMBridge with weird token metadata with invalid data', async () => {
+        const weirdErc20Metadata = await ethers.getContractFactory('ERC20InvalidMetadata');
 
-        const nameWeird = "";
-        const symbolWeird = "";
+        const nameWeird = '';
+        const symbolWeird = '';
 
         const nameWeirdBytes32 = ethers.encodeBytes32String(nameWeird);
         const symbolWeirdBytes = ethers.toUtf8Bytes(symbolWeird);
@@ -349,7 +347,7 @@ describe("SovereignBridge Contract", () => {
         const weirdTokenContract = (await weirdErc20Metadata.deploy(
             nameWeirdBytes32, // bytes32
             symbolWeirdBytes, // bytes
-            decimalsWeird
+            decimalsWeird,
         )) as any;
         await weirdTokenContract.waitForDeployment();
 
@@ -360,20 +358,20 @@ describe("SovereignBridge Contract", () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = weirdTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         // Empty bytes32 is a not valid encoding
-        const nameEmpty = "NOT_VALID_ENCODING"; // bytes32 empty
-        const symbolEmpty = "NOT_VALID_ENCODING";
+        const nameEmpty = 'NOT_VALID_ENCODING'; // bytes32 empty
+        const symbolEmpty = 'NOT_VALID_ENCODING';
 
         const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [nameEmpty, symbolEmpty, decimalsWeird]
+            ['string', 'string', 'uint8'],
+            [nameEmpty, symbolEmpty, decimalsWeird],
         );
 
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // pre compute root merkle tree in Js
         const height = 32;
@@ -385,7 +383,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -397,10 +395,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -409,22 +407,22 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it("should PolygonZkEVMBridge and with permit eip-2612 compilant", async () => {
+    it('should PolygonZkEVMBridge and with permit eip-2612 compilant', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const balanceDeployer = await polTokenContract.balanceOf(deployer.address);
         const balanceBridge = await polTokenContract.balanceOf(sovereignChainBridgeContract.target);
@@ -441,7 +439,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -453,23 +451,23 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
-        ).to.be.revertedWith("ERC20: insufficient allowance");
+                '0x',
+            ),
+        ).to.be.revertedWith('ERC20: insufficient allowance');
 
         // user permit
         const nonce = await polTokenContract.nonces(deployer.address);
         const deadline = ethers.MaxUint256;
-        const {chainId} = await ethers.provider.getNetwork();
+        const { chainId } = await ethers.provider.getNetwork();
 
-        const {v, r, s} = await createPermitSignature(
+        const { v, r, s } = await createPermitSignature(
             polTokenContract,
             deployer,
             sovereignChainBridgeContract.target,
             amount,
             nonce,
             deadline,
-            chainId
+            chainId,
         );
 
         await expect(
@@ -483,7 +481,7 @@ describe("SovereignBridge Contract", () => {
             )
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "NotValidSignature");
 
-        const dataPermit = ifacePermit.encodeFunctionData("permit", [
+        const dataPermit = ifacePermit.encodeFunctionData('permit', [
             deployer.address,
             sovereignChainBridgeContract.target,
             amount,
@@ -500,10 +498,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                dataPermit
-            )
+                dataPermit,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -512,11 +510,13 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
-            )
+                depositCount,
+            );
 
         expect(await polTokenContract.balanceOf(deployer.address)).to.be.equal(balanceDeployer - amount);
-        expect(await polTokenContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(balanceBridge + amount);
+        expect(await polTokenContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(
+            balanceBridge + amount,
+        );
 
         // check merkle root with SC
         const rootSCMainnet = await sovereignChainBridgeContract.getRoot();
@@ -528,31 +528,30 @@ describe("SovereignBridge Contract", () => {
 
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
-        expect(await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(
-            true
-        );
-
+        expect(
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
+        ).to.be.equal(true);
     });
 
-    it("should PolygonZkEVMBridge with permit DAI type contracts", async () => {
-        const {chainId} = await ethers.provider.getNetwork();
-        const daiTokenFactory = await ethers.getContractFactory("DaiMock");
+    it('should PolygonZkEVMBridge with permit DAI type contracts', async () => {
+        const { chainId } = await ethers.provider.getNetwork();
+        const daiTokenFactory = await ethers.getContractFactory('DaiMock');
         const daiContract = (await daiTokenFactory.deploy(chainId)) as any;
         await daiContract.waitForDeployment();
-        await daiContract.mint(deployer.address, ethers.parseEther("100"));
+        await daiContract.mint(deployer.address, ethers.parseEther('100'));
 
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = daiContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [await daiContract.name(), await daiContract.symbol(), await daiContract.decimals()]
+            ['string', 'string', 'uint8'],
+            [await daiContract.name(), await daiContract.symbol(), await daiContract.decimals()],
         );
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const balanceDeployer = await daiContract.balanceOf(deployer.address);
         const balanceBridge = await daiContract.balanceOf(sovereignChainBridgeContract.target);
@@ -569,7 +568,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -581,24 +580,24 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
-        ).to.be.revertedWith("Dai/insufficient-allowance");
+                '0x',
+            ),
+        ).to.be.revertedWith('Dai/insufficient-allowance');
 
         // user permit
         const nonce = await daiContract.nonces(deployer.address);
         const deadline = ethers.MaxUint256;
 
-        const {v, r, s} = await createPermitSignatureDaiType(
+        const { v, r, s } = await createPermitSignatureDaiType(
             daiContract,
             deployer,
             sovereignChainBridgeContract.target,
             nonce,
             deadline,
-            chainId
+            chainId,
         );
 
-        const dataPermit = ifacePermitDAI.encodeFunctionData("permit", [
+        const dataPermit = ifacePermitDAI.encodeFunctionData('permit', [
             deployer.address,
             sovereignChainBridgeContract.target,
             nonce,
@@ -616,10 +615,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                dataPermit
-            )
+                dataPermit,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -628,8 +627,8 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
-            )
+                depositCount,
+            );
 
         expect(await daiContract.balanceOf(deployer.address)).to.be.equal(balanceDeployer - amount);
         expect(await daiContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(balanceBridge + amount);
@@ -644,35 +643,34 @@ describe("SovereignBridge Contract", () => {
 
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
-        expect(await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(
-            true
-        );
-
+        expect(
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
+        ).to.be.equal(true);
     });
 
-    it("should PolygonZkEVMBridge with permit UNI type contracts", async () => {
-        const uniTokenFactory = await ethers.getContractFactory("Uni");
-        const lastBlock = (await ethers.provider.getBlock("latest")) as any;
+    it('should PolygonZkEVMBridge with permit UNI type contracts', async () => {
+        const uniTokenFactory = await ethers.getContractFactory('Uni');
+        const lastBlock = (await ethers.provider.getBlock('latest')) as any;
         const uniContract = (await uniTokenFactory.deploy(
             deployer.address,
             deployer.address,
-            lastBlock.timestamp + 1
+            lastBlock.timestamp + 1,
         )) as any;
         await uniContract.waitForDeployment();
-        await uniContract.mint(deployer.address, ethers.parseEther("100"));
+        await uniContract.mint(deployer.address, ethers.parseEther('100'));
 
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = uniContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [await uniContract.name(), await uniContract.symbol(), await uniContract.decimals()]
+            ['string', 'string', 'uint8'],
+            [await uniContract.name(), await uniContract.symbol(), await uniContract.decimals()],
         );
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const balanceDeployer = await uniContract.balanceOf(deployer.address);
         const balanceBridge = await uniContract.balanceOf(sovereignChainBridgeContract.target);
@@ -689,7 +687,7 @@ describe("SovereignBridge Contract", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -701,26 +699,26 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
-        ).to.be.revertedWith("Uni::transferFrom: transfer amount exceeds spender allowance");
+                '0x',
+            ),
+        ).to.be.revertedWith('Uni::transferFrom: transfer amount exceeds spender allowance');
 
         // user permit
         const nonce = await uniContract.nonces(deployer.address);
         const deadline = ethers.MaxUint256;
-        const {chainId} = await ethers.provider.getNetwork();
+        const { chainId } = await ethers.provider.getNetwork();
 
-        const {v, r, s} = await createPermitSignatureUniType(
+        const { v, r, s } = await createPermitSignatureUniType(
             uniContract,
             deployer,
             sovereignChainBridgeContract.target,
             amount,
             nonce,
             deadline,
-            chainId
+            chainId,
         );
 
-        const dataPermit = ifacePermit.encodeFunctionData("permit", [
+        const dataPermit = ifacePermit.encodeFunctionData('permit', [
             deployer.address,
             sovereignChainBridgeContract.target,
             amount,
@@ -737,10 +735,10 @@ describe("SovereignBridge Contract", () => {
                 amount,
                 tokenAddress,
                 true,
-                dataPermit
-            )
+                dataPermit,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -749,8 +747,8 @@ describe("SovereignBridge Contract", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
-            )
+                depositCount,
+            );
 
         expect(await uniContract.balanceOf(deployer.address)).to.be.equal(balanceDeployer - amount);
         expect(await uniContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(balanceBridge + amount);
@@ -765,9 +763,8 @@ describe("SovereignBridge Contract", () => {
 
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
-        expect(await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(
-            true
-        );
-
+        expect(
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
+        ).to.be.equal(true);
     });
 });

@@ -1,28 +1,28 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
-import {expect} from "chai";
-import {ethers, upgrades} from "hardhat";
-import {Address, PolygonPessimisticConsensus} from "../../typechain-types";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { Address, PolygonPessimisticConsensus } from '../../typechain-types';
 
-describe("PolygonPessimisticConsensus", () => {
+describe('PolygonPessimisticConsensus', () => {
     let deployer: any;
     let trustedSequencer: any;
     let admin: any;
 
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
 
-    const gerManagerAddress = "0xA00000000000000000000000000000000000000A" as unknown as Address;
-    const polTokenAddress = "0xB00000000000000000000000000000000000000B" as unknown as Address;
-    const rollupManagerAddress = "0xC00000000000000000000000000000000000000C" as unknown as Address;
-    const bridgeAddress = "0xD00000000000000000000000000000000000000D" as unknown as Address;
+    const gerManagerAddress = '0xA00000000000000000000000000000000000000A' as unknown as Address;
+    const polTokenAddress = '0xB00000000000000000000000000000000000000B' as unknown as Address;
+    const rollupManagerAddress = '0xC00000000000000000000000000000000000000C' as unknown as Address;
+    const bridgeAddress = '0xD00000000000000000000000000000000000000D' as unknown as Address;
 
-    const urlSequencer = "http://zkevm-json-rpc:8123";
-    const networkName = "zkevm";
+    const urlSequencer = 'http://zkevm-json-rpc:8123';
+    const networkName = 'zkevm';
     const networkID = 1;
 
     // Native token will be ether
     const gasTokenAddress = ethers.ZeroAddress;
 
-    beforeEach("Deploy contract", async () => {
+    beforeEach('Deploy contract', async () => {
         upgrades.silenceWarnings();
 
         // load signers
@@ -30,17 +30,17 @@ describe("PolygonPessimisticConsensus", () => {
 
         // deploy consensus
         // create polygonPessimisticConsensus implementation
-        const ppConsensusFactory = await ethers.getContractFactory("PolygonPessimisticConsensus");
+        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
         PolygonPPConsensusContract = await upgrades.deployProxy(ppConsensusFactory, [], {
             initializer: false,
             constructorArgs: [gerManagerAddress, polTokenAddress, bridgeAddress, rollupManagerAddress],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
         await PolygonPPConsensusContract.waitForDeployment();
     });
 
-    it("should check the initalized parameters", async () => {
+    it('should check the initalized parameters', async () => {
         // initialize zkEVM using non admin address
         await expect(
             PolygonPPConsensusContract.initialize(
@@ -49,12 +49,12 @@ describe("PolygonPessimisticConsensus", () => {
                 networkID,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
-            )
-        ).to.be.revertedWithCustomError(PolygonPPConsensusContract, "OnlyRollupManager");
+                networkName,
+            ),
+        ).to.be.revertedWithCustomError(PolygonPPConsensusContract, 'OnlyRollupManager');
 
         // initialize using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerAddress]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
         await PolygonPPConsensusContract.connect(rolllupManagerSigner).initialize(
             admin.address,
@@ -63,7 +63,7 @@ describe("PolygonPessimisticConsensus", () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
-            {gasPrice: 0}
+            { gasPrice: 0 },
         );
 
         expect(await PolygonPPConsensusContract.admin()).to.be.equal(admin.address);
@@ -81,14 +81,14 @@ describe("PolygonPessimisticConsensus", () => {
                 gasTokenAddress,
                 urlSequencer,
                 networkName,
-                {gasPrice: 0}
-            )
-        ).to.be.revertedWith("Initializable: contract is already initialized");
+                { gasPrice: 0 },
+            ),
+        ).to.be.revertedWith('Initializable: contract is already initialized');
     });
 
-    it("should check admin functions", async () => {
+    it('should check admin functions', async () => {
         // initialize using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerAddress]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
         await PolygonPPConsensusContract.connect(rolllupManagerSigner).initialize(
             admin.address,
@@ -97,46 +97,46 @@ describe("PolygonPessimisticConsensus", () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
-            {gasPrice: 0}
+            { gasPrice: 0 },
         );
 
         // setTrustedSequencer
         await expect(PolygonPPConsensusContract.setTrustedSequencer(deployer.address)).to.be.revertedWithCustomError(
             PolygonPPConsensusContract,
-            "OnlyAdmin"
+            'OnlyAdmin',
         );
 
         await expect(PolygonPPConsensusContract.connect(admin).setTrustedSequencer(deployer.address))
-            .to.emit(PolygonPPConsensusContract, "SetTrustedSequencer")
+            .to.emit(PolygonPPConsensusContract, 'SetTrustedSequencer')
             .withArgs(deployer.address);
 
         // setTrustedSequencerURL
-        await expect(PolygonPPConsensusContract.setTrustedSequencerURL("0x1253")).to.be.revertedWithCustomError(
+        await expect(PolygonPPConsensusContract.setTrustedSequencerURL('0x1253')).to.be.revertedWithCustomError(
             PolygonPPConsensusContract,
-            "OnlyAdmin"
+            'OnlyAdmin',
         );
-        await expect(PolygonPPConsensusContract.connect(admin).setTrustedSequencerURL("0x1253"))
-            .to.emit(PolygonPPConsensusContract, "SetTrustedSequencerURL")
-            .withArgs("0x1253");
+        await expect(PolygonPPConsensusContract.connect(admin).setTrustedSequencerURL('0x1253'))
+            .to.emit(PolygonPPConsensusContract, 'SetTrustedSequencerURL')
+            .withArgs('0x1253');
 
         // transferAdminRole & acceptAdminRole
         await expect(PolygonPPConsensusContract.connect(admin).transferAdminRole(deployer.address))
-            .to.emit(PolygonPPConsensusContract, "TransferAdminRole")
+            .to.emit(PolygonPPConsensusContract, 'TransferAdminRole')
             .withArgs(deployer.address);
 
         await expect(PolygonPPConsensusContract.connect(admin).acceptAdminRole()).to.be.revertedWithCustomError(
             PolygonPPConsensusContract,
-            "OnlyPendingAdmin"
+            'OnlyPendingAdmin',
         );
 
         await expect(PolygonPPConsensusContract.connect(deployer).acceptAdminRole())
-            .to.emit(PolygonPPConsensusContract, "AcceptAdminRole")
+            .to.emit(PolygonPPConsensusContract, 'AcceptAdminRole')
             .withArgs(deployer.address);
     });
 
-    it("should check getConsensusHash", async () => {
+    it('should check getConsensusHash', async () => {
         // initialize using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerAddress]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
         await PolygonPPConsensusContract.connect(rolllupManagerSigner).initialize(
             admin.address,
@@ -145,14 +145,14 @@ describe("PolygonPessimisticConsensus", () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
-            {gasPrice: 0}
+            { gasPrice: 0 },
         );
 
         // pessimistic constant CONSENSUS_TYPE = 0;
         const CONSENSUS_TYPE = 0;
         const consensusHashJs = ethers.solidityPackedKeccak256(
-            ["uint32", "address"],
-            [CONSENSUS_TYPE, trustedSequencer.address]
+            ['uint32', 'address'],
+            [CONSENSUS_TYPE, trustedSequencer.address],
         );
 
         // getConsensusHash

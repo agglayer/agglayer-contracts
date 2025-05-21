@@ -1,6 +1,7 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
@@ -11,10 +12,8 @@ import {
     PolygonRollupBaseEtrog,
     TokenWrapped,
     Address,
-} from "../../typechain-types";
-import { processorUtils, MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
+} from '../../typechain-types';
 import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
-
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
@@ -22,10 +21,10 @@ const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
+    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-describe("PolygonZkEVMEtrog", () => {
+describe('PolygonZkEVMEtrog', () => {
     let deployer: any;
     let trustedAggregator: any;
     let trustedSequencer: any;
@@ -39,9 +38,9 @@ describe("PolygonZkEVMEtrog", () => {
     let rollupManagerContract: PolygonRollupManagerMock;
     let PolygonZKEVMV2Contract: PolygonZkEVMEtrog;
 
-    const polTokenName = "POL Token";
-    const polTokenSymbol = "POL";
-    const polTokenInitialBalance = ethers.parseEther("20000000");
+    const polTokenName = 'POL Token';
+    const polTokenSymbol = 'POL';
+    const polTokenInitialBalance = ethers.parseEther('20000000');
 
     const FORCE_BATCH_TIMEOUT = 60 * 60 * 24 * 5; // 5 days
     const _MAX_VERIFY_BATCHES = 1000;
@@ -53,10 +52,10 @@ describe("PolygonZkEVMEtrog", () => {
     const LEAF_TYPE_ASSET = 0;
     const LEAF_TYPE_MESSAGE = 1;
 
-    const globalExitRootL2Address = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa" as unknown as Address;
+    const globalExitRootL2Address = '0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa' as unknown as Address;
 
-    const urlSequencer = "http://zkevm-json-rpc:8123";
-    const networkName = "zkevm";
+    const urlSequencer = 'http://zkevm-json-rpc:8123';
+    const networkName = 'zkevm';
     const networkID = 1;
 
     // Native token will be ether
@@ -66,7 +65,7 @@ describe("PolygonZkEVMEtrog", () => {
     const SIGNATURE_BYTES = 32 + 32 + 1;
     const EFFECTIVE_PERCENTAGE_BYTES = 1;
 
-    beforeEach("Deploy contract", async () => {
+    beforeEach('Deploy contract', async () => {
         upgrades.silenceWarnings();
 
         // load signers
@@ -74,20 +73,20 @@ describe("PolygonZkEVMEtrog", () => {
             await ethers.getSigners();
 
         // deploy mock verifier
-        const VerifierRollupHelperFactory = await ethers.getContractFactory("VerifierRollupHelperMock");
+        const VerifierRollupHelperFactory = await ethers.getContractFactory('VerifierRollupHelperMock');
         verifierContract = await VerifierRollupHelperFactory.deploy();
 
         // deploy pol
-        const polTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        const polTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         polTokenContract = await polTokenFactory.deploy(
             polTokenName,
             polTokenSymbol,
             deployer.address,
-            polTokenInitialBalance
+            polTokenInitialBalance,
         );
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
@@ -100,14 +99,14 @@ describe("PolygonZkEVMEtrog", () => {
         });
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRootV2");
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
         // deploy mock verifier
-        const PolygonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManagerEmptyMock");
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerEmptyMock');
         rollupManagerContract = await PolygonRollupManagerFactory.deploy();
 
         await rollupManagerContract.waitForDeployment();
@@ -136,11 +135,11 @@ describe("PolygonZkEVMEtrog", () => {
         expect(await polygonZkEVMBridgeContract.getProxiedTokensManager()).to.be.equal(ownerAddress);
 
         // fund sequencer address with Matic tokens
-        await polTokenContract.transfer(trustedSequencer.address, ethers.parseEther("1000"));
+        await polTokenContract.transfer(trustedSequencer.address, ethers.parseEther('1000'));
 
         // deploy consensus
         // Create zkEVM implementation
-        const PolygonZKEVMV2Factory = await ethers.getContractFactory("PolygonZkEVMEtrog");
+        const PolygonZKEVMV2Factory = await ethers.getContractFactory('PolygonZkEVMEtrog');
         PolygonZKEVMV2Contract = await upgrades.deployProxy(PolygonZKEVMV2Factory, [], {
             initializer: false,
             constructorArgs: [
@@ -149,13 +148,13 @@ describe("PolygonZkEVMEtrog", () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ["constructor", "state-variable-immutable"],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
         await PolygonZKEVMV2Contract.waitForDeployment();
     });
 
-    it("should check the initalized parameters", async () => {
+    it('should check the initalized parameters', async () => {
         // initialize zkEVM
         await expect(
             PolygonZKEVMV2Contract.initialize(
@@ -164,12 +163,12 @@ describe("PolygonZkEVMEtrog", () => {
                 networkID,
                 gasTokenAddress,
                 urlSequencer,
-                networkName
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "OnlyRollupManager");
+                networkName,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'OnlyRollupManager');
 
         // Initialzie using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
@@ -203,9 +202,9 @@ describe("PolygonZkEVMEtrog", () => {
         ).to.be.revertedWith("Initializable: contract is already initialized");
     });
 
-    it("should check admin functions", async () => {
+    it('should check admin functions', async () => {
         // Initialzie using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
@@ -221,103 +220,103 @@ describe("PolygonZkEVMEtrog", () => {
 
         await expect(PolygonZKEVMV2Contract.setTrustedSequencer(deployer.address)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "OnlyAdmin"
+            'OnlyAdmin',
         );
 
         await expect(PolygonZKEVMV2Contract.connect(admin).setTrustedSequencer(deployer.address))
-            .to.emit(PolygonZKEVMV2Contract, "SetTrustedSequencer")
+            .to.emit(PolygonZKEVMV2Contract, 'SetTrustedSequencer')
             .withArgs(deployer.address);
 
-        await expect(PolygonZKEVMV2Contract.setTrustedSequencerURL("0x1253")).to.be.revertedWithCustomError(
+        await expect(PolygonZKEVMV2Contract.setTrustedSequencerURL('0x1253')).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "OnlyAdmin"
+            'OnlyAdmin',
         );
-        await expect(PolygonZKEVMV2Contract.connect(admin).setTrustedSequencerURL("0x1253"))
-            .to.emit(PolygonZKEVMV2Contract, "SetTrustedSequencerURL")
-            .withArgs("0x1253");
+        await expect(PolygonZKEVMV2Contract.connect(admin).setTrustedSequencerURL('0x1253'))
+            .to.emit(PolygonZKEVMV2Contract, 'SetTrustedSequencerURL')
+            .withArgs('0x1253');
 
         await expect(PolygonZKEVMV2Contract.setForceBatchTimeout(0)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "OnlyAdmin"
+            'OnlyAdmin',
         );
 
         // Set Forcebatch timeout
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).setForceBatchTimeout(FORCE_BATCH_TIMEOUT + 1)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "InvalidRangeForceBatchTimeout");
+            PolygonZKEVMV2Contract.connect(admin).setForceBatchTimeout(FORCE_BATCH_TIMEOUT + 1),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'InvalidRangeForceBatchTimeout');
 
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).setForceBatchTimeout(FORCE_BATCH_TIMEOUT)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "InvalidRangeForceBatchTimeout");
+            PolygonZKEVMV2Contract.connect(admin).setForceBatchTimeout(FORCE_BATCH_TIMEOUT),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'InvalidRangeForceBatchTimeout');
 
         await expect(PolygonZKEVMV2Contract.connect(admin).setForceBatchTimeout(0))
-            .to.emit(PolygonZKEVMV2Contract, "SetForceBatchTimeout")
+            .to.emit(PolygonZKEVMV2Contract, 'SetForceBatchTimeout')
             .withArgs(0);
 
         expect(await PolygonZKEVMV2Contract.forceBatchTimeout()).to.be.equal(0);
 
         await rollupManagerContract.activateEmergencyState();
         await expect(PolygonZKEVMV2Contract.connect(admin).setForceBatchTimeout(FORCE_BATCH_TIMEOUT))
-            .to.emit(PolygonZKEVMV2Contract, "SetForceBatchTimeout")
+            .to.emit(PolygonZKEVMV2Contract, 'SetForceBatchTimeout')
             .withArgs(FORCE_BATCH_TIMEOUT);
         await rollupManagerContract.deactivateEmergencyState();
 
         await expect(PolygonZKEVMV2Contract.transferAdminRole(deployer.address)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "OnlyAdmin"
+            'OnlyAdmin',
         );
 
         await expect(PolygonZKEVMV2Contract.connect(admin).transferAdminRole(deployer.address))
-            .to.emit(PolygonZKEVMV2Contract, "TransferAdminRole")
+            .to.emit(PolygonZKEVMV2Contract, 'TransferAdminRole')
             .withArgs(deployer.address);
 
         await expect(PolygonZKEVMV2Contract.connect(admin).acceptAdminRole()).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "OnlyPendingAdmin"
+            'OnlyPendingAdmin',
         );
 
         await expect(PolygonZKEVMV2Contract.connect(deployer).acceptAdminRole())
-            .to.emit(PolygonZKEVMV2Contract, "AcceptAdminRole")
+            .to.emit(PolygonZKEVMV2Contract, 'AcceptAdminRole')
             .withArgs(deployer.address);
 
         // Check force batches are unactive
-        await expect(PolygonZKEVMV2Contract.forceBatch("0x", 0)).to.be.revertedWithCustomError(
+        await expect(PolygonZKEVMV2Contract.forceBatch('0x', 0)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "ForceBatchNotAllowed"
+            'ForceBatchNotAllowed',
         );
         await expect(PolygonZKEVMV2Contract.sequenceForceBatches([])).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "ForceBatchNotAllowed"
+            'ForceBatchNotAllowed',
         );
 
         // deployer now is the admin
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).setForceBatchAddress(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "OnlyAdmin");
+            PolygonZKEVMV2Contract.connect(admin).setForceBatchAddress(ethers.ZeroAddress),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'OnlyAdmin');
 
         await expect(PolygonZKEVMV2Contract.connect(deployer).setForceBatchAddress(ethers.ZeroAddress))
-            .to.emit(PolygonZKEVMV2Contract, "SetForceBatchAddress")
+            .to.emit(PolygonZKEVMV2Contract, 'SetForceBatchAddress')
             .withArgs(ethers.ZeroAddress);
 
         await expect(
-            PolygonZKEVMV2Contract.connect(deployer).setForceBatchAddress(ethers.ZeroAddress)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "ForceBatchesDecentralized");
+            PolygonZKEVMV2Contract.connect(deployer).setForceBatchAddress(ethers.ZeroAddress),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'ForceBatchesDecentralized');
 
         // Check revert onVerifyBatches
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).onVerifyBatches(0, ethers.ZeroHash, trustedAggregator.address)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "OnlyRollupManager");
+            PolygonZKEVMV2Contract.connect(admin).onVerifyBatches(0, ethers.ZeroHash, trustedAggregator.address),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'OnlyRollupManager');
     });
 
-    it("should generateInitializeTransaction with huge metadata", async () => {
-        const hugeMetadata = `0x${"00".repeat(Number(2n ** 16n))}`;
+    it('should generateInitializeTransaction with huge metadata', async () => {
+        const hugeMetadata = `0x${'00'.repeat(Number(2n ** 16n))}`;
         await expect(
-            PolygonZKEVMV2Contract.generateInitializeTransaction(0, ethers.ZeroAddress, 1, hugeMetadata)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "HugeTokenMetadataNotSupported");
+            PolygonZKEVMV2Contract.generateInitializeTransaction(0, ethers.ZeroAddress, 1, hugeMetadata),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'HugeTokenMetadataNotSupported');
     });
-    it("should check full flow", async () => {
+    it('should check full flow', async () => {
         // Initialzie using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
@@ -336,7 +335,7 @@ describe("PolygonZkEVMEtrog", () => {
             networkID,
             gasTokenAddress,
             gasTokenNetwork,
-            "0x" // empty metadata
+            '0x', // empty metadata
         );
 
         // Check transaction
@@ -347,9 +346,9 @@ describe("PolygonZkEVMEtrog", () => {
             gasTokenNetwork,
             globalExitRootL2Address,
             ethers.ZeroAddress,
-            "0x", // empty metadata
+            '0x', // empty metadata
         ]);
-        const blockCreatedRollup = await ethers.provider.getBlock("latest");
+        const blockCreatedRollup = await ethers.provider.getBlock('latest');
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -372,12 +371,12 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot(),
             timestampCreatedRollup,
             trustedSequencer.address,
-            blockCreatedRollup?.parentHash
+            blockCreatedRollup?.parentHash,
         );
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(initExpectedAccInputHash);
 
         // try verify batches
-        const l2txData = "0x123456";
+        const l2txData = '0x123456';
         const maticAmount = await rollupManagerContract.getBatchFee();
 
         const sequence = {
@@ -389,8 +388,8 @@ describe("PolygonZkEVMEtrog", () => {
 
         // Approve tokens
         await expect(
-            polTokenContract.connect(trustedSequencer).approve(PolygonZKEVMV2Contract.target, maticAmount * 100n)
-        ).to.emit(polTokenContract, "Approval");
+            polTokenContract.connect(trustedSequencer).approve(PolygonZKEVMV2Contract.target, maticAmount * 100n),
+        ).to.emit(polTokenContract, 'Approval');
 
         // Sequence Batches
         const l1InfoTreeLeafCount = 1;
@@ -398,22 +397,22 @@ describe("PolygonZkEVMEtrog", () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const originAddress = deployer.address;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
-        const tokenName = "Matic Token";
-        const tokenSymbol = "MATIC";
+        const tokenName = 'Matic Token';
+        const tokenSymbol = 'MATIC';
         const decimals = 18;
         const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [tokenName, tokenSymbol, decimals]
+            ['string', 'string', 'uint8'],
+            [tokenName, tokenSymbol, decimals],
         );
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // create a new deposit
         await expect(polTokenContract.approve(polygonZkEVMBridgeContract.target, amount))
-            .to.emit(polTokenContract, "Approval")
+            .to.emit(polTokenContract, 'Approval')
             .withArgs(deployer.address, polygonZkEVMBridgeContract.target, amount);
 
         // pre compute root merkle tree in Js
@@ -426,16 +425,16 @@ describe("PolygonZkEVMEtrog", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
 
         await expect(
             polygonZkEVMBridgeContract.bridgeMessage(destinationNetwork, destinationAddress, true, metadata, {
                 value: amount,
-            })
+            }),
         )
-            .to.emit(polygonZkEVMBridgeContract, "BridgeEvent")
+            .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_MESSAGE,
                 originNetwork,
@@ -444,16 +443,16 @@ describe("PolygonZkEVMEtrog", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
-        const currentTime = Number((await ethers.provider.getBlock("latest"))?.timestamp);
+        const currentTime = Number((await ethers.provider.getBlock('latest'))?.timestamp);
         const expectedAccInputHash = calculateAccInputHashetrog(
             await PolygonZKEVMV2Contract.lastAccInputHash(),
             ethers.keccak256(l2txData),
             await polygonZkEVMGlobalExitRoot.getRoot(),
             currentTime + 10,
             trustedSequencer.address,
-            ethers.ZeroHash
+            ethers.ZeroHash,
         );
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
@@ -461,9 +460,9 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime + 38,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "MaxTimestampSequenceInvalid");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'MaxTimestampSequenceInvalid');
 
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
@@ -471,9 +470,9 @@ describe("PolygonZkEVMEtrog", () => {
                 5,
                 currentTime + 10,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "L1InfoTreeLeafCountInvalid");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'L1InfoTreeLeafCountInvalid');
 
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
@@ -481,9 +480,9 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime + 10,
                 ethers.keccak256(ethers.ZeroHash), // Random expectedAccInputHash
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "FinalAccInputHashDoesNotMatch");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'FinalAccInputHashDoesNotMatch');
 
         await expect(
             PolygonZKEVMV2Contract.sequenceBatches(
@@ -491,9 +490,9 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "OnlyTrustedSequencer");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'OnlyTrustedSequencer');
 
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
@@ -501,12 +500,12 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "SequenceZeroBatches");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'SequenceZeroBatches');
 
         const hugeBatchArray = new Array(_MAX_VERIFY_BATCHES + 1).fill({
-            transactions: "0x",
+            transactions: '0x',
             forcedGlobalExitRoot: ethers.ZeroHash,
             forcedTimestamp: 0,
             forcedBlockHashL1: ethers.ZeroHash,
@@ -518,16 +517,16 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "ExceedMaxVerifyBatches");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'ExceedMaxVerifyBatches');
 
         // Create a huge sequence
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
                 [
                     {
-                        transactions: `0x${"00".repeat(_MAX_TRANSACTIONS_BYTE_LENGTH + 1)}` as any,
+                        transactions: `0x${'00'.repeat(_MAX_TRANSACTIONS_BYTE_LENGTH + 1)}` as any,
                         forcedGlobalExitRoot: ethers.ZeroHash,
                         forcedTimestamp: 0,
                         forcedBlockHashL1: ethers.ZeroHash,
@@ -536,16 +535,16 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "TransactionsLengthAboveMax");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'TransactionsLengthAboveMax');
 
         // False forced batch
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
                 [
                     {
-                        transactions: "0x",
+                        transactions: '0x',
                         forcedGlobalExitRoot: ethers.hexlify(ethers.randomBytes(32)),
                         forcedTimestamp: 1000,
                         forcedBlockHashL1: ethers.ZeroHash,
@@ -554,9 +553,9 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash,
-                trustedSequencer.address
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "ForcedDataDoesNotMatch");
+                trustedSequencer.address,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'ForcedDataDoesNotMatch');
 
         const expectedAccInputHash2 = calculateAccInputHashetrog(
             await PolygonZKEVMV2Contract.lastAccInputHash(),
@@ -564,7 +563,7 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.l1InfoRootMap(l1InfoTreeLeafCount),
             currentTime,
             trustedSequencer.address,
-            ethers.ZeroHash
+            ethers.ZeroHash,
         );
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
@@ -572,9 +571,9 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash2,
-                trustedSequencer.address
-            )
-        ).to.emit(PolygonZKEVMV2Contract, "SequenceBatches");
+                trustedSequencer.address,
+            ),
+        ).to.emit(PolygonZKEVMV2Contract, 'SequenceBatches');
 
         // calculate accINputHash
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash2);
@@ -589,7 +588,7 @@ describe("PolygonZkEVMEtrog", () => {
                 await polygonZkEVMGlobalExitRoot.l1InfoRootMap(l1InfoTreeLeafCount),
                 currentTime,
                 trustedSequencer.address,
-                ethers.ZeroHash
+                ethers.ZeroHash,
             );
         }
 
@@ -599,9 +598,9 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash3,
-                trustedSequencer.address
-            )
-        ).to.emit(PolygonZKEVMV2Contract, "SequenceBatches");
+                trustedSequencer.address,
+            ),
+        ).to.emit(PolygonZKEVMV2Contract, 'SequenceBatches');
 
         const expectedAccInputHash4 = calculateAccInputHashetrog(
             expectedAccInputHash3,
@@ -609,7 +608,7 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.l1InfoRootMap(l1InfoTreeLeafCount),
             currentTime,
             trustedSequencer.address,
-            ethers.ZeroHash
+            ethers.ZeroHash,
         );
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatches(
@@ -617,28 +616,28 @@ describe("PolygonZkEVMEtrog", () => {
                 l1InfoTreeLeafCount,
                 currentTime,
                 expectedAccInputHash4,
-                trustedSequencer.address
-            )
-        ).to.emit(PolygonZKEVMV2Contract, "SequenceBatches");
+                trustedSequencer.address,
+            ),
+        ).to.emit(PolygonZKEVMV2Contract, 'SequenceBatches');
     });
 
-    it("should check full flow with wrapped gas token", async () => {
+    it('should check full flow with wrapped gas token', async () => {
         // Create a new wrapped token mocking the bridge
-        const tokenName = "Matic Token L2";
-        const tokenSymbol = "MATIC";
+        const tokenName = 'Matic Token L2';
+        const tokenSymbol = 'MATIC';
         const decimals = 18;
         const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["string", "string", "uint8"],
-            [tokenName, tokenSymbol, decimals]
+            ['string', 'string', 'uint8'],
+            [tokenName, tokenSymbol, decimals],
         );
 
         const originNetwork = networkIDRollup;
         const tokenAddress = ethers.getAddress(ethers.hexlify(ethers.randomBytes(20)));
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDMainnet;
         const destinationAddress = beneficiary.address;
         const metadata = metadataToken; // since we are inserting in the exit root can be anything
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // compute root merkle tree in Js
         const height = 32;
@@ -650,7 +649,7 @@ describe("PolygonZkEVMEtrog", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
 
         // Add 2 leafs
@@ -666,7 +665,7 @@ describe("PolygonZkEVMEtrog", () => {
         const rootRollups = merkleTreeRollups.getRoot();
 
         // Assert global exit root
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await polygonZkEVMGlobalExitRoot.connect(rolllupManagerSigner).updateExitRoot(rootRollups, { gasPrice: 0 });
 
@@ -674,7 +673,7 @@ describe("PolygonZkEVMEtrog", () => {
         expect(await polygonZkEVMGlobalExitRoot.lastRollupExitRoot()).to.be.equal(rootRollups);
 
         expect(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot()).to.be.equal(
-            calculateGlobalExitRoot(ethers.ZeroHash, rootRollups)
+            calculateGlobalExitRoot(ethers.ZeroHash, rootRollups),
         );
 
         const indexLeaf = 0;
@@ -686,11 +685,11 @@ describe("PolygonZkEVMEtrog", () => {
         expect(verifyMerkleProof(rootzkEVM, proofRollups, indexLeaf, rootRollups)).to.be.equal(true);
 
         expect(
-            await polygonZkEVMBridgeContract.verifyMerkleProof(leafValue, proofZkEVM, indexLeaf, rootzkEVM)
+            await polygonZkEVMBridgeContract.verifyMerkleProof(leafValue, proofZkEVM, indexLeaf, rootzkEVM),
         ).to.be.equal(true);
 
         expect(
-            await polygonZkEVMBridgeContract.verifyMerkleProof(rootzkEVM, proofRollups, indexLeaf, rootRollups)
+            await polygonZkEVMBridgeContract.verifyMerkleProof(rootzkEVM, proofRollups, indexLeaf, rootRollups),
         ).to.be.equal(true);
 
         // claim
@@ -722,14 +721,14 @@ describe("PolygonZkEVMEtrog", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(polygonZkEVMBridgeContract, "ClaimEvent")
+            .to.emit(polygonZkEVMBridgeContract, 'ClaimEvent')
             .withArgs(indexLeaf, originNetwork, tokenAddress, destinationAddress, amount)
-            .to.emit(polygonZkEVMBridgeContract, "NewWrappedToken")
+            .to.emit(polygonZkEVMBridgeContract, 'NewWrappedToken')
             .withArgs(originNetwork, tokenAddress, precalculateWrappedErc20, metadata)
-            .to.emit(newWrappedToken, "Transfer")
+            .to.emit(newWrappedToken, 'Transfer')
             .withArgs(ethers.ZeroAddress, beneficiary.address, amount);
 
         // Assert maps created
@@ -738,10 +737,10 @@ describe("PolygonZkEVMEtrog", () => {
         expect(newTokenInfo.originNetwork).to.be.equal(networkIDRollup);
         expect(newTokenInfo.originTokenAddress).to.be.equal(tokenAddress);
         expect(await polygonZkEVMBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
-            precalculateWrappedErc20
+            precalculateWrappedErc20,
         );
         expect(await polygonZkEVMBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
-            precalculateWrappedErc20
+            precalculateWrappedErc20,
         );
 
         const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
@@ -753,7 +752,7 @@ describe("PolygonZkEVMEtrog", () => {
         expect(await newWrappedToken.connect(trustedAggregator).decimals()).to.be.equal(decimals);
 
         // Initialzie using rollup manager with gas token
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
                 admin.address,
@@ -766,13 +765,13 @@ describe("PolygonZkEVMEtrog", () => {
             )
         ).to.emit(PolygonZKEVMV2Contract, "InitialSequenceBatches");
 
-        const timestampCreatedRollup = (await ethers.provider.getBlock("latest"))?.timestamp;
+        const timestampCreatedRollup = (await ethers.provider.getBlock('latest'))?.timestamp;
 
         const transaction = await PolygonZKEVMV2Contract.generateInitializeTransaction(
             networkID,
             tokenAddress,
             originNetwork,
-            metadata // empty metadata
+            metadata, // empty metadata
         );
 
         // Check transaction
@@ -786,7 +785,7 @@ describe("PolygonZkEVMEtrog", () => {
             metadata, // empty metadata
         ]);
 
-        const blockCreatedRollup = await ethers.provider.getBlock("latest");
+        const blockCreatedRollup = await ethers.provider.getBlock('latest');
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -808,7 +807,7 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot(),
             timestampCreatedRollup,
             trustedSequencer.address,
-            blockCreatedRollup?.parentHash
+            blockCreatedRollup?.parentHash,
         );
 
         // calcualte accINputHash
@@ -818,9 +817,9 @@ describe("PolygonZkEVMEtrog", () => {
         expect(await PolygonZKEVMV2Contract.gasTokenNetwork()).to.be.equal(originNetwork);
     });
 
-    it("should check forced batches", async () => {
+    it('should check forced batches', async () => {
         // Initialzie using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
@@ -834,12 +833,12 @@ describe("PolygonZkEVMEtrog", () => {
             )
         ).to.emit(PolygonZKEVMV2Contract, "InitialSequenceBatches");
 
-        const timestampCreatedRollup = (await ethers.provider.getBlock("latest"))?.timestamp;
+        const timestampCreatedRollup = (await ethers.provider.getBlock('latest'))?.timestamp;
         const transaction = await PolygonZKEVMV2Contract.generateInitializeTransaction(
             networkID,
             gasTokenAddress,
             gasTokenNetwork,
-            "0x" // empty metadata
+            '0x', // empty metadata
         );
 
         // Check transaction
@@ -850,10 +849,10 @@ describe("PolygonZkEVMEtrog", () => {
             gasTokenNetwork,
             globalExitRootL2Address,
             ethers.ZeroAddress,
-            "0x", // empty metadata
+            '0x', // empty metadata
         ]);
 
-        const blockCreatedRollup = await ethers.provider.getBlock("latest");
+        const blockCreatedRollup = await ethers.provider.getBlock('latest');
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -875,20 +874,20 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot(),
             timestampCreatedRollup,
             trustedSequencer.address,
-            blockCreatedRollup?.parentHash
+            blockCreatedRollup?.parentHash,
         );
 
         // calcualte accINputHash
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash);
 
         // try verify batches
-        const l2txData = "0x123456";
-        const maticAmount = ethers.parseEther("1");
+        const l2txData = '0x123456';
+        const maticAmount = ethers.parseEther('1');
 
         // Approve tokens
         await expect(polTokenContract.connect(admin).approve(PolygonZKEVMV2Contract.target, maticAmount)).to.emit(
             polTokenContract,
-            "Approval"
+            'Approval',
         );
 
         expect(await PolygonZKEVMV2Contract.calculatePolPerForceBatch()).to.be.equal(0);
@@ -898,42 +897,42 @@ describe("PolygonZkEVMEtrog", () => {
         // force Batches
         await expect(PolygonZKEVMV2Contract.forceBatch(l2txData, maticAmount)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "ForceBatchNotAllowed"
+            'ForceBatchNotAllowed',
         );
 
-        //await PolygonZKEVMV2Contract.connect(admin).activateForceBatches();
-        await polTokenContract.transfer(admin.address, ethers.parseEther("1000"));
+        // await PolygonZKEVMV2Contract.connect(admin).activateForceBatches();
+        await polTokenContract.transfer(admin.address, ethers.parseEther('1000'));
 
         // force Batches
         await expect(PolygonZKEVMV2Contract.forceBatch(l2txData, 0)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "ForceBatchNotAllowed"
+            'ForceBatchNotAllowed',
         );
 
         await expect(PolygonZKEVMV2Contract.connect(admin).forceBatch(l2txData, 0)).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "NotEnoughPOLAmount"
+            'NotEnoughPOLAmount',
         );
 
         await expect(
             PolygonZKEVMV2Contract.connect(admin).forceBatch(
-                `0x${"00".repeat(_MAX_TRANSACTIONS_BYTE_LENGTH + 1)}`,
-                maticAmount
-            )
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "TransactionsLengthAboveMax");
+                `0x${'00'.repeat(_MAX_TRANSACTIONS_BYTE_LENGTH + 1)}`,
+                maticAmount,
+            ),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'TransactionsLengthAboveMax');
 
         await expect(PolygonZKEVMV2Contract.connect(admin).forceBatch(l2txData, maticAmount))
-            .to.emit(PolygonZKEVMV2Contract, "ForceBatch")
-            .withArgs(1, globalExitRoot, admin.address, "0x");
+            .to.emit(PolygonZKEVMV2Contract, 'ForceBatch')
+            .withArgs(1, globalExitRoot, admin.address, '0x');
 
         expect(await PolygonZKEVMV2Contract.calculatePolPerForceBatch()).to.be.equal(
-            await rollupManagerContract.getForcedBatchFee()
+            await rollupManagerContract.getForcedBatchFee(),
         );
     });
 
-    it("should check forced batches from a contract", async () => {
+    it('should check forced batches from a contract', async () => {
         // Initialzie using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
@@ -947,12 +946,12 @@ describe("PolygonZkEVMEtrog", () => {
             )
         ).to.emit(PolygonZKEVMV2Contract, "InitialSequenceBatches");
 
-        const timestampCreatedRollup = (await ethers.provider.getBlock("latest"))?.timestamp;
+        const timestampCreatedRollup = (await ethers.provider.getBlock('latest'))?.timestamp;
         const transaction = await PolygonZKEVMV2Contract.generateInitializeTransaction(
             networkID,
             gasTokenAddress,
             gasTokenNetwork,
-            "0x" // empty metadata
+            '0x', // empty metadata
         );
 
         // Check transaction
@@ -963,10 +962,10 @@ describe("PolygonZkEVMEtrog", () => {
             gasTokenNetwork,
             globalExitRootL2Address,
             ethers.ZeroAddress,
-            "0x", // empty metadata
+            '0x', // empty metadata
         ]);
 
-        const blockCreatedRollup = await ethers.provider.getBlock("latest");
+        const blockCreatedRollup = await ethers.provider.getBlock('latest');
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -988,54 +987,54 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot(),
             timestampCreatedRollup,
             trustedSequencer.address,
-            blockCreatedRollup?.parentHash
+            blockCreatedRollup?.parentHash,
         );
 
         // calcualte accINputHash
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash);
 
         // try verify batches
-        const l2txData = "0x123456";
-        const maticAmount = ethers.parseEther("1");
+        const l2txData = '0x123456';
+        const maticAmount = ethers.parseEther('1');
 
         expect(await PolygonZKEVMV2Contract.calculatePolPerForceBatch()).to.be.equal(0);
 
         // deploy sender SC
-        const sendDataFactory = await ethers.getContractFactory("SendData");
+        const sendDataFactory = await ethers.getContractFactory('SendData');
         const sendDataContract = await sendDataFactory.deploy();
         await sendDataContract.waitForDeployment();
 
         // Approve matic
         const approveTx = await polTokenContract.approve.populateTransaction(
             PolygonZKEVMV2Contract.target,
-            maticAmount
+            maticAmount,
         );
         await sendDataContract.sendData(approveTx.to, approveTx.data);
 
         // Activate forced batches
         await expect(PolygonZKEVMV2Contract.connect(admin).setForceBatchAddress(sendDataContract.target)).to.emit(
             PolygonZKEVMV2Contract,
-            "SetForceBatchAddress"
+            'SetForceBatchAddress',
         );
 
-        await polTokenContract.transfer(sendDataContract.target, ethers.parseEther("1000"));
+        await polTokenContract.transfer(sendDataContract.target, ethers.parseEther('1000'));
 
         const globalExitRoot = await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot();
         const lastForcedBatch = (await PolygonZKEVMV2Contract.lastForceBatch()) + 1n;
 
         const forceBatchTx = await PolygonZKEVMV2Contract.forceBatch.populateTransaction(l2txData, maticAmount);
         await expect(sendDataContract.sendData(forceBatchTx.to, forceBatchTx.data))
-            .to.emit(PolygonZKEVMV2Contract, "ForceBatch")
+            .to.emit(PolygonZKEVMV2Contract, 'ForceBatch')
             .withArgs(lastForcedBatch, globalExitRoot, sendDataContract.target, l2txData);
 
         expect(await PolygonZKEVMV2Contract.calculatePolPerForceBatch()).to.be.equal(
-            await rollupManagerContract.getForcedBatchFee()
+            await rollupManagerContract.getForcedBatchFee(),
         );
     });
 
-    it("should check forced batches from a contract", async () => {
+    it('should check forced batches from a contract', async () => {
         // Initialzie using rollup manager
-        await ethers.provider.send("hardhat_impersonateAccount", [rollupManagerContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rolllupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await expect(
             PolygonZKEVMV2Contract.connect(rolllupManagerSigner).initialize(
@@ -1049,12 +1048,12 @@ describe("PolygonZkEVMEtrog", () => {
             )
         ).to.emit(PolygonZKEVMV2Contract, "InitialSequenceBatches");
 
-        const timestampCreatedRollup = (await ethers.provider.getBlock("latest"))?.timestamp;
+        const timestampCreatedRollup = (await ethers.provider.getBlock('latest'))?.timestamp;
         const transaction = await PolygonZKEVMV2Contract.generateInitializeTransaction(
             networkID,
             gasTokenAddress,
             gasTokenNetwork,
-            "0x" // empty metadata
+            '0x', // empty metadata
         );
 
         // Check transaction
@@ -1065,10 +1064,10 @@ describe("PolygonZkEVMEtrog", () => {
             gasTokenNetwork,
             globalExitRootL2Address,
             ethers.ZeroAddress,
-            "0x", // empty metadata
+            '0x', // empty metadata
         ]);
 
-        const blockCreatedRollup = await ethers.provider.getBlock("latest");
+        const blockCreatedRollup = await ethers.provider.getBlock('latest');
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -1090,21 +1089,21 @@ describe("PolygonZkEVMEtrog", () => {
             await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot(),
             timestampCreatedRollup,
             trustedSequencer.address,
-            blockCreatedRollup?.parentHash
+            blockCreatedRollup?.parentHash,
         );
 
         // calcualte accINputHash
         expect(await PolygonZKEVMV2Contract.lastAccInputHash()).to.be.equal(expectedAccInputHash);
 
         // try verify batches
-        const l2txData = "0x123456";
-        const maticAmount = ethers.parseEther("1");
+        const l2txData = '0x123456';
+        const maticAmount = ethers.parseEther('1');
 
         // Approve tokens
-        await polTokenContract.transfer(admin.address, ethers.parseEther("1000"));
+        await polTokenContract.transfer(admin.address, ethers.parseEther('1000'));
         await expect(polTokenContract.connect(admin).approve(PolygonZKEVMV2Contract.target, maticAmount)).to.emit(
             polTokenContract,
-            "Approval"
+            'Approval',
         );
 
         expect(await PolygonZKEVMV2Contract.calculatePolPerForceBatch()).to.be.equal(0);
@@ -1114,16 +1113,16 @@ describe("PolygonZkEVMEtrog", () => {
         const forceBatchFee = await rollupManagerContract.getForcedBatchFee();
 
         await expect(PolygonZKEVMV2Contract.connect(admin).forceBatch(l2txData, maticAmount))
-            .to.emit(PolygonZKEVMV2Contract, "ForceBatch")
-            .withArgs(1, globalExitRoot, admin.address, "0x");
+            .to.emit(PolygonZKEVMV2Contract, 'ForceBatch')
+            .withArgs(1, globalExitRoot, admin.address, '0x');
 
-        const blockForced = await ethers.provider.getBlock("latest");
+        const blockForced = await ethers.provider.getBlock('latest');
         const timestampForceBatch = blockForced?.timestamp as any;
 
         expect(await polTokenContract.balanceOf(admin.address)).to.be.equal(adminPolBalance - forceBatchFee);
 
         expect(await PolygonZKEVMV2Contract.calculatePolPerForceBatch()).to.be.equal(
-            await rollupManagerContract.getForcedBatchFee()
+            await rollupManagerContract.getForcedBatchFee(),
         );
 
         // Sequence force batches
@@ -1137,32 +1136,32 @@ describe("PolygonZkEVMEtrog", () => {
         // sequence force batch
         await expect(PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches([])).to.be.revertedWithCustomError(
             PolygonZKEVMV2Contract,
-            "SequenceZeroBatches"
+            'SequenceZeroBatches',
         );
 
         // sequence force batch
         const sequencedArray = new Array(_MAX_VERIFY_BATCHES + 1).fill(sequenceForced);
 
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches(sequencedArray)
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "ExceedMaxVerifyBatches");
+            PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches(sequencedArray),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'ExceedMaxVerifyBatches');
 
         // sequence force batch
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches([sequenceForced, sequenceForced])
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "ForceBatchesOverflow");
+            PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches([sequenceForced, sequenceForced]),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'ForceBatchesOverflow');
 
         // sequence force batch
         await expect(
-            PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches([sequenceForced])
-        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, "ForceBatchTimeoutNotExpired");
+            PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches([sequenceForced]),
+        ).to.be.revertedWithCustomError(PolygonZKEVMV2Contract, 'ForceBatchTimeoutNotExpired');
 
         // Increment timestamp
-        await ethers.provider.send("evm_setNextBlockTimestamp", [timestampForceBatch + FORCE_BATCH_TIMEOUT]);
+        await ethers.provider.send('evm_setNextBlockTimestamp', [timestampForceBatch + FORCE_BATCH_TIMEOUT]);
 
         // sequence force batch
         await expect(PolygonZKEVMV2Contract.connect(admin).sequenceForceBatches([sequenceForced]))
-            .to.emit(PolygonZKEVMV2Contract, "SequenceForceBatches")
+            .to.emit(PolygonZKEVMV2Contract, 'SequenceForceBatches')
             .withArgs(2);
 
         const expectedAccInputHash3 = calculateAccInputHashetrog(
@@ -1171,7 +1170,7 @@ describe("PolygonZkEVMEtrog", () => {
             globalExitRoot,
             timestampForceBatch,
             admin.address,
-            blockForced?.parentHash
+            blockForced?.parentHash,
         );
 
         // calcualte accINputHash
@@ -1194,11 +1193,11 @@ function calculateAccInputHashetrog(
     globalExitRoot: any,
     timestamp: any,
     sequencerAddress: any,
-    forcedBlockHash: any
+    forcedBlockHash: any,
 ) {
     const hashKeccak = ethers.solidityPackedKeccak256(
-        ["bytes32", "bytes32", "bytes32", "uint64", "address", "bytes32"],
-        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash]
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
+        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
     );
 
     return hashKeccak;

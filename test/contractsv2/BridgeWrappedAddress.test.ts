@@ -1,5 +1,7 @@
-import {expect} from "chai";
-import {ethers, upgrades} from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { takeSnapshot, time } from '@nomicfoundation/hardhat-network-helpers';
+import { processorUtils, contractUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
@@ -9,27 +11,25 @@ import {
     PolygonZkEVMV2,
     PolygonRollupBase,
     TokenWrapped,
-} from "../../typechain-types";
-import {takeSnapshot, time} from "@nomicfoundation/hardhat-network-helpers";
-import {processorUtils, contractUtils, MTBridge, mtBridgeUtils} from "@0xpolygonhermez/zkevm-commonjs";
-const {calculateSnarkInput, calculateAccInputHash, calculateBatchHashData} = contractUtils;
+} from '../../typechain-types';
+
+const { calculateSnarkInput, calculateAccInputHash, calculateBatchHashData } = contractUtils;
 const MerkleTreeBridge = MTBridge;
-const {verifyMerkleProof, getLeafValue} = mtBridgeUtils;
+const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
+    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
-function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: Boolean) {
+function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
     if (isMainnet === true) {
         return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
-    } else {
-        return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
     }
+    return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
-describe("PolygonZkEVMBridge Contract", () => {
+describe('PolygonZkEVMBridge Contract', () => {
     upgrades.silenceWarnings();
 
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
@@ -42,22 +42,22 @@ describe("PolygonZkEVMBridge Contract", () => {
 
     const networkIDMainnet = 0;
 
-    beforeEach("Deploy contracts", async () => {
+    beforeEach('Deploy contracts', async () => {
         // load signers
         [deployer, rollupManager, acc1] = await ethers.getSigners();
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer"],
+            unsafeAllow: ['constructor', 'missing-initializer'],
         })) as unknown as PolygonZkEVMBridgeV2;
 
         // deploy global exit root manager
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory("PolygonZkEVMGlobalExitRoot");
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot');
         polygonZkEVMGlobalExitRoot = await PolygonZkEVMGlobalExitRootFactory.deploy(
             rollupManager.address,
-            polygonZkEVMBridgeContract.target
+            polygonZkEVMBridgeContract.target,
         );
 
         await polygonZkEVMBridgeContract.initialize(
@@ -66,7 +66,7 @@ describe("PolygonZkEVMBridge Contract", () => {
             ethers.ZeroAddress, // zero for ether
             polygonZkEVMGlobalExitRoot.target,
             rollupManager.address,
-            "0x"
+            '0x',
         );
     });
 });

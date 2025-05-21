@@ -1,32 +1,32 @@
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChainPessimistic,
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChain,
     TokenWrapped,
-} from "../../typechain-types";
-import { MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
+} from '../../typechain-types';
+import { claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
+
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-import { claimBeforeBridge } from "./helpers/helpers-sovereign-bridge";
 import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
+    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
-function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: Boolean) {
+function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
     if (isMainnet === true) {
         return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
-    } else {
-        return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
     }
+    return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
-describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
+describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
     upgrades.silenceWarnings();
 
     let sovereignChainBridgeContract: BridgeL2SovereignChain;
@@ -42,13 +42,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
     let globalExitRootRemover: any;
     let proxiedTokensManager: any;
 
-    const tokenName = "Matic Token";
-    const tokenSymbol = "MATIC";
+    const tokenName = 'Matic Token';
+    const tokenSymbol = 'MATIC';
     const decimals = 18;
-    const tokenInitialBalance = ethers.parseEther("20000000");
+    const tokenInitialBalance = ethers.parseEther('20000000');
     const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["string", "string", "uint8"],
-        [tokenName, tokenSymbol, decimals]
+        ['string', 'string', 'uint8'],
+        [tokenName, tokenSymbol, decimals],
     );
     const networkIDMainnet = 0;
     const networkIDRollup = 1;
@@ -57,44 +57,44 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
     const LEAF_TYPE_ASSET = 0;
     const LEAF_TYPE_MESSAGE = 1;
 
-    beforeEach("Deploy contracts", async () => {
+    beforeEach('Deploy contracts', async () => {
         // load signers
         [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
         globalExitRootRemover = deployer;
         // Set trusted sequencer as coinbase for sovereign chains
-        await ethers.provider.send("hardhat_setCoinbase", [deployer.address]);
+        await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
         // deploy BridgeL2SovereignChain
-        const BridgeL2SovereignChainFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
+        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as BridgeL2SovereignChain;
 
         // deploy global exit root manager pessimistic
         const GlobalExitRootManagerL2SovereignChainPessimisticFactory = await ethers.getContractFactory(
-            "GlobalExitRootManagerL2SovereignChainPessimistic"
+            'GlobalExitRootManagerL2SovereignChainPessimistic',
         );
         sovereignChainGlobalExitRootPessimisticContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainPessimisticFactory,
             [deployer.address, globalExitRootRemover.address], // Initializer params
             {
-                initializer: "initialize", // initializer function name
+                initializer: 'initialize', // initializer function name
                 constructorArgs: [sovereignChainBridgeContract.target], // Constructor arguments
-                unsafeAllow: ["constructor", "state-variable-immutable"],
-            }
+                unsafeAllow: ['constructor', 'state-variable-immutable'],
+            },
         )) as unknown as GlobalExitRootManagerL2SovereignChain;
 
         // Upgrade to GlobalExitRootManagerL2SovereignChain
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            "GlobalExitRootManagerL2SovereignChain"
+            'GlobalExitRootManagerL2SovereignChain',
         );
         sovereignChainGlobalExitRootContract = (await upgrades.upgradeProxy(
             sovereignChainGlobalExitRootPessimisticContract.target,
             GlobalExitRootManagerL2SovereignChainFactory,
             {
                 constructorArgs: [sovereignChainBridgeContract.target],
-                unsafeAllow: ["constructor"],
-            }
+                unsafeAllow: ['constructor'],
+            },
         )) as unknown as GlobalExitRootManagerL2SovereignChain;
 
         // cannot initialize bridgeV2 initializer from Sovereign bridge
@@ -105,9 +105,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 ethers.ZeroAddress, // zero for ether
                 sovereignChainGlobalExitRootContract.target,
                 rollupManager.address,
-                "0x"
-            )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "InvalidInitializeFunction");
+                '0x',
+            ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidInitializeFunction');
 
         await sovereignChainBridgeContract.initialize(
             networkIDRollup2,
@@ -115,26 +115,25 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             ethers.ZeroAddress, // zero for ether
             sovereignChainGlobalExitRootContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(bridgeManager),
             ethers.ZeroAddress,
             false,
-            emergencyBridgePauser.address,
             emergencyBridgePauser.address,
             proxiedTokensManager.address,
         );
 
         // deploy token
-        const maticTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         polTokenContract = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
     });
 
-    it("Should remap source 6 decimal token to 18 sovereign wrapped token and bridge", async () => {
+    it('Should remap source 6 decimal token to 18 sovereign wrapped token and bridge', async () => {
         const originNetwork = networkIDMainnet;
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = acc1.address;
@@ -142,20 +141,20 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const eighteenDecimal = 18;
         const amountSIXBridged = 1;
         // Deploy 6 decimals token
-        const sixDecimalsTokenFactory = await ethers.getContractFactory("ERC20Decimals");
+        const sixDecimalsTokenFactory = await ethers.getContractFactory('ERC20Decimals');
         const sixDecimalsTokenContract = await sixDecimalsTokenFactory.deploy(
-            "6DEC",
-            "SIX",
+            '6DEC',
+            'SIX',
             deployer.address,
-            ethers.parseUnits("10", sixDecimal), // 10 SIX
-            sixDecimal
+            ethers.parseUnits('10', sixDecimal), // 10 SIX
+            sixDecimal,
         );
         const sovereignTokenContract = await sixDecimalsTokenFactory.deploy(
-            "18DEC",
-            "EIGHTEEN",
+            '18DEC',
+            'EIGHTEEN',
             deployer.address,
-            ethers.parseUnits("20", eighteenDecimal), // 20 EIGHTEEN
-            eighteenDecimal
+            ethers.parseUnits('20', eighteenDecimal), // 20 EIGHTEEN
+            eighteenDecimal,
         );
         // Remap token
         await expect(
@@ -165,16 +164,16 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                     [networkIDMainnet],
                     [sixDecimalsTokenContract.target],
                     [sovereignTokenContract.target],
-                    [false]
-                )
+                    [false],
+                ),
         )
-            .to.emit(sovereignChainBridgeContract, "SetSovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'SetSovereignTokenAddress')
             .withArgs(networkIDMainnet, sixDecimalsTokenContract.target, sovereignTokenContract.target, false);
 
         // Add allowance
         await sixDecimalsTokenContract.approve(
             sovereignChainBridgeContract.target,
-            ethers.parseUnits("10", sixDecimal)
+            ethers.parseUnits('10', sixDecimal),
         );
 
         // bridge asset
@@ -184,15 +183,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             ethers.parseUnits(String(amountSIXBridged), sixDecimal), // 1 SIX
             sixDecimalsTokenContract.target,
             true,
-            "0x"
+            '0x',
         );
 
         // Check burnt balance is 1 SIX
         const balanceOfSIX = await sixDecimalsTokenContract.balanceOf(deployer.address);
         const balanceOfEIGHTEEN = await sovereignTokenContract.balanceOf(deployer.address);
         expect(balanceOfSIX).to.be.equal(ethers.parseUnits(String(10 - amountSIXBridged), 6));
-        const metadata = "0x"; // since is ether does not have metadata
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadata = '0x'; // since is ether does not have metadata
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         // Claim Asset
         const height = 32;
@@ -204,7 +203,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             ethers.parseUnits(String(amountSIXBridged), sixDecimal), // 1 SIX
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         // check merkle root with SC
@@ -214,7 +213,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const rollupRoot = merkleTreeRollup.getRoot();
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rollupRoot, { gasPrice: 0 });
 
@@ -239,7 +238,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup),
         ).to.be.equal(true);
 
         await expect(
@@ -254,16 +253,16 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 ethers.parseUnits(String(amountSIXBridged), sixDecimal), // 1 SIX
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(
                 index,
                 originNetwork,
                 sixDecimalsTokenContract.target,
                 destinationAddress,
-                ethers.parseUnits(String(amountSIXBridged), sixDecimal)
+                ethers.parseUnits(String(amountSIXBridged), sixDecimal),
             );
         // Check balance is with 6 decimals and check is from sovereign token
         const sovereignTokenAmount = await sovereignTokenContract.balanceOf(destinationAddress);
@@ -271,12 +270,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         expect(String(sovereignTokenAmount)).to.be.equal(ethers.parseUnits(String(amountSIXBridged), sixDecimal));
     });
 
-    it("should check the initialize function", async () => {
+    it('should check the initialize function', async () => {
         // deploy PolygonZkEVMBridge
-        const sovereignChainBridgeContract = await ethers.getContractFactory("BridgeL2SovereignChain");
+        const sovereignChainBridgeContract = await ethers.getContractFactory('BridgeL2SovereignChain');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         // Gas token network should be zero if gas token address is zero
@@ -291,7 +290,6 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 ethers.Typed.address(bridgeManager.address),
                 ethers.ZeroAddress,
                 false,
-                emergencyBridgePauser.address,
                 emergencyBridgePauser.address,
                 proxiedTokensManager.address,
             )
@@ -310,7 +308,6 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 bridge.target, // Not zero, revert
                 false,
                 emergencyBridgePauser.address,
-                emergencyBridgePauser.address,
                 proxiedTokensManager.address,
             )
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSovereignWETHAddressParams");
@@ -327,17 +324,18 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 ethers.ZeroAddress,
                 true, // Not false, revert
                 emergencyBridgePauser.address,
-                emergencyBridgePauser.address,
                 proxiedTokensManager.address,
             )
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSovereignWETHAddressParams");
     });
-    it("should check the initialize function after upgrade", async () => {
+    it('should check the initialize function after upgrade', async () => {
         // deploy PolygonZkEVMBridge
-        const sovereignChainBridgePessimisticContract = await ethers.getContractFactory("BridgeL2SovereignChainPessimistic");
+        const sovereignChainBridgePessimisticContract = await ethers.getContractFactory(
+            'BridgeL2SovereignChainPessimistic',
+        );
         let bridge = await upgrades.deployProxy(sovereignChainBridgePessimisticContract, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         await bridge.initialize(
@@ -349,19 +347,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             metadataToken,
             ethers.Typed.address(bridgeManager.address),
             ethers.ZeroAddress,
-            false
-        )
+            false,
+        );
 
         // Upgrade sovereign bridge
-        const sovereignChainBridgeContractFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
-        bridge = (await upgrades.upgradeProxy(
-            bridge.target,
-            sovereignChainBridgeContractFactory,
-            {
-                constructorArgs: [],
-                unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
-            }
-        )) as unknown as BridgeL2SovereignChain;
+        const sovereignChainBridgeContractFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        bridge = (await upgrades.upgradeProxy(bridge.target, sovereignChainBridgeContractFactory, {
+            constructorArgs: [],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+        })) as unknown as BridgeL2SovereignChain;
 
         // try wrong initializer
         await expect(bridge.initialize(
@@ -397,7 +391,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // deploy and initialize wrong initializer
         const bridge2 = await upgrades.deployProxy(sovereignChainBridgeContractFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         await expect(bridge2.initialize(
@@ -418,16 +412,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             ethers.ZeroAddress,
             false,
             emergencyBridgePauser.address,
-            emergencyBridgePauser.address,
             proxiedTokensManager.address,
         )
     });
 
-    it("Migrate non mintable tokens", async () => {
+    it('Migrate non mintable tokens', async () => {
         // Deploy token1
-        const tokenFactory = await ethers.getContractFactory("ERC20PermitMock");
-        const iBalance = ethers.parseEther("20000000");
-        const migrationAmount = ethers.parseEther("10");
+        const tokenFactory = await ethers.getContractFactory('ERC20PermitMock');
+        const iBalance = ethers.parseEther('20000000');
+        const migrationAmount = ethers.parseEther('10');
         const networkIDRollup1 = 1;
         const legacyToken = await tokenFactory.deploy(tokenName, tokenSymbol, deployer.address, iBalance);
         // Send legacy tokens to user
@@ -438,8 +431,8 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // Try migrate token that is not mapped
         await expect(
-            sovereignChainBridgeContract.connect(acc1).migrateLegacyToken(legacyToken.target, migrationAmount, '0x')
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "TokenNotMapped");
+            sovereignChainBridgeContract.connect(acc1).migrateLegacyToken(legacyToken.target, migrationAmount, '0x'),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'TokenNotMapped');
 
         // Make first remapping
         await sovereignChainBridgeContract
@@ -448,7 +441,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 [networkIDRollup1],
                 [polTokenContract.target],
                 [legacyToken.target],
-                [true]
+                [true],
             );
 
         await expect(
@@ -458,9 +451,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                     [networkIDRollup1],
                     [polTokenContract.target],
                     [legacyToken.target],
-                    [true]
-                )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "TokenAlreadyMapped");
+                    [true],
+                ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'TokenAlreadyMapped');
 
         // Deploy token 2
         const updatedToken = await tokenFactory.deploy(tokenName, tokenSymbol, deployer.address, iBalance);
@@ -474,13 +467,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 [networkIDRollup1],
                 [polTokenContract.target],
                 [updatedToken.target],
-                [true]
+                [true],
             );
 
         // Try migrate a token already updated
         await expect(
-            sovereignChainBridgeContract.connect(acc1).migrateLegacyToken(updatedToken.target, migrationAmount, '0x')
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "TokenAlreadyUpdated");
+            sovereignChainBridgeContract.connect(acc1).migrateLegacyToken(updatedToken.target, migrationAmount, '0x'),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'TokenAlreadyUpdated');
 
         // Migrate tokens
         await sovereignChainBridgeContract.connect(acc1).migrateLegacyToken(legacyToken.target, migrationAmount, '0x');
@@ -491,49 +484,49 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         expect(await updatedToken.balanceOf(acc1.address)).to.be.equal(migrationAmount);
     });
 
-    it("should Sovereign Chain bridge a remapped asset not mintable and verify merkle proof", async () => {
+    it('should Sovereign Chain bridge a remapped asset not mintable and verify merkle proof', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDRollup;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const rollupExitRoot = await sovereignChainGlobalExitRootContract.lastRollupExitRoot();
 
         // deploy sovereign
-        const maticTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         const sovereignToken = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
         const sovereignToken2 = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
         const sovereignToken3 = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
         const sovereignToken4 = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
         const tokenAddress2 = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
         const balanceDeployer = await sovereignToken.balanceOf(deployer.address);
         const balanceBridge = await sovereignToken.balanceOf(sovereignChainBridgeContract.target);
@@ -542,9 +535,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         await expect(
             sovereignChainBridgeContract
                 .connect(bridgeManager)
-                .setMultipleSovereignTokenAddress([networkIDRollup], [tokenAddress], [sovereignToken.target], [true])
+                .setMultipleSovereignTokenAddress([networkIDRollup], [tokenAddress], [sovereignToken.target], [true]),
         )
-            .to.emit(sovereignChainBridgeContract, "SetSovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'SetSovereignTokenAddress')
             .withArgs(networkIDRollup, tokenAddress, sovereignToken.target, true);
 
         // pre compute root merkle tree in Js
@@ -557,7 +550,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -570,12 +563,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 sovereignToken.target,
                 true,
-                "0x"
-            )
-        ).to.be.revertedWith("ERC20: insufficient allowance");
+                '0x',
+            ),
+        ).to.be.revertedWith('ERC20: insufficient allowance');
         // create a new deposit
         await expect(sovereignToken.approve(sovereignChainBridgeContract.target, amount))
-            .to.emit(sovereignToken, "Approval")
+            .to.emit(sovereignToken, 'Approval')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         await claimBeforeBridge(
@@ -589,7 +582,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             sovereignChainGlobalExitRootContract,
             sovereignChainBridgeContract,
             sovereignToken,
-            0
+            0,
         );
 
         await expect(
@@ -599,10 +592,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 sovereignToken.target,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 networkIDRollup,
@@ -611,7 +604,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
         // Check updated exit root
         expect(await sovereignChainGlobalExitRootContract.lastRollupExitRoot()).to.be.equal(rootJSMainnet);
@@ -630,103 +623,109 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
         ).to.be.equal(true);
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
 
         // Try to insert global exit root with non coinbase
         await expect(
-            sovereignChainGlobalExitRootContract.connect(acc1).insertGlobalExitRoot(computedGlobalExitRoot)
-        ).to.be.revertedWithCustomError(sovereignChainGlobalExitRootContract, "OnlyGlobalExitRootUpdater");
+            sovereignChainGlobalExitRootContract.connect(acc1).insertGlobalExitRoot(computedGlobalExitRoot),
+        ).to.be.revertedWithCustomError(sovereignChainGlobalExitRootContract, 'OnlyGlobalExitRootUpdater');
 
         // Compute next hash chain value
         const previousHash = await sovereignChainGlobalExitRootContract.insertedGERHashChain();
         let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [previousHash, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [previousHash, computedGlobalExitRoot],
         );
         // Insert global exit root
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
-        const lastBlock = (await ethers.provider.getBlock("latest")) as any;
+        const lastBlock = (await ethers.provider.getBlock('latest')) as any;
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.be.eq(
-            lastBlock.timestamp
+            lastBlock.timestamp,
         );
 
         // Trigger GlobalExitRootNotFound
         await expect(
-            sovereignChainGlobalExitRootContract.removeGlobalExitRoots([computedGlobalExitRoot, computedGlobalExitRoot])
-        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, "GlobalExitRootNotFound");
+            sovereignChainGlobalExitRootContract.removeGlobalExitRoots([
+                computedGlobalExitRoot,
+                computedGlobalExitRoot,
+            ]),
+        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, 'GlobalExitRootNotFound');
 
         // Trigger OnlyGlobalExitRootRemover
         await expect(
-            sovereignChainGlobalExitRootContract.connect(rollupManager).removeGlobalExitRoots([metadataHash])
-        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, "OnlyGlobalExitRootRemover");
+            sovereignChainGlobalExitRootContract.connect(rollupManager).removeGlobalExitRoots([metadataHash]),
+        ).to.revertedWithCustomError(sovereignChainGlobalExitRootContract, 'OnlyGlobalExitRootRemover');
 
         // Update globalExitRootRemover
-        await expect(sovereignChainGlobalExitRootContract.transferGlobalExitRootRemover(acc1.address)).to.emit(sovereignChainGlobalExitRootContract, "TransferGlobalExitRootRemover").withArgs(deployer.address, acc1.address);
+        await expect(sovereignChainGlobalExitRootContract.transferGlobalExitRootRemover(acc1.address))
+            .to.emit(sovereignChainGlobalExitRootContract, 'TransferGlobalExitRootRemover')
+            .withArgs(deployer.address, acc1.address);
 
-        await expect(sovereignChainGlobalExitRootContract.connect(acc1).acceptGlobalExitRootRemover()).to.emit(sovereignChainGlobalExitRootContract, "AcceptGlobalExitRootRemover").withArgs(deployer.address, acc1.address);
+        await expect(sovereignChainGlobalExitRootContract.connect(acc1).acceptGlobalExitRootRemover())
+            .to.emit(sovereignChainGlobalExitRootContract, 'AcceptGlobalExitRootRemover')
+            .withArgs(deployer.address, acc1.address);
 
         // Update globalExitRootUpdater
-        await expect(
-            sovereignChainGlobalExitRootContract.transferGlobalExitRootUpdater(acc1.address)
-        ).to.emit(sovereignChainGlobalExitRootContract, "TransferGlobalExitRootUpdater").withArgs(deployer.address, acc1.address);
+        await expect(sovereignChainGlobalExitRootContract.transferGlobalExitRootUpdater(acc1.address))
+            .to.emit(sovereignChainGlobalExitRootContract, 'TransferGlobalExitRootUpdater')
+            .withArgs(deployer.address, acc1.address);
 
-        await expect(
-            sovereignChainGlobalExitRootContract.connect(acc1).acceptGlobalExitRootUpdater()
-        ).to.emit(sovereignChainGlobalExitRootContract, "AcceptGlobalExitRootUpdater").withArgs(deployer.address, acc1.address);
+        await expect(sovereignChainGlobalExitRootContract.connect(acc1).acceptGlobalExitRootUpdater())
+            .to.emit(sovereignChainGlobalExitRootContract, 'AcceptGlobalExitRootUpdater')
+            .withArgs(deployer.address, acc1.address);
 
         // Remove global exit root
         let removalHashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.connect(acc1).removeGlobalExitRoots([computedGlobalExitRoot]))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateRemovalHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateRemovalHashChainValue')
             .withArgs(computedGlobalExitRoot, removalHashChainValue);
 
         // Test to remove more than one global exit root
         hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [hashChainValue, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [hashChainValue, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.connect(acc1).insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
-        const computedGlobalExitRoot2 = "0x5946741ff5ff7732e1c7614ae327543a1d9f5870fcb8afbf146bd5ea75d6d519"; // Random 32 bytes
+        const computedGlobalExitRoot2 = '0x5946741ff5ff7732e1c7614ae327543a1d9f5870fcb8afbf146bd5ea75d6d519'; // Random 32 bytes
         hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [hashChainValue, computedGlobalExitRoot2]
+            ['bytes32', 'bytes32'],
+            [hashChainValue, computedGlobalExitRoot2],
         );
         await expect(sovereignChainGlobalExitRootContract.connect(acc1).insertGlobalExitRoot(computedGlobalExitRoot2))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot2, hashChainValue);
-        const lastBlock2 = (await ethers.provider.getBlock("latest")) as any;
+        const lastBlock2 = (await ethers.provider.getBlock('latest')) as any;
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot2)).to.be.eq(
-            lastBlock2.timestamp
+            lastBlock2.timestamp,
         );
         removalHashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [removalHashChainValue, computedGlobalExitRoot2]
+            ['bytes32', 'bytes32'],
+            [removalHashChainValue, computedGlobalExitRoot2],
         );
         const removalHashChainValue2 = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [removalHashChainValue, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [removalHashChainValue, computedGlobalExitRoot],
         );
         await expect(
-            sovereignChainGlobalExitRootContract.connect(acc1).removeGlobalExitRoots([
-                computedGlobalExitRoot2,
-                computedGlobalExitRoot,
-            ])
+            sovereignChainGlobalExitRootContract
+                .connect(acc1)
+                .removeGlobalExitRoots([computedGlobalExitRoot2, computedGlobalExitRoot]),
         )
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateRemovalHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateRemovalHashChainValue')
             .withArgs(computedGlobalExitRoot2, removalHashChainValue)
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateRemovalHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateRemovalHashChainValue')
             .withArgs(computedGlobalExitRoot, removalHashChainValue2);
 
         // Check GER has value in mapping
@@ -734,38 +733,42 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // Insert global exit root again
         hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [hashChainValue, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [hashChainValue, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.connect(acc1).insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
 
         // Remove unmapped sovereign token address, should revert
         await expect(
-            sovereignChainBridgeContract.connect(bridgeManager).removeLegacySovereignTokenAddress(tokenAddress)
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "TokenNotRemapped");
+            sovereignChainBridgeContract.connect(bridgeManager).removeLegacySovereignTokenAddress(tokenAddress),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'TokenNotRemapped');
         // Remove not updated sovereign token address, should revert
         await expect(
-            sovereignChainBridgeContract.connect(bridgeManager).removeLegacySovereignTokenAddress(sovereignToken.target)
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "TokenNotRemapped");
+            sovereignChainBridgeContract
+                .connect(bridgeManager)
+                .removeLegacySovereignTokenAddress(sovereignToken.target),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'TokenNotRemapped');
 
         // Remove updated sovereign token address
         // Remap token a second time to support removal function
         await expect(
             sovereignChainBridgeContract
                 .connect(bridgeManager)
-                .setMultipleSovereignTokenAddress([networkIDRollup], [tokenAddress], [sovereignToken2.target], [true])
+                .setMultipleSovereignTokenAddress([networkIDRollup], [tokenAddress], [sovereignToken2.target], [true]),
         )
-            .to.emit(sovereignChainBridgeContract, "SetSovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'SetSovereignTokenAddress')
             .withArgs(networkIDRollup, tokenAddress, sovereignToken2.target, true);
 
         await expect(
-            sovereignChainBridgeContract.connect(bridgeManager).removeLegacySovereignTokenAddress(sovereignToken.target)
+            sovereignChainBridgeContract
+                .connect(bridgeManager)
+                .removeLegacySovereignTokenAddress(sovereignToken.target),
         )
-            .to.emit(sovereignChainBridgeContract, "RemoveLegacySovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'RemoveLegacySovereignTokenAddress')
             .withArgs(sovereignToken.target);
 
         // Remap sovereign address with multiCall
@@ -780,12 +783,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                     originNetworksArray,
                     originTokenAddressesArray,
                     sovereignTokenAddressesArray,
-                    isNotMintableArray
-                )
+                    isNotMintableArray,
+                ),
         )
-            .to.emit(sovereignChainBridgeContract, "SetSovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'SetSovereignTokenAddress')
             .withArgs(networkIDRollup, tokenAddress, sovereignToken3.target, true)
-            .to.emit(sovereignChainBridgeContract, "SetSovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'SetSovereignTokenAddress')
             .withArgs(networkIDRollup, tokenAddress2.target, sovereignToken4.target, false);
 
         await expect(
@@ -793,47 +796,47 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 originNetworksArray,
                 [], // Different length
                 sovereignTokenAddressesArray,
-                isNotMintableArray
-            )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "InputArraysLengthMismatch");
+                isNotMintableArray,
+            ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
 
         await expect(
             sovereignChainBridgeContract.connect(bridgeManager).setMultipleSovereignTokenAddress(
                 originNetworksArray,
                 originTokenAddressesArray,
                 [], // Different length
-                isNotMintableArray
-            )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "InputArraysLengthMismatch");
+                isNotMintableArray,
+            ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
 
         await expect(
             sovereignChainBridgeContract.connect(bridgeManager).setMultipleSovereignTokenAddress(
                 [], // Different length
                 originTokenAddressesArray,
                 sovereignTokenAddressesArray,
-                isNotMintableArray
-            )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "InputArraysLengthMismatch");
+                isNotMintableArray,
+            ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
 
         await expect(
             sovereignChainBridgeContract.connect(bridgeManager).setMultipleSovereignTokenAddress(
                 originNetworksArray,
                 originTokenAddressesArray,
                 sovereignTokenAddressesArray,
-                [] // Different length
-            )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "InputArraysLengthMismatch");
+                [], // Different length
+            ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
     });
 
-    it("should Sovereign Chain bridge a remapped asset mintable and verify merkle proof", async () => {
+    it('should Sovereign Chain bridge a remapped asset mintable and verify merkle proof', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDRollup2;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const balanceDeployer = await polTokenContract.balanceOf(deployer.address);
         const balanceBridge = await polTokenContract.balanceOf(sovereignChainBridgeContract.target);
@@ -842,16 +845,16 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // create a new deposit
         await expect(polTokenContract.approve(sovereignChainBridgeContract.target, amount))
-            .to.emit(polTokenContract, "Approval")
+            .to.emit(polTokenContract, 'Approval')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         // deploy sovereign
-        const maticTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         const sovereignToken = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
 
         // Remap asset
@@ -860,14 +863,14 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         await expect(
             sovereignChainBridgeContract
                 .connect(rollupManager)
-                .setMultipleSovereignTokenAddress([networkIDMainnet], [tokenAddress], [sovereignToken.target], [false])
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OnlyBridgeManager");
+                .setMultipleSovereignTokenAddress([networkIDMainnet], [tokenAddress], [sovereignToken.target], [false]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyBridgeManager');
         // Set rollupManager as bridge manager
-        await expect(sovereignChainBridgeContract.connect(bridgeManager).setBridgeManager(ethers.ZeroAddress)).to.revertedWithCustomError(
-            sovereignChainBridgeContract, "InvalidZeroAddress"
-        );
+        await expect(
+            sovereignChainBridgeContract.connect(bridgeManager).setBridgeManager(ethers.ZeroAddress),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidZeroAddress');
         await expect(sovereignChainBridgeContract.connect(bridgeManager).setBridgeManager(rollupManager.address))
-            .to.emit(sovereignChainBridgeContract, "SetBridgeManager")
+            .to.emit(sovereignChainBridgeContract, 'SetBridgeManager')
             .withArgs(rollupManager.address);
 
         // invalid token address
@@ -878,32 +881,27 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                     [networkIDMainnet],
                     [ethers.ZeroAddress],
                     [sovereignToken.target],
-                    [false]
-                )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidZeroAddress");
+                    [false],
+                ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidZeroAddress');
         await expect(
             sovereignChainBridgeContract
                 .connect(rollupManager)
-                .setMultipleSovereignTokenAddress(
-                    [networkIDMainnet],
-                    [tokenAddress],
-                    [ethers.ZeroAddress],
-                    [false]
-                )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidZeroAddress");
+                .setMultipleSovereignTokenAddress([networkIDMainnet], [tokenAddress], [ethers.ZeroAddress], [false]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidZeroAddress');
 
         // Invalid origin network
         await expect(
             sovereignChainBridgeContract
                 .connect(rollupManager)
-                .setMultipleSovereignTokenAddress([networkIDRollup2], [tokenAddress], [sovereignToken.target], [false])
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OriginNetworkInvalid");
+                .setMultipleSovereignTokenAddress([networkIDRollup2], [tokenAddress], [sovereignToken.target], [false]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OriginNetworkInvalid');
         await expect(
             sovereignChainBridgeContract
                 .connect(rollupManager)
-                .setMultipleSovereignTokenAddress([networkIDRollup], [tokenAddress], [sovereignToken.target], [false])
+                .setMultipleSovereignTokenAddress([networkIDRollup], [tokenAddress], [sovereignToken.target], [false]),
         )
-            .to.emit(sovereignChainBridgeContract, "SetSovereignTokenAddress")
+            .to.emit(sovereignChainBridgeContract, 'SetSovereignTokenAddress')
             .withArgs(networkIDRollup, tokenAddress, sovereignToken.target, false);
         // pre compute root merkle tree in Js
         const height = 32;
@@ -915,7 +913,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -927,10 +925,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -939,13 +937,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
         // Check updated exit root
         expect(await sovereignChainGlobalExitRootContract.lastRollupExitRoot()).to.be.equal(rootJSMainnet);
         expect(await polTokenContract.balanceOf(deployer.address)).to.be.equal(balanceDeployer - amount);
         expect(await polTokenContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(
-            balanceBridge + amount
+            balanceBridge + amount,
         );
         expect(await sovereignChainBridgeContract.lastUpdatedDepositCount()).to.be.equal(1);
 
@@ -960,26 +958,26 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
         ).to.be.equal(true);
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
     });
 
-    it("should check the initialize parameters", async () => {
+    it('should check the initialize parameters', async () => {
         expect(await sovereignChainBridgeContract.globalExitRootManager()).to.be.equal(
-            sovereignChainGlobalExitRootContract.target
+            sovereignChainGlobalExitRootContract.target,
         );
         expect(await sovereignChainBridgeContract.networkID()).to.be.equal(networkIDRollup2);
         expect(await sovereignChainBridgeContract.polygonRollupManager()).to.be.equal(rollupManager.address);
@@ -992,40 +990,39 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 ethers.ZeroAddress, // zero for ether
                 sovereignChainGlobalExitRootContract.target,
                 rollupManager.address,
-                "0x",
+                '0x',
                 ethers.Typed.address(bridgeManager),
                 ethers.ZeroAddress,
                 false,
-                emergencyBridgePauser.address,
                 emergencyBridgePauser.address,
                 proxiedTokensManager.address
             )
         ).to.be.revertedWith("Initializable: contract is already initialized");
 
         await expect(
-            sovereignChainGlobalExitRootContract.initialize(ethers.ZeroAddress, ethers.ZeroAddress)
-        ).to.be.revertedWith("Initializable: contract is already initialized");
+            sovereignChainGlobalExitRootContract.initialize(ethers.ZeroAddress, ethers.ZeroAddress),
+        ).to.be.revertedWith('Initializable: contract is already initialized');
     });
 
-    it("should check bridgeMessageWETH reverts", async () => {
+    it('should check bridgeMessageWETH reverts', async () => {
         await expect(
-            sovereignChainBridgeContract.bridgeMessageWETH(networkIDMainnet, deployer.address, 0, true, "0x")
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "NativeTokenIsEther");
+            sovereignChainBridgeContract.bridgeMessageWETH(networkIDMainnet, deployer.address, 0, true, '0x'),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NativeTokenIsEther');
 
         await expect(
-            sovereignChainBridgeContract.connect(bridgeManager).setSovereignWETHAddress(deployer.address, true)
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "WETHRemappingNotSupportedOnGasTokenNetworks");
+            sovereignChainBridgeContract.connect(bridgeManager).setSovereignWETHAddress(deployer.address, true),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'WETHRemappingNotSupportedOnGasTokenNetworks');
     });
 
-    it("should Sovereign Chain bridge asset and verify merkle proof", async () => {
+    it('should Sovereign Chain bridge asset and verify merkle proof', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDRollup2;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const balanceDeployer = await polTokenContract.balanceOf(deployer.address);
         const balanceBridge = await polTokenContract.balanceOf(sovereignChainBridgeContract.target);
@@ -1034,7 +1031,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // create a new deposit
         await expect(polTokenContract.approve(sovereignChainBridgeContract.target, amount))
-            .to.emit(polTokenContract, "Approval")
+            .to.emit(polTokenContract, 'Approval')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         // pre compute root merkle tree in Js
@@ -1047,7 +1044,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -1059,10 +1056,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: 1 }
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "MsgValueNotZero");
+                '0x',
+                { value: 1 },
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'MsgValueNotZero');
 
         await expect(
             sovereignChainBridgeContract.bridgeAsset(
@@ -1071,10 +1068,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -1083,13 +1080,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
         // Check updated exit root
         expect(await sovereignChainGlobalExitRootContract.lastRollupExitRoot()).to.be.equal(rootJSMainnet);
         expect(await polTokenContract.balanceOf(deployer.address)).to.be.equal(balanceDeployer - amount);
         expect(await polTokenContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(
-            balanceBridge + amount
+            balanceBridge + amount,
         );
         expect(await sovereignChainBridgeContract.lastUpdatedDepositCount()).to.be.equal(1);
 
@@ -1104,33 +1101,33 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
         ).to.be.equal(true);
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
     });
 
-    it("should message at Sovereign chain and verify merkle proof", async () => {
+    it('should message at Sovereign chain and verify merkle proof', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDRollup2;
         const originAddress = deployer.address;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
         const rollupExitRoot = await sovereignChainGlobalExitRootContract.lastRollupExitRoot();
 
         // pre compute root merkle tree in Js
@@ -1143,14 +1140,14 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
 
         await expect(
-            sovereignChainBridgeContract.bridgeMessage(networkIDRollup2, destinationAddress, true, "0x")
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "DestinationNetworkInvalid");
+            sovereignChainBridgeContract.bridgeMessage(networkIDRollup2, destinationAddress, true, '0x'),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'DestinationNetworkInvalid');
 
         await claimBeforeBridge(
             LEAF_TYPE_ASSET,
@@ -1159,19 +1156,19 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             networkIDRollup2, // destinationNetwork
             destinationAddress,
             amount,
-            "0x", // metadata
+            '0x', // metadata
             sovereignChainGlobalExitRootContract,
             sovereignChainBridgeContract,
             polTokenContract,
-            0
+            0,
         );
 
         await expect(
             sovereignChainBridgeContract.bridgeMessage(destinationNetwork, destinationAddress, true, metadata, {
                 value: amount,
-            })
+            }),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_MESSAGE,
                 originNetwork,
@@ -1180,7 +1177,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         // check merkle root with SC
@@ -1194,34 +1191,34 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proof, index, rootSCMainnet)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proof, index, rootSCMainnet),
         ).to.be.equal(true);
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
         const previousHash = await sovereignChainGlobalExitRootContract.insertedGERHashChain();
-        let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [previousHash, computedGlobalExitRoot]
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ['bytes32', 'bytes32'],
+            [previousHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
         expect(await sovereignChainGlobalExitRootContract.globalExitRootMap(computedGlobalExitRoot)).to.not.be.eq(0);
     });
 
-    it("should bridge asset and message to sovereign chain to check global exit root updates", async () => {
+    it('should bridge asset and message to sovereign chain to check global exit root updates', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDRollup2;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const balanceDeployer = await polTokenContract.balanceOf(deployer.address);
         const balanceBridge = await polTokenContract.balanceOf(sovereignChainBridgeContract.target);
@@ -1230,7 +1227,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // create a new deposit
         await expect(polTokenContract.approve(sovereignChainBridgeContract.target, amount))
-            .to.emit(polTokenContract, "Approval")
+            .to.emit(polTokenContract, 'Approval')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         // pre compute root merkle tree in Js
@@ -1243,7 +1240,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
         const rootJSMainnet = merkleTree.getRoot();
@@ -1255,10 +1252,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 false,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -1267,12 +1264,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         expect(await polTokenContract.balanceOf(deployer.address)).to.be.equal(balanceDeployer - amount);
         expect(await polTokenContract.balanceOf(sovereignChainBridgeContract.target)).to.be.equal(
-            balanceBridge + amount
+            balanceBridge + amount,
         );
         expect(await sovereignChainBridgeContract.lastUpdatedDepositCount()).to.be.equal(0);
 
@@ -1286,12 +1283,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
-        let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -1304,20 +1301,20 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             networkIDRollup2, // destinationNetwork
             destinationAddress,
             amount,
-            "0x", // metadata
+            '0x', // metadata
             sovereignChainGlobalExitRootContract,
             sovereignChainBridgeContract,
             polTokenContract,
-            0
+            0,
         );
 
         // bridge message
         await expect(
             sovereignChainBridgeContract.bridgeMessage(destinationNetwork, destinationAddress, false, metadata, {
                 value: amount,
-            })
+            }),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_MESSAGE,
                 originNetwork,
@@ -1326,7 +1323,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                1
+                1,
             );
         expect(await sovereignChainBridgeContract.lastUpdatedDepositCount()).to.be.equal(1);
 
@@ -1338,7 +1335,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // Just to have the metric of a low cost bridge Asset
         const tokenAddress2 = ethers.ZeroAddress; // Ether
-        const amount2 = ethers.parseEther("10");
+        const amount2 = ethers.parseEther('10');
 
         await claimBeforeBridge(
             LEAF_TYPE_ASSET,
@@ -1347,7 +1344,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             networkIDRollup2, // destinationNetwork
             destinationAddress,
             amount,
-            "0x", // metadata
+            '0x', // metadata
             sovereignChainGlobalExitRootContract,
             sovereignChainBridgeContract,
             polTokenContract,
@@ -1360,20 +1357,20 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             amount2,
             tokenAddress2,
             false,
-            "0x",
-            { value: amount2 }
+            '0x',
+            { value: amount2 },
         );
     });
 
-    it("should claim tokens from Mainnet to Mainnet", async () => {
+    it('should claim tokens from Mainnet to Mainnet', async () => {
         const originNetwork = networkIDRollup2;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = acc1.address;
 
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const mainnetExitRoot = ethers.ZeroHash;
 
@@ -1387,7 +1384,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTreeLocal.add(leafValue);
 
@@ -1409,11 +1406,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // check only rollup account with update rollup exit root
         await expect(sovereignChainGlobalExitRootContract.updateExitRoot(rootRollup)).to.be.revertedWithCustomError(
             sovereignChainGlobalExitRootContract,
-            "OnlyAllowedContracts"
+            'OnlyAllowedContracts',
         );
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rootRollup, { gasPrice: 0 });
 
@@ -1423,12 +1420,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -1445,7 +1442,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup),
         ).to.be.equal(true);
         const globalIndex = computeGlobalIndex(indexLocal, indexRollup, false);
         /*
@@ -1464,13 +1461,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+                metadata,
+            ),
+        ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
 
         // transfer tokens, then claim
         await expect(polTokenContract.transfer(sovereignChainBridgeContract.target, amount))
-            .to.emit(polTokenContract, "Transfer")
+            .to.emit(polTokenContract, 'Transfer')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         expect(false).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
@@ -1486,12 +1483,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(globalIndex, originNetwork, tokenAddress, destinationAddress, amount)
-            .to.emit(polTokenContract, "Transfer")
+            .to.emit(polTokenContract, 'Transfer')
             .withArgs(sovereignChainBridgeContract.target, acc1.address, amount);
 
         // Can't claim because nullifier
@@ -1507,20 +1504,20 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "AlreadyClaimed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AlreadyClaimed');
     });
 
-    it("should claim tokens from Rollup to Mainnet", async () => {
+    it('should claim tokens from Rollup to Mainnet', async () => {
         const originNetwork = networkIDRollup;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = deployer.address;
 
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const mainnetExitRoot = ethers.ZeroHash;
 
@@ -1534,7 +1531,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTreeLocal.add(leafValue);
         merkleTreeLocal.add(leafValue);
@@ -1552,11 +1549,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // check only rollup account with update rollup exit root
         await expect(sovereignChainGlobalExitRootContract.updateExitRoot(rootRollup)).to.be.revertedWithCustomError(
             sovereignChainGlobalExitRootContract,
-            "OnlyAllowedContracts"
+            'OnlyAllowedContracts',
         );
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rootRollup, { gasPrice: 0 });
 
@@ -1567,11 +1564,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
         let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -1590,7 +1587,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         expect(verifyMerkleProof(leafValue, proofLocal, indexLocal, rootLocalRollup)).to.be.equal(true);
         expect(verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup),
         ).to.be.equal(true);
         const globalIndex = computeGlobalIndex(indexLocal, indexRollup, false);
 
@@ -1624,14 +1621,14 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(globalIndex, originNetwork, tokenAddress, destinationAddress, amount)
-            .to.emit(sovereignChainBridgeContract, "NewWrappedToken")
+            .to.emit(sovereignChainBridgeContract, 'NewWrappedToken')
             .withArgs(originNetwork, tokenAddress, precalculateWrappedErc20, metadata)
-            .to.emit(newWrappedToken, "Transfer")
+            .to.emit(newWrappedToken, 'Transfer')
             .withArgs(ethers.ZeroAddress, destinationAddress, amount);
 
         const newTokenInfo = await sovereignChainBridgeContract.wrappedTokenToTokenInfo(precalculateWrappedErc20);
@@ -1647,10 +1644,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         expect(newTokenInfo.originNetwork).to.be.equal(networkIDRollup);
         expect(newTokenInfo.originTokenAddress).to.be.equal(tokenAddress);
         expect(await sovereignChainBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
-            precalculateWrappedErc20
+            precalculateWrappedErc20,
         );
         expect(await sovereignChainBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
-            precalculateWrappedErc20
+            precalculateWrappedErc20,
         );
 
         const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
@@ -1674,9 +1671,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "AlreadyClaimed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AlreadyClaimed');
         expect(true).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         expect(await newWrappedToken.totalSupply()).to.be.equal(amount);
@@ -1701,12 +1698,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(globalIndex2, originNetwork, tokenAddress, destinationAddress, amount)
-            .to.emit(newWrappedToken, "Transfer")
+            .to.emit(newWrappedToken, 'Transfer')
             .withArgs(ethers.ZeroAddress, destinationAddress, amount);
 
         // Burn Tokens
@@ -1718,7 +1715,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // create a new deposit
         await expect(newWrappedToken.approve(sovereignChainBridgeContract.target, amount))
-            .to.emit(newWrappedToken, "Approval")
+            .to.emit(newWrappedToken, 'Approval')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         /*
@@ -1729,7 +1726,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // Imporant calcualte leaf with origin token address no wrapped token address
         const originTokenAddress = tokenAddress;
         const metadataMainnet = metadata; // since the token does not belong to this network
-        const metadataHashMainnet = ethers.solidityPackedKeccak256(["bytes"], [metadataMainnet]);
+        const metadataHashMainnet = ethers.solidityPackedKeccak256(['bytes'], [metadataMainnet]);
 
         const leafValueMainnet = getLeafValue(
             LEAF_TYPE_ASSET,
@@ -1738,7 +1735,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             newDestinationNetwork,
             destinationAddress,
             amount,
-            metadataHashMainnet
+            metadataHashMainnet,
         );
         const leafValueMainnetSC = await sovereignChainBridgeContract.getLeafValue(
             LEAF_TYPE_ASSET,
@@ -1747,7 +1744,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             newDestinationNetwork,
             destinationAddress,
             amount,
-            metadataHashMainnet
+            metadataHashMainnet,
         );
 
         expect(leafValueMainnet).to.be.equal(leafValueMainnetSC);
@@ -1764,10 +1761,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 wrappedTokenAddress,
                 true,
-                "0x"
-            )
+                '0x',
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -1776,9 +1773,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadataMainnet,
-                depositCount
+                depositCount,
             )
-            .to.emit(newWrappedToken, "Transfer")
+            .to.emit(newWrappedToken, 'Transfer')
             .withArgs(deployer.address, ethers.ZeroAddress, amount);
 
         expect(await newWrappedToken.totalSupply()).to.be.equal(amount);
@@ -1800,18 +1797,18 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 leafValueMainnet,
                 proofMainnet,
                 indexMainnet,
-                rootSCMainnet
-            )
+                rootSCMainnet,
+            ),
         ).to.be.equal(true);
 
         const computedGlobalExitRoot2 = calculateGlobalExitRoot(rootJSMainnet, rollupExitRoot);
         // Insert global exit root
         hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [hashChainValue, computedGlobalExitRoot2]
+            ['bytes32', 'bytes32'],
+            [hashChainValue, computedGlobalExitRoot2],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot2, hashChainValue);
 
         // Check GER has value in mapping
@@ -1819,8 +1816,8 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         // Insert an already inserted GER
         await expect(
-            sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2)
-        ).to.be.revertedWithCustomError(sovereignChainGlobalExitRootContract, "GlobalExitRootAlreadySet");
+            sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot2),
+        ).to.be.revertedWithCustomError(sovereignChainGlobalExitRootContract, 'GlobalExitRootAlreadySet');
 
         // Unset claims in bulk
         expect(true).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
@@ -1843,19 +1840,19 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 .unsetMultipleClaims([
                     computeGlobalIndex(indexLocal, indexRollup + 1, false),
                     computeGlobalIndex(index2, indexRollup, false),
-                ])
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "ClaimNotSet");
+                ]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'ClaimNotSet');
     });
 
-    it("should claim tokens from Rollup to Mainnet, failing deploy wrapped", async () => {
+    it('should claim tokens from Rollup to Mainnet, failing deploy wrapped', async () => {
         const originNetwork = networkIDRollup;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = deployer.address;
 
         const metadata = ethers.hexlify(ethers.randomBytes(40));
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const mainnetExitRoot = ethers.ZeroHash;
 
@@ -1869,7 +1866,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTreeLocal.add(leafValue);
         merkleTreeLocal.add(leafValue);
@@ -1887,11 +1884,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // check only rollup account with update rollup exit root
         await expect(sovereignChainGlobalExitRootContract.updateExitRoot(rootRollup)).to.be.revertedWithCustomError(
             sovereignChainGlobalExitRootContract,
-            "OnlyAllowedContracts"
+            'OnlyAllowedContracts',
         );
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rootRollup, { gasPrice: 0 });
 
@@ -1902,11 +1899,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
         const hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -1924,7 +1921,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         expect(verifyMerkleProof(leafValue, proofLocal, indexLocal, rootLocalRollup)).to.be.equal(true);
         expect(verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rootRollup),
         ).to.be.equal(true);
 
         expect(false).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
@@ -1941,15 +1938,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         ).to.be.equal(precalculateWrappedErc20);
 
     });
-    it("should sovereignChainBridge and sync the current root with events", async () => {
+    it('should sovereignChainBridge and sync the current root with events', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // Ether
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
-        const metadata = "0x"; // since is ether does not have metadata
+        const metadata = '0x'; // since is ether does not have metadata
 
         // claim 3*amount for the LocalBalanceTree
         await claimBeforeBridge(
@@ -1959,7 +1956,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             networkIDRollup2, // destinationNetwork
             destinationAddress,
             amount * 3n,
-            "0x", // metadata
+            '0x', // metadata
             sovereignChainGlobalExitRootContract,
             sovereignChainBridgeContract,
             polTokenContract,
@@ -1974,11 +1971,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -1987,7 +1984,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount
+                depositCount,
             );
 
         await expect(
@@ -1997,11 +1994,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -2010,7 +2007,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount + 1n
+                depositCount + 1n,
             );
 
         await expect(
@@ -2020,11 +2017,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "BridgeEvent")
+            .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
                 LEAF_TYPE_ASSET,
                 originNetwork,
@@ -2033,7 +2030,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationAddress,
                 amount,
                 metadata,
-                depositCount + 2n
+                depositCount + 2n,
             );
 
         // Prepare merkle tree
@@ -2049,9 +2046,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             undefined,
             undefined,
             undefined,
-            undefined
+            undefined,
         );
-        const events = await sovereignChainBridgeContract.queryFilter(filter, 0, "latest");
+        const events = await sovereignChainBridgeContract.queryFilter(filter, 0, 'latest');
         events.forEach((e) => {
             const { args } = e;
             const leafValue = getLeafValue(
@@ -2061,7 +2058,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 args.destinationNetwork,
                 args.destinationAddress,
                 args.amount,
-                ethers.solidityPackedKeccak256(["bytes"], [args.metadata])
+                ethers.solidityPackedKeccak256(['bytes'], [args.metadata]),
             );
             merkleTree.add(leafValue);
         });
@@ -2073,16 +2070,16 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         expect(rootSC).to.be.equal(rootJS);
     });
 
-    it("should claim testing all the asserts", async () => {
+    it('should claim testing all the asserts', async () => {
         // Add a claim leaf to rollup exit tree
         const originNetwork = networkIDRollup2;
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = deployer.address;
 
         const metadata = metadataToken;
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const mainnetExitRoot = ethers.ZeroHash;
 
@@ -2096,7 +2093,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
 
@@ -2109,7 +2106,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const rollupRoot = merkleTreeRollup.getRoot();
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rollupRoot, { gasPrice: 0 });
         // check roots
@@ -2119,11 +2116,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
         const hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -2137,7 +2134,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup),
         ).to.be.equal(true);
 
         const globalIndex = computeGlobalIndex(index, index, false);
@@ -2154,13 +2151,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+                metadata,
+            ),
+        ).to.be.revertedWith('ERC20: transfer amount exceeds balance');
 
         // transfer tokens, then claim
         await expect(polTokenContract.transfer(sovereignChainBridgeContract.target, amount))
-            .to.emit(polTokenContract, "Transfer")
+            .to.emit(polTokenContract, 'Transfer')
             .withArgs(deployer.address, sovereignChainBridgeContract.target, amount);
 
         // Check GlobalExitRoot invalid assert
@@ -2176,9 +2173,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "GlobalExitRootInvalid");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'GlobalExitRootInvalid');
 
         // Check Invalid smt proof assert
         await expect(
@@ -2193,9 +2190,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSmtProof");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSmtProof');
 
         await expect(
             sovereignChainBridgeContract.claimAsset(
@@ -2209,12 +2206,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(index, originNetwork, tokenAddress, destinationAddress, amount)
-            .to.emit(polTokenContract, "Transfer")
+            .to.emit(polTokenContract, 'Transfer')
             .withArgs(sovereignChainBridgeContract.target, deployer.address, amount);
 
         // Check Already claimed_claim
@@ -2230,21 +2227,21 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "AlreadyClaimed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AlreadyClaimed');
     });
 
-    it("should claim ether", async () => {
+    it('should claim ether', async () => {
         // Add a claim leaf to rollup exit tree
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // ether
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = deployer.address;
 
-        const metadata = "0x"; // since is ether does not have metadata
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadata = '0x'; // since is ether does not have metadata
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const mainnetExitRoot = ethers.ZeroHash;
 
@@ -2258,7 +2255,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
 
@@ -2269,7 +2266,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const rollupRoot = merkleTreeRollup.getRoot();
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rollupRoot, { gasPrice: 0 });
 
@@ -2280,11 +2277,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
         const hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -2299,7 +2296,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup),
         ).to.be.equal(true);
 
         /*
@@ -2318,9 +2315,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "EtherTransferFailed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'EtherTransferFailed');
 
         const balanceDeployer = await ethers.provider.getBalance(deployer.address);
         // Check mainnet destination assert
@@ -2331,16 +2328,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "DestinationNetworkInvalid");
+                '0x',
+                { value: amount },
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'DestinationNetworkInvalid');
 
         // This is used just to pay ether to the SovereignChain smart contract and be able to claim it afterwards.
-        await ethers.provider.send("hardhat_setBalance", [
-            sovereignChainBridgeContract.target,
-            ethers.toBeHex(amount)
-        ]);
+        await ethers.provider.send('hardhat_setBalance', [sovereignChainBridgeContract.target, ethers.toBeHex(amount)]);
 
         // Check balances before claim
         expect(await ethers.provider.getBalance(sovereignChainBridgeContract.target)).to.be.equal(amount);
@@ -2357,15 +2351,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(index, originNetwork, tokenAddress, destinationAddress, amount);
 
         // Check balances after claim
         expect(await ethers.provider.getBalance(sovereignChainBridgeContract.target)).to.be.equal(
-            ethers.parseEther("0")
+            ethers.parseEther('0'),
         );
         expect(await ethers.provider.getBalance(deployer.address)).to.be.gte(balanceDeployer);
 
@@ -2382,21 +2376,21 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "AlreadyClaimed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AlreadyClaimed');
     });
 
-    it("should claim message", async () => {
+    it('should claim message', async () => {
         // Add a claim leaf to rollup exit tree
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // ether
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup2;
         const destinationAddress = deployer.address;
 
-        const metadata = "0x176923791298713271763697869132"; // since is ether does not have metadata
-        const metadataHash = ethers.solidityPackedKeccak256(["bytes"], [metadata]);
+        const metadata = '0x176923791298713271763697869132'; // since is ether does not have metadata
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
 
         const mainnetExitRoot = ethers.ZeroHash;
 
@@ -2410,7 +2404,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
             destinationNetwork,
             destinationAddress,
             amount,
-            metadataHash
+            metadataHash,
         );
         merkleTree.add(leafValue);
 
@@ -2421,7 +2415,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         const rollupRoot = merkleTreeRollup.getRoot();
 
         // add rollup Merkle root
-        await ethers.provider.send("hardhat_impersonateAccount", [sovereignChainBridgeContract.target]);
+        await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
         const bridgeMock = await ethers.getSigner(sovereignChainBridgeContract.target as any);
         await sovereignChainGlobalExitRootContract.connect(bridgeMock).updateExitRoot(rollupRoot, { gasPrice: 0 });
 
@@ -2431,12 +2425,12 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
 
         const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
         // Insert global exit root
-        let hashChainValue = ethers.solidityPackedKeccak256(
-            ["bytes32", "bytes32"],
-            [ethers.ZeroHash, computedGlobalExitRoot]
+        const hashChainValue = ethers.solidityPackedKeccak256(
+            ['bytes32', 'bytes32'],
+            [ethers.ZeroHash, computedGlobalExitRoot],
         );
         await expect(sovereignChainGlobalExitRootContract.insertGlobalExitRoot(computedGlobalExitRoot))
-            .to.emit(sovereignChainGlobalExitRootContract, "UpdateHashChainValue")
+            .to.emit(sovereignChainGlobalExitRootContract, 'UpdateHashChainValue')
             .withArgs(computedGlobalExitRoot, hashChainValue);
 
         // Check GER has value in mapping
@@ -2450,7 +2444,7 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // verify merkle proof
         expect(verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)).to.be.equal(true);
         expect(
-            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup)
+            await sovereignChainBridgeContract.verifyMerkleProof(leafValue, proofLocal, index, rootJSRollup),
         ).to.be.equal(true);
 
         /*
@@ -2469,9 +2463,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSmtProof");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSmtProof');
 
         /*
          * claim
@@ -2489,9 +2483,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 networkIDRollup,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "DestinationNetworkInvalid");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'DestinationNetworkInvalid');
 
         /*
          * claim
@@ -2509,9 +2503,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "MessageFailed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'MessageFailed');
 
         await expect(
             sovereignChainBridgeContract.claimAsset(
@@ -2525,9 +2519,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 networkIDRollup,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "DestinationNetworkInvalid");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'DestinationNetworkInvalid');
 
         const balanceDeployer = await ethers.provider.getBalance(deployer.address);
         /*
@@ -2541,10 +2535,10 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: ethers.parseEther("100") }
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "AmountDoesNotMatchMsgValue");
+                '0x',
+                { value: ethers.parseEther('100') },
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AmountDoesNotMatchMsgValue');
 
         // Check mainnet destination assert
         await expect(
@@ -2554,16 +2548,13 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "DestinationNetworkInvalid");
+                '0x',
+                { value: amount },
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'DestinationNetworkInvalid');
 
         // This is used just to pay ether to the SovereignChainBridge smart contract and be able to claim it afterwards
-        await ethers.provider.send("hardhat_setBalance", [
-            sovereignChainBridgeContract.target,
-            ethers.toBeHex(amount)
-        ]);
+        await ethers.provider.send('hardhat_setBalance', [sovereignChainBridgeContract.target, ethers.toBeHex(amount)]);
 
         // Check balances before claim
         expect(await ethers.provider.getBalance(sovereignChainBridgeContract.target)).to.be.equal(amount);
@@ -2581,9 +2572,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSmtProof");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSmtProof');
 
         await expect(
             sovereignChainBridgeContract.claimMessage(
@@ -2597,15 +2588,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         )
-            .to.emit(sovereignChainBridgeContract, "ClaimEvent")
+            .to.emit(sovereignChainBridgeContract, 'ClaimEvent')
             .withArgs(index, originNetwork, tokenAddress, destinationAddress, amount);
 
         // Check balances after claim
         expect(await ethers.provider.getBalance(sovereignChainBridgeContract.target)).to.be.equal(
-            ethers.parseEther("0")
+            ethers.parseEther('0'),
         );
         expect(await ethers.provider.getBalance(deployer.address)).to.be.gte(balanceDeployer);
 
@@ -2622,15 +2613,15 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "AlreadyClaimed");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AlreadyClaimed');
     });
 
-    it("should test emergency state", async () => {
+    it('should test emergency state', async () => {
         await expect(sovereignChainBridgeContract.activateEmergencyState()).to.be.revertedWithCustomError(
             sovereignChainBridgeContract,
-            "OnlyEmergencyBridgePauser"
+            'OnlyEmergencyBridgePauser',
         );
 
         await expect(sovereignChainBridgeContract.deactivateEmergencyState()).to.be.revertedWithCustomError(
@@ -2641,11 +2632,11 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
         // Activate emergency state
         await expect(sovereignChainBridgeContract.connect(emergencyBridgePauser).activateEmergencyState()).to.emit(
             sovereignChainBridgeContract,
-            "EmergencyStateActivated"
+            'EmergencyStateActivated',
         );
 
         const tokenAddress = polTokenContract.target;
-        const amount = ethers.parseEther("10");
+        const amount = ethers.parseEther('10');
         const destinationNetwork = networkIDRollup;
         const destinationAddress = deployer.address;
 
@@ -2658,17 +2649,17 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x"
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OnlyNotEmergencyState");
+                '0x',
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyNotEmergencyState');
 
         await expect(
-            sovereignChainBridgeContract.bridgeMessage(destinationNetwork, destinationAddress, true, "0x")
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OnlyNotEmergencyState");
+            sovereignChainBridgeContract.bridgeMessage(destinationNetwork, destinationAddress, true, '0x'),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyNotEmergencyState');
 
         await expect(
-            sovereignChainBridgeContract.bridgeMessageWETH(destinationNetwork, destinationAddress, amount, true, "0x")
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OnlyNotEmergencyState");
+            sovereignChainBridgeContract.bridgeMessageWETH(destinationNetwork, destinationAddress, amount, true, '0x'),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyNotEmergencyState');
 
         const mockMerkleProof = new Array(32).fill(ethers.ZeroHash) as any;
         await expect(
@@ -2683,9 +2674,9 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OnlyNotEmergencyState");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyNotEmergencyState');
 
         await expect(
             sovereignChainBridgeContract.claimMessage(
@@ -2699,14 +2690,14 @@ describe("BridgeL2SovereignChain Contract Upgrade AL", () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "OnlyNotEmergencyState");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyNotEmergencyState');
 
         // Deactivate emergency state
         await expect(sovereignChainBridgeContract.connect(emergencyBridgePauser).deactivateEmergencyState()).to.emit(
             sovereignChainBridgeContract,
-            "EmergencyStateDeactivated"
+            'EmergencyStateDeactivated',
         );
         expect(await sovereignChainBridgeContract.isEmergencyState()).to.be.equal(false);
     });

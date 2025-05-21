@@ -6,20 +6,20 @@ const MerkleTreeBridge = MTBridge;
 
 // Constants
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
+export const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
 
-function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
+export function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
     if (isMainnet === true) {
         return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
     }
     return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
-function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
+export function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-async function createClaimAndAddGER(
+export async function createClaimAndAddGER(
     leafType: any,
     originNetwork: any,
     tokenAddress: any,
@@ -135,7 +135,7 @@ async function createClaimAndAddGER(
     };
 }
 
-async function claimBeforeBridge(
+export async function claimBeforeBridge(
     leafType: any,
     originNetwork: any,
     tokenAddress: any,
@@ -177,7 +177,7 @@ async function claimBeforeBridge(
     );
 }
 
-async function createClaimAndAddGER(
+export async function createClaimAndAddGER(
     leafType: any,
     originNetwork: any,
     tokenAddress: any,
@@ -299,12 +299,7 @@ async function createClaimAndAddGER(
     }
 }
 
-
-function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(["bytes32", "bytes32"], [mainnetExitRoot, rollupExitRoot]);
-}
-
-async function computeWrappedTokenProxyAddress(networkId: any, tokenAddress: string, bridgeContract: any, isWETH: boolean) {
+export async function computeWrappedTokenProxyAddress(networkId: any, tokenAddress: string, bridgeContract: any, isWETH: boolean) {
     const salt = isWETH ? ethers.ZeroHash : ethers.solidityPackedKeccak256(["uint32", "address"], [networkId, tokenAddress]);
 
     const minimalBytecodeProxy = await bridgeContract.INIT_BYTECODE_TRANSPARENT_PROXY();
@@ -316,12 +311,4 @@ async function computeWrappedTokenProxyAddress(networkId: any, tokenAddress: str
         salt,
         hashInitCode
     );
-}
-
-module.exports = {
-    claimBeforeBridge,
-    calculateGlobalExitRoot,
-    computeGlobalIndex,
-    createClaimAndAddGER,
-    computeWrappedTokenProxyAddress
 }
