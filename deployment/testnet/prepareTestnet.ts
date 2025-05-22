@@ -144,7 +144,10 @@ async function main() {
         const gasTokenName = 'Gas Token';
         const gasTokenSymbol = 'GAS';
 
-        const gasTokenFactory = await ethers.getContractFactory("@openzeppelin/contracts4/token/ERC20/ERC20.sol:ERC20", deployer);
+        const gasTokenFactory = await ethers.getContractFactory(
+            '@openzeppelin/contracts4/token/ERC20/ERC20.sol:ERC20',
+            deployer,
+        );
         const gasTokenContract = await gasTokenFactory.deploy(gasTokenName, gasTokenSymbol);
         await gasTokenContract.waitForDeployment();
         createRollupParameters.gasTokenAddress = gasTokenContract.target;

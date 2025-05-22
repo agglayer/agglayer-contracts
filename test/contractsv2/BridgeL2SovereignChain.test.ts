@@ -6,10 +6,9 @@ import {
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChain,
     TokenWrapped,
-} from "../../typechain-types";
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+} from '../../typechain-types';
+import { computeWrappedTokenProxyAddress, claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
 import { valueToStorageBytes } from '../../src/utils';
-import { claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
@@ -67,7 +66,8 @@ describe('BridgeL2SovereignChain Contract', () => {
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
+        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] =
+            await ethers.getSigners();
         globalExitRootRemover = deployer;
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
@@ -105,7 +105,7 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         // cannot initialize bridgeV2 initializer from Sovereign bridge
         await expect(
-            sovereignChainBridgeContract["initialize(uint32,address,uint32,address,address,bytes)"](
+            sovereignChainBridgeContract['initialize(uint32,address,uint32,address,address,bytes)'](
                 networkIDMainnet,
                 ethers.ZeroAddress, // zero for ether
                 ethers.ZeroAddress, // zero for ether
@@ -122,8 +122,8 @@ describe('BridgeL2SovereignChain Contract', () => {
                 [42],
                 emergencyBridgePauser.address,
                 proxiedTokensManager.address,
-            )
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, "InvalidInitializeFunction");
+            ),
+        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidInitializeFunction');
 
         await sovereignChainBridgeContract.initialize(
             networkIDRollup2,
@@ -136,7 +136,8 @@ describe('BridgeL2SovereignChain Contract', () => {
             ethers.ZeroAddress,
             false,
             emergencyBridgePauser.address,
-            proxiedTokensManager.address
+            emergencyBridgePauser.address,
+            proxiedTokensManager.address,
         );
 
         // deploy token
@@ -326,9 +327,10 @@ describe('BridgeL2SovereignChain Contract', () => {
                 ethers.ZeroAddress,
                 false,
                 emergencyBridgePauser.address,
-                proxiedTokensManager.address
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "GasTokenNetworkMustBeZeroOnEther");
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'GasTokenNetworkMustBeZeroOnEther');
 
         // _sovereignWETHAddress should be zero and _sovereignWETHAddressIsNotMintable should be false for native wethGasTokenNetworks
         await expect(
@@ -343,9 +345,10 @@ describe('BridgeL2SovereignChain Contract', () => {
                 bridge.target, // Not zero, revert
                 false,
                 emergencyBridgePauser.address,
-                proxiedTokensManager.address
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSovereignWETHAddressParams");
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSovereignWETHAddressParams');
 
         await expect(
             bridge.initialize(
@@ -359,9 +362,10 @@ describe('BridgeL2SovereignChain Contract', () => {
                 ethers.ZeroAddress,
                 true, // Not false, revert
                 emergencyBridgePauser.address,
-                proxiedTokensManager.address
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSovereignWETHAddressParams");
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSovereignWETHAddressParams');
     });
 
     it('Migrate non mintable tokens', async () => {
@@ -523,9 +527,10 @@ describe('BridgeL2SovereignChain Contract', () => {
                 amount,
                 sovereignToken.target,
                 true,
-                "0x"
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "LocalBalanceTreeUnderflow")
+                '0x',
+            ),
+        )
+            .to.be.revertedWithCustomError(sovereignChainBridgeContract, 'LocalBalanceTreeUnderflow')
             .withArgs(originNetwork, tokenAddress, amount, ethers.toBeHex(0));
 
         // increase LBT to allow bridge action afterwards
@@ -948,9 +953,10 @@ describe('BridgeL2SovereignChain Contract', () => {
                 ethers.ZeroAddress,
                 false,
                 emergencyBridgePauser.address,
-                proxiedTokensManager.address
-            )
-        ).to.be.revertedWith("Initializable: contract is already initialized");
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address,
+            ),
+        ).to.be.revertedWith('Initializable: contract is already initialized');
 
         await expect(
             sovereignChainGlobalExitRootContract.initialize(ethers.ZeroAddress, ethers.ZeroAddress),
@@ -1255,8 +1261,9 @@ describe('BridgeL2SovereignChain Contract', () => {
         await expect(
             sovereignChainBridgeContract.bridgeMessage(destinationNetwork, destinationAddress, false, metadata, {
                 value: amount,
-            })
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "LocalBalanceTreeUnderflow")
+            }),
+        )
+            .to.be.revertedWithCustomError(sovereignChainBridgeContract, 'LocalBalanceTreeUnderflow')
             .withArgs(0, ethers.ZeroAddress, amount, ethers.toBeHex(0));
 
         // increase LBT to allow bridge action afterwards
@@ -1574,20 +1581,21 @@ describe('BridgeL2SovereignChain Contract', () => {
         expect(false).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, sovereignChainBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            sovereignChainBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await sovereignChainBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await sovereignChainBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         await expect(
             sovereignChainBridgeContract.claimAsset(
@@ -1616,12 +1624,9 @@ describe('BridgeL2SovereignChain Contract', () => {
         const newTokenInfo = await sovereignChainBridgeContract.wrappedTokenToTokenInfo(precalculateWrappedErc20);
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await sovereignChainBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await sovereignChainBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         expect(newTokenInfo.originNetwork).to.be.equal(networkIDRollup);
         expect(newTokenInfo.originTokenAddress).to.be.equal(tokenAddress);
@@ -1632,7 +1637,7 @@ describe('BridgeL2SovereignChain Contract', () => {
             precalculateWrappedErc20,
         );
 
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await sovereignChainBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
@@ -1930,18 +1935,19 @@ describe('BridgeL2SovereignChain Contract', () => {
         expect(false).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // create2 parameters
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, sovereignChainBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            sovereignChainBridgeContract,
+        );
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await sovereignChainBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await sovereignChainBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
     });
 
-    it("should sovereignChainBridge and sync the current root with events", async () => {
+    it('should sovereignChainBridge and sync the current root with events', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // Ether
@@ -2650,7 +2656,7 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         await expect(sovereignChainBridgeContract.deactivateEmergencyState()).to.be.revertedWithCustomError(
             sovereignChainBridgeContract,
-            "OnlyEmergencyBridgeUnpauser"
+            'OnlyEmergencyBridgeUnpauser',
         );
 
         // Activate emergency state

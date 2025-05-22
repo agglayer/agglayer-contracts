@@ -1,7 +1,7 @@
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, TokenWrapped } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
@@ -45,7 +45,7 @@ describe('PolygonZkEVMBridge Contract', () => {
     const LEAF_TYPE_ASSET = 0;
     const LEAF_TYPE_MESSAGE = 1;
 
-    beforeEach("Deploy contracts", async () => {
+    beforeEach('Deploy contracts', async () => {
         // load signers
         [deployer, rollupManager, acc1] = await ethers.getSigners();
 
@@ -53,7 +53,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as PolygonZkEVMBridgeV2;
 
         // deploy global exit root manager
@@ -149,10 +149,10 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: 1 }
-            )
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "MsgValueNotZero");
+                '0x',
+                { value: 1 },
+            ),
+        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'MsgValueNotZero');
 
         await expect(
             polygonZkEVMBridgeContract.bridgeAsset(
@@ -384,8 +384,8 @@ describe('PolygonZkEVMBridge Contract', () => {
             amount2,
             tokenAddress2,
             false,
-            "0x",
-            { value: amount2 }
+            '0x',
+            { value: amount2 },
         );
     });
 
@@ -434,7 +434,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         // });
 
         await expect(polygonZkEVMGlobalExitRoot.connect(bridgemoCK).updateExitRoot(mainnetExitRoot, { gasPrice: 0 }))
-            .to.emit(polygonZkEVMGlobalExitRoot, "UpdateGlobalExitRoot")
+            .to.emit(polygonZkEVMGlobalExitRoot, 'UpdateGlobalExitRoot')
             .withArgs(mainnetExitRoot, rollupExitRoot);
 
         // check roots
@@ -771,20 +771,21 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(false).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         await expect(
             polygonZkEVMBridgeContract.claimAsset(
@@ -818,7 +819,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(await polygonZkEVMBridgeContract.getTokenWrappedAddress(networkIDRollup, tokenAddress)).to.be.equal(
             precalculateWrappedErc20,
         );
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await polygonZkEVMBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
@@ -883,7 +884,7 @@ describe('PolygonZkEVMBridge Contract', () => {
 
         // create a new deposit
         await expect(newWrappedToken.connect(acc1).approve(polygonZkEVMBridgeContract.target, amount))
-            .to.emit(newWrappedToken, "Approval")
+            .to.emit(newWrappedToken, 'Approval')
             .withArgs(acc1.address, polygonZkEVMBridgeContract.target, amount);
 
         /*
@@ -1050,15 +1051,16 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(false).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         await expect(
             polygonZkEVMBridgeContract.claimAsset(
@@ -1072,8 +1074,8 @@ describe('PolygonZkEVMBridge Contract', () => {
                 destinationNetwork,
                 destinationAddress,
                 amount,
-                metadata
-            )
+                metadata,
+            ),
         ).to.be.reverted;
     });
     it('should PolygonZkEVMBridge and sync the current root with events', async () => {
@@ -1094,9 +1096,9 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1117,9 +1119,9 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1140,9 +1142,9 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1465,10 +1467,10 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "DestinationNetworkInvalid");
+                '0x',
+                { value: amount },
+            ),
+        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'DestinationNetworkInvalid');
 
         // This is used just to pay ether to the PolygonZkEVMBridge smart contract and be able to claim it afterwards.
         expect(
@@ -1478,9 +1480,9 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         );
 
         // Check balances before claim
@@ -1672,10 +1674,10 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: ethers.parseEther("100") }
-            )
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "AmountDoesNotMatchMsgValue");
+                '0x',
+                { value: ethers.parseEther('100') },
+            ),
+        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'AmountDoesNotMatchMsgValue');
 
         // Check mainnet destination assert
         await expect(
@@ -1685,10 +1687,10 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "DestinationNetworkInvalid");
+                '0x',
+                { value: amount },
+            ),
+        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'DestinationNetworkInvalid');
 
         // This is used just to pay ether to the PolygonZkEVMBridge smart contract and be able to claim it afterwards.
         expect(
@@ -1698,9 +1700,9 @@ describe('PolygonZkEVMBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         );
 
         // Check balances before claim

@@ -113,7 +113,7 @@ async function main() {
     const operationBridge = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+        proxyAdmin.interface.encodeFunctionData('upgradeAndCall', [
             bridgeAddress,
             impBridge,
             bridgeFactory.interface.encodeFunctionData("initialize()", [])

@@ -1,16 +1,14 @@
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChain,
     TokenWrapped,
-} from "../../typechain-types";
-import { MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
-
-import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
-import { claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
+} from '../../typechain-types';
+import { computeWrappedTokenProxyAddress, claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
@@ -64,7 +62,8 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
+        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] =
+            await ethers.getSigners();
 
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
@@ -112,6 +111,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
             ethers.Typed.address(bridgeManager.address),
             WETHToken.target,
             false,
+            emergencyBridgePauser.address,
             emergencyBridgePauser.address,
             proxiedTokensManager.address,
         );
@@ -313,10 +313,10 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: 1 }
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "MsgValueNotZero");
+                '0x',
+                { value: 1 },
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'MsgValueNotZero');
 
         await expect(
             sovereignChainBridgeContract.bridgeAsset(
@@ -434,9 +434,10 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
                 destinationAddress,
                 amount,
                 true,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "LocalBalanceTreeUnderflow")
+                metadata,
+            ),
+        )
+            .to.be.revertedWithCustomError(sovereignChainBridgeContract, 'LocalBalanceTreeUnderflow')
             .withArgs(0, ethers.ZeroAddress, amount, ethers.toBeHex(0));
 
         // increase LBT to allow bridge action afterwards
@@ -640,7 +641,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
 
         // Just to have the metric of a low cost bridge Asset
         const tokenAddress2 = WETHToken.target; // Ether
-        const amount2 = ethers.parseEther("10");
+        const amount2 = ethers.parseEther('10');
         await WETHToken.connect(bridgeMock).mint(deployer.address, amount2, { gasPrice: 0 });
 
         // Check LBT underflow
@@ -650,9 +651,10 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
                 destinationAddress,
                 amount,
                 true,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "LocalBalanceTreeUnderflow")
+                metadata,
+            ),
+        )
+            .to.be.revertedWithCustomError(sovereignChainBridgeContract, 'LocalBalanceTreeUnderflow')
             .withArgs(0, ethers.ZeroAddress, amount, ethers.toBeHex(0));
 
         // increase LBT to allow bridge action afterwards
@@ -930,20 +932,21 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
         expect(false).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, sovereignChainBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            sovereignChainBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await sovereignChainBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await sovereignChainBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         await expect(
             sovereignChainBridgeContract.claimAsset(
@@ -978,7 +981,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
             precalculateWrappedErc20,
         );
 
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await sovereignChainBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
@@ -1158,9 +1161,9 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1181,9 +1184,9 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1204,9 +1207,9 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(sovereignChainBridgeContract, 'BridgeEvent')
             .withArgs(

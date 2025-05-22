@@ -75,8 +75,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: 0,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
@@ -219,8 +219,15 @@ describe('AggchainFEP', () => {
         await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         // Check initialized selector
-        expect(await aggchainFEPContract.getAggchainVKeySelector(aggchainVKeySelector.slice(0,6), `0x${aggchainVKeySelector.slice(6)}`)).to.equal(aggchainVKeySelector)
-        expect(await aggchainFEPContract.getAggchainVKeyVersionFromSelector(aggchainVKeySelector)).to.equal(aggchainVKeySelector.slice(0,6))
+        expect(
+            await aggchainFEPContract.getAggchainVKeySelector(
+                aggchainVKeySelector.slice(0, 6),
+                `0x${aggchainVKeySelector.slice(6)}`,
+            ),
+        ).to.equal(aggchainVKeySelector);
+        expect(await aggchainFEPContract.getAggchainVKeyVersionFromSelector(aggchainVKeySelector)).to.equal(
+            aggchainVKeySelector.slice(0, 6),
+        );
 
         // check all SC storage slots are correctly initialized
         // aggchain
@@ -307,8 +314,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: 0,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv1(
@@ -372,8 +379,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: blockDataTimestamp - 20,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
@@ -479,8 +486,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: blockDataTimestamp - 20,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
@@ -549,8 +556,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: blockDataTimestamp - 20,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
@@ -622,8 +629,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: blockDataTimestamp - 20,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
@@ -701,14 +708,14 @@ describe('AggchainFEP', () => {
 
         // rangeVKeyCommitment
         const oldAggregationVkey = await aggchainFEPContract.aggregationVkey();
-        const newAggregationVkey = ethers.id("newAggregationVkey");
+        const newAggregationVkey = ethers.id('newAggregationVkey');
 
         await expect(aggchainFEPContract.updateAggregationVkey(newRangeVKeyCommitment)).to.be.revertedWithCustomError(
             aggchainFEPContract,
             'OnlyAggchainManager',
         );
         await expect(aggchainFEPContract.connect(aggchainManager).updateAggregationVkey(newAggregationVkey))
-            .to.emit(aggchainFEPContract, "AggregationVkeyUpdated")
+            .to.emit(aggchainFEPContract, 'AggregationVkeyUpdated')
             .withArgs(oldAggregationVkey, newAggregationVkey);
 
         const newAggregationVkeySC = await aggchainFEPContract.aggregationVkey();
@@ -755,8 +762,8 @@ describe('AggchainFEP', () => {
             startingTimestamp: blockDataTimestamp - 20,
             submissionInterval: 5,
             optimisticModeManager: optModeManager.address,
-            aggregationVkey: ethers.id("aggregationVkey"),
-            rangeVkeyCommitment: ethers.id("rangeVkeyCommitment"),
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
         const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(

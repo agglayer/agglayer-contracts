@@ -1,6 +1,7 @@
-import { execSync } from "child_process";
-import { ethers, run } from "hardhat";
-import { convertBigIntsToNumbers } from "../tools/utils";
+/* eslint-disable no-console */
+import { execSync } from 'child_process';
+import { ethers, run } from 'hardhat';
+import { convertBigIntsToNumbers } from '../tools/utils';
 
 /**
  * Generates a timelock operation with the given input valies
@@ -121,13 +122,13 @@ async function decodeScheduleData(scheduleData: any, contractFactory: any) {
  */
 function getGitInfo(): { commit: string; repo: string } | null {
     try {
-      // Get the latest commit hash
-      const commit = execSync("git rev-parse HEAD").toString().trim();
+        // Get the latest commit hash
+        const commit = execSync('git rev-parse HEAD').toString().trim();
 
-      // Get the repository URL
-      const repo = execSync("git config --get remote.origin.url").toString().trim();
+        // Get the repository URL
+        const repo = execSync('git config --get remote.origin.url').toString().trim();
 
-      return { commit, repo };
+        return { commit, repo };
     } catch (error) {
         throw new Error(`getGitInfo: ${error}`);
     }
@@ -135,12 +136,11 @@ function getGitInfo(): { commit: string; repo: string } | null {
 
 // This is a workaround to fix the BigInt serialization issue in JSON
 // when using JSON.stringify on BigInt values, which is common in Ethers
-Object.defineProperty(BigInt.prototype, "toJSON", {
+// eslint-disable-next-line no-extend-native
+Object.defineProperty(BigInt.prototype, 'toJSON', {
     get() {
-        "use strict";
         return () => String(this);
     },
 });
-
 
 export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, getGitInfo };

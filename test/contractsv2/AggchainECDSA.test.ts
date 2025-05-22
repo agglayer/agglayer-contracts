@@ -48,8 +48,8 @@ describe('AggchainECDSA', () => {
     const newStateRoot = '0x1122334455667788990011223344556677889900112233445566778899001122';
 
     const useDefaultGateway = true;
-    const aggchainSelector3 = utilsAggchain.getAggchainVKeySelector("0x1234", AGGCHAIN_TYPE);
-    const ownedAggchainVKey = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    const aggchainSelector3 = utilsAggchain.getAggchainVKeySelector('0x1234', AGGCHAIN_TYPE);
+    const ownedAggchainVKey = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
     beforeEach('Deploy contract', async () => {
         upgrades.silenceWarnings();
@@ -158,12 +158,13 @@ describe('AggchainECDSA', () => {
         const rollupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
 
         // Check AggchainManagerCannotBeZero
-        await expect(aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(ethers.ZeroAddress, { gasPrice: 0 })).to.be.revertedWithCustomError(
-            aggchainECDSAcontract,
-            "AggchainManagerCannotBeZero"
-        );
+        await expect(
+            aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(ethers.ZeroAddress, { gasPrice: 0 }),
+        ).to.be.revertedWithCustomError(aggchainECDSAcontract, 'AggchainManagerCannotBeZero');
 
-        await aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainECDSAcontract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
         // initialize zkEVM using non admin address
         await expect(aggchainECDSAcontract.initialize(initializeBytesAggchain)).to.be.revertedWithCustomError(
@@ -201,8 +202,8 @@ describe('AggchainECDSA', () => {
 
         // initialize again
         await expect(
-            aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 })
-        ).to.be.revertedWith("Initializable: contract is already initialized");
+            aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+        ).to.be.revertedWith('Initializable: contract is already initialized');
     });
 
     // PolygonConsensusBase
@@ -210,7 +211,9 @@ describe('AggchainECDSA', () => {
         // initialize using rollup manager
         await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rollupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
-        await aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainECDSAcontract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
         await aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         // setTrustedSequencer
@@ -255,7 +258,9 @@ describe('AggchainECDSA', () => {
         // initialize using rollup manager
         await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rollupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
-        await aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainECDSAcontract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
         await aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         // disableUseDefaultGatewayFlag
@@ -359,7 +364,9 @@ describe('AggchainECDSA', () => {
         // initialize using rollup manager
         await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rollupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
-        await aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainECDSAcontract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
         await aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         // calculate aggchainHash
@@ -397,7 +404,9 @@ describe('AggchainECDSA', () => {
         // initialize using rollup manager
         await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerAddress]);
         const rollupManagerSigner = await ethers.getSigner(rollupManagerAddress as any);
-        await aggchainECDSAcontract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainECDSAcontract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
         await aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         const aggchainVKeySelector = utilsAggchain.getAggchainVKeySelector(aggchainVkeyVersion, AGGCHAIN_TYPE);
@@ -467,7 +476,9 @@ describe('AggchainECDSA', () => {
             vKeyManager.address,
         );
 
-        await ppConsensusContract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await ppConsensusContract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
         await ppConsensusContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         // check initializeBytesAggchain

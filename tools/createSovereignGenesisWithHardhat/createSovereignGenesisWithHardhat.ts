@@ -4,12 +4,12 @@ import { expect } from 'chai';
 import path = require('path');
 import fs = require('fs');
 
-import { GENESIS_CONTRACT_NAMES } from "../../src/utils-common-aggchain"
 import * as dotenv from 'dotenv';
 import yargs from 'yargs/yargs';
 import { getStorageAt, setCode, setNonce } from '@nomicfoundation/hardhat-network-helpers';
 import { ethers, upgrades } from 'hardhat';
 import { MemDB, ZkEVMDB, getPoseidon, smtUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { GENESIS_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import {
     deployPolygonZkEVMDeployer,
     create2Deployment,
@@ -91,8 +91,8 @@ async function main() {
 
     // Deploy proxy admin:
     const proxyAdminFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
-        deployer
+        '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
+        deployer,
     );
     const deployTransactionAdmin = (await proxyAdminFactory.getDeployTransaction()).data;
     const dataCallAdmin = proxyAdminFactory.interface.encodeFunctionData('transferOwnership', [deployer.address]);
@@ -121,16 +121,16 @@ async function main() {
     );
     // Get genesis params
     const sovereignGenesisBridgeProxy = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_PROXY;
+        return obj.contractName === GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_PROXY;
     });
     const sovereignGenesisBridgeImplementation = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE;
+        return obj.contractName === GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE;
     });
     const sovereignGenesisGERProxy = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN_PROXY;
+        return obj.contractName === GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN_PROXY;
     });
     const sovereignGenesisGERImplementation = genesisSovereign.genesis.find(function (obj) {
-        return obj.contractName == GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN;
+        return obj.contractName === GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN;
     });
     const sovereignDeployerAccount = genesisSovereign.genesis.find(function (obj) {
         return obj.accountName === 'deployer';
@@ -144,8 +144,8 @@ async function main() {
      * deploy bridge proxy and initialize
      */
     const transparentProxyFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
-        deployer
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+        deployer,
     );
     const initializeEmptyDataProxy = '0x';
     const deployTransactionProxy = (
@@ -169,7 +169,7 @@ async function main() {
     /*
      *Deployment Global exit root manager implementation, proxy and initialize
      */
-    const {sovereignParams} = createRollupParameters;
+    const { sovereignParams } = createRollupParameters;
     const globalExitRootContractName = GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN;
     const GERSovereignFactory = await ethers.getContractFactory(globalExitRootContractName, deployer);
     const proxyGERContract = await upgrades.deployProxy(GERSovereignFactory, [sovereignParams.globalExitRootUpdater], {
@@ -284,7 +284,7 @@ async function main() {
         const wethAddress = await sovereignBridgeProxyContract.WETHToken();
         const wethBytecode = await ethers.provider.getCode(wethAddress);
         const sovereignWETH = genesisSovereign.genesis.find(function (obj) {
-            return obj.contractName == GENESIS_CONTRACT_NAMES.WETH_PROXY;
+            return obj.contractName === GENESIS_CONTRACT_NAMES.WETH_PROXY;
         });
         // Check storage
         for (const key in sovereignWETH.storage) {

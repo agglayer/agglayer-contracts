@@ -1,17 +1,17 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import { expect } from "chai";
-import path = require("path");
-import fs = require("fs");
-import { utils } from "ffjavascript";
-import { logger } from "../../src/logger";
-
-import { ethers, upgrades, run } from "hardhat";
-import { GlobalExitRootManagerL2SovereignChainPessimistic } from "../../typechain-types";
-import { genTimelockOperation, decodeScheduleData } from "../utils";
-import { checkParams, getDeployerFromParameters } from "../../src/utils";
-
+import { expect } from 'chai';
+import path = require('path');
+import fs = require('fs');
+import { utils } from 'ffjavascript';
+import { ethers, upgrades, run } from 'hardhat';
 import * as dotenv from 'dotenv';
+import { logger } from '../../src/logger';
+
+import { GlobalExitRootManagerL2SovereignChainPessimistic } from '../../typechain-types';
+import { genTimelockOperation, decodeScheduleData } from '../utils';
+import { checkParams, getDeployerFromParameters } from '../../src/utils';
+
 import * as upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -23,10 +23,16 @@ async function main() {
      * Check upgrade parameters
      * Check that every necessary parameter is fulfilled
      */
-    const mandatoryUpgradeParameters = ["timelockDelay", "proxiedTokensManagerAddress", "emergencyBridgePauserAddress", "emergencyBridgeUnpauserAddress"];
+    const mandatoryUpgradeParameters = [
+        'timelockDelay',
+        'proxiedTokensManagerAddress',
+        'emergencyBridgePauserAddress',
+        'emergencyBridgeUnpauserAddress',
+    ];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    const { timelockDelay, emergencyBridgePauserAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress } = upgradeParameters;
+    const { timelockDelay, emergencyBridgePauserAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress } =
+        upgradeParameters;
 
     // In case globalExitRootManagerL2SovereignChainAddress is not provided, use the default one, used by most chains in the genesis
     const globalExitRootManagerL2SovereignChainAddress =
@@ -85,10 +91,10 @@ async function main() {
         },
     );
 
-    logger.info("#######################\n");
+    logger.info('#######################\n');
     logger.info(`GERManagerL2Sovereign implementation: ${gerManagerL2SovereignChainImplementation}`);
     try {
-        logger.info("Trying to verify the new implementation contract");
+        logger.info('Trying to verify the new implementation contract');
         // wait a few seconds before trying etherscan verification
         await new Promise((r) => {
             setTimeout(r, 5000);
@@ -99,12 +105,12 @@ async function main() {
             constructorArguments: [bridgeAddress],
         });
     } catch (error) {
-        logger.info("Error verifying the new implementation contract: ", error);
-        logger.info("you can verify the new impl address with:");
+        logger.info('Error verifying the new implementation contract: ', error);
+        logger.info('you can verify the new impl address with:');
         logger.info(
-            `npx hardhat verify --constructor-args upgrade/arguments.js ${gerManagerL2SovereignChainImplementation} --network ${process.env.HARDHAT_NETWORK}\n`
+            `npx hardhat verify --constructor-args upgrade/arguments.js ${gerManagerL2SovereignChainImplementation} --network ${process.env.HARDHAT_NETWORK}\n`,
         );
-        logger.info("Copy the following constructor arguments on: upgrade/arguments.js \n", [bridgeAddress]);
+        logger.info('Copy the following constructor arguments on: upgrade/arguments.js \n', [bridgeAddress]);
     }
     // gerManagerL2SovereignChainImplementation is upgraded but not initialized
     const operationGER = genTimelockOperation(
@@ -119,37 +125,39 @@ async function main() {
     );
 
     // Upgrade BridgeL2SovereignChain
-    const bridgeFactory = await ethers.getContractFactory("BridgeL2SovereignChain", deployer);
-    await upgrades.forceImport(
-        bridgeAddress,
-        bridgeFactory,
-        {
-            constructorArgs: [],
-            kind: "transparent",
-        }
-    );
+    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
+    await upgrades.forceImport(bridgeAddress, bridgeFactory, {
+        constructorArgs: [],
+        kind: 'transparent',
+    });
 
     const impBridge = await upgrades.prepareUpgrade(bridgeAddress, bridgeFactory, {
-        unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
-        redeployImplementation: "always",
+        unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+        redeployImplementation: 'always',
     });
-    logger.info("#######################\n");
+    logger.info('#######################\n');
     logger.info(`Polygon sovereign bridge implementation deployed at: ${impBridge}`);
 
     const operationBridge = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+        proxyAdmin.interface.encodeFunctionData('upgradeAndCall', [
             bridgeAddress,
             impBridge,
-            bridgeFactory.interface.encodeFunctionData("initialize(bytes32[],uint256[],address,address,address)", [[], [], emergencyBridgePauserAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress])
+            bridgeFactory.interface.encodeFunctionData('initialize(bytes32[],uint256[],address,address,address)', [
+                [],
+                [],
+                emergencyBridgePauserAddress,
+                emergencyBridgeUnpauserAddress,
+                proxiedTokensManagerAddress,
+            ]),
         ]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("scheduleBatch", [
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData('scheduleBatch', [
         [operationGER.target, operationBridge.target],
         [operationGER.value, operationBridge.value],
         [operationGER.data, operationBridge.data],
@@ -159,7 +167,7 @@ async function main() {
     ]);
 
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("executeBatch", [
+    const executeData = timelockContractFactory.interface.encodeFunctionData('executeBatch', [
         [operationGER.target, operationBridge.target],
         [operationGER.value, operationBridge.value],
         [operationGER.data, operationBridge.data],

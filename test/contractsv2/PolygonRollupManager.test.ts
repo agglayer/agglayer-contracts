@@ -15,8 +15,8 @@ import {
     TokenWrapped,
     Address,
     PolygonDataCommittee,
-} from "../../typechain-types";
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+} from '../../typechain-types';
+import { computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 import { computeRandomBytes } from '../../src/pessimistic-utils';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 
@@ -24,7 +24,6 @@ type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-
 
 function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
@@ -175,7 +174,7 @@ describe('Polygon Rollup Manager', () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         // deploy PolygonRollupManager
@@ -198,14 +197,17 @@ describe('Polygon Rollup Manager', () => {
         expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
 
-        await expect(polygonZkEVMBridgeContract.initialize(
-            networkIDMainnet,
-            ethers.ZeroAddress, // zero for ether
-            ethers.ZeroAddress, // zero for ether
-            polygonZkEVMGlobalExitRoot.target,
-            rollupManagerContract.target,
-            "0x"
-        )).to.emit(polygonZkEVMBridgeContract, "AcceptProxiedTokensManagerRole")
+        await expect(
+            polygonZkEVMBridgeContract.initialize(
+                networkIDMainnet,
+                ethers.ZeroAddress, // zero for ether
+                ethers.ZeroAddress, // zero for ether
+                polygonZkEVMGlobalExitRoot.target,
+                rollupManagerContract.target,
+                '0x',
+            ),
+        )
+            .to.emit(polygonZkEVMBridgeContract, 'AcceptProxiedTokensManagerRole')
             .withArgs(ethers.ZeroAddress, deployer.address);
 
         // Initialize Mock
@@ -516,19 +518,22 @@ describe('Polygon Rollup Manager', () => {
             newCreatedRollupID,
             gasTokenAddress,
             gasTokenNetwork,
-            "0x", // empty metadata
+            '0x', // empty metadata
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
-        const encodedData = bridgeL2Factory.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
-            newCreatedRollupID,
-            gasTokenAddress,
-            gasTokenNetwork,
-            globalExitRootL2Address,
-            ethers.ZeroAddress,
-            '0x', // empty metadata
-        ]);
+        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const encodedData = bridgeL2Factory.interface.encodeFunctionData(
+            'initialize(uint32,address,uint32,address,address,bytes)',
+            [
+                newCreatedRollupID,
+                gasTokenAddress,
+                gasTokenNetwork,
+                globalExitRootL2Address,
+                ethers.ZeroAddress,
+                '0x', // empty metadata
+            ],
+        );
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -922,20 +927,21 @@ describe('Polygon Rollup Manager', () => {
         // claim
         const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
         // create2 parameters
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         // index leaf is 0 bc, does not have mainnet flag, and it's rollup 0 on leaf 0
         await expect(
@@ -1467,15 +1473,18 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
-        const encodedData = bridgeL2Factory.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
-            newCreatedRollupID,
-            gasTokenAddress,
-            gasTokenNetwork,
-            globalExitRootL2Address,
-            ethers.ZeroAddress,
-            gasMetadataToken,
-        ]);
+        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const encodedData = bridgeL2Factory.interface.encodeFunctionData(
+            'initialize(uint32,address,uint32,address,address,bytes)',
+            [
+                newCreatedRollupID,
+                gasTokenAddress,
+                gasTokenNetwork,
+                globalExitRootL2Address,
+                ethers.ZeroAddress,
+                gasMetadataToken,
+            ],
+        );
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -1762,20 +1771,21 @@ describe('Polygon Rollup Manager', () => {
         ).to.be.equal(true);
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         // index leaf is 0 bc, does not have mainnet flag, and it's rollup 0 on leaf 0
         await expect(
@@ -1812,7 +1822,7 @@ describe('Polygon Rollup Manager', () => {
             precalculateWrappedErc20,
         );
 
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await polygonZkEVMBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
@@ -2045,15 +2055,18 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
-        const encodedData = bridgeL2Factory.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
-            newCreatedRollupID,
-            gasTokenAddress,
-            gasTokenNetwork,
-            globalExitRootL2Address,
-            ethers.ZeroAddress,
-            gasMetadataToken, // empty metadata
-        ]);
+        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const encodedData = bridgeL2Factory.interface.encodeFunctionData(
+            'initialize(uint32,address,uint32,address,address,bytes)',
+            [
+                newCreatedRollupID,
+                gasTokenAddress,
+                gasTokenNetwork,
+                globalExitRootL2Address,
+                ethers.ZeroAddress,
+                gasMetadataToken, // empty metadata
+            ],
+        );
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -2327,20 +2340,21 @@ describe('Polygon Rollup Manager', () => {
         // claim
         const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
         // create2 parameters
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         // index leaf is 0 bc, does not have mainnet flag, and it's rollup 0 on leaf 0
         await expect(
@@ -2720,15 +2734,18 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory("PolygonZkEVMBridgeV2");
-        const encodedData = bridgeL2Factory.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
-            newCreatedRollupID,
-            gasTokenAddress,
-            gasTokenNetwork,
-            globalExitRootL2Address,
-            ethers.ZeroAddress,
-            gasMetadataToken, // empty metadata
-        ]);
+        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const encodedData = bridgeL2Factory.interface.encodeFunctionData(
+            'initialize(uint32,address,uint32,address,address,bytes)',
+            [
+                newCreatedRollupID,
+                gasTokenAddress,
+                gasTokenNetwork,
+                globalExitRootL2Address,
+                ethers.ZeroAddress,
+                gasMetadataToken, // empty metadata
+            ],
+        );
 
         const rawTx = processorUtils.customRawTxToRawTx(transaction);
         const tx = ethers.Transaction.from(rawTx);
@@ -3383,20 +3400,21 @@ describe('Polygon Rollup Manager', () => {
         ).to.be.equal(true);
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         // index leaf is 0 bc, does not have mainnet flag, and it's rollup 0 on leaf 0
         await expect(
@@ -3433,7 +3451,7 @@ describe('Polygon Rollup Manager', () => {
             precalculateWrappedErc20,
         );
 
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await polygonZkEVMBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info

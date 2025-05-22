@@ -187,7 +187,7 @@ async function main() {
         const operation = genOperation(
             initializeRollupParameters.rollupManagerAddress,
             0, // value
-            aggchainContract.interface.encodeFunctionData("initialize(bytes)", [initializeBytesAggchain]),
+            aggchainContract.interface.encodeFunctionData('initialize(bytes)', [initializeBytesAggchain]),
             predecessor, // predecessor
             salt, // salt
         );

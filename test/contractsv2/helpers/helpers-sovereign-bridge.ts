@@ -195,4 +195,3 @@ export async function claimBeforeBridge(
         metadata,
     );
 }
-

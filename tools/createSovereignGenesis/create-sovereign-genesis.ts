@@ -35,20 +35,20 @@ async function main() {
     logger.info('Check initial parameters');
 
     const mandatoryParameters = [
-        "rollupManagerAddress",
-        "rollupID",
-        "chainID",
-        "bridgeManager",
-        "gasTokenAddress",
-        "sovereignWETHAddress",
-        "sovereignWETHAddressIsNotMintable",
-        "globalExitRootUpdater",
-        "globalExitRootRemover",
-        "emergencyBridgePauser",
-        "emergencyBridgeUnpauser",
-        "proxiedTokensManager",
-        "setPreMintAccounts",
-        "setTimelockParameters",
+        'rollupManagerAddress',
+        'rollupID',
+        'chainID',
+        'bridgeManager',
+        'gasTokenAddress',
+        'sovereignWETHAddress',
+        'sovereignWETHAddressIsNotMintable',
+        'globalExitRootUpdater',
+        'globalExitRootRemover',
+        'emergencyBridgePauser',
+        'emergencyBridgeUnpauser',
+        'proxiedTokensManager',
+        'setPreMintAccounts',
+        'setTimelockParameters',
     ];
 
     // check global parameters

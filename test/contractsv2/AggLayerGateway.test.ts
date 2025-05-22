@@ -277,7 +277,7 @@ describe('AggLayerGateway tests', () => {
         ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'AggchainVKeyAlreadyExists');
     });
 
-    it("getDefaultAggchainVKey & updateDefaultAggchainVKey & unsetDefaultAggchainVKey", async () => {
+    it('getDefaultAggchainVKey & updateDefaultAggchainVKey & unsetDefaultAggchainVKey', async () => {
         // add pessimistic vkey route
         // check onlyRole
         await expect(aggLayerGatewayContract.addDefaultAggchainVKey(selector, pessimisticVKey))
@@ -316,8 +316,9 @@ describe('AggLayerGateway tests', () => {
             .withArgs(deployer.address, AGGCHAIN_DEFAULT_VKEY_ROLE);
 
         // check non-zero
-        await expect(aggLayerGatewayContract.connect(aggLayerAdmin).updateDefaultAggchainVKey(selector, ethers.ZeroHash))
-            .to.be.revertedWithCustomError(aggLayerGatewayContract, "VKeyCannotBeZero")
+        await expect(
+            aggLayerGatewayContract.connect(aggLayerAdmin).updateDefaultAggchainVKey(selector, ethers.ZeroHash),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'VKeyCannotBeZero');
 
         // check UpdateDefaultAggchainVKey
         await expect(
@@ -332,23 +333,24 @@ describe('AggLayerGateway tests', () => {
         // unset default aggchain vkey
         // check onlyRole
         await expect(aggLayerGatewayContract.unsetDefaultAggchainVKey(selector))
-            .to.be.revertedWithCustomError(aggLayerGatewayContract, "AccessControlUnauthorizedAccount")
+            .to.be.revertedWithCustomError(aggLayerGatewayContract, 'AccessControlUnauthorizedAccount')
             .withArgs(deployer.address, AGGCHAIN_DEFAULT_VKEY_ROLE);
 
         // check AggchainVKeyNotFound
-        const selector2 = "0x00000002";
-        await expect(aggLayerGatewayContract.connect(aggLayerAdmin).unsetDefaultAggchainVKey(selector2))
-            .to.be.revertedWithCustomError(aggLayerGatewayContract, "AggchainVKeyNotFound");
+        const selector2 = '0x00000002';
+        await expect(
+            aggLayerGatewayContract.connect(aggLayerAdmin).unsetDefaultAggchainVKey(selector2),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'AggchainVKeyNotFound');
 
         // unset correctly
         await expect(aggLayerGatewayContract.connect(aggLayerAdmin).unsetDefaultAggchainVKey(selector))
-            .to.emit(aggLayerGatewayContract, "UnsetDefaultAggchainVKey")
+            .to.emit(aggLayerGatewayContract, 'UnsetDefaultAggchainVKey')
             .withArgs(selector);
 
         // check getDefaultAggchainVKey --> ethers.ZeroHash
         await expect(aggLayerGatewayContract.getDefaultAggchainVKey(selector)).to.be.revertedWithCustomError(
             aggLayerGatewayContract,
-            "AggchainVKeyNotFound"
+            'AggchainVKeyNotFound',
         );
     });
 

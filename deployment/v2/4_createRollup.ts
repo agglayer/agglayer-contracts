@@ -45,15 +45,15 @@ async function main() {
      * Check that every necessary parameter is fullfilled
      */
     const mandatoryDeploymentParameters = [
-        "trustedSequencerURL",
-        "networkName",
-        "description",
-        "trustedSequencer",
-        "chainID",
-        "adminZkEVM",
-        "forkID",
-        "consensusContract",
-        "programVKey"
+        'trustedSequencerURL',
+        'networkName',
+        'description',
+        'trustedSequencer',
+        'chainID',
+        'adminZkEVM',
+        'forkID',
+        'consensusContract',
+        'programVKey',
     ];
 
     // eslint-disable-next-line no-restricted-syntax
@@ -113,14 +113,14 @@ async function main() {
 
         // Check sovereign params
         const mandatorySovereignParams = [
-            "bridgeManager",
-            "sovereignWETHAddress",
-            "sovereignWETHAddressIsNotMintable",
-            "globalExitRootUpdater",
-            "globalExitRootRemover",
-            "emergencyBridgePauser",
-            "emergencyBridgeUnpauser",
-            "proxiedTokensManager"
+            'bridgeManager',
+            'sovereignWETHAddress',
+            'sovereignWETHAddressIsNotMintable',
+            'globalExitRootUpdater',
+            'globalExitRootRemover',
+            'emergencyBridgePauser',
+            'emergencyBridgeUnpauser',
+            'proxiedTokensManager',
         ];
         // eslint-disable-next-line no-restricted-syntax
         for (const parameterName of mandatorySovereignParams) {
@@ -586,12 +586,12 @@ async function main() {
                 !ethers.isAddress(sovereignParams.sovereignWETHAddress))
         ) {
             const wethObject = genesis.genesis.find(function (obj) {
-                return obj.contractName == utilsAggchain.GENESIS_CONTRACT_NAMES.WETH_PROXY;
+                return obj.contractName === utilsAggchain.GENESIS_CONTRACT_NAMES.WETH_PROXY;
             });
             outputJson.WETHProxyAddress = wethObject.address;
 
             const wethImpObject = genesis.genesis.find(function (obj) {
-                return obj.contractName ==utilsAggchain.GENESIS_CONTRACT_NAMES.TOKEN_WRAPPED_IMPLEMENTATION;
+                return obj.contractName === utilsAggchain.GENESIS_CONTRACT_NAMES.TOKEN_WRAPPED_IMPLEMENTATION;
             });
             outputJson.WETHImplementationAddress = wethImpObject.address;
         }
@@ -605,14 +605,17 @@ async function main() {
             // Get last GER
             const lastGER = await globalExitRootManagerContract.getLastGlobalExitRoot();
 
-            const dataInjectedTx = await polygonZkEVMBridgeContract.interface.encodeFunctionData("initialize(uint32,address,uint32,address,address,bytes)", [
-                rollupID,
-                gasTokenAddress,
-                gasTokenNetwork,
-                Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2, // Global exit root address on L2
-                ethers.ZeroAddress, // Rollup manager on L2 does not exist
-                gasTokenMetadata as any,
-            ]);
+            const dataInjectedTx = await polygonZkEVMBridgeContract.interface.encodeFunctionData(
+                'initialize(uint32,address,uint32,address,address,bytes)',
+                [
+                    rollupID,
+                    gasTokenAddress,
+                    gasTokenNetwork,
+                    Constants.ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2, // Global exit root address on L2
+                    ethers.ZeroAddress, // Rollup manager on L2 does not exist
+                    gasTokenMetadata as any,
+                ],
+            );
 
             // check maximum length is 65535
             if ((dataInjectedTx.length - 2) / 2 > 0xffff) {

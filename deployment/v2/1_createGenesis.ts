@@ -10,7 +10,7 @@ import { ethers, upgrades } from 'hardhat';
 import { MemDB, ZkEVMDB, getPoseidon, smtUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import { deployPolygonZkEVMDeployer, create2Deployment, getAddressInfo } from '../helpers/deployment-helpers';
 import { ProxyAdmin } from '../../typechain-types';
-import { GENESIS_CONTRACT_NAMES } from "../../src/utils-common-aggchain";
+import { GENESIS_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import '../helpers/utils';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -27,6 +27,7 @@ const DEFAULT_MNEMONIC = 'test test test test test test test test test test test
 process.env.HARDHAT_NETWORK = 'hardhat';
 process.env.MNEMONIC = argv.test ? DEFAULT_MNEMONIC : process.env.MNEMONIC;
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const deployParameters = require(argv.input);
 const pathOutputJson = path.join(__dirname, argv.out);
 
@@ -136,8 +137,8 @@ async function main() {
 
     // Deploy proxy admin:
     const proxyAdminFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
-        deployer
+        '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
+        deployer,
     );
     const deployTransactionAdmin = (await proxyAdminFactory.getDeployTransaction()).data;
     const dataCallAdmin = proxyAdminFactory.interface.encodeFunctionData('transferOwnership', [deployer.address]);
@@ -176,7 +177,7 @@ async function main() {
     const bytecodeStorerInfo = await getAddressInfo(wrappedTokenBytecodeStorer as string);
     genesis.push({
         contractName: GENESIS_CONTRACT_NAMES.BYTECODE_STORER,
-        balance: "0",
+        balance: '0',
         nonce: bytecodeStorerInfo.nonce.toString(),
         address: wrappedTokenBytecodeStorer,
         bytecode: bytecodeStorerInfo.bytecode,
@@ -190,7 +191,7 @@ async function main() {
     const wrappedTokenImplementationInfo = await getAddressInfo(wrappedTokenImplementationAddress as string);
     genesis.push({
         contractName: `TokenWrapped Implementation`,
-        balance: "0",
+        balance: '0',
         nonce: wrappedTokenImplementationInfo.nonce.toString(),
         address: wrappedTokenImplementationAddress,
         bytecode: wrappedTokenImplementationInfo.bytecode,
@@ -202,8 +203,8 @@ async function main() {
      * Do not initialize directly the proxy since we want to deploy the same code on L2 and this will alter the bytecode deployed of the proxy
      */
     const transparentProxyFactory = await ethers.getContractFactory(
-        "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy",
-        deployer
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+        deployer,
     );
     const initializeEmptyDataProxy = '0x';
     const deployTransactionProxy = (
@@ -234,10 +235,7 @@ async function main() {
      *Deployment Global exit root manager
      */
     const globalExitRootContractName = GENESIS_CONTRACT_NAMES.GER_L2;
-    const PolygonZkEVMGlobalExitRootL2Factory = await ethers.getContractFactory(
-        globalExitRootContractName,
-        deployer
-    );
+    const PolygonZkEVMGlobalExitRootL2Factory = await ethers.getContractFactory(globalExitRootContractName, deployer);
     let polygonZkEVMGlobalExitRootL2;
     for (let i = 0; i < attemptsDeployProxy; i++) {
         try {

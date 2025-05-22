@@ -1,4 +1,3 @@
-import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2 } from '../../typechain-types';
 

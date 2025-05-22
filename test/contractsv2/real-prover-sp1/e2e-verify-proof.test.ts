@@ -115,7 +115,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         // deploy polygon rollup manager mock

@@ -1,15 +1,14 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
+import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChain,
     TokenWrapped,
-} from "../../typechain-types";
-import { MTBridge, mtBridgeUtils } from "@0xpolygonhermez/zkevm-commonjs";
-import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
-import { claimBeforeBridge } from "./helpers/helpers-sovereign-bridge";
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+} from '../../typechain-types';
+import { claimBeforeBridge, computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
@@ -62,7 +61,8 @@ describe('SovereignChainBridge Gas tokens tests', () => {
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
+        [deployer, rollupManager, acc1, bridgeManager, emergencyBridgePauser, proxiedTokensManager] =
+            await ethers.getSigners();
 
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
@@ -112,9 +112,10 @@ describe('SovereignChainBridge Gas tokens tests', () => {
                 ethers.ZeroAddress,
                 true, // Not false, revert
                 emergencyBridgePauser.address,
-                proxiedTokensManager.address
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "InvalidSovereignWETHAddressParams");
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSovereignWETHAddressParams');
 
         await sovereignChainBridgeContract.initialize(
             networkIDRollup2,
@@ -127,13 +128,19 @@ describe('SovereignChainBridge Gas tokens tests', () => {
             ethers.ZeroAddress,
             false,
             emergencyBridgePauser.address,
-            proxiedTokensManager.address
+            emergencyBridgePauser.address,
+            proxiedTokensManager.address,
         );
 
         // calculate the weth address:
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
-        const precalculatedWeth = await computeWrappedTokenProxyAddress(networkIDRollup, ethers.ZeroAddress, sovereignChainBridgeContract, true);
+        const precalculatedWeth = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            ethers.ZeroAddress,
+            sovereignChainBridgeContract,
+            true,
+        );
         WETHToken = tokenWrappedFactory.attach(precalculatedWeth) as TokenWrapped;
 
         expect(await sovereignChainBridgeContract.WETHToken()).to.be.equal(WETHToken.target);
@@ -438,16 +445,16 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         ).to.be.revertedWithoutReason();
 
         // Use bridgeMessageWETH instead!
-        const tokenWrappedBridgeUpgradeableFactory = await ethers.getContractFactory("TokenWrappedBridgeUpgradeable");
+        const tokenWrappedBridgeUpgradeableFactory = await ethers.getContractFactory('TokenWrappedBridgeUpgradeable');
         await expect(
             sovereignChainBridgeContract.bridgeMessageWETH(
                 destinationNetwork,
                 destinationAddress,
                 amount,
                 true,
-                metadata
-            )
-        ).to.be.revertedWithCustomError(tokenWrappedBridgeUpgradeableFactory, "ERC20InsufficientBalance");
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(tokenWrappedBridgeUpgradeableFactory, 'ERC20InsufficientBalance');
 
         // Mock mint weth
         await ethers.provider.send('hardhat_impersonateAccount', [sovereignChainBridgeContract.target]);
@@ -932,20 +939,21 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         expect(false).to.be.equal(await sovereignChainBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, sovereignChainBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            sovereignChainBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await sovereignChainBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await sovereignChainBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         await expect(
             sovereignChainBridgeContract.claimAsset(
@@ -980,7 +988,7 @@ describe('SovereignChainBridge Gas tokens tests', () => {
             precalculateWrappedErc20,
         );
 
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await sovereignChainBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
@@ -1146,10 +1154,11 @@ describe('SovereignChainBridge Gas tokens tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "LocalBalanceTreeUnderflow")
+                '0x',
+                { value: amount },
+            ),
+        )
+            .to.be.revertedWithCustomError(sovereignChainBridgeContract, 'LocalBalanceTreeUnderflow')
             .withArgs(originNetwork, gasTokenAddress, amount, ethers.toBeHex(0));
 
         // increase LBT to allow bridge action afterwards

@@ -470,9 +470,9 @@ describe('SovereignBridge Contract', () => {
                 amount,
                 tokenAddress,
                 true,
-                ethers.ZeroHash
-            )
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, "NotValidSignature");
+                ethers.ZeroHash,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NotValidSignature');
 
         const dataPermit = ifacePermit.encodeFunctionData('permit', [
             deployer.address,

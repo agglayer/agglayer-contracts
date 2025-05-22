@@ -1,9 +1,8 @@
-
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+import { computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, TokenWrapped } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
@@ -60,7 +59,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as PolygonZkEVMBridgeV2;
 
         // deploy global exit root manager
@@ -93,9 +92,14 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         );
 
         // calculate the weth address:
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
-        const precalculatedWeth = await computeWrappedTokenProxyAddress(networkIDRollup, ethers.ZeroHash, polygonZkEVMBridgeContract, true);
+        const precalculatedWeth = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            ethers.ZeroHash,
+            polygonZkEVMBridgeContract,
+            true,
+        );
         WETHToken = tokenWrappedFactory.attach(precalculatedWeth) as TokenWrapped;
 
         expect(await polygonZkEVMBridgeContract.WETHToken()).to.be.equal(WETHToken.target);
@@ -116,7 +120,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
         const bridge = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         await expect(
@@ -200,10 +204,10 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: 1 }
-            )
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, "MsgValueNotZero");
+                '0x',
+                { value: 1 },
+            ),
+        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'MsgValueNotZero');
 
         await expect(
             polygonZkEVMBridgeContract.bridgeAsset(
@@ -302,10 +306,16 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         ).to.be.reverted;
 
         // Use bridgeMessageWETH instead!
-        const tokenWrappedBridgeUpgradeableFactory = await ethers.getContractFactory("TokenWrappedBridgeUpgradeable");
+        const tokenWrappedBridgeUpgradeableFactory = await ethers.getContractFactory('TokenWrappedBridgeUpgradeable');
         await expect(
-            polygonZkEVMBridgeContract.bridgeMessageWETH(destinationNetwork, destinationAddress, amount, true, metadata)
-        ).to.be.revertedWithCustomError(tokenWrappedBridgeUpgradeableFactory, "ERC20InsufficientBalance");;
+            polygonZkEVMBridgeContract.bridgeMessageWETH(
+                destinationNetwork,
+                destinationAddress,
+                amount,
+                true,
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(tokenWrappedBridgeUpgradeableFactory, 'ERC20InsufficientBalance');
 
         // Mock mint weth
         await ethers.provider.send('hardhat_impersonateAccount', [polygonZkEVMBridgeContract.target]);
@@ -494,7 +504,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
 
         // Just to have the metric of a low cost bridge Asset
         const tokenAddress2 = WETHToken.target; // Ether
-        const amount2 = ethers.parseEther("10");
+        const amount2 = ethers.parseEther('10');
         await WETHToken.connect(bridgeMock).mint(deployer.address, amount2, { gasPrice: 0 });
 
         await expect(
@@ -567,7 +577,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         // });
 
         await expect(polygonZkEVMGlobalExitRoot.connect(bridgemoCK).updateExitRoot(mainnetExitRoot, { gasPrice: 0 }))
-            .to.emit(polygonZkEVMGlobalExitRoot, "UpdateGlobalExitRoot")
+            .to.emit(polygonZkEVMGlobalExitRoot, 'UpdateGlobalExitRoot')
             .withArgs(mainnetExitRoot, rollupExitRoot);
 
         // check roots
@@ -871,20 +881,21 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         expect(false).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
 
         // claim
-        const tokenWrappedFactory = await ethers.getContractFactory("TokenWrapped");
+        const tokenWrappedFactory = await ethers.getContractFactory('TokenWrapped');
 
         // Compute wrapped token proxy address
-        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(networkIDRollup, tokenAddress, polygonZkEVMBridgeContract);
+        const precalculateWrappedErc20 = await computeWrappedTokenProxyAddress(
+            networkIDRollup,
+            tokenAddress,
+            polygonZkEVMBridgeContract,
+        );
 
         const newWrappedToken = tokenWrappedFactory.attach(precalculateWrappedErc20) as TokenWrapped;
 
         // Use precalculatedWrapperAddress and check if matches
-        expect(
-            await polygonZkEVMBridgeContract.computeTokenProxyAddress(
-                networkIDRollup,
-                tokenAddress,
-            )
-        ).to.be.equal(precalculateWrappedErc20);
+        expect(await polygonZkEVMBridgeContract.computeTokenProxyAddress(networkIDRollup, tokenAddress)).to.be.equal(
+            precalculateWrappedErc20,
+        );
 
         await expect(
             polygonZkEVMBridgeContract.claimAsset(
@@ -919,7 +930,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
             precalculateWrappedErc20,
         );
 
-        const salt = ethers.solidityPackedKeccak256(["uint32", "address"], [networkIDRollup, tokenAddress]);
+        const salt = ethers.solidityPackedKeccak256(['uint32', 'address'], [networkIDRollup, tokenAddress]);
         expect(await polygonZkEVMBridgeContract.tokenInfoToWrappedToken(salt)).to.be.equal(precalculateWrappedErc20);
 
         // Check the wrapper info
@@ -984,7 +995,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
 
         // create a new deposit
         await expect(newWrappedToken.connect(acc1).approve(polygonZkEVMBridgeContract.target, amount))
-            .to.emit(newWrappedToken, "Approval")
+            .to.emit(newWrappedToken, 'Approval')
             .withArgs(acc1.address, polygonZkEVMBridgeContract.target, amount);
 
         /*
@@ -1092,9 +1103,9 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1115,9 +1126,9 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(
@@ -1138,9 +1149,9 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
                 amount,
                 tokenAddress,
                 true,
-                "0x",
-                { value: amount }
-            )
+                '0x',
+                { value: amount },
+            ),
         )
             .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
             .withArgs(

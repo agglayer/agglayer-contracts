@@ -1,20 +1,20 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
-import path = require("path");
-import fs = require("fs");
-import {logger} from "../../src/logger";
+import { expect } from 'chai';
+import path = require('path');
+import fs = require('fs');
 
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers, upgrades} from "hardhat";
-import {TimelockController} from "../../typechain-types";
-import {genTimelockOperation, decodeScheduleData, getGitInfo} from "../utils";
-import {checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas} from "../../src/utils";
+import * as dotenv from 'dotenv';
+import { ethers, upgrades } from 'hardhat';
+import { logger } from '../../src/logger';
+import { TimelockController } from '../../typechain-types';
+import { genTimelockOperation, decodeScheduleData, getGitInfo } from '../utils';
+import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
+import * as upgradeParameters from './upgrade_parameters.json';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const dateStr = new Date().toISOString();
 const pathOutputJson = path.join(__dirname, `./upgrade_output_${dateStr}.json`);
-
-const upgradeParameters = require("./upgrade_parameters.json");
 
 async function main() {
     upgrades.silenceWarnings();
@@ -26,17 +26,16 @@ async function main() {
     logger.info('Check input paraneters');
 
     const mandatoryUpgradeParameters = [
-        "tagSCPreviousVersion",
-        "bridgeL2SovereignChainAddress",
-        "proxiedTokensManagerAddress",
-        "emergencyBridgeUnpauserAddress",
+        'tagSCPreviousVersion',
+        'bridgeL2SovereignChainAddress',
+        'proxiedTokensManagerAddress',
+        'emergencyBridgeUnpauserAddress',
     ];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    const {bridgeL2SovereignChainAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress} =
+    const { bridgeL2SovereignChainAddress, emergencyBridgeUnpauserAddress, proxiedTokensManagerAddress } =
         upgradeParameters;
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
-
 
     // Load deployer
     const currentProvider = getProviderAdjustingMultiplierGas(upgradeParameters, ethers);
@@ -44,49 +43,49 @@ async function main() {
     logger.info(`Deploying implementation with: ${deployer.address}`);
 
     // Force import hardhat manifest
-    logger.info("Force import hardhat manifest");
+    logger.info('Force import hardhat manifest');
     // As this contract is deployed in the genesis of a L2 network, no open zeppelin network file is created, we need to force import it
-    const bridgeFactory = await ethers.getContractFactory("BridgeL2SovereignChain", deployer);
+    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
     await upgrades.forceImport(bridgeL2SovereignChainAddress, bridgeFactory, {
         constructorArgs: [],
-        kind: "transparent",
+        kind: 'transparent',
     });
 
     // get proxy admin and timelock
-    logger.info("Get proxy admin information");
+    logger.info('Get proxy admin information');
     const proxyAdmin = await upgrades.admin.getInstance();
 
     // Assert correct admin
     expect(await upgrades.erc1967.getAdminAddress(bridgeL2SovereignChainAddress as string)).to.be.equal(
-        proxyAdmin.target
+        proxyAdmin.target,
     );
 
     const timelockAddress = await proxyAdmin.owner();
 
     // load timelock
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock", deployer);
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
     const timelockContract = (await timelockContractFactory.attach(timelockAddress)) as TimelockController;
     // take params delay, or minimum timelock dela
     const timelockDelay = upgradeParameters.timelockDelay || (await timelockContract.getMinDelay());
 
     // Upgrade BridgeL2SovereignChain
     const impBridge = await upgrades.prepareUpgrade(bridgeL2SovereignChainAddress, bridgeFactory, {
-        unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
-        redeployImplementation: "always",
+        unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+        redeployImplementation: 'always',
     });
 
     logger.info(`Polygon sovereign bridge implementation deployed at: ${impBridge}`);
 
     // Create schedule and execute operation
-    logger.info("Create schedule and execute operation");
+    logger.info('Create schedule and execute operation');
 
     const operationBridge = genTimelockOperation(
         proxyAdmin.target,
         0, // value
-        proxyAdmin.interface.encodeFunctionData("upgradeAndCall", [
+        proxyAdmin.interface.encodeFunctionData('upgradeAndCall', [
             bridgeL2SovereignChainAddress,
             impBridge,
-            bridgeFactory.interface.encodeFunctionData("initialize(bytes32[],uint256[],address,address)", [
+            bridgeFactory.interface.encodeFunctionData('initialize(bytes32[],uint256[],address,address)', [
                 [],
                 [],
                 emergencyBridgeUnpauserAddress,
@@ -94,11 +93,11 @@ async function main() {
             ]),
         ]), // data
         ethers.ZeroHash, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData('schedule', [
         operationBridge.target,
         operationBridge.value,
         operationBridge.data,
@@ -108,7 +107,7 @@ async function main() {
     ]);
 
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
+    const executeData = timelockContractFactory.interface.encodeFunctionData('execute', [
         operationBridge.target,
         operationBridge.value,
         operationBridge.data,
@@ -116,8 +115,8 @@ async function main() {
         salt, // salt
     ]);
 
-    logger.info({scheduleData});
-    logger.info({executeData});
+    logger.info({ scheduleData });
+    logger.info({ executeData });
 
     // Get current block number, used in the shallow fork tests
     const outputJson = {

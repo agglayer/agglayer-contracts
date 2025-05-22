@@ -1,25 +1,21 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { takeSnapshot } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChain,
     BridgeL2SovereignChainPessimistic,
     TokenWrappedBridgeUpgradeable,
-    TokenWrappedTransparentProxy
-} from "../../typechain-types";
-import { claimBeforeBridge } from "./helpers/helpers-sovereign-bridge";
-import { takeSnapshot } from "@nomicfoundation/hardhat-network-helpers";
-import { computeWrappedTokenProxyAddress } from "./helpers/helpers-sovereign-bridge"
+    TokenWrappedTransparentProxy,
+} from '../../typechain-types';
+import { claimBeforeBridge, computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 
-
-describe("Upgradeable Tokens", () => {
-
+describe('Upgradeable Tokens', () => {
     let deployer: any;
     let receiver: any;
     let emergencyBridgePauser: any;
-    let vKeyManager: any;
     let rollupManager: any;
     let proxiedTokensManager: any;
     let bridgeManager: any;
@@ -34,48 +30,57 @@ describe("Upgradeable Tokens", () => {
     const networkIDMainnet = 0;
     const networkIDRollup = 1;
     const LEAF_TYPE_ASSET = 0;
-    const tokenName = "Matic Token";
-    const tokenSymbol = "MATIC";
+    const tokenName = 'Matic Token';
+    const tokenSymbol = 'MATIC';
     const decimals = 18;
     const tokenInitialBalance = ethers.MaxUint256;
     const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["string", "string", "uint8"],
-        [tokenName, tokenSymbol, decimals]
+        ['string', 'string', 'uint8'],
+        [tokenName, tokenSymbol, decimals],
     );
 
     let maticTokenFactory: any;
 
-    beforeEach("Deploy contracts", async () => {
+    beforeEach('Deploy contracts', async () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, rollupManager, receiver, emergencyBridgePauser, vKeyManager, proxiedTokensManager, bridgeManager, bridgeManager2] = await ethers.getSigners();
+        [
+            deployer,
+            rollupManager,
+            receiver,
+            emergencyBridgePauser,
+            vKeyManager,
+            proxiedTokensManager,
+            bridgeManager,
+            bridgeManager2,
+        ] = await ethers.getSigners();
 
-        maticTokenFactory = await ethers.getContractFactory("ERC20PermitMock");
+        maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
 
         // deploy PolygonZkEVMBridge pessimistic
-        const sovBridgePessimisticFactory = await ethers.getContractFactory("BridgeL2SovereignChainPessimistic");
+        const sovBridgePessimisticFactory = await ethers.getContractFactory('BridgeL2SovereignChainPessimistic');
         sovereignBridgeContract = (await upgrades.deployProxy(sovBridgePessimisticFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as BridgeL2SovereignChainPessimistic;
 
         // Deploy pessimistic bridge with gas token
         gasTokenBridgeContract = (await upgrades.deployProxy(sovBridgePessimisticFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as BridgeL2SovereignChain;
 
         // deploy global exit root manager
-        const sovGERFactory = await ethers.getContractFactory("GlobalExitRootManagerL2SovereignChain");
+        const sovGERFactory = await ethers.getContractFactory('GlobalExitRootManagerL2SovereignChain');
         sovereignGERContract = (await upgrades.deployProxy(
             sovGERFactory,
             [deployer.address, deployer.address], // Initializer params
             {
-                initializer: "initialize", // initializer function name
+                initializer: 'initialize', // initializer function name
                 constructorArgs: [sovereignBridgeContract.target], // Constructor arguments
-                unsafeAllow: ["constructor", "state-variable-immutable"],
-            }
+                unsafeAllow: ['constructor', 'state-variable-immutable'],
+            },
         )) as unknown as GlobalExitRootManagerL2SovereignChain;
 
         await sovereignBridgeContract.initialize(
@@ -84,10 +89,10 @@ describe("Upgradeable Tokens", () => {
             networkIDMainnet, // gasTokenNetwork: zero for ethereum, L1, mainnet
             sovereignGERContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(bridgeManager),
             ethers.ZeroAddress,
-            false
+            false,
         );
 
         // deploy token
@@ -95,13 +100,13 @@ describe("Upgradeable Tokens", () => {
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
         polTokenContractUpgradeable = await maticTokenFactory.deploy(
             tokenName,
             tokenSymbol,
             deployer.address,
-            tokenInitialBalance
+            tokenInitialBalance,
         );
 
         await gasTokenBridgeContract.initialize(
@@ -110,10 +115,10 @@ describe("Upgradeable Tokens", () => {
             networkIDMainnet, // gasTokenNetwork: zero for ethereum, L1, mainnet
             sovereignGERContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(bridgeManager),
             ethers.ZeroAddress,
-            false
+            false,
         );
 
         // Should make claim of a token
@@ -135,78 +140,93 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET++
+            indexLET++,
         );
-        const precalculatedWrappedAddress = await sovereignBridgeContract.precalculatedWrapperAddress(originNetwork, tokenAddress, tokenName, tokenSymbol, decimals);
+        const precalculatedWrappedAddress = await sovereignBridgeContract.precalculatedWrapperAddress(
+            originNetwork,
+            tokenAddress,
+            tokenName,
+            tokenSymbol,
+            decimals,
+        );
         const wrappedAddressContract = maticTokenFactory.attach(precalculatedWrappedAddress) as ERC20PermitMock;
         expect(await wrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount);
 
         // Upgrade bridge to upgradeable tokens
         // Upgrade sov bridge to new version
-        const sovBridgeFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
-        sovereignBridgeContract = await upgrades.upgradeProxy(sovereignBridgeContract.target, sovBridgeFactory, {
-            unsafeAllow: ["constructor", "missing-initializer-call", "missing-initializer"],
+        const sovBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        sovereignBridgeContract = (await upgrades.upgradeProxy(sovereignBridgeContract.target, sovBridgeFactory, {
+            unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],
             call: {
-                fn: "initialize(bytes32[],uint256[],address,address)",
-                args: [
-                    [],
-                    [],
-                    emergencyBridgePauser.address,
-                    proxiedTokensManager.address,
-                ],
+                fn: 'initialize(bytes32[],uint256[],address,address)',
+                args: [[], [], emergencyBridgePauser.address, proxiedTokensManager.address],
             },
-        }) as unknown as BridgeL2SovereignChain;
+        })) as unknown as BridgeL2SovereignChain;
 
-        gasTokenBridgeContract = await upgrades.upgradeProxy(gasTokenBridgeContract.target, sovBridgeFactory, {
-            unsafeAllow: ["constructor", "missing-initializer-call", "missing-initializer"],
+        gasTokenBridgeContract = (await upgrades.upgradeProxy(gasTokenBridgeContract.target, sovBridgeFactory, {
+            unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],
             call: {
-                fn: "initialize(bytes32[],uint256[],address,address)",
-                args: [
-                    [],
-                    [],
-                    emergencyBridgePauser.address,
-                    proxiedTokensManager.address,
-                ],
+                fn: 'initialize(bytes32[],uint256[],address,address)',
+                args: [[], [], emergencyBridgePauser.address, proxiedTokensManager.address],
             },
-        }) as unknown as BridgeL2SovereignChain;
+        })) as unknown as BridgeL2SovereignChain;
     });
 
-    it("Should migrate from a legacy token to a new upgradeable token, make a claim and migrate legacy tokens", async () => {
-
+    it('Should migrate from a legacy token to a new upgradeable token, make a claim and migrate legacy tokens', async () => {
         const originNetwork = 0; // mainnet
         const tokenAddress = polTokenContract.target;
         const amount = 1000;
-        const legacyTokenAddress = await sovereignBridgeContract.tokenInfoToWrappedToken(ethers.solidityPackedKeccak256(["uint32", "address"],
-            [originNetwork, tokenAddress]));
+        const legacyTokenAddress = await sovereignBridgeContract.tokenInfoToWrappedToken(
+            ethers.solidityPackedKeccak256(['uint32', 'address'], [originNetwork, tokenAddress]),
+        );
 
         // Deploy proxied token
-        await expect(sovereignBridgeContract.deployWrappedTokenAndRemap(originNetwork, tokenAddress, false))
-            .to.be.revertedWithCustomError(sovereignBridgeContract, "OnlyBridgeManager");
+        await expect(
+            sovereignBridgeContract.deployWrappedTokenAndRemap(originNetwork, tokenAddress, false),
+        ).to.be.revertedWithCustomError(sovereignBridgeContract, 'OnlyBridgeManager');
 
         // Try to deploy a gas token at a gas token network
-        await expect(gasTokenBridgeContract.connect(bridgeManager).deployWrappedTokenAndRemap(originNetwork, tokenAddress, false))
-            .to.be.revertedWithCustomError(gasTokenBridgeContract, "TokenNotMapped");
+        await expect(
+            gasTokenBridgeContract
+                .connect(bridgeManager)
+                .deployWrappedTokenAndRemap(originNetwork, tokenAddress, false),
+        ).to.be.revertedWithCustomError(gasTokenBridgeContract, 'TokenNotMapped');
 
         // Deploy weth for a gas token network
-        const proxiedTokenAddressWETH = await computeWrappedTokenProxyAddress(originNetwork, ethers.ZeroAddress, gasTokenBridgeContract, true);
-        await expect(gasTokenBridgeContract.connect(bridgeManager).deployWrappedTokenAndRemap(originNetwork, ethers.ZeroAddress, false))
-            .to.emit(gasTokenBridgeContract, "SetSovereignWETHAddress")
-            .withArgs(
-                proxiedTokenAddressWETH,
-                false);
+        const proxiedTokenAddressWETH = await computeWrappedTokenProxyAddress(
+            originNetwork,
+            ethers.ZeroAddress,
+            gasTokenBridgeContract,
+            true,
+        );
+        await expect(
+            gasTokenBridgeContract
+                .connect(bridgeManager)
+                .deployWrappedTokenAndRemap(originNetwork, ethers.ZeroAddress, false),
+        )
+            .to.emit(gasTokenBridgeContract, 'SetSovereignWETHAddress')
+            .withArgs(proxiedTokenAddressWETH, false);
 
-        const proxiedTokenAddress = await computeWrappedTokenProxyAddress(originNetwork, tokenAddress, sovereignBridgeContract, false);
+        const proxiedTokenAddress = await computeWrappedTokenProxyAddress(
+            originNetwork,
+            tokenAddress,
+            sovereignBridgeContract,
+            false,
+        );
 
-        await expect(sovereignBridgeContract.connect(bridgeManager).deployWrappedTokenAndRemap(originNetwork, tokenAddress, false))
-            .to.emit(sovereignBridgeContract, "SetSovereignTokenAddress")
-            .withArgs(
-                originNetwork,
-                tokenAddress,
-                proxiedTokenAddress,
-                false);
+        await expect(
+            sovereignBridgeContract
+                .connect(bridgeManager)
+                .deployWrappedTokenAndRemap(originNetwork, tokenAddress, false),
+        )
+            .to.emit(sovereignBridgeContract, 'SetSovereignTokenAddress')
+            .withArgs(originNetwork, tokenAddress, proxiedTokenAddress, false);
 
-        expect(await sovereignBridgeContract.tokenInfoToWrappedToken(ethers.solidityPackedKeccak256(["uint32", "address"],
-            [originNetwork, tokenAddress]))).to.be.equal(proxiedTokenAddress);
+        expect(
+            await sovereignBridgeContract.tokenInfoToWrappedToken(
+                ethers.solidityPackedKeccak256(['uint32', 'address'], [originNetwork, tokenAddress]),
+            ),
+        ).to.be.equal(proxiedTokenAddress);
 
         // Check balance of proxied token
         const proxyWrappedAddressContract = maticTokenFactory.attach(proxiedTokenAddress) as ERC20PermitMock;
@@ -230,13 +250,13 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET
+            indexLET,
         );
         expect(await proxyWrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount);
 
         // Migrate tokens from legacy token to new proxied token
-        await expect(sovereignBridgeContract.connect(receiver).migrateLegacyToken(legacyTokenAddress, amount, "0x"))
-            .to.emit(sovereignBridgeContract, "MigrateLegacyToken")
+        await expect(sovereignBridgeContract.connect(receiver).migrateLegacyToken(legacyTokenAddress, amount, '0x'))
+            .to.emit(sovereignBridgeContract, 'MigrateLegacyToken')
             .withArgs(receiver.address, legacyTokenAddress, proxiedTokenAddress, amount);
 
         // Check amounts after migration
@@ -244,13 +264,12 @@ describe("Upgradeable Tokens", () => {
         expect(await legacyWrappedAddressContract.balanceOf(receiver.address)).to.be.equal(0);
     });
 
-    it("Should deploy a bridge and claim asset in different chains with different arguments and check address is the same", async () => {
-
+    it('Should deploy a bridge and claim asset in different chains with different arguments and check address is the same', async () => {
         // Deploy bridge 1 with upgradeable tokens
-        const sovBridgeFactory = await ethers.getContractFactory("BridgeL2SovereignChain");
+        const sovBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
         sovereignBridgeContract = (await upgrades.deployProxy(sovBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as BridgeL2SovereignChainPessimistic;
 
         // Make snapshot
@@ -262,17 +281,19 @@ describe("Upgradeable Tokens", () => {
             ethers.ZeroAddress, // zero for ether
             sovereignGERContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(bridgeManager),
             ethers.ZeroAddress,
             false,
             emergencyBridgePauser.address,
             emergencyBridgePauser.address,
-            proxiedTokensManager.address
+            proxiedTokensManager.address,
         );
 
         // Get bridge proxy implementation address
-        const bridgeImplementationAddress = await upgrades.erc1967.getImplementationAddress(sovereignBridgeContract.target);
+        const bridgeImplementationAddress = await upgrades.erc1967.getImplementationAddress(
+            sovereignBridgeContract.target,
+        );
 
         // Make a claim to deploy a wtoken
         const originNetwork = 0; // mainnet
@@ -292,9 +313,12 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET
+            indexLET,
         );
-        const wrappedTokenProxyAddress1 = await sovereignBridgeContract.computeTokenProxyAddress(originNetwork, tokenAddress);
+        const wrappedTokenProxyAddress1 = await sovereignBridgeContract.computeTokenProxyAddress(
+            originNetwork,
+            tokenAddress,
+        );
         // Check correct balance after claim
         const wrappedAddressContract = maticTokenFactory.attach(wrappedTokenProxyAddress1) as ERC20PermitMock;
         expect(await wrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount);
@@ -308,13 +332,13 @@ describe("Upgradeable Tokens", () => {
             ethers.ZeroAddress, // zero for ether
             sovereignGERContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(bridgeManager2),
             ethers.ZeroAddress,
             false,
             emergencyBridgePauser.address,
             emergencyBridgePauser.address,
-            proxiedTokensManager.address
+            proxiedTokensManager.address,
         );
 
         // Make a claim to deploy a wtoken
@@ -329,9 +353,12 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET
+            indexLET,
         );
-        const wrappedTokenProxyAddress2 = await sovereignBridgeContract.computeTokenProxyAddress(originNetwork, tokenAddress);
+        const wrappedTokenProxyAddress2 = await sovereignBridgeContract.computeTokenProxyAddress(
+            originNetwork,
+            tokenAddress,
+        );
 
         // Check correct balance after claim
         const wrappedAddressContract2 = maticTokenFactory.attach(wrappedTokenProxyAddress2) as ERC20PermitMock;
@@ -347,22 +374,24 @@ describe("Upgradeable Tokens", () => {
             ethers.ZeroAddress, // zero for ether
             sovereignGERContract.target,
             rollupManager.address,
-            "0x",
+            '0x',
             ethers.Typed.address(bridgeManager),
             ethers.ZeroAddress,
             false,
             emergencyBridgePauser.address,
             emergencyBridgePauser.address,
-            proxiedTokensManager.address
+            proxiedTokensManager.address,
         );
         const wrappedTokenImplementationAddress = await sovereignBridgeContract.getWrappedTokenBridgeImplementation();
         // Upgrade proxy
-        sovereignBridgeContract = await upgrades.upgradeProxy(sovereignBridgeContract.target, sovBridgeFactory, {
-            unsafeAllow: ["constructor", "missing-initializer-call", "missing-initializer"],
-            redeployImplementation: "always",
-        }) as unknown as BridgeL2SovereignChain;
+        sovereignBridgeContract = (await upgrades.upgradeProxy(sovereignBridgeContract.target, sovBridgeFactory, {
+            unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],
+            redeployImplementation: 'always',
+        })) as unknown as BridgeL2SovereignChain;
 
-        const bridgeImplementationAddress2 = await upgrades.erc1967.getImplementationAddress(sovereignBridgeContract.target);
+        const bridgeImplementationAddress2 = await upgrades.erc1967.getImplementationAddress(
+            sovereignBridgeContract.target,
+        );
 
         expect(bridgeImplementationAddress).to.be.not.equal(bridgeImplementationAddress2);
 
@@ -380,29 +409,27 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET
+            indexLET,
         );
-        const wrappedTokenProxyAddress3 = await sovereignBridgeContract.computeTokenProxyAddress(originNetwork, tokenAddress);
+        const wrappedTokenProxyAddress3 = await sovereignBridgeContract.computeTokenProxyAddress(
+            originNetwork,
+            tokenAddress,
+        );
         // Check correct balance after claim
         const wrappedAddressContract3 = maticTokenFactory.attach(wrappedTokenProxyAddress3) as ERC20PermitMock;
         expect(await wrappedAddressContract3.balanceOf(receiver.address)).to.be.equal(amount);
         expect(wrappedTokenProxyAddress1).to.be.equal(wrappedTokenProxyAddress3);
-    })
+    });
 
-    it("Should perform a migration from a legacy token to an upgradeable token", async () => {
-
+    it('Should perform a migration from a legacy token to an upgradeable token', async () => {
         // Call function to deploy upgradeable token
-        //const wrappedTokenProxyAddress = await sovereignBridgeContract.connect(bridgeManager).deployWrappedToken()
+        // const wrappedTokenProxyAddress = await sovereignBridgeContract.connect(bridgeManager).deployWrappedToken()
         // Remap te legacy token to the upgradeable token
-
         // Migrated the previous claimed tokens
-
         // Check balances
+    });
 
-    })
-
-    it("Should make a claim to a legacy token and check no new address is created", async () => {
-
+    it('Should make a claim to a legacy token and check no new address is created', async () => {
         const nonceBefore = await ethers.provider.getTransactionCount(sovereignBridgeContract.target);
 
         // Should make claim of a token
@@ -423,14 +450,11 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET++
+            indexLET++,
         );
 
         // Check legacy token amount of destination has doubled
-        const tokenInfo = ethers.solidityPackedKeccak256(
-            ["uint32", "address"],
-            [originNetwork, tokenAddress]
-        );
+        const tokenInfo = ethers.solidityPackedKeccak256(['uint32', 'address'], [originNetwork, tokenAddress]);
         const wrappedTokenLegacyAddress = await sovereignBridgeContract.tokenInfoToWrappedToken(tokenInfo);
         const wrappedAddressContract = maticTokenFactory.attach(wrappedTokenLegacyAddress) as ERC20PermitMock;
         expect(await wrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount * 2);
@@ -438,10 +462,9 @@ describe("Upgradeable Tokens", () => {
         // Check nonce after and before is the same so no contract has been deployed
         const nonceAfter = await ethers.provider.getTransactionCount(sovereignBridgeContract.target);
         expect(nonceAfter).to.be.equal(nonceBefore);
-    })
+    });
 
-    it("Should make a claim to an upgradeable token", async () => {
-
+    it('Should make a claim to an upgradeable token', async () => {
         const nonceBefore = await ethers.provider.getTransactionCount(sovereignBridgeContract.target);
         // Should make claim of an upgradeable token
         const originNetwork = 0; // mainnet
@@ -461,9 +484,12 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET++
+            indexLET++,
         );
-        const precalculatedWrappedAddress = await sovereignBridgeContract.computeTokenProxyAddress(originNetwork, tokenAddress);
+        const precalculatedWrappedAddress = await sovereignBridgeContract.computeTokenProxyAddress(
+            originNetwork,
+            tokenAddress,
+        );
 
         // Check correct balance after claim
         const wrappedAddressContract = maticTokenFactory.attach(precalculatedWrappedAddress) as ERC20PermitMock;
@@ -472,10 +498,10 @@ describe("Upgradeable Tokens", () => {
         // Check nonce increased after deploying new token
         const nonceAfter = await ethers.provider.getTransactionCount(sovereignBridgeContract.target);
         expect(nonceAfter).to.be.equal(nonceBefore + 1);
-    })
+    });
 
-    it("Should perform an upgrade to an upgradeable token and make a claim", async () => {
-        //Make a claim of the wrapped token
+    it('Should perform an upgrade to an upgradeable token and make a claim', async () => {
+        // Make a claim of the wrapped token
         const originNetwork = 0; // mainnet
         const tokenAddress = polTokenContractUpgradeable.target;
         const amount = 1000;
@@ -493,31 +519,34 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET++
+            indexLET++,
         );
 
         // Check balance
-        const precalculatedWrappedAddress = await sovereignBridgeContract.computeTokenProxyAddress(originNetwork, tokenAddress);
+        const precalculatedWrappedAddress = await sovereignBridgeContract.computeTokenProxyAddress(
+            originNetwork,
+            tokenAddress,
+        );
 
-        let wrappedAddressContract = maticTokenFactory.attach(precalculatedWrappedAddress) as TokenWrappedBridgeUpgradeable;
+        const wrappedAddressContract = maticTokenFactory.attach(
+            precalculatedWrappedAddress,
+        ) as TokenWrappedBridgeUpgradeable;
         expect(await wrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount);
 
         // Upgrade upgradeable token, from matic to upgradeable matic
         // Deploy new implementation
-        const wrappedTokenFactory = await ethers.getContractFactory("TokenWrappedBridgeUpgradeable");
+        const wrappedTokenFactory = await ethers.getContractFactory('TokenWrappedBridgeUpgradeable');
         const wrappedTokenNewImplementation = await wrappedTokenFactory.deploy();
         // Upgrade the implementation
-        const proxyFactory = await ethers.getContractFactory("TokenWrappedTransparentProxy");
+        const proxyFactory = await ethers.getContractFactory('TokenWrappedTransparentProxy');
         const wrappedTokenProxy = proxyFactory.attach(precalculatedWrappedAddress) as TokenWrappedTransparentProxy;
 
-        await wrappedTokenProxy.connect(proxiedTokensManager).upgradeTo(
-            wrappedTokenNewImplementation.target
-        );
+        await wrappedTokenProxy.connect(proxiedTokensManager).upgradeTo(wrappedTokenNewImplementation.target);
 
         expect(await wrappedAddressContract.name()).to.be.equal(tokenName);
         expect(await wrappedAddressContract.symbol()).to.be.equal(tokenSymbol);
         expect(await wrappedAddressContract.decimals()).to.be.equal(decimals);
-        //expect(await wrappedAddressContract.bridgeAddress()).to.be.equal(sovereignBridgeContract.target);
+        // expect(await wrappedAddressContract.bridgeAddress()).to.be.equal(sovereignBridgeContract.target);
 
         // Check balance again
         expect(await wrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount);
@@ -534,12 +563,9 @@ describe("Upgradeable Tokens", () => {
             sovereignGERContract,
             sovereignBridgeContract,
             polTokenContract,
-            indexLET++
+            indexLET++,
         );
 
         expect(await wrappedAddressContract.balanceOf(receiver.address)).to.be.equal(amount * 2);
-
-    })
-
-})
-
+    });
+});
