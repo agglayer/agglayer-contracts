@@ -19,8 +19,7 @@ import {
 import '../helpers/utils';
 
 import { create2Deployment } from '../helpers/deployment-helpers';
-
-import * as deployParameters from './deploy_parameters.json';
+import deployParameters from './deploy_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

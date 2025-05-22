@@ -14,7 +14,7 @@ sudo rm -rf docker/gethData/geth_data
 sudo DEV_PERIOD=1 docker compose -f docker/docker-compose.yml up -d geth
 sleep 5
 # fund accounts
-node docker/scripts/fund-accounts.js
+node docker/scripts/fund-accounts.ts
 # copy necessary parameters to deploy contracts and create rollup FEP
 cp docker/scripts/v2/deploy_parameters_docker.json deployment/v2/deploy_parameters.json
 cp docker/scripts/v2/create_rollup_parameters_docker.json deployment/v2/create_rollup_parameters.json

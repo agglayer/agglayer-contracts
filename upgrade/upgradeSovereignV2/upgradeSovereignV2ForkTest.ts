@@ -10,7 +10,7 @@ import { logger } from '../../src/logger';
 import { TimelockController, BridgeL2SovereignChain } from '../../typechain-types';
 import { genTimelockOperation } from '../utils';
 import { checkParams } from '../../src/utils';
-import * as upgradeParameters from './upgrade_parameters.json';
+import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

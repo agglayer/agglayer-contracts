@@ -1,7 +1,7 @@
 import path = require('path');
 import fs = require('fs');
 
-import * as params from './parameters.json';
+import params from './parameters.json';
 import { AggchainFEP } from '../../../typechain-types';
 import { transactionTypes, genOperation } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';

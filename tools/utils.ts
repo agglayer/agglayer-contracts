@@ -1,6 +1,6 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
-import ethers from 'ethers';
+import * as ethers from 'ethers';
 
 export const supportedBridgeContracts = [
     'PolygonZkEVMBridgeV2 proxy',

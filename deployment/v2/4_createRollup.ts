@@ -8,7 +8,7 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { processorUtils, Constants } from '@0xpolygonhermez/zkevm-commonjs';
 import '../helpers/utils';
-import * as updateVanillaGenesis from './utils/updateVanillaGenesis';
+
 import * as utilsECDSA from '../../src/utils-aggchain-ECDSA';
 import * as utilsFEP from '../../src/utils-aggchain-FEP';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
@@ -21,8 +21,9 @@ import {
     PolygonPessimisticConsensus,
     AggLayerGateway,
 } from '../../typechain-types';
-import * as createRollupParameters from './create_rollup_parameters.json';
-import * as deployOutput from './deploy_output.json';
+import createRollupParameters from './create_rollup_parameters.json';
+import deployOutput from './deploy_output.json';
+import updateVanillaGenesis from './utils/updateVanillaGenesis';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

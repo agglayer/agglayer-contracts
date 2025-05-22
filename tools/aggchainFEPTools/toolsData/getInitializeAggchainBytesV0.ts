@@ -1,4 +1,4 @@
-import * as params from './parameters.json';
+import params from './parameters.json';
 import { logger } from '../../../src/logger';
 import { checkParams } from '../../../src/utils';
 import * as utilsFEP from '../../../src/utils-aggchain-FEP';

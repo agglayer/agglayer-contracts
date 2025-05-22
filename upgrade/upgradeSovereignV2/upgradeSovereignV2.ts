@@ -10,7 +10,7 @@ import { logger } from '../../src/logger';
 import { TimelockController } from '../../typechain-types';
 import { genTimelockOperation, decodeScheduleData, getGitInfo } from '../utils';
 import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
-import * as upgradeParameters from './upgrade_parameters.json';
+import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const dateStr = new Date().toISOString();

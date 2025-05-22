@@ -5,9 +5,9 @@ import path = require('path');
 import * as dotenv from 'dotenv';
 import { upgrades, run } from 'hardhat';
 
-import * as outputJson from './upgrade_output.json';
-import * as deployOutputParameters from './deploy_output.json';
-import * as upgradeParameters from './upgrade_parameters.json';
+import outputJson from './upgrade_output.json';
+import deployOutputParameters from './deploy_output.json';
+import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

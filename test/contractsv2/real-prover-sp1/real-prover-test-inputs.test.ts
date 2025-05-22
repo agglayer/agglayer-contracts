@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import * as input from './test-inputs/input.json';
+import input from './test-inputs/input.json';
 
 describe('Real prover inputs test', () => {
     let verifierContract;

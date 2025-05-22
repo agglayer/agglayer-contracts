@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable no-await-in-loop */
-import ethers from 'ethers';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ethers = require('ethers');
 require('dotenv').config();
 
 const DEFAULT_MNEMONIC = 'test test test test test test test test test test test junk';

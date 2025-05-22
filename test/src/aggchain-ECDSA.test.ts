@@ -4,7 +4,7 @@ import fs = require('fs');
 import path = require('path');
 import { Address, AggchainECDSA } from '../../typechain-types';
 
-import * as dataECDSA from '../test-vectors/aggchainECDSA/aggchainECDSA.json';
+import dataECDSA from '../test-vectors/aggchainECDSA/aggchainECDSA.json';
 import * as utilsECDSA from '../../src/utils-aggchain-ECDSA';
 import * as utilsCommon from '../../src/utils-common-aggchain';
 

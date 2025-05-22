@@ -14,7 +14,7 @@ import {
     encodeInitAggchainManager,
     GENESIS_CONTRACT_NAMES,
 } from '../../src/utils-common-aggchain';
-import * as createRollupParameters from './create_new_rollup.json';
+import createRollupParameters from './create_new_rollup.json';
 import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis';
 import { logger } from '../../src/logger';
 import {

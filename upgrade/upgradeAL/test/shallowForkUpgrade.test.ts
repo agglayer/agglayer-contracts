@@ -18,8 +18,8 @@ import {
 import { logger } from '../../../src/logger';
 import { checkParams } from '../../../src/utils';
 
-import * as upgradeParams from '../upgrade_parameters.json';
-import * as upgradeOutput from '../upgrade_output.json';
+import upgradeParams from '../upgrade_parameters.json';
+import upgradeOutput from '../upgrade_output.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

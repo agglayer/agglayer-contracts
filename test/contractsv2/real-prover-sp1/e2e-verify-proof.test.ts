@@ -11,7 +11,7 @@ import {
 } from '../../../typechain-types';
 
 import { VerifierType, computeInputPessimisticBytes, computeConsensusHashEcdsa } from '../../../src/pessimistic-utils';
-import * as inputProof from './test-inputs/input.json';
+import inputProof from './test-inputs/input.json';
 import { encodeInitializeBytesLegacy } from '../../../src/utils-common-aggchain';
 
 describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {

@@ -8,9 +8,9 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { PolygonZkEVMTimelock } from '../../typechain-types';
 
-import * as deployParameters from './deploy_parameters.json';
-import * as deployOutputParameters from './deploy_output.json';
-import * as upgradeParameters from './upgrade_parameters.json';
+import deployParameters from './deploy_parameters.json';
+import deployOutputParameters from './deploy_output.json';
+import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

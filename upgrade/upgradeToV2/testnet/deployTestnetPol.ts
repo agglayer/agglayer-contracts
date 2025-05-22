@@ -4,7 +4,7 @@ import path = require('path');
 
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
-import * as deployParameters from '../deploy_parameters.json';
+import deployParameters from '../deploy_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 

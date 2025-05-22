@@ -8,7 +8,7 @@ import { utils } from 'ffjavascript';
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { PolygonRollupManager } from '../../typechain-types';
-import * as upgradeParameters from './upgrade_parameters.json';
+import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

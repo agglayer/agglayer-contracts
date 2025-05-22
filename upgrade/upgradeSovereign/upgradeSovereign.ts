@@ -12,7 +12,7 @@ import { GlobalExitRootManagerL2SovereignChainPessimistic } from '../../typechai
 import { genTimelockOperation, decodeScheduleData } from '../utils';
 import { checkParams, getDeployerFromParameters } from '../../src/utils';
 
-import * as upgradeParameters from './upgrade_parameters.json';
+import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

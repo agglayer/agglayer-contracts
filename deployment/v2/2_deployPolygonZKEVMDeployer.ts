@@ -9,7 +9,7 @@ import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { deployPolygonZkEVMDeployer } from '../helpers/deployment-helpers';
 import '../helpers/utils';
-import * as deployParameters from './deploy_parameters.json';
+import deployParameters from './deploy_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
