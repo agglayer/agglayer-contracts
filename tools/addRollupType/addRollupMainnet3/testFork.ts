@@ -2,21 +2,20 @@
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
 import { expect } from 'chai';
 import path = require('path');
-import fs = require('fs');
 
 import * as dotenv from 'dotenv';
-import { ethers, upgrades } from 'hardhat';
-import { takeSnapshot, time, reset, setBalance, setStorageAt } from '@nomicfoundation/hardhat-network-helpers';
+import { ethers } from 'hardhat';
+import { time, reset, setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import { PolygonRollupManager, PolygonZkEVMTimelock } from '../../../typechain-types';
+
+import deployOutputParameters from './deploy_output_mainnet.json';
+import updateOutput from './updateRollupOutput.json';
+import addRollupTypeOutput from './add_rollup_type_output.json';
+import addRollupType2Output from '../addRollupMainnet2/add_rollup_type_output.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-const deployOutputParameters = require('./deploy_output_mainnet.json');
-const updateOutput = require('./updateRollupOutput.json');
-const addRollupTypeOutput = require('./add_rollup_type_output.json');
-
 async function main() {
-    const polTokenAddress = '0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6'; // mainnet address
     const deployer = (await ethers.getSigners())[0];
     console.log('using signer: ', deployer.address);
 
@@ -46,8 +45,6 @@ async function main() {
     const dataAvailabilityProtocol = await polygonValidiumContract.dataAvailabilityProtocol();
 
     await time.increase(timelockDelay);
-
-    const addRollupType2Output = require('../addRollupMainnet2/add_rollup_type_output.json');
 
     const txExectureData = {
         to: timelockContract.target,

@@ -2,21 +2,19 @@
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
 import { expect } from 'chai';
 import path = require('path');
-import fs = require('fs');
 
 import * as dotenv from 'dotenv';
-import { ethers, upgrades } from 'hardhat';
-import { takeSnapshot, time, reset, setBalance, setStorageAt } from '@nomicfoundation/hardhat-network-helpers';
+import { ethers } from 'hardhat';
+import { time, reset, setBalance, setStorageAt } from '@nomicfoundation/hardhat-network-helpers';
 import { PolygonRollupManager, PolygonZkEVMTimelock } from '../../../typechain-types';
+
+import deployOutputParameters from './deploy_output_mainnet.json';
+import upgradeOutput from './upgrade_output.json';
+import addRollupTypeOutput from './add_rollup_type_output.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-const deployOutputParameters = require('./deploy_output_mainnet.json');
-const upgradeOutput = require('./upgrade_output.json');
-const addRollupTypeOutput = require('./add_rollup_type_output.json');
-
 async function main() {
-    const polTokenAddress = '0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6'; // mainnet address
     const deployer = (await ethers.getSigners())[0];
     console.log('using signer: ', deployer.address);
 
@@ -61,7 +59,7 @@ async function main() {
         data: upgradeOutput.executeData,
     };
 
-    const receipt = await (await multisigSigner.sendTransaction(txUpgrade)).wait();
+    await (await multisigSigner.sendTransaction(txUpgrade)).wait();
 
     const RollupMangerFactory = await ethers.getContractFactory('PolygonRollupManager');
     const rollupManager = (await RollupMangerFactory.attach(
@@ -80,7 +78,7 @@ async function main() {
         to: timelockContract.target,
         data: addRollupTypeOutput.executeData,
     };
-    const receiptAddRollupType = await (await multisigSigner.sendTransaction(txAddRollupType)).wait();
+    await (await multisigSigner.sendTransaction(txAddRollupType)).wait();
 
     expect(await rollupManager.rollupTypeCount()).to.be.equal(1);
 
@@ -98,7 +96,7 @@ async function main() {
 
     console.log('Validum added');
 
-    const receiptDeployRollup = (await txDeployRollup.wait()) as any;
+    await txDeployRollup.wait();
     expect(await rollupManager.rollupCount()).to.be.equal(2);
 
     // Update rollup to this type: this is just a test is NOT intended to update our zkevm to a validium
@@ -111,7 +109,7 @@ async function main() {
         '0x', // upgradeData
     );
 
-    const receiptUpdateRollup = (await txUpdateRollup.wait()) as any;
+    await txUpdateRollup.wait();
 
     const rollupDataFinal2 = await rollupManager.rollupIDToRollupData(2);
     // expect(rollupDataFinal2.rollupContract).to.be.equal(upgradeOutput.newPolygonZKEVM);
