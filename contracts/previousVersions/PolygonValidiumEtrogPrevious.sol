@@ -3,8 +3,8 @@
 pragma solidity 0.8.28;
 
 import "./PolygonRollupBaseEtrogPrevious.sol";
-import "../../interfaces/IDataAvailabilityProtocol.sol";
-import "../../interfaces/IPolygonValidium.sol";
+import "../interfaces/IDataAvailabilityProtocol.sol";
+import "../interfaces/IPolygonValidium.sol";
 
 /**
  * Contract responsible for managing the states and the updates of L2 network.

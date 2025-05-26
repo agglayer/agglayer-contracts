@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.20;
 
-import "../../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
-import "../../../lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
+import "../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../../lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 import "./DepositContractBasePessimistic.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
