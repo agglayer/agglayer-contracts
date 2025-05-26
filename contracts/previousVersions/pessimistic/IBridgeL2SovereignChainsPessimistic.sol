@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
-import "../../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
+import "../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 import "./IPolygonZkEVMBridgeV2Pessimistic.sol";
 
 interface IBridgeL2SovereignChainsPessimistic is
