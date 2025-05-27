@@ -1,8 +1,8 @@
 # SP1VerifierPlonk
-[Git Source](https://github.com/agglayer/agglayer-contracts/blob/112a010b7c8b14335e5fe1a9bffc11bd2459df05/contracts/verifiers/v4.0.0-rc.3/SP1VerifierPlonk.sol)
+[Git Source](https://github.com/agglayer/agglayer-contracts/blob/856b421eef55a77f98f6fed45beb5ed8e3023c16/contracts/verifiers/v4.0.0-rc.3/SP1VerifierPlonk.sol)
 
 **Inherits:**
-[PlonkVerifier](/contracts/verifiers/v4.0.0-rc.3/PlonkVerifier.sol/contract.PlonkVerifier.md), [ISP1VerifierWithHash](/contracts/v2/interfaces/ISP1Verifier.sol/interface.ISP1VerifierWithHash.md)
+[PlonkVerifier](/contracts/verifiers/v4.0.0-rc.3/PlonkVerifier.sol/contract.PlonkVerifier.md), [ISP1VerifierWithHash](/contracts/interfaces/ISP1Verifier.sol/interface.ISP1VerifierWithHash.md)
 
 **Author:**
 Succinct Labs
