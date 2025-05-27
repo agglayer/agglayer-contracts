@@ -1,5 +1,5 @@
 # GlobalExitRootLib
-[Git Source](https://github.com/agglayer/agglayer-contracts/blob/112a010b7c8b14335e5fe1a9bffc11bd2459df05/contracts/lib/GlobalExitRootLib.sol)
+[Git Source](https://github.com/agglayer/agglayer-contracts/blob/856b421eef55a77f98f6fed45beb5ed8e3023c16/contracts/lib/GlobalExitRootLib.sol)
 
 *A library that provides the necessary calculations to calculate the global exit root*
 
