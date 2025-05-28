@@ -85,6 +85,7 @@ async function main() {
     const bridgeFactory = await ethers.getContractFactory("PolygonZkEVMBridgeV2", deployer);
     const impBridge = await upgrades.prepareUpgrade(bridgeAddress, bridgeFactory, {
         unsafeAllow: ["constructor", "missing-initializer", "missing-initializer-call"],
+        unsafeSkipStorageCheck: true,
     }) as string;
     logger.info("#######################\n");
     logger.info(`Polygon bridge implementation deployed at: ${impBridge}`);
