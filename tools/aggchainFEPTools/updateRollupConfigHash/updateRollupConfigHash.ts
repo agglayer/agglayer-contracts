@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import path = require('path');
 import fs = require('fs');
-
 import params from './parameters.json';
 import { AggchainFEP } from '../../../typechain-types';
 import { transactionTypes, genOperation } from '../../utils';
@@ -41,7 +41,7 @@ async function main() {
 
     try {
         checkParams(params, mandatoryParameters);
-    } catch (e) {
+    } catch (e: any) {
         logger.error(`Error checking parameters. ${e.message}`);
         process.exit(1);
     }
@@ -163,7 +163,7 @@ async function main() {
             outputJson.rollupAddress = rollupAddress;
             outputJson.rollupConfigHash = rollupConfigHash;
             outputJson.txHash = tx.hash;
-        } catch (e) {
+        } catch (e: any) {
             logger.error(`Error sending tx: ${e.message}`);
             process.exit(1);
         }
