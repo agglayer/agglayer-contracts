@@ -19,8 +19,8 @@ Object.keys(contractAddressMap).forEach((key) => {
 const contractFactories: string[] = [
     "PolygonRollupManager",
     // "ProxyAdmin",
-    "BridgeL2SovereignChain",
     "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+    "BridgeL2SovereignChain",
 ];
 
 async function decodePayload(data: string, factories: string[]): Promise<any> {
@@ -28,6 +28,9 @@ async function decodePayload(data: string, factories: string[]): Promise<any> {
         try {
             const factory: any = await ethers.getContractFactory(name);
             const decoded: any = factory.interface.parseTransaction({data});
+            if (!decoded || !decoded.name) {
+                continue; // Skip if no valid decode
+            }
             return {contract: name, decoded};
         } catch (e) {
             // Try next
@@ -77,10 +80,12 @@ function printDecoded(name: string, decoded: any, contractName: string, to: any,
 
 async function main(): Promise<void> {
     // User input: fill these with your data
-    const scheduleData: string = "0x...";
+    const scheduleData: string = "0x..";
     const executeData: string = "0x..";
 
-    const TimelockFactory: any = await ethers.getContractFactory("TimelockController");
+    const TimelockFactory: any = await ethers.getContractFactory(
+        "@openzeppelin/contracts/governance/TimelockController.sol:TimelockController"
+    );
 
     // Decode schedule and execute
     const decodedSchedule: any = TimelockFactory.interface.parseTransaction({data: scheduleData});
@@ -151,7 +156,7 @@ async function main(): Promise<void> {
             decoded = await decodePayload(decoded.decoded.args.data, contractFactories);
             depth++;
         }
-        if (decoded && depth === 0) {
+        if (decoded) {
             printDecoded(decoded.contract, decoded.decoded, contractName || decoded.contract, to, depth);
         }
         if (!decoded && depth === 0) {
