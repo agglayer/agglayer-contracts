@@ -13,7 +13,11 @@ import {
     TokenWrapped,
     Address,
 } from '../../typechain-types';
-import { computeWrappedTokenProxyAddress, calculateGlobalExitRoot, calculateAccInputHashetrog } from './helpers/helpers-sovereign-bridge';
+import {
+    computeWrappedTokenProxyAddress,
+    calculateGlobalExitRoot,
+    calculateAccInputHashetrog,
+} from './helpers/helpers-sovereign-bridge';
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 

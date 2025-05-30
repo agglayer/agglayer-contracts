@@ -12,7 +12,7 @@ import {
     claimBeforeBridge,
     computeWrappedTokenProxyAddress,
     calculateGlobalExitRoot,
-    computeGlobalIndex
+    computeGlobalIndex,
 } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;

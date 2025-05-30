@@ -5,8 +5,9 @@ import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     computeWrappedTokenProxyAddress,
     calculateGlobalExitRoot,
-    computeGlobalIndex
-} from './helpers/helpers-sovereign-bridge';import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, TokenWrapped } from '../../typechain-types';
+    computeGlobalIndex,
+} from './helpers/helpers-sovereign-bridge';
+import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, TokenWrapped } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
