@@ -7,32 +7,17 @@ import {
     BridgeL2SovereignChain,
     TokenWrapped,
 } from '../../typechain-types';
-import { computeWrappedTokenProxyAddress, claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
-import { valueToStorageBytes } from '../../src/utils';
+import {
+    computeWrappedTokenProxyAddress,
+    claimBeforeBridge,
+    calculateGlobalExitRoot,
+    computeGlobalIndex,
+    newHashChainValue,
+    newClaimedGlobalIndexValue
+} from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-
-function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
-}
-// eslint-disable-next-line @typescript-eslint/naming-convention
-const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
-
-function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolean) {
-    if (isMainnet === true) {
-        return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
-    }
-    return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
-}
-
-function newHashChainValue(prevHashChainValue: any, valueToAdd: any) {
-    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [prevHashChainValue, valueToAdd]);
-}
-
-function newClaimedGlobalIndexValue(globalIndex: any, leafValue: any) {
-    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [valueToStorageBytes(globalIndex), leafValue]);
-}
 
 describe('BridgeL2SovereignChain Contract', () => {
     upgrades.silenceWarnings();
