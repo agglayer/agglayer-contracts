@@ -13,7 +13,7 @@ import {
     calculateGlobalExitRoot,
     computeGlobalIndex,
     newHashChainValue,
-    newClaimedGlobalIndexValue
+    newClaimedGlobalIndexValue,
 } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
