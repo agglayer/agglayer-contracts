@@ -16,7 +16,7 @@ import {
     Address,
     PolygonDataCommittee,
 } from '../../typechain-types';
-import { computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
+import { computeWrappedTokenProxyAddress, calculateGlobalExitRoot } from './helpers/helpers-sovereign-bridge';
 import { computeRandomBytes } from '../../src/pessimistic-utils';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 
@@ -24,10 +24,6 @@ type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 
 const MerkleTreeBridge = MTBridge;
 const { verifyMerkleProof, getLeafValue } = mtBridgeUtils;
-
-function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
-}
 
 /**
  * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, seqAddress)

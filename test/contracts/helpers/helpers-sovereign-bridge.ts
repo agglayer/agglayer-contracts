@@ -1,5 +1,6 @@
 import { ethers } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
+import { valueToStorageBytes } from '../../../src/utils';
 
 const { getLeafValue } = mtBridgeUtils;
 const MerkleTreeBridge = MTBridge;
@@ -17,6 +18,13 @@ export function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet:
 
 export function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
+}
+
+export function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
+    return ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'uint64'],
+        [newGlobalExitRoot, lastBlockHash, timestamp],
+    );
 }
 
 export async function computeWrappedTokenProxyAddress(
@@ -194,4 +202,37 @@ export async function claimBeforeBridge(
         amount,
         metadata,
     );
+}
+
+export function newHashChainValue(prevHashChainValue: any, valueToAdd: any) {
+    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [prevHashChainValue, valueToAdd]);
+}
+
+export function newClaimedGlobalIndexValue(globalIndex: any, leafValue: any) {
+    return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [valueToStorageBytes(globalIndex), leafValue]);
+}
+
+/**
+ * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, globalExitRoot, timestamp, seqAddress)
+ * @param {String} oldAccInputHash - old accumulateInputHash
+ * @param {String} batchHashData - Batch hash data
+ * @param {String} globalExitRoot - Global Exit Root
+ * @param {Number} timestamp - Block timestamp
+ * @param {String} sequencerAddress - Sequencer address
+ * @returns {String} - accumulateInputHash in hex encoding
+ */
+export function calculateAccInputHashetrog(
+    oldAccInputHash: any,
+    batchHashData: any,
+    globalExitRoot: any,
+    timestamp: any,
+    sequencerAddress: any,
+    forcedBlockHash: any,
+) {
+    const hashKeccak = ethers.solidityPackedKeccak256(
+        ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
+        [oldAccInputHash, batchHashData, globalExitRoot, timestamp, sequencerAddress, forcedBlockHash],
+    );
+
+    return hashKeccak;
 }
