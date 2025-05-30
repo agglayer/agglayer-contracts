@@ -18,7 +18,11 @@ import {
     PolygonZkEVMExistentEtrog,
     AggLayerGateway,
 } from '../../typechain-types';
-import { computeWrappedTokenProxyAddress, calculateGlobalExitRoot, computeGlobalIndex } from './helpers/helpers-sovereign-bridge';
+import {
+    computeWrappedTokenProxyAddress,
+    calculateGlobalExitRoot,
+    computeGlobalIndex,
+} from './helpers/helpers-sovereign-bridge';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
