@@ -4,10 +4,7 @@ import { ethers, upgrades } from 'hardhat';
 import { MTBridge } from '@0xpolygonhermez/zkevm-commonjs';
 import { PolygonZkEVMGlobalExitRoot, PolygonZkEVMGlobalExitRootV2 } from '../../typechain-types';
 
-import {
-    calculateGlobalExitRoot,
-    calculateGlobalExitRootLeaf,
-} from './helpers/helpers-sovereign-bridge';
+import { calculateGlobalExitRoot, calculateGlobalExitRootLeaf } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
 
