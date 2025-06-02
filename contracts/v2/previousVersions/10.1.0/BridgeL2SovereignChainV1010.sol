@@ -2,23 +2,23 @@
 
 pragma solidity 0.8.28;
 
-import "../interfaces/IBridgeL2SovereignChains.sol";
-import "../PolygonZkEVMBridgeV2.sol";
-import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import "../../interfaces/IBridgeL2SovereignChains.sol";
+import "../../PolygonZkEVMBridgeV2.sol";
+import "../../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
 
 /**
  * Sovereign chains bridge that will be deployed on all Sovereign chains
  * Contract responsible to manage the token interactions with other networks
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
-contract BridgeL2SovereignChain is
+contract BridgeL2SovereignChainV1010 is
     PolygonZkEVMBridgeV2,
     IBridgeL2SovereignChains
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
 
     // Current bridge version
-    string public constant BRIDGE_SOVEREIGN_VERSION = "v10.1.1";
+    string public constant BRIDGE_SOVEREIGN_VERSION = "v10.1.0";
 
     // Map to store wrappedAddresses that are not mintable
     mapping(address wrappedAddress => bool isNotMintable)
@@ -286,6 +286,69 @@ contract BridgeL2SovereignChain is
 
         // Initialize OZ contracts
         __ReentrancyGuard_init();
+    }
+
+    /**
+     * @notice Initialize function on contracts that has been already deployed
+     * Allow to initialize the LocalBalanceTree with the initial balances
+     * @param tokenInfoHash Array of tokenInfoHash
+     * @param amount Array of amount
+     * @param _emergencyBridgeUnpauser Address of the emergencyBridgeUnpauser role
+     * @param _proxiedTokensManager Address of the proxiedTokensManager role
+     */
+    function initialize(
+        bytes32[] calldata tokenInfoHash,
+        uint256[] calldata amount,
+        address _emergencyBridgeUnpauser,
+        address _proxiedTokensManager
+    ) public getInitializedVersion reinitializer(3) {
+        if (_initializerVersion == 0) {
+            revert InvalidInitializeFunction();
+        }
+
+        if (tokenInfoHash.length != amount.length) {
+            revert InputArraysLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < tokenInfoHash.length; i++) {
+            _setInitialLocalBalanceTreeAmount(tokenInfoHash[i], amount[i]);
+        }
+
+        // Set emergency bridge unpauser
+        emergencyBridgeUnpauser = _emergencyBridgeUnpauser;
+        emit AcceptEmergencyBridgeUnpauserRole(
+            address(0),
+            emergencyBridgeUnpauser
+        );
+
+        // set proxied tokens manager
+        require(
+            _proxiedTokensManager != address(this),
+            BridgeAddressNotAllowed()
+        );
+        // It's not allowed proxiedTokensManager to be zero address.
+        // If disabling token upgradability is required, add a not owned account like 0xffff...fffff
+        require(_proxiedTokensManager != address(0), InvalidZeroAddress());
+
+        proxiedTokensManager = _proxiedTokensManager;
+
+        emit AcceptProxiedTokensManagerRole(address(0), proxiedTokensManager);
+
+        // OZ contract already initialized
+    }
+
+    /**
+     * @notice Set the initial local balance tree amount
+     * @param tokenInfoHash Token info hash
+     * @param amount Amount to set
+     */
+    function _setInitialLocalBalanceTreeAmount(
+        bytes32 tokenInfoHash,
+        uint256 amount
+    ) internal {
+        localBalanceTree[tokenInfoHash] = amount;
+
+        emit SetInitialLocalBalanceTreeAmount(tokenInfoHash, amount);
     }
 
     /**
@@ -810,6 +873,10 @@ contract BridgeL2SovereignChain is
         address destinationAddress,
         uint256 amount
     ) internal override {
+        if (destinationAddress == address(0)) {
+            revert InvalidZeroAddress();
+        }
+
         // If is not mintable transfer instead of mint
         if (wrappedAddressIsNotMintable[address(tokenWrapped)]) {
             // Transfer tokens

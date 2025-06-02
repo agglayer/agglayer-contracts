@@ -1,6 +1,11 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { ERC20PermitMock, GlobalExitRootManagerL2SovereignChain, BridgeL2SovereignChain } from '../../typechain-types';
+import {
+    ERC20PermitMock,
+    GlobalExitRootManagerL2SovereignChain,
+    BridgeL2SovereignChain,
+    BridgeL2SovereignChainV1010,
+} from '../../typechain-types';
 import { claimBeforeBridge, createClaimAndAddGER } from './helpers/helpers-sovereign-bridge';
 
 describe('BridgeL2SovereignChain: LBT & upgrade', () => {
@@ -92,13 +97,13 @@ describe('BridgeL2SovereignChain: LBT & upgrade', () => {
 
     it('Should test upgrade to BridgeL2SovereignChain', async () => {
         // load correct contract interface
-        const BridgeL2SovereignChainFactoryNew = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const BridgeL2SovereignChainFactoryNew = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
         sovereignChainBridgeContract = BridgeL2SovereignChainFactoryNew.attach(
             sovereignChainBridgeContract.target,
-        ) as BridgeL2SovereignChain;
+        ) as BridgeL2SovereignChainV1010;
 
         // get new version
-        const newBridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const newBridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
 
         await upgrades.upgradeProxy(sovereignChainBridgeContract.target, newBridgeL2SovereignChainFactory, {
             unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],
@@ -168,13 +173,13 @@ describe('BridgeL2SovereignChain: LBT & upgrade', () => {
 
     it('LBT overflow', async () => {
         // load correct contract interface
-        const BridgeL2SovereignChainFactoryNew = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const BridgeL2SovereignChainFactoryNew = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
         sovereignChainBridgeContract = BridgeL2SovereignChainFactoryNew.attach(
             sovereignChainBridgeContract.target,
         ) as BridgeL2SovereignChain;
 
         // get new version
-        const newBridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const newBridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
 
         await upgrades.upgradeProxy(sovereignChainBridgeContract.target, newBridgeL2SovereignChainFactory, {
             unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],

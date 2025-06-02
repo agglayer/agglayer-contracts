@@ -355,7 +355,7 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
         );
 
         // Upgrade sovereign bridge
-        const sovereignChainBridgeContractFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const sovereignChainBridgeContractFactory = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
         bridge = (await upgrades.upgradeProxy(bridge.target, sovereignChainBridgeContractFactory, {
             constructorArgs: [],
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],

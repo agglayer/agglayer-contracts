@@ -115,16 +115,6 @@ describe('BridgeL2SovereignChain Contract', () => {
             ),
         ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidInitializeFunction');
 
-        // cannot initialize from unexpected initializer. Initializer for already deployed contract
-        await expect(
-            sovereignChainBridgeContract.initialize(
-                [ethers.randomBytes(32)],
-                [42],
-                emergencyBridgePauser.address,
-                proxiedTokensManager.address,
-            ),
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidInitializeFunction');
-
         await sovereignChainBridgeContract.initialize(
             networkIDRollup2,
             ethers.ZeroAddress, // zero for ether

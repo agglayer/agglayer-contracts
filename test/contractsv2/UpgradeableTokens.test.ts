@@ -154,7 +154,7 @@ describe('Upgradeable Tokens', () => {
 
         // Upgrade bridge to upgradeable tokens
         // Upgrade sov bridge to new version
-        const sovBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const sovBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
         sovereignBridgeContract = (await upgrades.upgradeProxy(sovereignBridgeContract.target, sovBridgeFactory, {
             unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],
             call: {
