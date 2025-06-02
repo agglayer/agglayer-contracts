@@ -1,16 +1,16 @@
-import "dotenv/config";
-import "@openzeppelin/hardhat-upgrades";
-import "hardhat-dependency-compiler";
-import "hardhat-switch-network";
-import "@nomiclabs/hardhat-solhint";
-import {HardhatUserConfig} from "hardhat/config";
-import "solidity-coverage";
-import "@typechain/hardhat";
-import "@nomicfoundation/hardhat-ethers";
-import "@nomicfoundation/hardhat-chai-matchers";
-import "@nomicfoundation/hardhat-verify";
+import 'dotenv/config';
+import '@openzeppelin/hardhat-upgrades';
+import 'hardhat-dependency-compiler';
+import 'hardhat-switch-network';
+import '@nomiclabs/hardhat-solhint';
+import { HardhatUserConfig } from 'hardhat/config';
+import 'solidity-coverage';
+import '@typechain/hardhat';
+import '@nomicfoundation/hardhat-ethers';
+import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomicfoundation/hardhat-verify';
 
-const DEFAULT_MNEMONIC = "test test test test test test test test test test test junk";
+const DEFAULT_MNEMONIC = 'test test test test test test test test test test test junk';
 
 /*
  * You need to export an object to set up your config
@@ -20,53 +20,44 @@ const DEFAULT_MNEMONIC = "test test test test test test test test test test test
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-
+const customChainId = Number(process.env.CUSTOM_CHAIN_ID);
 const config: HardhatUserConfig = {
     typechain: {
-        outDir: "typechain-types",
-        target: "ethers-v6",
+        outDir: 'typechain-types',
+        target: 'ethers-v6',
     },
     dependencyCompiler: {
         paths: [
-            "@openzeppelin/contracts4/token/ERC20/presets/ERC20PresetFixedSupply.sol",
-            "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol",
-            "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol",
+            '@openzeppelin/contracts4/token/ERC20/presets/ERC20PresetFixedSupply.sol',
+            '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol',
+            '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol',
         ], // ,
         // keep: true
     },
     solidity: {
         compilers: [
             {
-                version: "0.8.28",
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "cancun",
+                    evmVersion: 'cancun',
                 },
             },
             {
-                version: "0.8.20",
+                version: '0.8.20',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 },
             },
             {
-                version: "0.8.17",
-                settings: {
-                    optimizer: {
-                        enabled: true,
-                        runs: 999999,
-                    },
-                },
-            },
-            {
-                version: "0.6.11",
+                version: '0.8.17',
                 settings: {
                     optimizer: {
                         enabled: true,
@@ -75,7 +66,7 @@ const config: HardhatUserConfig = {
                 },
             },
             {
-                version: "0.5.16",
+                version: '0.6.11',
                 settings: {
                     optimizer: {
                         enabled: true,
@@ -84,7 +75,16 @@ const config: HardhatUserConfig = {
                 },
             },
             {
-                version: "0.5.12",
+                version: '0.5.16',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 999999,
+                    },
+                },
+            },
+            {
+                version: '0.5.12',
                 settings: {
                     optimizer: {
                         enabled: true,
@@ -95,150 +95,150 @@ const config: HardhatUserConfig = {
         ],
         overrides: {
             // Set all contracts on L2 to use 'evmVersion: Shangai' to be compatible with clients not supporting Cancun opcodes
-            "contracts/v2/utils/ClaimCompressor.sol": {
-                version: "0.8.28",
+            'contracts/v2/utils/ClaimCompressor.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai",
-                    //viaIR: true,
+                    evmVersion: 'shanghai',
+                    // viaIR: true,
                 },
             },
-            "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol": {
-                version: "0.8.28",
+            '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            "@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol": {
-                version: "0.8.28",
+            '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            "contracts/v2/PolygonZkEVMBridgeV2.sol": {
-                version: "0.8.28",
+            'contracts/v2/PolygonZkEVMBridgeV2.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500, // should have same runs than BridgeL2SovereignChain
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 },
             },
-            "contracts/v2/lib/BytecodeStorer.sol": {
-                version: "0.8.28",
+            'contracts/v2/lib/BytecodeStorer.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999,
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 },
             },
-            "contracts/v2/sovereignChains/BridgeL2SovereignChain.sol": {
-                version: "0.8.28",
+            'contracts/v2/sovereignChains/BridgeL2SovereignChain.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500, // should have same runs than PolygonZkEVMBridgeV2
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            "contracts/PolygonZkEVMGlobalExitRootL2.sol": {
-                version: "0.8.28",
+            'contracts/PolygonZkEVMGlobalExitRootL2.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            "contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol": {
-                version: "0.8.28",
+            'contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai",
+                    evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            "contracts/v2/PolygonRollupManager.sol": {
-                version: "0.8.28",
+            'contracts/v2/PolygonRollupManager.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500, // Should have the same optimizations as PolygonTransparentProxy
                     },
-                    evmVersion: "cancun",
+                    evmVersion: 'cancun',
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            "contracts/v2/newDeployments/PolygonRollupManagerNotUpgraded.sol": {
-                version: "0.8.28",
+            'contracts/v2/newDeployments/PolygonRollupManagerNotUpgraded.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500, // Should have the same optimizations as PolygonTransparentProxy
                     },
-                    evmVersion: "cancun",
+                    evmVersion: 'cancun',
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            "contracts/v2/mocks/PolygonRollupManagerMock.sol": {
-                version: "0.8.28",
+            'contracts/v2/mocks/PolygonRollupManagerMock.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500, // Should have the same optimizations as PolygonTransparentProxy
                     },
-                    evmVersion: "cancun",
+                    evmVersion: 'cancun',
                 }, // try yul optimizer
             },
             // Should have the same optimizations than the RollupManager to verify
-            "contracts/v2/lib/PolygonTransparentProxy.sol": {
-                version: "0.8.28",
+            'contracts/v2/lib/PolygonTransparentProxy.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500,
                     },
-                    evmVersion: "cancun",
+                    evmVersion: 'cancun',
                 }, // try yul optimizer
             },
-            "contracts/v2/lib/TokenWrappedBridgeUpgradeable.sol": {
-                version: "0.8.28",
+            'contracts/v2/lib/TokenWrappedBridgeUpgradeable.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 500,
                     },
-                    evmVersion: "shanghai", // Same evm version than BridgeL2SovereignChain
+                    evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
                 },
             },
-            "contracts/v2/lib/TokenWrappedTransparentProxy.sol": {
-                version: "0.8.28",
+            'contracts/v2/lib/TokenWrappedTransparentProxy.sol': {
+                version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: "shanghai", // Same evm version than BridgeL2SovereignChain
-                    metadata: {bytecodeHash: "none"}, // Get always same bytecode
+                    evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
+                    metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },
         },
@@ -300,7 +300,7 @@ const config: HardhatUserConfig = {
             },
         },
         localhost: {
-            url: "http://127.0.0.1:8545",
+            url: 'http://127.0.0.1:8545',
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",
@@ -309,9 +309,7 @@ const config: HardhatUserConfig = {
             },
         },
         custom: {
-            url: process.env.CUSTOM_PROVIDER
-                ? process.env.CUSTOM_PROVIDER
-                : "http://127.0.0.1:8545",
+            url: process.env.CUSTOM_PROVIDER ? process.env.CUSTOM_PROVIDER : 'http://127.0.0.1:8545',
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",
@@ -320,7 +318,7 @@ const config: HardhatUserConfig = {
             },
         },
         hardhat: {
-            initialDate: "0",
+            initialDate: '0',
             allowUnlimitedContractSize: true,
             initialBaseFeePerGas: 0,
             accounts: {
@@ -343,7 +341,7 @@ const config: HardhatUserConfig = {
             },
         },
         polygonZKEVMTestnet: {
-            url: "https://rpc.cardona.zkevm-rpc.com",
+            url: 'https://rpc.cardona.zkevm-rpc.com',
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",
@@ -352,7 +350,7 @@ const config: HardhatUserConfig = {
             },
         },
         polygonZKEVMMainnet: {
-            url: "https://zkevm-rpc.com",
+            url: 'https://zkevm-rpc.com',
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",
@@ -361,7 +359,7 @@ const config: HardhatUserConfig = {
             },
         },
         zkevmDevnet: {
-            url: "http://123:123:123:123:123",
+            url: 'http://123:123:123:123:123',
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",
@@ -372,7 +370,7 @@ const config: HardhatUserConfig = {
     },
     gasReporter: {
         enabled: !!process.env.REPORT_GAS,
-        outputFile: process.env.REPORT_GAS_FILE ? "./gas_report.md" : undefined,
+        outputFile: process.env.REPORT_GAS_FILE ? './gas_report.md' : undefined,
         noColors: !!process.env.REPORT_GAS_FILE,
     },
     etherscan: {
@@ -383,30 +381,39 @@ const config: HardhatUserConfig = {
             sepolia: `${process.env.ETHERSCAN_API_KEY}`,
             mainnet: `${process.env.ETHERSCAN_API_KEY}`,
             zkevmDevnet: `${process.env.ETHERSCAN_API_KEY}`,
+            custom: `${process.env.CUSTOM_RPC}`,
         },
         customChains: [
             {
-                network: "polygonZKEVMMainnet",
+                network: 'polygonZKEVMMainnet',
                 chainId: 1101,
                 urls: {
-                    apiURL: "https://api-zkevm.polygonscan.com/api",
-                    browserURL: "https://zkevm.polygonscan.com/",
+                    apiURL: 'https://api-zkevm.polygonscan.com/api',
+                    browserURL: 'https://zkevm.polygonscan.com/',
                 },
             },
             {
-                network: "polygonZKEVMTestnet",
+                network: 'polygonZKEVMTestnet',
                 chainId: 2442,
                 urls: {
-                    apiURL: "https://api-cardona-zkevm.polygonscan.com/api",
-                    browserURL: "https://cardona-zkevm.polygonscan.com/",
+                    apiURL: 'https://api-cardona-zkevm.polygonscan.com/api',
+                    browserURL: 'https://cardona-zkevm.polygonscan.com/',
                 },
             },
             {
-                network: "zkevmDevnet",
+                network: 'zkevmDevnet',
                 chainId: 123,
                 urls: {
-                    apiURL: "http://123:123:123:123:123/api",
-                    browserURL: "http://123:123:123:123:123",
+                    apiURL: 'http://123:123:123:123:123/api',
+                    browserURL: 'http://123:123:123:123:123',
+                },
+            },
+            {
+                network: 'custom',
+                chainId: customChainId,
+                urls: {
+                    apiURL: `${process.env.CUSTOM_API}`,
+                    browserURL: '',
                 },
             },
         ],

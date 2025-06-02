@@ -204,11 +204,7 @@ contract BridgeL2SovereignChain is
         address _emergencyBridgePauser,
         address _emergencyBridgeUnpauser,
         address _proxiedTokensManager
-    ) public virtual getInitializedVersion reinitializer(3) {
-        if (_initializerVersion != 0) {
-            revert InvalidInitializeFunction();
-        }
-
+    ) public virtual reinitializer(3) {
         require(
             address(_globalExitRootManager) != address(0),
             InvalidZeroAddress()
