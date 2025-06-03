@@ -20,7 +20,6 @@ const DEFAULT_MNEMONIC = 'test test test test test test test test test test test
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-const customChainId = Number(process.env.CUSTOM_CHAIN_ID);
 const config: HardhatUserConfig = {
     typechain: {
         outDir: 'typechain-types',
@@ -381,7 +380,7 @@ const config: HardhatUserConfig = {
             sepolia: `${process.env.ETHERSCAN_API_KEY}`,
             mainnet: `${process.env.ETHERSCAN_API_KEY}`,
             zkevmDevnet: `${process.env.ETHERSCAN_API_KEY}`,
-            custom: `${process.env.CUSTOM_RPC}`,
+            custom: `${process.env.CUSTOM_ETHERSCAN_API_KEY}`,
         },
         customChains: [
             {
@@ -410,10 +409,10 @@ const config: HardhatUserConfig = {
             },
             {
                 network: 'custom',
-                chainId: customChainId,
+                chainId: Number(process.env.CUSTOM_CHAIN_ID),
                 urls: {
-                    apiURL: `${process.env.CUSTOM_API}`,
-                    browserURL: '',
+                    apiURL: `${process.env.CUSTOM_API_URL}`,
+                    browserURL: `${process.env.CUSTOM_BROWSER_URL}`,
                 },
             },
         ],
