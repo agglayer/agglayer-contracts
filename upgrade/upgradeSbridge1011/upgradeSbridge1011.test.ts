@@ -130,6 +130,24 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         expect(await sovereignBridgeContract.wrappedTokenBytecodeStorer()).to.equal(
             upgradeOutput.deployedContracts.wrappedTokenBytecodeStorer,
         );
+
+        // Check can not be reinitialized
+        await expect(
+            sovereignBridgeContract.initialize(
+                1,
+                ethers.ZeroAddress,
+                1,
+                ethers.ZeroAddress,
+                ethers.ZeroAddress,
+                '0x',
+                ethers.ZeroAddress,
+                ethers.ZeroAddress,
+                true,
+                ethers.ZeroAddress,
+                ethers.ZeroAddress,
+                ethers.ZeroAddress,
+            ),
+        ).to.be.revertedWith('Initializable: contract is already initialized');
         logger.info(`✓ Checked bridge contract storage parameters`);
 
         logger.info('Finished shallow fork upgrade test successfully!');
