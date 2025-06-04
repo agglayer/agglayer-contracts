@@ -1,9 +1,9 @@
-import {ethers} from "hardhat";
+import { ethers } from 'hardhat';
 // Template: fill with your contract addresses and names
 const contractAddressMap: Record<string, string> = {
-    "0x5132A183E9F3CB7C848b0AAC5Ae0c4f0491B7aB2": "RollupManager",
-    "0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe": "Bridge",
-    "0x580bda1e7A0CFAe92Fa7F6c20A3794F169CE3CFb": "GER",
+    '0x5132A183E9F3CB7C848b0AAC5Ae0c4f0491B7aB2': 'RollupManager',
+    '0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe': 'Bridge',
+    '0x580bda1e7A0CFAe92Fa7F6c20A3794F169CE3CFb': 'GER',
 };
 
 // Ensure all keys are stored in lowercase
@@ -17,21 +17,21 @@ Object.keys(contractAddressMap).forEach((key) => {
 
 // Template: fill with your contract factories for decoding
 const contractFactories: string[] = [
-    "PolygonRollupManager",
+    'PolygonRollupManager',
     // "ProxyAdmin",
-    "@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
-    "BridgeL2SovereignChain",
+    '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
+    'BridgeL2SovereignChain',
 ];
 
 async function decodePayload(data: string, factories: string[]): Promise<any> {
     for (const name of factories) {
         try {
             const factory: any = await ethers.getContractFactory(name);
-            const decoded: any = factory.interface.parseTransaction({data});
+            const decoded: any = factory.interface.parseTransaction({ data });
             if (!decoded || !decoded.name) {
                 continue; // Skip if no valid decode
             }
-            return {contract: name, decoded};
+            return { contract: name, decoded };
         } catch (e) {
             // Try next
         }
@@ -42,23 +42,23 @@ async function decodePayload(data: string, factories: string[]): Promise<any> {
 function getDisplayContract(to: string, contractName: string): string {
     if (contractName && to) {
         return `${to} --> ${contractName}`;
-    } else if (to) {
-        return to;
-    } else {
-        return contractName;
     }
+    if (to) {
+        return to;
+    }
+    return contractName;
 }
 
 function printDecoded(name: string, decoded: any, contractName: string, to: any, depth = 0) {
-    const indent = "  ".repeat(depth);
-    const displayContract = contractName !== "UnknownContract" ? contractName : name;
+    const indent = '  '.repeat(depth);
+    const displayContract = contractName !== 'UnknownContract' ? contractName : name;
     console.log(`${indent}Decoded as ${displayContract}:`);
     console.log(`${indent}  Function: ${decoded.name}`);
     if (decoded.fragment && decoded.fragment.inputs) {
         for (let j = 0; j < decoded.fragment.inputs.length; j++) {
             const param = decoded.fragment.inputs[j];
             const value = decoded.args[j];
-            if (param.type === "address") {
+            if (param.type === 'address') {
                 // Check if the address exists in the contractAddressMap (always lowercase)
                 const mappedName = contractAddressMap[String(value).toLowerCase()];
                 if (mappedName) {
@@ -80,24 +80,28 @@ function printDecoded(name: string, decoded: any, contractName: string, to: any,
 
 async function main(): Promise<void> {
     // User input: fill these with your data
-    const scheduleData: string = "0x..";
-    const executeData: string = "0x..";
+    const scheduleData: string = '0x..';
+    const executeData: string = '0x..';
 
     const TimelockFactory: any = await ethers.getContractFactory(
-        "@openzeppelin/contracts/governance/TimelockController.sol:TimelockController"
+        '@openzeppelin/contracts/governance/TimelockController.sol:TimelockController',
     );
 
     // Decode schedule and execute
-    const decodedSchedule: any = TimelockFactory.interface.parseTransaction({data: scheduleData});
-    const decodedExecute: any = TimelockFactory.interface.parseTransaction({data: executeData});
+    const decodedSchedule: any = TimelockFactory.interface.parseTransaction({ data: scheduleData });
+    const decodedExecute: any = TimelockFactory.interface.parseTransaction({ data: executeData });
 
     // Detect batch or single
-    const isScheduleBatch: boolean = decodedSchedule.name === "scheduleBatch";
-    const isExecuteBatch: boolean = decodedExecute.name === "executeBatch";
+    const isScheduleBatch: boolean = decodedSchedule.name === 'scheduleBatch';
+    const isExecuteBatch: boolean = decodedExecute.name === 'executeBatch';
 
     // Extract targets, values, payloads
-    let scheduleTargets: any[], scheduleValues: any[], schedulePayloads: any[];
-    let executeTargets: any[], executeValues: any[], executePayloads: any[];
+    let scheduleTargets: any[];
+    let scheduleValues: any[];
+    let schedulePayloads: any[];
+    let executeTargets: any[];
+    let executeValues: any[];
+    let executePayloads: any[];
 
     if (isScheduleBatch) {
         scheduleTargets = decodedSchedule.args[0];
@@ -122,7 +126,7 @@ async function main(): Promise<void> {
     }
 
     // Print top-level TimelockController call
-    printDecoded("TimelockController", decodedSchedule, "TimelockController", "TimelockController", 0);
+    printDecoded('TimelockController', decodedSchedule, 'TimelockController', 'TimelockController', 0);
 
     // Check that schedule and execute match
     const match: boolean =
@@ -132,7 +136,7 @@ async function main(): Promise<void> {
         schedulePayloads.every((p: any, i: number) => p === executePayloads[i]);
 
     if (!match) {
-        console.error("❌ Schedule and Execute do not match!");
+        console.error('❌ Schedule and Execute do not match!');
         return;
     }
 
@@ -143,7 +147,7 @@ async function main(): Promise<void> {
         const data: string = schedulePayloads[i];
 
         // Use contract name from address map, or fallback to decoded.contract (always lowercase)
-        let contractName: string = contractAddressMap[to.toLowerCase()];
+        const contractName: string = contractAddressMap[to.toLowerCase()];
         let decoded: any = await decodePayload(data, contractFactories);
         let depth = 0;
         let currentContractName = contractName;
@@ -152,7 +156,7 @@ async function main(): Promise<void> {
             // Use decoded.contract if contractName is undefined
             printDecoded(decoded.contract, decoded.decoded, currentContractName || decoded.contract, currentTo, depth);
             currentContractName = decoded.contract;
-            currentTo = ""; // unknown for inner
+            currentTo = ''; // unknown for inner
             decoded = await decodePayload(decoded.decoded.args.data, contractFactories);
             depth++;
         }
@@ -161,16 +165,16 @@ async function main(): Promise<void> {
         }
         if (!decoded && depth === 0) {
             console.log(
-                `Could not decode payload for ${to} (${contractName || "UnknownContract"}) with provided ABIs.`
+                `Could not decode payload for ${to} (${contractName || 'UnknownContract'}) with provided ABIs.`,
             );
         }
         if (!decoded && depth > 0) {
-            console.log(`${"  ".repeat(depth)}↳ Inner payload could not be decoded.`);
+            console.log(`${'  '.repeat(depth)}↳ Inner payload could not be decoded.`);
         }
     }
 }
 
 main().catch((error: any) => {
-    console.error("❌ Error:", error);
+    console.error('❌ Error:', error);
     process.exit(1);
 });
