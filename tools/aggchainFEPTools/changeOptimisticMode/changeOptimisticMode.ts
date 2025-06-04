@@ -6,7 +6,7 @@ import { AggchainFEP } from '../../../typechain-types';
 import { transactionTypes, genOperation } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
-import { checkParams, getProviderAdjustingMultiplierGas } from '../../../src/utils';
+import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../../src/utils';
 
 async function main() {
     logger.info('Starting tool enable/disable optimistic mode');
@@ -39,12 +39,7 @@ async function main() {
             process.exit(1);
     }
 
-    try {
-        checkParams(params, mandatoryParameters);
-    } catch (e) {
-        logger.error(`Error checking parameters. ${e.message}`);
-        process.exit(1);
-    }
+    checkParams(params, mandatoryParameters);
 
     const { type, rollupAddress, optimisticMode } = params;
 
@@ -54,18 +49,7 @@ async function main() {
 
     // Load optimisticManager
     logger.info('Load optimisticManager');
-    // Load optimisticManager
-    let optimisticManager;
-    if (params.optimisticModeManagerPvk) {
-        optimisticManager = new ethers.Wallet(params.optimisticModeManagerPvk, currentProvider);
-    } else if (process.env.MNEMONIC) {
-        optimisticManager = ethers.HDNodeWallet.fromMnemonic(
-            ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0",
-        ).connect(currentProvider);
-    } else {
-        [optimisticManager] = await ethers.getSigners();
-    }
+    const optimisticManager = await getDeployerFromParameters(currentProvider, params, ethers);
 
     logger.info(`Using with: ${optimisticManager.address}`);
 
@@ -157,8 +141,8 @@ main().then(
         process.exit(0);
     },
     (err) => {
-        logger.info(err.message);
-        logger.info(err.stack);
+        logger.error(err.message);
+        logger.error(err.stack);
         process.exit(1);
     },
 );

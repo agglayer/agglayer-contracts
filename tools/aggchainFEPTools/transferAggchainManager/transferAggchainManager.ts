@@ -8,7 +8,6 @@ import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
 import { checkParams, getProviderAdjustingMultiplierGas } from '../../../src/utils';
 
-
 async function main() {
     logger.info('Starting tool to transfer aggchain manager role');
 
@@ -40,12 +39,7 @@ async function main() {
             process.exit(1);
     }
 
-    try {
-        checkParams(params, mandatoryParameters);
-    } catch (e) {
-        logger.error(`Error checking parameters. ${e.message}`);
-        process.exit(1);
-    }
+    checkParams(params, mandatoryParameters);
 
     const { type, rollupAddress } = params;
 
@@ -221,8 +215,8 @@ main().then(
         process.exit(0);
     },
     (err) => {
-        logger.info(err.message);
-        logger.info(err.stack);
+        logger.error(err.message);
+        logger.error(err.stack);
         process.exit(1);
     },
 );

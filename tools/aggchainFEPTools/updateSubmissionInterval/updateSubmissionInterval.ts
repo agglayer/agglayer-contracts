@@ -6,8 +6,7 @@ import { AggchainFEP } from '../../../typechain-types';
 import { transactionTypes, genOperation } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
-import { checkParams, getProviderAdjustingMultiplierGas } from '../../../src/utils';
-
+import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../../src/utils';
 
 async function main() {
     logger.info('Starting tool to update submission interval');
@@ -40,12 +39,7 @@ async function main() {
             process.exit(1);
     }
 
-    try {
-        checkParams(params, mandatoryParameters);
-    } catch (e) {
-        logger.error(`Error checking parameters. ${e.message}`);
-        process.exit(1);
-    }
+    checkParams(params, mandatoryParameters);
 
     const { type, rollupAddress, submissionInterval } = params;
 
@@ -53,19 +47,9 @@ async function main() {
     logger.info('Load provider');
     const currentProvider = getProviderAdjustingMultiplierGas(params, ethers);
 
-    logger.info('Load aggchainManager');
     // Load aggchainManager
-    let aggchainManager;
-    if (params.aggchainManagerPvk) {
-        aggchainManager = new ethers.Wallet(params.aggchainManagerPvk, currentProvider);
-    } else if (process.env.MNEMONIC) {
-        aggchainManager = ethers.HDNodeWallet.fromMnemonic(
-            ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0",
-        ).connect(currentProvider);
-    } else {
-        [aggchainManager] = await ethers.getSigners();
-    }
+    logger.info('Load aggchainManager');
+    const aggchainManager = await getDeployerFromParameters(currentProvider, params, ethers);
 
     logger.info(`Using with: ${aggchainManager.address}`);
 
@@ -148,8 +132,8 @@ main().then(
         process.exit(0);
     },
     (err) => {
-        logger.info(err.message);
-        logger.info(err.stack);
+        logger.error(err.message);
+        logger.error(err.stack);
         process.exit(1);
     },
 );
