@@ -6,7 +6,8 @@ import { AggchainFEP } from '../../../typechain-types';
 import { transactionTypes, genOperation } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
-import { checkParams } from '../../../src/utils';
+import { checkParams, getProviderAdjustingMultiplierGas } from '../../../src/utils';
+
 
 async function main() {
     logger.info('Starting tool to update submission interval');
@@ -50,38 +51,7 @@ async function main() {
 
     // Load provider
     logger.info('Load provider');
-    let currentProvider = ethers.provider;
-    if (params.multiplierGas || params.maxFeePerGas) {
-        if (process.env.HARDHAT_NETWORK !== 'hardhat') {
-            currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            ) as any;
-            if (params.maxPriorityFeePerGas && params.maxFeePerGas) {
-                logger.info(
-                    `Hardcoded gas used: MaxPriority${params.maxPriorityFeePerGas} gwei, MaxFee${params.maxFeePerGas} gwei`,
-                );
-                const FEE_DATA = new ethers.FeeData(
-                    null,
-                    ethers.parseUnits(params.maxFeePerGas, 'gwei'),
-                    ethers.parseUnits(params.maxPriorityFeePerGas, 'gwei'),
-                );
-
-                currentProvider.getFeeData = async () => FEE_DATA;
-            } else {
-                logger.info(`Multiplier gas used: ${params.multiplierGas}`);
-                // eslint-disable-next-line no-inner-declarations
-                async function overrideFeeData() {
-                    const feedata = await ethers.provider.getFeeData();
-                    return new ethers.FeeData(
-                        null,
-                        ((feedata.maxFeePerGas as bigint) * BigInt(params.multiplierGas)) / 1000n,
-                        ((feedata.maxPriorityFeePerGas as bigint) * BigInt(params.multiplierGas)) / 1000n,
-                    );
-                }
-                currentProvider.getFeeData = overrideFeeData;
-            }
-        }
-    }
+    const currentProvider = getProviderAdjustingMultiplierGas(params, ethers);
 
     logger.info('Load aggchainManager');
     // Load aggchainManager
