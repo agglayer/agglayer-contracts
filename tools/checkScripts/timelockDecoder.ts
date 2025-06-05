@@ -1,19 +1,45 @@
 import { ethers } from 'hardhat';
-// Template: fill with your contract addresses and names
-const contractAddressMap: Record<string, string> = {
+import fs from 'fs';
+import path from 'path';
+
+// Try to load contractAddresses.json if it exists
+let contractAddressMap: Record<string, string> = {
     '0x5132A183E9F3CB7C848b0AAC5Ae0c4f0491B7aB2': 'RollupManager',
     '0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe': 'Bridge',
     '0x580bda1e7A0CFAe92Fa7F6c20A3794F169CE3CFb': 'GER',
 };
 
-// Ensure all keys are stored in lowercase
-Object.keys(contractAddressMap).forEach((key) => {
-    const lowerKey = key.toLowerCase();
-    if (key !== lowerKey) {
-        contractAddressMap[lowerKey] = contractAddressMap[key];
-        delete contractAddressMap[key];
+try {
+    const addressesPath = path.join(__dirname, 'contractAddresses.json');
+    if (fs.existsSync(addressesPath)) {
+        const addressesJson = JSON.parse(fs.readFileSync(addressesPath, 'utf8'));
+        // Flatten all networks into a single mapping
+        contractAddressMap = {};
+        for (const network of Object.values(addressesJson)) {
+            for (const [addr, name] of Object.entries(network as Record<string, string>)) {
+                contractAddressMap[addr.toLowerCase()] = name;
+            }
+        }
+    } else {
+        // fallback: ensure all keys are lowercase
+        Object.keys(contractAddressMap).forEach((key) => {
+            const lowerKey = key.toLowerCase();
+            if (key !== lowerKey) {
+                contractAddressMap[lowerKey] = contractAddressMap[key];
+                delete contractAddressMap[key];
+            }
+        });
     }
-});
+} catch (e) {
+    // fallback: ensure all keys are lowercase
+    Object.keys(contractAddressMap).forEach((key) => {
+        const lowerKey = key.toLowerCase();
+        if (key !== lowerKey) {
+            contractAddressMap[lowerKey] = contractAddressMap[key];
+            delete contractAddressMap[key];
+        }
+    });
+}
 
 // Template: fill with your contract factories for decoding
 const contractFactories: string[] = [
