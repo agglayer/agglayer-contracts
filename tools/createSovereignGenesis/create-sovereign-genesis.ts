@@ -13,9 +13,9 @@ import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis
 import { PolygonRollupManager, PolygonZkEVMBridgeV2 } from '../../typechain-types';
 import '../../deployment/helpers/utils';
 import { initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
-import { checkParams } from '../../src/utils';
+import { checkParams, getGitInfo } from '../../src/utils';
 import { logger } from '../../src/logger';
-import { formatGenesis, getGitInfo } from './helpers';
+import { formatGenesis } from './helpers';
 import { checkBridgeAddress } from '../utils';
 import { GENESIS_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 // read files

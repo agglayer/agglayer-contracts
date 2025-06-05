@@ -8,8 +8,8 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
 import { PolygonRollupManagerPessimistic, PolygonZkEVMBridgeV2 } from '../../typechain-types';
-import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, getGitInfo } from '../utils';
-import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../src/utils';
+import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData } from '../utils';
+import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters, getGitInfo } from '../../src/utils';
 import * as upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });

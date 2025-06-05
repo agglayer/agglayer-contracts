@@ -19,12 +19,7 @@ async function main() {
         'vKeyManager',
     ];
 
-    try {
-        checkParams(params, mandatoryParameters);
-    } catch (e) {
-        logger.error(`Error checking parameters. ${e.message}`);
-        process.exit(1);
-    }
+    checkParams(params, mandatoryParameters);
 
     const { initParams, useDefaultGateway, initOwnedAggchainVKey, initAggchainVKeyVersion, vKeyManager } = params;
 
@@ -43,8 +38,8 @@ main().then(
         process.exit(0);
     },
     (err) => {
-        logger.info(err.message);
-        logger.info(err.stack);
+        logger.error(err.message);
+        logger.error(err.stack);
         process.exit(1);
     },
 );

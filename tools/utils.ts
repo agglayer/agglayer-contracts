@@ -1,6 +1,7 @@
 /* eslint-disable no-prototype-builtins */
 /* eslint-disable no-restricted-syntax */
 import * as ethers from 'ethers';
+import { getGitInfo } from '../src/utils';
 
 export const supportedBridgeContracts = [
     'PolygonZkEVMBridgeV2 proxy',
@@ -74,4 +75,14 @@ export function checkBridgeAddress(genesis, expectedBridgeAddress) {
             `checkBridgeAddress: '${bridgeContractName}' address in the 'genesis.json' does not match the 'expectedBridgeAddress'`,
         );
     }
+}
+
+/**
+ * Function to add extra info output (TODO: add more info)
+ * @param {Object} output - output json object
+ * @returns {Object} output - output json object with git info added
+ */
+export function addInfoOutput(output) {
+    output.gitInfo = getGitInfo();
+    return output;
 }
