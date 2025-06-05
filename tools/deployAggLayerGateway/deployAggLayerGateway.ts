@@ -7,8 +7,8 @@ import fs = require('fs');
 
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
-import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../src/utils';
-import { verifyContractEtherscan, getGitInfo } from '../../upgrade/utils';
+import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters, getGitInfo } from '../../src/utils';
+import { verifyContractEtherscan } from '../../upgrade/utils';
 import { AggLayerGateway } from '../../typechain-types';
 import deployParameters from './deploy_parameters.json';
 

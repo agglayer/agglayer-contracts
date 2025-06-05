@@ -3,7 +3,7 @@ import fs = require('fs');
 
 import params from './parameters.json';
 import { AggchainFEP } from '../../../typechain-types';
-import { transactionTypes, genOperation } from '../../utils';
+import { transactionTypes, genOperation, addInfoOutput } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../../src/utils';
@@ -133,7 +133,8 @@ async function main() {
         logger.info('Transaction successful');
     }
     // Save output
-    fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
+    const finalOutput = addInfoOutput(outputJson);
+    fs.writeFileSync(destPath, JSON.stringify(finalOutput, null, 1));
     logger.info(`Finished script, output saved at: ${destPath}`);
 }
 main().then(

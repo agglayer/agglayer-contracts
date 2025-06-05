@@ -8,8 +8,8 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
 import { TimelockController } from '../../typechain-types';
-import { genTimelockOperation, decodeScheduleData, getGitInfo } from '../utils';
-import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
+import { genTimelockOperation, decodeScheduleData } from '../utils';
+import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas, getGitInfo } from '../../src/utils';
 import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
