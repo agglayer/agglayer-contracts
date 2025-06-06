@@ -64,11 +64,11 @@ contract PolygonDataCommittee is
     /**
      * @notice Allows the admin to setup the members of the committee. Note that:
      * The system will require N / M signatures where N => _requiredAmountOfSignatures and M => urls.length
-     * There must be the same amount of urls than addressess encoded in the addrsBytes
+     * There must be the same amount of urls than addresses encoded in the addrsBytes
      * A member is represented by the url and the address contained in urls[i] and addrsBytes[i*_ADDR_SIZE : i*_ADDR_SIZE + _ADDR_SIZE]
      * @param _requiredAmountOfSignatures Required amount of signatures
      * @param urls List of urls of the members of the committee
-     * @param addrsBytes Byte array that contains the addressess of the members of the committee
+     * @param addrsBytes Byte array that contains the addresses of the members of the committee
      */
     function setupCommittee(
         uint256 _requiredAmountOfSignatures,
