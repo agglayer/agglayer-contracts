@@ -69,7 +69,7 @@ Allows a sequencer to send multiple batches
 |`batches` | struct PolygonRollupBaseEtrog.BatchData[] | Struct array which holds the necessary data to append new batches to the sequence
 |`l1InfoTreeLeafCount` | uint32 | Count of the L1InfoTree leaf that will be used in this sequence
 |`maxSequenceTimestamp` | uint64 | Max timestamp of the sequence. This timestamp must be inside a safety range (actual + 36 seconds).
-This timestamp should be equal or higher of the last block inside the sequence, otherwise this batch will be invalidated by circuit.
+This timestamp should be equal or higher than the last block inside the sequence, otherwise this batch will be invalidated by circuit.
 |`expectedFinalAccInputHash` | bytes32 | This parameter must match the acc input hash after hash all the batch data
 This will be a protection for the sequencer to avoid sending undesired data
 |`l2Coinbase` | address | Address that will receive the fees from L2

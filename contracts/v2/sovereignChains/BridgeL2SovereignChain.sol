@@ -175,7 +175,7 @@ contract BridgeL2SovereignChain is
      * @notice Remap multiple wrapped tokens to a new sovereign token address
      * @dev This function is a "multi/batch call" to `setSovereignTokenAddress`
      * @param originNetworks Array of Origin networks
-     * @param originTokenAddresses Array od Origin token addresses, 0 address is reserved for ether
+     * @param originTokenAddresses Array of Origin token addresses, 0 address is reserved for ether
      * @param sovereignTokenAddresses Array of Addresses of the sovereign wrapped token
      * @param isNotMintable Array of Flags to indicate if the wrapped token is not mintable
      */
