@@ -927,7 +927,7 @@ describe('PolygonValidiumEtrog', () => {
                 badDataAvMessage.slice(0, -2),
             ),
         ).to.be.revertedWithCustomError(PolygonDataCommitee, 'UnexpectedAddrsAndSignaturesSize');
-
+        console.log("AS: ", dataAvailabilityMessage)
         await expect(
             PolygonZKEVMV2Contract.connect(trustedSequencer).sequenceBatchesValidium(
                 [sequenceValidium],
