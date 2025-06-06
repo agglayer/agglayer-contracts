@@ -314,6 +314,9 @@ contract PolygonRollupManager is
     // Timestamp when the last emergency state was deactivated
     uint64 public lastDeactivatedEmergencyStateTimestamp;
 
+    // Mapping to track chains in migration to PP
+    mapping(uint32 rollupID => bool) public isInMigrationToPP;
+
     /**
      * @dev Emitted when a new rollup type is added
      */
@@ -438,6 +441,8 @@ contract PolygonRollupManager is
         uint8 rollupVerifierType,
         bytes initializeBytesAggchain
     );
+
+    event CompletedMigrationToPP(uint32 indexed rollupID);
 
     /**
      * @param _globalExitRootManager Global exit root manager address
@@ -843,6 +848,16 @@ contract PolygonRollupManager is
             revert UpdateNotCompatible();
         }
 
+        // Only allow update rollupVerifierType when updating to ALGateway
+        if (
+            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+            VerifierType.ALGateway &&
+            rollup.rollupVerifierType !=
+            rollupTypeMap[newRollupTypeID].rollupVerifierType
+        ) {
+            revert UpdateNotCompatible();
+        }
+
         _updateRollup(rollupContract, newRollupTypeID, new bytes(0));
     }
 
@@ -857,6 +872,18 @@ contract PolygonRollupManager is
         uint32 newRollupTypeID,
         bytes memory upgradeData
     ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
+        uint32 rollupID = rollupAddressToID[address(rollupContract)];
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+        // Only allow update rollupVerifierType when updating to ALGateway
+        if (
+            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+            VerifierType.ALGateway &&
+            rollup.rollupVerifierType !=
+            rollupTypeMap[newRollupTypeID].rollupVerifierType
+        ) {
+            revert UpdateNotCompatible();
+        }
+
         _updateRollup(rollupContract, newRollupTypeID, upgradeData);
     }
 
@@ -896,14 +923,6 @@ contract PolygonRollupManager is
             revert RollupTypeObsolete();
         }
 
-        // Only allow update rollupVerifierType when updating to ALGateway
-        if (
-            newRollupType.rollupVerifierType != VerifierType.ALGateway &&
-            rollup.rollupVerifierType != newRollupType.rollupVerifierType
-        ) {
-            revert UpdateNotCompatible();
-        }
-
         // Update rollup parameters
         rollup.verifier = newRollupType.verifier;
         rollup.forkID = newRollupType.forkID;
@@ -919,6 +938,42 @@ contract PolygonRollupManager is
             upgradeData
         );
         emit UpdateRollup(rollupID, newRollupTypeID, lastVerifiedBatch);
+    }
+
+    function initMigrationToPP(
+        uint32 rollupID,
+        uint32 newRollupTypeID
+    ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+
+        // Only for StateTransition chains
+        require(
+            rollup.rollupVerifierType == VerifierType.StateTransition,
+            OnlyStateTransitionChains()
+        );
+
+        // No pending batches to verify allowed before migration
+        require(
+            rollup.lastBatchSequenced == rollup.lastVerifiedBatch,
+            AllSequencedMustBeVerified()
+        );
+
+        // NewRollupType must be pessimistic
+        require(
+            rollupTypeMap[newRollupTypeID].rollupVerifierType ==
+                VerifierType.Pessimistic,
+            NewRollupTypeMustBePessimistic()
+        );
+
+        // Add rollupID to migration to PP mapping
+        isInMigrationToPP[rollupID] = true;
+
+        // Update rollup type to pessimistic
+        _updateRollup(
+            ITransparentUpgradeableProxy(rollup.rollupContract),
+            newRollupTypeID,
+            new bytes(0)
+        );
     }
 
     /**
@@ -1238,6 +1293,24 @@ contract PolygonRollupManager is
         if (l1InfoRoot == bytes32(0)) {
             revert L1InfoTreeLeafCountInvalid();
         }
+
+        // In case of a chain in migration to PP, the inputs are a special case.
+        if (isInMigrationToPP[rollupID]) {
+            // If we are migrating, the proof is proving a "bootstrapCertificate" containing all the bridges involved in the network since the genesis.
+            // It's a hard requirement that the newLocalExitRoot matches the current lastLocalExitRoot meaning that the certificates covers all the bridges
+            require(
+                newLocalExitRoot == rollup.lastLocalExitRoot,
+                NewLocalExitRootMustMatchLastLocalExitRoot()
+            );
+            // In this special case, we consider lastLocalExitRoot is zero.
+            rollup.lastLocalExitRoot = bytes32(0);
+            // Finally, after proving the "bootstrapCertificate", the migration will be completed
+            isInMigrationToPP[rollupID] = false;
+
+            // Emit event
+            emit CompletedMigrationToPP(rollupID);
+        }
+
         bytes memory inputPessimisticBytes = _getInputPessimisticBytes(
             rollupID,
             rollup,
@@ -1246,6 +1319,7 @@ contract PolygonRollupManager is
             newPessimisticRoot,
             aggchainData
         );
+
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
             // Verify proof. The pessimistic proof selector is attached at the first 4 bytes of the proof
             // proof[0:4]: 4 bytes selector pp

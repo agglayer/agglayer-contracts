@@ -334,6 +334,9 @@ interface IPolygonRollupManager {
      */
     error InvalidVerifierAddress();
 
+    error NewRollupTypeMustBePessimistic();
+    error NewLocalExitRootMustMatchLastLocalExitRoot();
+
     enum VerifierType {
         StateTransition,
         Pessimistic,
