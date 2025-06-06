@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 async function main() {
-    const address = '0x0...';
-    const deployedTxHash = '0x..';
+    const address = '0x7A02C28081b10D49Fff06aDbCbe7418919D8Be54';
+    const deployedTxHash = '0xae0ca2b9a07e60c3738ac42ea5e0ec414e4f4d995d4148d8b00fe8f19164c117';
 
     const { provider } = ethers;
     const code = await provider.getCode(address);
@@ -22,54 +22,70 @@ async function main() {
     const initCode = creationTx.data;
 
     // Load all artifacts from Hardhat
-    const artifactsDir = path.join(__dirname, '../../artifacts/contracts');
+    const artifactsDirs = [path.join(__dirname, '../../out'), path.join(__dirname, '../../artifacts/contracts')];
+
     const artifactFiles: string[] = [];
     function findArtifacts(dir: string) {
+        if (!fs.existsSync(dir)) return;
         for (const file of fs.readdirSync(dir)) {
             const full = path.join(dir, file);
             if (fs.statSync(full).isDirectory()) findArtifacts(full);
             else if (file.endsWith('.json')) artifactFiles.push(full);
         }
     }
-    findArtifacts(artifactsDir);
+    for (const dir of artifactsDirs) {
+        findArtifacts(dir);
+    }
+
+    function trimSolcIpfs(bytecode: string): string {
+        // Find last occurrence of '64736f6c63' (case-insensitive)
+        const solcTag = /64736f6c63/i;
+        const match = bytecode.toLowerCase().lastIndexOf('64736f6c63');
+        if (match === -1) return bytecode;
+        // Remove 32 bytes (64 hex chars) before the tag
+        const ipfsStart = match - 64;
+        if (ipfsStart < 0) return bytecode;
+        return bytecode.slice(0, ipfsStart) + bytecode.slice(match);
+    }
 
     let found = false;
     for (const artifactPath of artifactFiles) {
         const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
-        if (!artifact.contractName) continue;
-        let factory: any;
-        try {
-            factory = await ethers.getContractFactory(artifact.contractName);
-        } catch {
+        if (!artifact.bytecode) continue;
+        const contractName = artifact.contractName || path.basename(artifactPath, '.json');
+        let artifactInitCode: string;
+        if (typeof artifact.bytecode === 'object' && artifact.bytecode.object) {
+            artifactInitCode = artifact.bytecode.object;
+        } else if (typeof artifact.bytecode === 'string') {
+            artifactInitCode = artifact.bytecode;
+        } else {
             continue;
         }
-        const artifactInitCode: string = factory.bytecode;
 
-        // Compare the start of the initCode with the artifact's init bytecode (allowing for constructor args)
-        if (initCode.startsWith(artifactInitCode)) {
+        const trimmedArtifactInitCode = trimSolcIpfs(artifactInitCode);
+        const trimmedInitCode = trimSolcIpfs(initCode);
+
+        if (trimmedInitCode === trimmedArtifactInitCode) {
             found = true;
-            console.log(`Contract at ${address} matches artifact: ${artifact.contractName}`);
-            // Try to decode constructor args
-            const { abi } = artifact;
-            const constructorAbi = abi.find((x: any) => x.type === 'constructor');
+            console.log(`Contract at ${address} matches artifact: ${contractName}`);
+            const abi = artifact.abi;
+            const constructorAbi = abi && abi.find((x: any) => x.type === 'constructor');
             if (constructorAbi && constructorAbi.inputs.length > 0) {
                 const argTypes = constructorAbi.inputs.map((x: any) => x.type);
                 const argNames = constructorAbi.inputs.map((x: any) => x.name);
-                // The encoded constructor args are after the bytecode
-                const encodedArgs = `0x${initCode.slice(artifactInitCode.length)}`;
+                // The encoded constructor args are after the bytecode (excluding IPFS hash)
+                const encodedArgs = `0x${trimSolcIpfs(initCode).slice(trimmedArtifactInitCode.length)}`;
                 try {
                     const decoded = ethers.AbiCoder.defaultAbiCoder().decode(argTypes, encodedArgs);
                     for (let i = 0; i < argNames.length; i++) {
                         console.log(`  ${argNames[i]}:`, decoded[i]);
                     }
                 } catch (e) {
-                    console.log(e);
                     console.log('  Could not decode constructor arguments.');
                 }
             } else {
                 console.log('  No constructor arguments.');
             }
-            break;
         }
     }
     if (!found) {
