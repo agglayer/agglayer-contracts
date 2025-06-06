@@ -83,7 +83,7 @@ Allow the admin to set the trusted sequencer URL
   ) external
 ```
 Starts the admin role transfer
-This is a two step process, the pending admin must accepted to finalize the process
+This is a two step process, the pending admin must accept to finalize the process
 
 
 #### Parameters:

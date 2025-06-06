@@ -263,7 +263,7 @@ contract PolygonZkEVM is
     event SequenceForceBatches(uint64 indexed numBatch);
 
     /**
-     * @dev Emitted when a aggregator verifies batches
+     * @dev Emitted when an aggregator verifies batches
      */
     event VerifyBatches(
         uint64 indexed numBatch,
@@ -852,7 +852,7 @@ contract PolygonZkEVM is
     }
 
     /**
-     * @notice Allows to consolidate any pending state that has already exceed the pendingStateTimeout
+     * @notice Allows to consolidate any pending state that has already exceeded the pendingStateTimeout
      * Can be called by the trusted aggregator, which can consolidate any state without the timeout restrictions
      * @param pendingStateNum Pending state to consolidate
      */
@@ -872,7 +872,7 @@ contract PolygonZkEVM is
     }
 
     /**
-     * @notice Internal function to consolidate any pending state that has already exceed the pendingStateTimeout
+     * @notice Internal function to consolidate any pending state that has already exceeded the pendingStateTimeout
      * @param pendingStateNum Pending state to consolidate
      */
     function _consolidatePendingState(uint64 pendingStateNum) internal {
@@ -1310,7 +1310,7 @@ contract PolygonZkEVM is
 
     /**
      * @notice Starts the admin role transfer
-     * This is a two step process, the pending admin must accepted to finalize the process
+     * This is a two step process, the pending admin must accept to finalize the process
      * @param newPendingAdmin Address of the new pending admin
      */
     function transferAdminRole(address newPendingAdmin) external onlyAdmin {
