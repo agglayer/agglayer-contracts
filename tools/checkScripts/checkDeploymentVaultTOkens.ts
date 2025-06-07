@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
 
-const deployedTxHashes = ['0x---'];
+const deployedTxHashes = ['0x123'];
 
 const proxyName = 'TransparentUpgradeableProxy';
 
@@ -53,6 +53,16 @@ const initializeAbis = [
     ],
 ];
 
+const upgradeTokenTxs = ['0x1232'];
+
+// ABI for upgradeToAndCall(address,bytes)
+const UPGRADE_TO_AND_CALL_ABI = ['function upgradeToAndCall(address newImplementation, bytes data)'];
+
+// ABI for reinitialize
+const REINITIALIZE_ABI = [
+    'function reinitialize(address owner_, string name_, string symbol_, uint8 originalUnderlyingTokenDecimals_, address lxlyBridge_, address nativeConverter_)',
+];
+
 async function getTokenInfo(
     provider: any,
     address: string,
@@ -67,6 +77,60 @@ async function getTokenInfo(
     } catch (error) {
         return null;
     }
+}
+
+async function decodeUpgradeTxs(provider: any): Promise<Record<string, any>> {
+    const ifaceUpgrade = new ethers.Interface(UPGRADE_TO_AND_CALL_ABI);
+    const ifaceReinit = new ethers.Interface(REINITIALIZE_ABI);
+    const upgradeResults: Record<string, any> = {};
+
+    for (const txHash of upgradeTokenTxs) {
+        const tx = await provider.getTransaction(txHash);
+        if (!tx) {
+            upgradeResults[txHash] = { error: 'Transaction not found' };
+            continue;
+        }
+        let decodedUpgrade;
+        try {
+            decodedUpgrade = ifaceUpgrade.parseTransaction({ data: tx.data });
+        } catch (e) {
+            upgradeResults[txHash] = { error: 'Could not decode upgradeToAndCall' };
+            continue;
+        }
+        const { newImplementation, data } = decodedUpgrade.args;
+        let decodedReinit;
+        try {
+            decodedReinit = ifaceReinit.parseTransaction({ data });
+        } catch (e) {
+            decodedReinit = { error: 'Could not decode reinitialize' };
+        }
+
+        // Get token info for the contract being upgraded (tx.to)
+        let tokenInfo = null;
+        if (tx.to) {
+            tokenInfo = await getTokenInfo(provider, tx.to);
+        }
+        let key = tokenInfo && tokenInfo.name ? tokenInfo.name : tx.to || txHash;
+
+        upgradeResults[key] = {
+            txHash,
+            tokenAddress: tx.to,
+            newImplementation,
+            decodedReinitialize:
+                decodedReinit && decodedReinit.args
+                    ? {
+                          owner_: decodedReinit.args[0],
+                          name_: decodedReinit.args[1],
+                          symbol_: decodedReinit.args[2],
+                          originalUnderlyingTokenDecimals_: decodedReinit.args[3],
+                          lxlyBridge_: decodedReinit.args[4],
+                          nativeConverter_: decodedReinit.args[5],
+                      }
+                    : decodedReinit,
+            ...(tokenInfo ? { tokenInfo } : {}),
+        };
+    }
+    return upgradeResults;
 }
 
 async function main() {
@@ -236,7 +300,9 @@ async function main() {
                     if (
                         contractName === 'GenericNativeConverter' ||
                         finalContractName.includes('GenericNativeConverter') ||
-                        logicContractName === 'GenericNativeConverter'
+                        logicContractName === 'GenericNativeConverter' ||
+                        finalContractName.includes('WETHNativeConverter') ||
+                        logicContractName === 'WETHNativeConverter'
                     ) {
                         if (decodedData && decodedData.customToken_ && decodedData.underlyingToken_) {
                             const customTokenInfo = await getTokenInfo(provider, decodedData.customToken_);
@@ -300,7 +366,14 @@ async function main() {
         }
     }
 
-    fs.writeFileSync(path.join(__dirname, 'deployed_contracts_info.json'), JSON.stringify(results, null, 2));
+    const upgradeTxsDecoded = await decodeUpgradeTxs(provider);
+
+    const output = {
+        ...results,
+        upgradeTxs: upgradeTxsDecoded,
+    };
+
+    fs.writeFileSync(path.join(__dirname, 'deployed_contracts_info.json'), JSON.stringify(output, null, 2));
     console.log('Results saved to deployed_contracts_info.json');
 }
 
