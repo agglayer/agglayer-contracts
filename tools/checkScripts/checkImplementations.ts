@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 async function main() {
-    const address = '0x7A02C28081b10D49Fff06aDbCbe7418919D8Be54';
-    const deployedTxHash = '0xae0ca2b9a07e60c3738ac42ea5e0ec414e4f4d995d4148d8b00fe8f19164c117';
+    const address = '';
+    const deployedTxHash = '';
 
     const { provider } = ethers;
     const code = await provider.getCode(address);
