@@ -1,0 +1,6 @@
+{
+    "tagSCPreviousVersion": "v1.0.0",
+    "tagSCNewVersion": "v1.0.0",
+    "rollupManagerAddress": "0x...",
+    "timelockDelay": 60
+}

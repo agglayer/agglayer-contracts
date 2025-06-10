@@ -478,7 +478,7 @@ contract PolygonRollupManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(4) {
+    function initialize() external virtual reinitializer(5) {
         emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
