@@ -943,7 +943,7 @@ contract PolygonRollupManager is
     function initMigrationToPP(
         uint32 rollupID,
         uint32 newRollupTypeID
-    ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
+    ) external {
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
 
         // Check admin of the network is msg.sender
