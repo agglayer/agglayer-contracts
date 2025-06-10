@@ -336,7 +336,7 @@ describe('Upgradeable zkEVM to PPV2', () => {
 
         // Call initMigrationToPP
         await expect(
-            rollupManagerContract.connect(admin).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
+            rollupManagerContract.connect(timelock).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'AllSequencedMustBeVerified');
 
         // Verify pending sequenced batches
