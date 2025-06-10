@@ -137,10 +137,13 @@ function getGitInfo(): { commit: string; repo: string } | null {
 // This is a workaround to fix the BigInt serialization issue in JSON
 // when using JSON.stringify on BigInt values, which is common in Ethers
 // eslint-disable-next-line no-extend-native
-Object.defineProperty(BigInt.prototype, 'toJSON', {
-    get() {
-        return () => String(this);
-    },
-});
+if (typeof BigInt.prototype.toJSON !== 'function') {
+    // eslint-disable-next-line no-extend-native
+    Object.defineProperty(BigInt.prototype, 'toJSON', {
+        get() {
+            return () => String(this);
+        },
+    });
+}
 
 export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, getGitInfo };
