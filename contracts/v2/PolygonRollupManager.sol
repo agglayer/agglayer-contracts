@@ -237,7 +237,7 @@ contract PolygonRollupManager is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Current rollup manager version
-    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.0";
+    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.1";
 
     // Hardcoded address used to indicate that this address triggered in an event should not be considered as valid.
     address private constant _NO_ADDRESS =
@@ -442,6 +442,7 @@ contract PolygonRollupManager is
         bytes initializeBytesAggchain
     );
 
+    event InitMigrationToPP(uint32 indexed rollupID, uint32 newRollupTypeID);
     event CompletedMigrationToPP(uint32 indexed rollupID);
 
     /**
@@ -943,13 +944,8 @@ contract PolygonRollupManager is
     function initMigrationToPP(
         uint32 rollupID,
         uint32 newRollupTypeID
-    ) external {
+    ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
-
-        // Check admin of the network is msg.sender
-        if (IPolygonRollupBase(address(rollup.rollupContract)).admin() != msg.sender) {
-            revert OnlyRollupAdmin();
-        }
 
         // Only for StateTransition chains
         require(
@@ -979,6 +975,9 @@ contract PolygonRollupManager is
             newRollupTypeID,
             new bytes(0)
         );
+
+        // Emit event
+        emit InitMigrationToPP(rollupID, newRollupTypeID);
     }
 
     /**
