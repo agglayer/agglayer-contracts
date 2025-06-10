@@ -946,6 +946,11 @@ contract PolygonRollupManager is
     ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
 
+        // Check admin of the network is msg.sender
+        if (IPolygonRollupBase(address(rollup.rollupContract)).admin() != msg.sender) {
+            revert OnlyRollupAdmin();
+        }
+
         // Only for StateTransition chains
         require(
             rollup.rollupVerifierType == VerifierType.StateTransition,
