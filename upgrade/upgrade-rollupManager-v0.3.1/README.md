@@ -28,6 +28,7 @@ cp ./upgrade/upgrade-rollupManager-v0.3.1/upgrade_parameters.json.example ./upgr
 
     - "tagSCPreviousVersion": -> The smart contract tag of the previous upgrade version
     - "rollupManagerAddress": "0x.." -> Address of the rollup manager proxy to upgrade
+    - "test": false -> Optional: in case of false, a fake address is set to aggLayerGatewayAddress, this way the transition can be tested being agnostic to Agglayer features
     - "timelockDelay": 3600, -> the timelock delay between schedule and execution transaction
     - "timelockSalt": "" -> Optional: A unique salt used to identify and secure the operation
     - "maxFeePerGas": "", -> Optional: Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it

@@ -57,7 +57,14 @@ async function main() {
     const globalExitRootManagerAddress = await rollupManagerContract.globalExitRootManager();
     const polAddress = await rollupManagerContract.pol();
     const bridgeAddress = await rollupManagerContract.bridgeAddress();
-    const aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
+    let aggLayerGatewayAddress;
+    if (upgradeParameters.test === true) {
+        // WARNING: only for testing purposes, in case of testing the upgrade from zkevm to pp, aggLayerGatewayAddress is not needed but is mandatory
+        // a random value is used for testing purposes
+        aggLayerGatewayAddress = globalExitRootManagerAddress;
+    } else {
+        aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
+    }
 
     const implRollupManager = await upgrades.prepareUpgrade(rollupManagerAddress, rollupManagerFactory, {
         constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress, aggLayerGatewayAddress],
