@@ -7,7 +7,6 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { PolygonRollupManager } from '../../typechain-types';
 import { transactionTypes, genOperation } from '../utils';
-import '../../deployment/helpers/utils';
 import initMigrationToPPParams from './initMigrationToPP.json';
 import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
 import { logger } from '../../src/logger';
@@ -21,7 +20,7 @@ const pathOutputJson = path.join(__dirname, `./initMigrationToPP-${dateStr}.json
 async function main() {
     /*
      * Check parameters
-     * Check that every necessary parameter is fullfilled
+     * Check that every necessary parameter is fulfilled
      */
     const mandatoryParameters = ['type', 'rollupID', 'newRollupTypeID', 'polygonRollupManagerAddress'];
 
@@ -48,13 +47,13 @@ async function main() {
     // Load deployer
     logger.info('Load deployer');
     const deployer = await getDeployerFromParameters(currentProvider, initMigrationToPPParams, ethers);
-    logger.info('Using with: ', deployer.address);
+    logger.info(`Using with: ${deployer.address}`);
 
     const { type, polygonRollupManagerAddress, rollupID, newRollupTypeID } = initMigrationToPPParams;
 
     // Load Rollup manager
-    const PolgonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
-    const rollupManagerContract = PolgonRollupManagerFactory.attach(
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
+    const rollupManagerContract = PolygonRollupManagerFactory.attach(
         polygonRollupManagerAddress,
     ) as PolygonRollupManager;
 
@@ -68,7 +67,7 @@ async function main() {
         const operation = genOperation(
             polygonRollupManagerAddress,
             0, // value
-            PolgonRollupManagerFactory.interface.encodeFunctionData('initMigrationToPP', [rollupID, newRollupTypeID]),
+            PolygonRollupManagerFactory.interface.encodeFunctionData('initMigrationToPP', [rollupID, newRollupTypeID]),
             predecessor, // predecessor
             salt, // salt
         );
@@ -94,14 +93,14 @@ async function main() {
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         // Decode the scheduleData for better readability
-        outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, PolgonRollupManagerFactory);
+        outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, PolygonRollupManagerFactory);
     } else if (type === transactionTypes.MULTISIG) {
         logger.info('Creating calldata to initMigrationToPP from multisig...');
-        const tx = PolgonRollupManagerFactory.interface.encodeFunctionData('initMigrationToPP', [
+        const tx = PolygonRollupManagerFactory.interface.encodeFunctionData('initMigrationToPP', [
             rollupID,
             newRollupTypeID,
         ]);
-        outputJson.aggLayerGatewayAddress = polygonRollupManagerAddress;
+        outputJson.polygonRollupManagerAddress = polygonRollupManagerAddress;
         outputJson.rollupID = rollupID;
         outputJson.newRollupTypeID = newRollupTypeID;
         outputJson.tx = tx;

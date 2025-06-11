@@ -4,7 +4,6 @@
     "rollupID": 4,
     "newRollupTypeID": 2,
     "timelockDelay": 0,
-    "deployerPvtKey": "",
     "maxFeePerGas": "",
     "maxPriorityFeePerGas": "",
     "multiplierGas": ""
