@@ -373,7 +373,7 @@ describe('Upgradeable zkEVM to PPV2', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
-        expect(await rollupManagerContract.isInMigrationToPP(newCreatedRollupID)).to.be.true;
+        expect(await rollupManagerContract.isRollupMigratingToPP(newCreatedRollupID)).to.be.true;
 
         // Verify PP with mock "bootstrapBatch"
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
@@ -421,7 +421,7 @@ describe('Upgradeable zkEVM to PPV2', () => {
                 trustedAggregator.address,
             );
 
-        expect(await rollupManagerContract.isInMigrationToPP(newCreatedRollupID)).to.be.false;
+        expect(await rollupManagerContract.isRollupMigratingToPP(newCreatedRollupID)).to.be.false;
     });
 
     /**

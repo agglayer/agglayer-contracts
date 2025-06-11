@@ -334,8 +334,20 @@ interface IPolygonRollupManager {
      */
     error InvalidVerifierAddress();
 
+    /**
+     * @dev Thrown when trying to migrate a rollup tot a non pessimistic rollup type with `initMigrationToPP` function.
+     */
     error NewRollupTypeMustBePessimistic();
+
+    /**
+     * @dev Thrown when trying to finish a migration of a rollup to a pessimistic rollup type with `verifyPessimisticTrustedAggregator` function and the last local exit root does not match the new local exit root
+     */
     error NewLocalExitRootMustMatchLastLocalExitRoot();
+
+    /**
+     * @dev Thrown when trying to migrate a rollup tot a pessimistic rollup type with `initMigrationToPP` function but the rollup has not verified any LER.
+     */
+    error NoLERToMigrate();
 
     enum VerifierType {
         StateTransition,

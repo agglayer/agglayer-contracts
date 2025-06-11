@@ -315,7 +315,7 @@ contract PolygonRollupManager is
     uint64 public lastDeactivatedEmergencyStateTimestamp;
 
     // Mapping to track chains in migration to PP
-    mapping(uint32 rollupID => bool) public isInMigrationToPP;
+    mapping(uint32 rollupID => bool) public isRollupMigratingToPP;
 
     /**
      * @dev Emitted when a new rollup type is added
@@ -442,7 +442,17 @@ contract PolygonRollupManager is
         bytes initializeBytesAggchain
     );
 
+    /**
+     * @dev Emitted when `initMigrationToPP` is called
+     * @param rollupID Rollup ID that is being migrated
+     * @param newRollupTypeID New rollup type ID that the rollup will be migrated to
+     */
     event InitMigrationToPP(uint32 indexed rollupID, uint32 newRollupTypeID);
+
+    /**
+     * @dev Emitted when a rollup completes the migration to Pessimistic, just after proving bootstrapped batch
+     * @param rollupID Rollup ID that completed the migration
+     */
     event CompletedMigrationToPP(uint32 indexed rollupID);
 
     /**
@@ -849,16 +859,6 @@ contract PolygonRollupManager is
             revert UpdateNotCompatible();
         }
 
-        // Only allow update rollupVerifierType when updating to ALGateway
-        if (
-            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
-            VerifierType.ALGateway &&
-            rollup.rollupVerifierType !=
-            rollupTypeMap[newRollupTypeID].rollupVerifierType
-        ) {
-            revert UpdateNotCompatible();
-        }
-
         _updateRollup(rollupContract, newRollupTypeID, new bytes(0));
     }
 
@@ -945,6 +945,7 @@ contract PolygonRollupManager is
         uint32 rollupID,
         uint32 newRollupTypeID
     ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
+        /// @dev Rollup existence check is done at `_updateRollup`function
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
 
         // Only for StateTransition chains
@@ -952,6 +953,9 @@ contract PolygonRollupManager is
             rollup.rollupVerifierType == VerifierType.StateTransition,
             OnlyStateTransitionChains()
         );
+
+        // Chains need at least one verified LER
+        require(rollup.lastLocalExitRoot != bytes32(0), NoLERToMigrate());
 
         // No pending batches to verify allowed before migration
         require(
@@ -967,7 +971,7 @@ contract PolygonRollupManager is
         );
 
         // Add rollupID to migration to PP mapping
-        isInMigrationToPP[rollupID] = true;
+        isRollupMigratingToPP[rollupID] = true;
 
         // Update rollup type to pessimistic
         _updateRollup(
@@ -1299,7 +1303,7 @@ contract PolygonRollupManager is
         }
 
         // In case of a chain in migration to PP, the inputs are a special case.
-        if (isInMigrationToPP[rollupID]) {
+        if (isRollupMigratingToPP[rollupID]) {
             // If we are migrating, the proof is proving a "bootstrapCertificate" containing all the bridges involved in the network since the genesis.
             // It's a hard requirement that the newLocalExitRoot matches the current lastLocalExitRoot meaning that the certificates covers all the bridges
             require(
@@ -1309,7 +1313,7 @@ contract PolygonRollupManager is
             // In this special case, we consider lastLocalExitRoot is zero.
             rollup.lastLocalExitRoot = bytes32(0);
             // Finally, after proving the "bootstrapCertificate", the migration will be completed
-            isInMigrationToPP[rollupID] = false;
+            isRollupMigratingToPP[rollupID] = false;
 
             // Emit event
             emit CompletedMigrationToPP(rollupID);
