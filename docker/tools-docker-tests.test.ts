@@ -116,6 +116,8 @@ describe('Tooling docker build tests Contract', () => {
         }
         createRollupTypeConfig.polygonRollupManagerAddress = dockerDeploymentOutput.polygonRollupManagerAddress;
         createRollupTypeConfig.outputPath = 'add_rollup_type_output.json';
+        delete createRollupTypeConfig.customALGatewayAddress;
+
         fs.writeFileSync(
             path.join(__dirname, '../tools/addRollupType/add_rollup_type.json'),
             JSON.stringify(createRollupTypeConfig, null, 2),
