@@ -4,13 +4,15 @@ import { expect } from 'chai';
 import path = require('path');
 import fs = require('fs');
 import * as dotenv from 'dotenv';
-import { ethers, run } from 'hardhat';
-import '../../deployment/helpers/utils';
+import { ethers, upgrades } from 'hardhat';
 import { supportedBridgeContracts, transactionTypes, genOperation } from '../utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import { ConsensusContracts, VerifierType } from '../../src/pessimistic-utils';
 import addRollupTypeParameters from './add_rollup_type.json';
 import { PolygonRollupManager } from '../../typechain-types';
+import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
+import { logger } from '../../src/logger';
+import { decodeScheduleData, getGitInfo, verifyContractEtherscan } from '../../upgrade/utils';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -27,25 +29,7 @@ async function main() {
      * Check deploy parameters
      * Check that every necessary parameter is fulfilled
      */
-    const mandatoryDeploymentParameters = ['type', 'description', 'consensusContract', 'polygonRollupManagerAddress'];
-
-    // check add new rollup type
-    switch (addRollupTypeParameters.type) {
-        case transactionTypes.EOA:
-            break;
-        case transactionTypes.TIMELOCK:
-            mandatoryDeploymentParameters.push('timelockDelay');
-            break;
-        default:
-            throw new Error(`Invalid type ${addRollupTypeParameters.type}`);
-    }
-
-    mandatoryDeploymentParameters.forEach((parameterName: string) => {
-        const value = addRollupTypeParameters[parameterName as keyof typeof addRollupTypeParameters];
-        if (value === undefined || value === '') {
-            throw new Error(`Missing parameter: ${parameterName}`);
-        }
-    });
+    const mandatoryParameters = ['type', 'description', 'consensusContract', 'polygonRollupManagerAddress'];
 
     const {
         type,
@@ -56,10 +40,37 @@ async function main() {
         timelockDelay,
         genesisRoot,
         programVKey,
+        customALGatewayAddress,
     } = addRollupTypeParameters;
 
+    // check add new rollup type
+    switch (type) {
+        case transactionTypes.EOA:
+            break;
+        case transactionTypes.TIMELOCK:
+            mandatoryParameters.push('timelockDelay');
+            break;
+        default:
+            throw new Error(`Invalid type ${type}`);
+    }
+
+    // if setCustomALGatewayAddress is true, get ALGatewayAddress from input params, not rollup Manager
+    const setCustomALGatewayAddress = typeof customALGatewayAddress !== 'undefined';
+    if (setCustomALGatewayAddress) {
+        mandatoryParameters.push('customALGatewayAddress');
+    }
+
+    checkParams(addRollupTypeParameters, mandatoryParameters);
+
+    // Load provider
+    const currentProvider = getProviderAdjustingMultiplierGas(addRollupTypeParameters, ethers);
+
+    // Load deployer
+    const deployer = await getDeployerFromParameters(currentProvider, addRollupTypeParameters, ethers);
+    logger.info(`Using deployer: ${deployer.address}`);
+
     const supportedConsensus = Object.values(ConsensusContracts).concat(AggchainContracts);
-    const isPessimistic = consensusContract === 'PolygonPessimisticConsensus';
+    const isPessimistic = consensusContract === ConsensusContracts.PolygonPessimisticConsensus;
 
     if (!supportedConsensus.includes(consensusContract)) {
         throw new Error(`Consensus contract not supported, supported contracts are: ${supportedConsensus}`);
@@ -80,55 +91,6 @@ async function main() {
         finalForkId = 0;
     }
 
-    // Load provider
-    let currentProvider = ethers.provider;
-    if (addRollupTypeParameters.multiplierGas || addRollupTypeParameters.maxFeePerGas) {
-        if (process.env.HARDHAT_NETWORK !== 'hardhat') {
-            currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            ) as any;
-            if (addRollupTypeParameters.maxPriorityFeePerGas && addRollupTypeParameters.maxFeePerGas) {
-                console.log(
-                    `Hardcoded gas used: MaxPriority${addRollupTypeParameters.maxPriorityFeePerGas} gwei, MaxFee${addRollupTypeParameters.maxFeePerGas} gwei`,
-                );
-                const FEE_DATA = new ethers.FeeData(
-                    null,
-                    ethers.parseUnits(addRollupTypeParameters.maxFeePerGas, 'gwei'),
-                    ethers.parseUnits(addRollupTypeParameters.maxPriorityFeePerGas, 'gwei'),
-                );
-
-                currentProvider.getFeeData = async () => FEE_DATA;
-            } else {
-                console.log('Multiplier gas used: ', addRollupTypeParameters.multiplierGas);
-                async function overrideFeeData() {
-                    const feedata = await ethers.provider.getFeeData();
-                    return new ethers.FeeData(
-                        null,
-                        ((feedata.maxFeePerGas as bigint) * BigInt(addRollupTypeParameters.multiplierGas)) / 1000n,
-                        ((feedata.maxPriorityFeePerGas as bigint) * BigInt(addRollupTypeParameters.multiplierGas)) /
-                            1000n,
-                    );
-                }
-                currentProvider.getFeeData = overrideFeeData;
-            }
-        }
-    }
-
-    // Load deployer
-    let deployer;
-    if (addRollupTypeParameters.deployerPvtKey) {
-        deployer = new ethers.Wallet(addRollupTypeParameters.deployerPvtKey, currentProvider);
-    } else if (process.env.MNEMONIC) {
-        deployer = ethers.HDNodeWallet.fromMnemonic(
-            ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0",
-        ).connect(currentProvider);
-    } else {
-        [deployer] = await ethers.getSigners();
-    }
-
-    console.log('Using with: ', deployer.address);
-
     // Load Rollup manager
     const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
     const rollupManagerContract = PolygonRollupManagerFactory.attach(
@@ -147,6 +109,7 @@ async function main() {
 
     let genesis;
     if (!isPessimistic && !AggchainContracts.includes(consensusContract)) {
+        // Checks for state transition verifier types
         const pathGenesis = path.join(__dirname, './genesis.json');
         genesis = JSON.parse(fs.readFileSync(pathGenesis, 'utf8'));
 
@@ -191,101 +154,75 @@ async function main() {
             await rollupManagerContract.grantRole(ADD_ROLLUP_TYPE_ROLE, deployer.address);
     }
 
+    const deployedContracts = {};
     // Create consensus implementation if needed
     let consensusContractAddress;
-
     if (
         typeof addRollupTypeParameters.consensusContractAddress !== 'undefined' &&
         ethers.isAddress(addRollupTypeParameters.consensusContractAddress)
     ) {
+        logger.info('Consensus contract address is provided in the parameters, no need to deploy');
         consensusContractAddress = addRollupTypeParameters.consensusContractAddress;
     } else {
-        const PolygonConsensusFactory = (await ethers.getContractFactory(consensusContract, deployer)) as any;
-        let PolygonConsensusContract;
+        const polygonConsensusFactory = (await ethers.getContractFactory(consensusContract, deployer)) as any;
+        let polygonConsensusContract;
 
         // Create consensus/aggchain implementation
         if (!AggchainContracts.includes(consensusContract)) {
-            PolygonConsensusContract = await PolygonConsensusFactory.deploy(
+            polygonConsensusContract = await polygonConsensusFactory.deploy(
                 polygonZkEVMGlobalExitRootAddress,
                 polTokenAddress,
                 polygonZkEVMBridgeAddress,
                 polygonRollupManagerAddress,
             );
-            await PolygonConsensusContract.waitForDeployment();
+            await polygonConsensusContract.waitForDeployment();
 
-            console.log('#######################\n');
-            console.log(`new consensus name: ${consensusContract}`);
-            console.log(`new ${consensusContract} impl: ${PolygonConsensusContract.target}`);
+            deployedContracts[consensusContract] = polygonConsensusContract.target;
 
-            try {
-                console.log('Verifying contract...');
-                await run('verify:verify', {
-                    address: PolygonConsensusContract.target,
-                    constructorArguments: [
-                        polygonZkEVMGlobalExitRootAddress,
-                        polTokenAddress,
-                        polygonZkEVMBridgeAddress,
-                        polygonRollupManagerAddress,
-                    ],
-                });
-            } catch (e) {
-                console.log('Automatic verification failed. Please verify the contract manually.');
-                console.log('you can verify the new impl address with:');
-                console.log(
-                    `npx hardhat verify --constructor-args upgrade/arguments.js ${PolygonConsensusContract.target} --network ${process.env.HARDHAT_NETWORK}\n`,
-                );
-                console.log('Copy the following constructor arguments on: upgrade/arguments.js \n', [
-                    polygonZkEVMGlobalExitRootAddress,
-                    polTokenAddress,
-                    polygonZkEVMBridgeAddress,
-                    polygonRollupManagerAddress,
-                ]);
-            }
+            logger.info('#######################\n');
+            logger.info(`new consensus name: ${consensusContract}`);
+            logger.info(`new ${consensusContract} impl: ${polygonConsensusContract.target}`);
+
+            await verifyContractEtherscan(polygonConsensusContract.target, [
+                polygonZkEVMGlobalExitRootAddress,
+                polTokenAddress,
+                polygonZkEVMBridgeAddress,
+                polygonRollupManagerAddress,
+            ]);
         } else {
-            const aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
-
-            PolygonConsensusContract = await PolygonConsensusFactory.deploy(
+            let aggLayerGatewayAddress;
+            if (setCustomALGatewayAddress) {
+                aggLayerGatewayAddress = customALGatewayAddress;
+            } else {
+                // Retrieve ALGateway from rollupManagerContract
+                aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
+            }
+            logger.info(`AggLayerGateway address: ${aggLayerGatewayAddress}`);
+            polygonConsensusContract = await polygonConsensusFactory.deploy(
                 polygonZkEVMGlobalExitRootAddress,
                 polTokenAddress,
                 polygonZkEVMBridgeAddress,
                 polygonRollupManagerAddress,
                 aggLayerGatewayAddress,
             );
-            await PolygonConsensusContract.waitForDeployment();
+            await polygonConsensusContract.waitForDeployment();
 
-            console.log('#######################\n');
-            console.log(`new aggchain name: ${consensusContract}`);
-            console.log(`new ${consensusContract} impl: ${PolygonConsensusContract.target}`);
+            deployedContracts[consensusContract] = polygonConsensusContract.target;
 
-            try {
-                console.log('Verifying contract...');
-                await run('verify:verify', {
-                    address: PolygonConsensusContract.target,
-                    constructorArguments: [
-                        polygonZkEVMGlobalExitRootAddress,
-                        polTokenAddress,
-                        polygonZkEVMBridgeAddress,
-                        polygonRollupManagerAddress,
-                        aggLayerGatewayAddress,
-                    ],
-                });
-            } catch (e) {
-                console.log('Automatic verification failed. Please verify the contract manually.');
-                console.log('you can verify the new impl address with:');
-                console.log(
-                    `npx hardhat verify --constructor-args upgrade/arguments.js ${PolygonConsensusContract.target} --network ${process.env.HARDHAT_NETWORK}\n`,
-                );
-                console.log('Copy the following constructor arguments on: upgrade/arguments.js \n', [
-                    polygonZkEVMGlobalExitRootAddress,
-                    polTokenAddress,
-                    polygonZkEVMBridgeAddress,
-                    polygonRollupManagerAddress,
-                    aggLayerGatewayAddress,
-                ]);
-            }
+            logger.info('#######################\n');
+            logger.info(`new aggchain name: ${consensusContract}`);
+            logger.info(`new ${consensusContract} impl: ${polygonConsensusContract.target}`);
+
+            await verifyContractEtherscan(polygonConsensusContract.target, [
+                polygonZkEVMGlobalExitRootAddress,
+                polTokenAddress,
+                polygonZkEVMBridgeAddress,
+                polygonRollupManagerAddress,
+                aggLayerGatewayAddress,
+            ]);
         }
 
-        consensusContractAddress = PolygonConsensusContract.target;
+        consensusContractAddress = polygonConsensusContract.target;
     }
 
     // Add a new rollup type
@@ -315,32 +252,26 @@ async function main() {
     }
 
     if (type === transactionTypes.EOA) {
-        console.log(
-            await (
-                await rollupManagerContract
-                    .connect(deployer)
-                    .addNewRollupType(
-                        consensusContractAddress,
-                        verifierAddress,
-                        finalForkId,
-                        rollupVerifierType,
-                        genesisFinal,
-                        description,
-                        programVKeyFinal,
-                    )
-            ).wait(),
-        );
+        await (
+            await rollupManagerContract
+                .connect(deployer)
+                .addNewRollupType(
+                    consensusContractAddress,
+                    verifierAddress,
+                    finalForkId,
+                    rollupVerifierType,
+                    genesisFinal,
+                    description,
+                    programVKeyFinal,
+                )
+        ).wait();
 
-        console.log('#######################\n');
-        console.log('New Rollup Type deployed');
+        logger.info('#######################\n');
+        logger.info('New Rollup Type deployed');
         const newRollupTypeID = await rollupManagerContract.rollupTypeCount();
 
-        outputJson.genesis = genesisFinal;
-        outputJson.verifierAddress = verifierAddress;
-        outputJson.consensusContract = consensusContract;
         outputJson.rollupTypeID = newRollupTypeID;
         outputJson.programVKey = programVKeyFinal;
-        outputJson.consensusContractAddress = consensusContractAddress;
     } else {
         // load timelock
         const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
@@ -381,51 +312,36 @@ async function main() {
             operation.salt,
         ]);
 
-        console.log({ scheduleData });
-        console.log({ executeData });
-
-        outputJson.genesis = genesisFinal.root;
-        outputJson.verifierAddress = verifierAddress;
-        outputJson.consensusContract = consensusContract;
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         outputJson.id = operation.id;
-
         // Decode the scheduleData for better readability
-        const timelockTx = timelockContractFactory.interface.parseTransaction({
-            data: scheduleData,
-        });
-        const paramsArray = timelockTx?.fragment.inputs;
-        const objectDecoded = {};
-
-        for (let i = 0; i < paramsArray?.length; i++) {
-            const currentParam = paramsArray[i];
-
-            objectDecoded[currentParam.name] = timelockTx?.args[i];
-
-            if (currentParam.name === 'data') {
-                const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
-                    data: timelockTx?.args[i],
-                });
-                const objectDecodedData = {};
-                const paramsArrayData = decodedRollupManagerData?.fragment.inputs;
-
-                for (let j = 0; j < paramsArrayData?.length; j++) {
-                    const currentParamData = paramsArrayData[j];
-                    objectDecodedData[currentParamData.name] = decodedRollupManagerData?.args[j];
-                }
-                objectDecoded.decodedData = objectDecodedData;
-            }
-        }
-
+        const objectDecoded = await decodeScheduleData(scheduleData, PolygonRollupManagerFactory);
         outputJson.decodedScheduleData = objectDecoded;
     }
+
+    outputJson.gitInfo = getGitInfo();
+    outputJson.genesis = genesisFinal;
+    outputJson.verifierAddress = verifierAddress;
+    outputJson.consensusContract = consensusContract;
+    outputJson.consensusContractAddress = consensusContractAddress;
+    outputJson.deployedContracts = deployedContracts;
+
+    // Add rollupManager proxy Admin owner
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(polygonRollupManagerAddress);
+    const proxyAdminFactory = await ethers.getContractFactory(
+        '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
+    );
+    const proxyAdmin = proxyAdminFactory.attach(proxyAdminAddress);
+    const ownerAddress = await proxyAdmin.owner();
+    outputJson.rollupManagerProxyOwnerTimelock = ownerAddress;
 
     // add time to output path
     fs.writeFileSync(pathOutputJson, JSON.stringify(outputJson, null, 1));
 }
 
 main().catch((e) => {
-    console.error(e);
+    console.log(e);
+    logger.error(e);
     process.exit(1);
 });

@@ -8,10 +8,10 @@
     "forkID": 0,
     "timelockDelay": 864000,
     "timelockSalt": "",
-    "deployerPvtKey": "",
     "maxFeePerGas":"",
     "maxPriorityFeePerGas":"",
     "multiplierGas": "",
     "genesisRoot": "0x4e162206cf43dc25698089ff4183ab1ef31c56049d57bcb295e1fc7a734cfe8f",
-    "programVKey": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    "programVKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "customALGatewayAddress": "0x..."
 }
