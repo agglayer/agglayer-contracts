@@ -615,7 +615,7 @@ describe('Upgradeable to PPV2', () => {
         // Check AllSequencedMustBeVerified
         await expect(
             rollupManagerContract.connect(timelock).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'AllSequencedMustBeVerified');
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'NoLERToMigrate');
 
         // Verify pending sequenced batches
         const pendingState = 0;
