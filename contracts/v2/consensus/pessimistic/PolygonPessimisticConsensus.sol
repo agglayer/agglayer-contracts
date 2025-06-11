@@ -10,6 +10,11 @@ contract PolygonPessimisticConsensus is
 {
     uint32 public constant CONSENSUS_TYPE = 0;
 
+    // Legacy storage values from PolygonValidiumEtrog. There is no collision because `PolygonPessimisticConsensus` has no storage but is a good practice
+    // to keep them here for caution in case of future upgrades or changes.
+    address private _legacyDataAvailabilityProtocol;
+    bool private _legacyIsSequenceWithDataAvailabilityAllowed;
+
     /**
      * @param _globalExitRootManager Global exit root manager address
      * @param _pol POL token address
