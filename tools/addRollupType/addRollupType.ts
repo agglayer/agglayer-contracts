@@ -15,9 +15,10 @@ import {
     getDeployerFromParameters,
     getProviderAdjustingMultiplierGas,
     getOwnerOfProxyAdminFromProxy,
+    getGitInfo,
 } from '../../src/utils';
 import { logger } from '../../src/logger';
-import { decodeScheduleData, getGitInfo, verifyContractEtherscan } from '../../upgrade/utils';
+import { decodeScheduleData, verifyContractEtherscan } from '../../upgrade/utils';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
