@@ -1,6 +1,7 @@
 /* eslint-disable no-inner-declarations */
 /* eslint-disable no-console */
 import { ethers, upgrades } from 'hardhat';
+import { execSync } from 'child_process';
 
 /**
  * Adjusts the multiplier gas and/or the maxFeePer gas of the provider depending on the parameters values and returns the adjusted provider
@@ -142,4 +143,22 @@ export async function getOwnerOfProxyAdminFromProxy(proxyAddress) {
  */
 export function getStorageReadWrites(trace) {
     return trace.structLogs[trace.structLogs.length - 1].storage;
+}
+
+/**
+ * Retrieves the current Git commit hash and repository URL
+ * @returns An object containing the commit hash and repository URL, or null if an error occurs
+ */
+export function getGitInfo(): { commit: string; repo: string } | null {
+    try {
+        // Get the latest commit hash
+        const commit = execSync('git rev-parse HEAD').toString().trim();
+
+        // Get the repository URL
+        const repo = execSync('git config --get remote.origin.url').toString().trim();
+
+        return { commit, repo };
+    } catch (error) {
+        throw new Error(`getGitInfo: ${error}`);
+    }
 }

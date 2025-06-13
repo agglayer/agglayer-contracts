@@ -12,7 +12,7 @@ npm i
 cp .env.example .env
 ````
 
-Fill `.env` with your `INFURA_PROJECT_ID` and `MNEMONIC`
+Fill `.env` with your `INFURA_PROJECT_ID`, `MNEMONIC` or and `DEPLOYER_PRIVATE_KEY`.
 
 -   Copy configuration files:
 ```
@@ -24,7 +24,6 @@ cp ./tools/aggchainFEPTools/updateSubmissionInterval/parameters.json.example ./t
         - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
         - `Multisig`: If creating the rollup from a multisig, the script will output the calldata of the transaction to execute for creating the rollup
         - `Timelock`: If creating the rollup through a timelock, the script will output the execute and schedule data to send to the timelock contract
-    - `aggchainManagerPvk`: Not mandatory, used to send tx
     - `submissionInterval`: new rollup config hash
     - `rollupAddress`: Address AggchainFEP contract
     - `timelockDelay(optional)`: timelock delay
