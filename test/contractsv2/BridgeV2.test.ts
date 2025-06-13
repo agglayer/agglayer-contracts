@@ -98,7 +98,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         expect(await polygonZkEVMBridgeContract.networkID()).to.be.equal(networkIDMainnet);
         expect(await polygonZkEVMBridgeContract.polygonRollupManager()).to.be.equal(rollupManager.address);
 
-        // cannot initialzie again
+        // cannot initialize again
         await expect(
             polygonZkEVMBridgeContract.initialize(
                 networkIDMainnet,
@@ -595,7 +595,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         const rootLocalRollup = merkleTreeLocal.getRoot();
         const indexRollup = 5;
 
-        // Try claim with 10 rollup leafs
+        // Try claim with 10 rollup leaves
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
             if (i == indexRollup) {
@@ -735,7 +735,7 @@ describe("PolygonZkEVMBridge Contract", () => {
 
         const rootLocalRollup = merkleTreeLocal.getRoot();
 
-        // Try claim with 10 rollup leafs
+        // Try claim with 10 rollup leaves
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
             merkleTreeRollup.add(rootLocalRollup);
@@ -919,7 +919,7 @@ describe("PolygonZkEVMBridge Contract", () => {
          * const height = 32;
          */
         const merkleTreeMainnet = new MerkleTreeBridge(height);
-        // Imporant calcualte leaf with origin token address no wrapped token address
+        // Important calculate leaf with origin token address no wrapped token address
         const originTokenAddress = tokenAddress;
         const metadataMainnet = metadata; // since the token does not belong to this network
         const metadataHashMainnet = ethers.solidityPackedKeccak256(["bytes"], [metadataMainnet]);
@@ -1031,7 +1031,7 @@ describe("PolygonZkEVMBridge Contract", () => {
 
         const rootLocalRollup = merkleTreeLocal.getRoot();
 
-        // Try claim with 10 rollup leafs
+        // Try claim with 10 rollup leaves
         const merkleTreeRollup = new MerkleTreeBridge(height);
         for (let i = 0; i < 10; i++) {
             merkleTreeRollup.add(rootLocalRollup);
@@ -1263,7 +1263,7 @@ describe("PolygonZkEVMBridge Contract", () => {
         // check merkle root with SC
         const rootJSRollup = merkleTree.getRoot();
 
-        // Try claim with 10 rollup leafs
+        // Try claim with 10 rollup leaves
         const merkleTreeRollup = new MerkleTreeBridge(height);
         merkleTreeRollup.add(rootJSRollup);
         const rollupRoot = merkleTreeRollup.getRoot();
