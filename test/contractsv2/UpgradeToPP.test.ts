@@ -186,20 +186,6 @@ describe('Upgradeable to PPV2', () => {
     });
 
     it('should create rollup type validium & migrate to PP', async () => {
-        // Validate upgrade
-        const validiumEtrogFactory = await ethers.getContractFactory('PolygonValidiumEtrog');
-        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
-
-        await upgrades.validateUpgrade(validiumEtrogFactory, ppConsensusFactory, {
-            constructorArgs: [
-                polygonZkEVMGlobalExitRoot.target,
-                polTokenContract.target,
-                polygonZkEVMBridgeContract.target,
-                rollupManagerContract.target,
-            ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
-        } as any);
-
         // Create etrog state transition chain
         const urlSequencer = 'http://zkevm-json-rpc:8123';
         const chainID = 1000;
@@ -214,6 +200,7 @@ describe('Upgradeable to PPV2', () => {
         const gasTokenAddress = ethers.ZeroAddress;
 
         // deploy validium consensus
+        const validiumEtrogFactory = await ethers.getContractFactory('PolygonValidiumEtrog');
         const validiumEtrogContract = await validiumEtrogFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
@@ -387,6 +374,8 @@ describe('Upgradeable to PPV2', () => {
         await expect(
             rollupManagerContract.connect(timelock).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
         )
+            .to.emit(rollupManagerContract, 'InitMigrationToPP')
+            .withArgs(newCreatedRollupID, rollupTypeIDPessimistic)
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
@@ -442,6 +431,20 @@ describe('Upgradeable to PPV2', () => {
     });
 
     it('should create rollup type validium & migrate to PP all checks', async () => {
+        // Validate upgrade
+        const validiumEtrogFactory = await ethers.getContractFactory('PolygonValidiumEtrog');
+        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
+
+        await upgrades.validateUpgrade(validiumEtrogFactory, ppConsensusFactory, {
+            constructorArgs: [
+                polygonZkEVMGlobalExitRoot.target,
+                polTokenContract.target,
+                polygonZkEVMBridgeContract.target,
+                rollupManagerContract.target,
+            ],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
+        } as any);
+
         // Create etrog state transition chain
         const urlSequencer = 'http://zkevm-json-rpc:8123';
         const chainID = 1000;
@@ -456,7 +459,6 @@ describe('Upgradeable to PPV2', () => {
         const gasTokenAddress = ethers.ZeroAddress;
 
         // deploy validium consensus
-        const validiumEtrogFactory = await ethers.getContractFactory('PolygonValidiumEtrog');
         const validiumEtrogContract = await validiumEtrogFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
@@ -663,6 +665,8 @@ describe('Upgradeable to PPV2', () => {
         await expect(
             rollupManagerContract.connect(timelock).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
         )
+            .to.emit(rollupManagerContract, 'InitMigrationToPP')
+            .withArgs(newCreatedRollupID, rollupTypeIDPessimistic)
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
@@ -718,6 +722,20 @@ describe('Upgradeable to PPV2', () => {
     });
 
     it('should create rollup type zkevm etrog & migrate to PP', async () => {
+        // Validate upgrade
+        const PolygonZKEVMV2Factory = await ethers.getContractFactory('PolygonZkEVMEtrog');
+        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
+
+        await upgrades.validateUpgrade(PolygonZKEVMV2Factory, ppConsensusFactory, {
+            constructorArgs: [
+                polygonZkEVMGlobalExitRoot.target,
+                polTokenContract.target,
+                polygonZkEVMBridgeContract.target,
+                rollupManagerContract.target,
+            ],
+            unsafeAllow: ['constructor', 'state-variable-immutable'],
+        } as any);
+
         // Create constants
         const FORCE_BATCH_TIMEOUT = 60 * 60 * 24 * 5; // 5 days
         const LEAF_TYPE_ASSET = 0;
@@ -737,7 +755,6 @@ describe('Upgradeable to PPV2', () => {
         const gasTokenAddress = '0x0000000000000000000000000000000000000000';
 
         // Create zkEVM implementation
-        const PolygonZKEVMV2Factory = await ethers.getContractFactory('PolygonZkEVMEtrog');
         const PolygonZKEVMV2Contract = await PolygonZKEVMV2Factory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
@@ -987,6 +1004,8 @@ describe('Upgradeable to PPV2', () => {
         await expect(
             rollupManagerContract.connect(timelock).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
         )
+            .to.emit(rollupManagerContract, 'InitMigrationToPP')
+            .withArgs(newCreatedRollupID, rollupTypeIDPessimistic)
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
