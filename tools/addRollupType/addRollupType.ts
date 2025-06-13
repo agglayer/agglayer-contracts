@@ -4,13 +4,18 @@ import { expect } from 'chai';
 import path = require('path');
 import fs = require('fs');
 import * as dotenv from 'dotenv';
-import { ethers, upgrades } from 'hardhat';
+import { ethers } from 'hardhat';
 import { supportedBridgeContracts, transactionTypes, genOperation } from '../utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import { ConsensusContracts, VerifierType } from '../../src/pessimistic-utils';
 import addRollupTypeParameters from './add_rollup_type.json';
 import { PolygonRollupManager } from '../../typechain-types';
-import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
+import {
+    checkParams,
+    getDeployerFromParameters,
+    getProviderAdjustingMultiplierGas,
+    getOwnerOfProxyAdminFromProxy,
+} from '../../src/utils';
 import { logger } from '../../src/logger';
 import { decodeScheduleData, getGitInfo, verifyContractEtherscan } from '../../upgrade/utils';
 
@@ -315,6 +320,7 @@ async function main() {
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         outputJson.id = operation.id;
+
         // Decode the scheduleData for better readability
         const objectDecoded = await decodeScheduleData(scheduleData, PolygonRollupManagerFactory);
         outputJson.decodedScheduleData = objectDecoded;
@@ -327,17 +333,13 @@ async function main() {
     outputJson.consensusContractAddress = consensusContractAddress;
     outputJson.deployedContracts = deployedContracts;
 
-    // Add rollupManager proxy Admin owner
-    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(polygonRollupManagerAddress);
-    const proxyAdminFactory = await ethers.getContractFactory(
-        '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
-    );
-    const proxyAdmin = proxyAdminFactory.attach(proxyAdminAddress);
-    const ownerAddress = await proxyAdmin.owner();
-    outputJson.rollupManagerProxyOwnerTimelock = ownerAddress;
+    // Get timelock address
+    const timelockAddress = await getOwnerOfProxyAdminFromProxy(polygonRollupManagerAddress);
+    outputJson.timelockContractAddress = timelockAddress;
 
     // add time to output path
-    fs.writeFileSync(pathOutputJson, JSON.stringify(outputJson, null, 1));
+    fs.writeFileSync(pathOutputJson, JSON.stringify(outputJson, null, 4));
+    logger.info(`Output JSON file written to: ${pathOutputJson}`);
 }
 
 main().catch((e) => {

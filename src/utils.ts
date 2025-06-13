@@ -1,6 +1,6 @@
 /* eslint-disable no-inner-declarations */
 /* eslint-disable no-console */
-import * as ethers from 'ethers';
+import { ethers, upgrades } from 'hardhat';
 
 /**
  * Adjusts the multiplier gas and/or the maxFeePer gas of the provider depending on the parameters values and returns the adjusted provider
@@ -118,6 +118,21 @@ export function getStorageWrites(trace) {
     });
 
     return writeObject;
+}
+
+/**
+ * Get the owner of the proxy admin of a proxy contract
+ * @param {String} proxyAddress - address of the proxy contract
+ * @returns {String} - address of the owner of the proxy admin of the proxy
+ */
+export async function getOwnerOfProxyAdminFromProxy(proxyAddress) {
+    const proxyAdminAddress = await upgrades.erc1967.getAdminAddress(proxyAddress);
+    const proxyAdminFactory = await ethers.getContractFactory(
+        '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
+    );
+    const proxyAdmin = proxyAdminFactory.attach(proxyAdminAddress);
+    const ownerAddress = await proxyAdmin.owner();
+    return ownerAddress;
 }
 
 /**
