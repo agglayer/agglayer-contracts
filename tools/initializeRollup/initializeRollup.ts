@@ -274,7 +274,7 @@ async function main() {
         process.exit(0);
     } else if (initializeRollupParameters.type === transactionTypes.MULTISIG) {
         console.log('Creating calldata for initializationfrom multisig...');
-        const txDeployRollupCalldata = aggchainContract.interface.encodeFunctionData('initialize', [
+        const txDeployRollupCalldata = aggchainContract.interface.encodeFunctionData('initialize(bytes)', [
             initializeBytesAggchain,
         ]);
 
