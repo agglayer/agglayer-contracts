@@ -6,10 +6,10 @@ import { AggchainFEP } from '../../../typechain-types';
 import { transactionTypes, genOperation, addInfoOutput } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
-import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../../src/utils';
+import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../../src/utils';
 
 async function main() {
-    logger.info('Starting tool enable/disable optimistic mode');
+    logger.info('Starting tool to update rangeVkeyCommitment');
 
     /// //////////////////////////
     ///        CONSTANTS      ///
@@ -18,14 +18,14 @@ async function main() {
     const dateStr = new Date().toISOString();
     const destPath = params.outputPath
         ? path.join(__dirname, params.outputPath)
-        : path.join(__dirname, `optimistic_mode_output_${params.type}_${dateStr}.json`);
+        : path.join(__dirname, `update_rangevkeycommitment_output_${params.type}_${dateStr}.json`);
 
     /// //////////////////////////
     ///   CHECK TOOL PARAMS   ///
     /// //////////////////////////
     logger.info('Check initial parameters');
 
-    const mandatoryParameters = ['type', 'rollupAddress', 'optimisticMode'];
+    const mandatoryParameters = ['type', 'rollupAddress', 'rangeVkeyCommitment'];
 
     switch (params.type) {
         case transactionTypes.EOA:
@@ -41,40 +41,34 @@ async function main() {
 
     checkParams(params, mandatoryParameters);
 
-    const { type, rollupAddress, optimisticMode } = params;
+    const { type, rollupAddress, rangeVkeyCommitment } = params;
 
     // Load provider
     logger.info('Load provider');
     const currentProvider = getProviderAdjustingMultiplierGas(params, ethers);
 
-    // Load optimisticManager
-    logger.info('Load optimisticManager');
-    const optimisticManager = await getDeployerFromParameters(currentProvider, params, ethers);
+    // Load aggchainManager
+    logger.info('Load aggchainManager');
+    const aggchainManager = await getDeployerFromParameters(currentProvider, params, ethers);
 
-    logger.info(`Using with: ${optimisticManager.address}`);
+    logger.info(`Using with: ${aggchainManager.address}`);
 
     // --network <input>
     logger.info('Load AggchainFEP contract');
-    const AggchainFEPFactory = await ethers.getContractFactory('AggchainFEP', optimisticManager);
+    const AggchainFEPFactory = await ethers.getContractFactory('AggchainFEP', aggchainManager);
     const aggchainFEP = (await AggchainFEPFactory.attach(rollupAddress)) as AggchainFEP;
 
     logger.info(`AggchainFEP address: ${aggchainFEP.target}`);
-    let func = '';
-    if (optimisticMode) {
-        func = 'enableOptimisticMode';
-    } else {
-        func = 'disableOptimisticMode';
-    }
 
     if (type === transactionTypes.TIMELOCK) {
-        logger.info('Creating timelock tx to change optimistic mode....');
+        logger.info('Creating timelock tx to update aggregationVkey....');
         const salt = params.timelockSalt || ethers.ZeroHash;
         const predecessor = params.predecessor || ethers.ZeroHash;
-        const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', optimisticManager);
+        const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', aggchainManager);
         const operation = genOperation(
             rollupAddress,
             0, // value
-            AggchainFEPFactory.interface.encodeFunctionData(func, []),
+            AggchainFEPFactory.interface.encodeFunctionData('updateRangeVkeyCommitment', [rangeVkeyCommitment]),
             predecessor, // predecessor
             salt, // salt
         );
@@ -102,29 +96,27 @@ async function main() {
         // Decode the scheduleData for better readability
         outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, AggchainFEPFactory);
     } else if (type === transactionTypes.MULTISIG) {
-        logger.info('Creating calldata to add default vkey from multisig...');
-        const txUpdateOptimisticMode = AggchainFEPFactory.interface.encodeFunctionData(func, []);
+        logger.info('Creating calldata to update aggregationVkey from multisig...');
+        const txUpdateRangeVkeyCommitment = AggchainFEPFactory.interface.encodeFunctionData(
+            'updateRangeVkeyCommitment',
+            [rangeVkeyCommitment],
+        );
         outputJson.rollupAddress = rollupAddress;
-        outputJson.optimisticMode = optimisticMode;
-        outputJson.txUpdateOptimisticMode = txUpdateOptimisticMode;
+        outputJson.rangeVkeyCommitment = rangeVkeyCommitment;
+        outputJson.txUpdateRangeVkeyCommitment = txUpdateRangeVkeyCommitment;
     } else {
-        logger.info('Send tx to change optimistic mode...');
-        logger.info('Check optimisticModeManager');
-        if ((await aggchainFEP.optimisticModeManager()) !== optimisticManager.address) {
-            logger.error('Invalid optimisticModeManager');
+        logger.info('Send tx to update aggregationVkey...');
+        logger.info('Check aggchainManager');
+        if ((await aggchainFEP.aggchainManager()) !== aggchainManager.address) {
+            logger.error('Invalid aggchainManager');
             process.exit(1);
         }
-        logger.info(`Sending ${func} transaction to AggchainFEP ${rollupAddress}...`);
+        logger.info(`Sending updateRangeVkeyCommitment transaction to AggchainFEP ${rollupAddress}...`);
         try {
-            let tx;
-            if (optimisticMode) {
-                tx = await aggchainFEP.enableOptimisticMode();
-            } else {
-                tx = await aggchainFEP.disableOptimisticMode();
-            }
+            const tx = await aggchainFEP.updateRangeVkeyCommitment(rangeVkeyCommitment);
             await tx.wait();
             outputJson.rollupAddress = rollupAddress;
-            outputJson.optimisticMode = optimisticMode;
+            outputJson.rangeVkeyCommitment = rangeVkeyCommitment;
             outputJson.txHash = tx.hash;
         } catch (e) {
             logger.error(`Error sending tx: ${e.message}`);
