@@ -358,6 +358,7 @@ async function main() {
                 polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
                     constructorArgs: [precalculateRollupManager, proxyBridgeAddress],
                     unsafeAllow: ['constructor', 'state-variable-immutable'],
+                    initializer: false,
                 });
                 break;
             } catch (error: any) {
