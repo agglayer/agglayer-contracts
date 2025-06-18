@@ -442,7 +442,7 @@ describe('Upgradeable to PPV2', () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer'],
         } as any);
 
         // Create etrog state transition chain
@@ -733,7 +733,7 @@ describe('Upgradeable to PPV2', () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer'],
         } as any);
 
         // Create constants

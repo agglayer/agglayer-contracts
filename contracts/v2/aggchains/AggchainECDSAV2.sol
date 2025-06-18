@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
 
-import "../lib/PolygonConsensusBase.sol";
-import "../interfaces/IAggchainBase.sol";
+import "../lib/AggchainBase.sol";
 
 /**
  * @title AggchainECDSAV2
@@ -10,24 +9,15 @@ import "../interfaces/IAggchainBase.sol";
  * ALGateway for pp key management.
  * @dev No owned vkeys are supported, forced to use default gateway.
  */
-contract AggchainECDSAV2 is PolygonConsensusBase, IAggchainBase {
+contract AggchainECDSAV2 is AggchainBase {
     ////////////////////////////////////////////////////////////
     //                  Constants & Immutables                //
     ////////////////////////////////////////////////////////////
-    uint32 public constant CONSENSUS_TYPE = 0;
+    uint32 public constant CONSENSUS_TYPE_PESSIMISTIC = 0;
     // Unused constant for this aggchain but forced by the interface
     bytes2 public constant AGGCHAIN_TYPE = 0x0000;
-
-    ////////////////////////////////////////////////////////////
-    //                          Storage                       //
-    ////////////////////////////////////////////////////////////
-    // Legacy storage values from PolygonValidiumEtrog. There is no collision because `AggchainECDSAV2` has no storage but is a good practice
-    // to keep them here for caution in case of future upgrades or changes.
-    /// @custom:oz-renamed-from dataAvailabilityProtocol
-    address private _legacyDataAvailabilityProtocol;
-    /// @custom:oz-renamed-from isSequenceWithDataAvailabilityAllowed
-    bool private _legacyIsSequenceWithDataAvailabilityAllowed;
-
+    // address used to invalidate certain params from aggchainBase, not usable in AggchainECDSAV2
+    address public constant INVALID_ADDRESS = address(1);
     ////////////////////////////////////////////////////////////
     //                       Events                           //
     ////////////////////////////////////////////////////////////
@@ -44,6 +34,7 @@ contract AggchainECDSAV2 is PolygonConsensusBase, IAggchainBase {
      * @param _pol POL token address
      * @param _bridgeAddress Bridge address
      * @param _rollupManager Rollup manager address
+     * @dev AgglayerGateway is set to INVALID_ADDRESS because this aggchain does not support AggLayerGateway features.
      */
     constructor(
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
@@ -51,25 +42,65 @@ contract AggchainECDSAV2 is PolygonConsensusBase, IAggchainBase {
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManager _rollupManager
     )
-        PolygonConsensusBase(
+        AggchainBase(
             _globalExitRootManager,
             _pol,
             _bridgeAddress,
-            _rollupManager
+            _rollupManager,
+            IAggLayerGateway(INVALID_ADDRESS)
         )
     {}
+
+    ////////////////////////////////////////////////////////////
+    //              Functions: initialization                 //
+    ////////////////////////////////////////////////////////////
+
+    /// @notice Initialize function for the contract.
+    /// @custom:security First initialization takes into account this contracts and all the inheritance contracts
+    ///                  Second initialization does not initialize PolygonConsensusBase parameters
+    ///                  Second initialization can happen if a chain is upgraded from a PolygonPessimisticConsensus
+    /// @param initializeBytesAggchain Encoded bytes to initialize the aggchain
+    function initialize(
+        bytes memory initializeBytesAggchain
+    ) external onlyAggchainManager initializer {
+        // initialize all parameters
+        // Decode the struct
+        (
+            address _admin,
+            address _trustedSequencer,
+            address _gasTokenAddress,
+            string memory _trustedSequencerURL,
+            string memory _networkName
+        ) = abi.decode(
+                initializeBytesAggchain,
+                (address, address, address, string, string)
+            );
+
+        // Set aggchainBase variables
+        /// @dev Only PolygonConsensusBase parameters are set with values because AggchainBase features are disabled for ECDSAV2 aggchains
+        _initializeAggchainBaseAndConsensusBase(
+            _admin,
+            _trustedSequencer,
+            _gasTokenAddress,
+            _trustedSequencerURL,
+            _networkName,
+            false, // useDefaultGateway
+            bytes32(0), // initOwnedAggchainVKey
+            bytes4(0), // initAggchainVKeySelector
+            INVALID_ADDRESS // vKeyManager
+        );
+    }
 
     /**
      * Note Return the necessary consensus information for the proof hashed
      * Copied from PolygonPessimisticConsensus getConsensusHash function.
      */
     function getAggchainHash(bytes calldata) public view returns (bytes32) {
-        return keccak256(abi.encodePacked(CONSENSUS_TYPE, trustedSequencer));
+        return
+            keccak256(
+                abi.encodePacked(CONSENSUS_TYPE_PESSIMISTIC, trustedSequencer)
+            );
     }
-
-    /// @inheritdoc IAggchainBase
-    /// @dev unused function, but required by the interface.
-    function initAggchainManager(address) external onlyRollupManager {}
 
     /// @inheritdoc IAggchainBase
     function onVerifyPessimistic(bytes calldata) external onlyRollupManager {

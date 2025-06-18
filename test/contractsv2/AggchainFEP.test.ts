@@ -273,7 +273,7 @@ describe('AggchainFEP', () => {
         const PolygonPPConsensusContract = await upgrades.deployProxy(ppConsensusFactory, [], {
             initializer: false,
             constructorArgs: [gerManagerAddress, polTokenAddress, bridgeAddress, rollupManagerAddress],
-            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call', 'missing-initializer'],
         });
 
         await PolygonPPConsensusContract.waitForDeployment();

@@ -170,7 +170,7 @@ abstract contract PolygonConsensusBase is
         address _gasTokenAddress,
         string memory sequencerURL,
         string memory _networkName
-    ) internal {
+    ) internal onlyInitializing {
         admin = _admin;
         trustedSequencer = sequencer;
 

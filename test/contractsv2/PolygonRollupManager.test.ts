@@ -2510,7 +2510,7 @@ describe('Polygon Rollup Manager', () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer'],
         } as any);
 
         await expect(
@@ -2947,7 +2947,7 @@ describe('Polygon Rollup Manager', () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer', 'missing-initializer-call'],
         });
 
         await PolygonZKEVMV2Contract.waitForDeployment();

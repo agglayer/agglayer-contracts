@@ -371,7 +371,9 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Initializer AggchainFEP storage
     /// @param _initParams The initialization parameters for the contract.
-    function _initializeAggchain(InitParams memory _initParams) internal {
+    function _initializeAggchain(
+        InitParams memory _initParams
+    ) internal onlyInitializing {
         if (_initParams.optimisticModeManager == address(0)) {
             revert InvalidZeroAddress();
         }
