@@ -101,7 +101,7 @@ abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
             _rollupManager
         )
     {
-        // Check if the gateway address is valid
+        // Check zero addresses inputs
         if (
             address(_aggLayerGateway) == address(0) ||
             address(_globalExitRootManager) == address(0) ||

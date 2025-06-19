@@ -152,7 +152,7 @@ describe('Test vectors aggchain FEP', () => {
             let ppConsensusContract = await upgrades.deployProxy(ppConsensusFactory, [], {
                 initializer: false,
                 constructorArgs: [gerManagerAddress, polTokenAddress, bridgeAddress, rollupManagerAddress],
-                unsafeAllow: ['constructor', 'state-variable-immutable'],
+                unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer', 'missing-initializer-call'],
             });
             await ppConsensusContract.waitForDeployment();
 

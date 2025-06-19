@@ -13,6 +13,7 @@ export const CONSENSUS_TYPE = {
 export const AGGCHAIN_CONTRACT_NAMES = {
     ECDSA: 'AggchainECDSA',
     FEP: 'AggchainFEP',
+    ECDSAV2: 'AggchainECDSAV2',
 };
 
 export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSA', 'AggchainFEP'];

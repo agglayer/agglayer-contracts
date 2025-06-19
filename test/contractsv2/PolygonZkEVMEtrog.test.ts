@@ -170,7 +170,7 @@ describe('PolygonZkEVMEtrog', () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer'],
         });
 
         await PolygonZKEVMV2Contract.waitForDeployment();

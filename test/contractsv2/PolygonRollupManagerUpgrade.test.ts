@@ -260,7 +260,7 @@ describe('Polygon Rollup manager upgraded', () => {
                 polygonZkEVMBridgeContract.target,
                 rollupManagerContract.target,
             ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer', 'missing-initializer-call'],
         })) as any as PolygonZkEVMExistentEtrog;
 
         // upgrade from V1 to V2
