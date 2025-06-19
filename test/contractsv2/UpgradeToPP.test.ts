@@ -397,7 +397,7 @@ describe('Upgradeable to PPV2', () => {
                 proofPP,
                 '0x', // aggchainData is zero for pessimistic
             ),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'NewLocalExitRootMustMatchLastLocalExitRoot');
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidNewLocalExitRoot');
 
         const prevPP = ethers.ZeroHash;
         const prevLER = ethers.ZeroHash;
@@ -627,11 +627,6 @@ describe('Upgradeable to PPV2', () => {
             rollupManagerContract.connect(timelock).initMigrationToPP(newPessimiticRollupID, rollupTypeIDPessimistic),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'OnlyStateTransitionChains');
 
-        // Check AllSequencedMustBeVerified
-        await expect(
-            rollupManagerContract.connect(timelock).initMigrationToPP(newCreatedRollupID, rollupTypeIDPessimistic),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'NoLERToMigrate');
-
         // Verify pending sequenced batches
         const pendingState = 0;
         const newStateRoot = '0x0000000000000000000000000000000000000000000000000000000000000123';
@@ -688,7 +683,7 @@ describe('Upgradeable to PPV2', () => {
                 proofPP,
                 '0x', // aggchainData is zero for pessimistic
             ),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'NewLocalExitRootMustMatchLastLocalExitRoot');
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidNewLocalExitRoot');
 
         const prevPP = ethers.ZeroHash;
         const prevLER = ethers.ZeroHash;
@@ -1027,7 +1022,7 @@ describe('Upgradeable to PPV2', () => {
                 proofPP,
                 '0x', // aggchainData is zero for pessimistic
             ),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'NewLocalExitRootMustMatchLastLocalExitRoot');
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidNewLocalExitRoot');
 
         const prevPP = ethers.ZeroHash;
         const prevLER = ethers.ZeroHash;

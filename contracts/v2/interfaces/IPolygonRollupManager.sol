@@ -340,14 +340,9 @@ interface IPolygonRollupManager {
     error NewRollupTypeMustBePessimistic();
 
     /**
-     * @dev Thrown when trying to finish a migration of a rollup to a pessimistic rollup type with `verifyPessimisticTrustedAggregator` function and the last local exit root does not match the new local exit root
+     * @dev Thrown when trying to finish a migration of a rollup to a pessimistic rollup type with `verifyPessimisticTrustedAggregator` function and the proposed new local exit root does not match the expected new local exit root
      */
-    error NewLocalExitRootMustMatchLastLocalExitRoot();
-
-    /**
-     * @dev Thrown when trying to migrate a rollup tot a pessimistic rollup type with `initMigrationToPP` function but the rollup has not verified any LER.
-     */
-    error NoLERToMigrate();
+    error InvalidNewLocalExitRoot();
 
     enum VerifierType {
         StateTransition,

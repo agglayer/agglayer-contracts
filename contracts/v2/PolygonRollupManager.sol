@@ -243,6 +243,10 @@ contract PolygonRollupManager is
     address private constant _NO_ADDRESS =
         0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
 
+    // Root value of an 32 levels empty merkle tree, where leaves are 32 zeroes bytes
+    bytes32 private constant _EMPTY_TREE_ROOT =
+        0x27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757;
+
     // Global Exit Root address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
@@ -954,9 +958,6 @@ contract PolygonRollupManager is
             OnlyStateTransitionChains()
         );
 
-        // Chains need at least one verified LER
-        require(rollup.lastLocalExitRoot != bytes32(0), NoLERToMigrate());
-
         // No pending batches to verify allowed before migration
         require(
             rollup.lastBatchSequenced == rollup.lastVerifiedBatch,
@@ -1304,11 +1305,19 @@ contract PolygonRollupManager is
 
         // In case of a chain in migration to PP, the inputs are a special case.
         if (isRollupMigratingToPP[rollupID]) {
+            bytes32 expectedNewLocalExitRoot = rollup.lastLocalExitRoot;
+
+            // If the lastLocalExitRoot is zero, it means that the rollup has never verified a batch with bridges
+            if (rollup.lastLocalExitRoot == bytes32(0)) {
+                // To proof the transition, the expected newLocalExitRoot must be to root of an empty 32 levels tree
+                expectedNewLocalExitRoot = _EMPTY_TREE_ROOT;
+            }
+
             // If we are migrating, the proof is proving a "bootstrapCertificate" containing all the bridges involved in the network since the genesis.
             // It's a hard requirement that the newLocalExitRoot matches the current lastLocalExitRoot meaning that the certificates covers all the bridges
             require(
-                newLocalExitRoot == rollup.lastLocalExitRoot,
-                NewLocalExitRootMustMatchLastLocalExitRoot()
+                expectedNewLocalExitRoot == newLocalExitRoot,
+                InvalidNewLocalExitRoot()
             );
             // In this special case, we consider lastLocalExitRoot is zero.
             rollup.lastLocalExitRoot = bytes32(0);
