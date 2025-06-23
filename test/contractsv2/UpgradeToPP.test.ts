@@ -28,6 +28,7 @@ describe('Upgradeable to PPV2', () => {
     let trustedSequencer: any;
     let admin: any;
     let beneficiary: any;
+    let aggLayerAdmin: any;
 
     let polTokenContract: ERC20PermitMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
@@ -43,6 +44,9 @@ describe('Upgradeable to PPV2', () => {
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
+    const PESSIMISTIC_SELECTOR = '0x00000001';
+    const randomPessimisticVKey = computeRandomBytes(32);
+    const randomPessimisticDefaultVKey = computeRandomBytes(32);
 
     const rollupTypeIDPessimistic = 1;
 
@@ -50,7 +54,7 @@ describe('Upgradeable to PPV2', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary] =
+        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary, aggLayerAdmin] =
             await ethers.getSigners();
 
         // deploy mock verifier
@@ -83,6 +87,16 @@ describe('Upgradeable to PPV2', () => {
             unsafeAllow: ['constructor'],
         });
 
+        // Initialize aggLayerGateway
+        await aggLayerGatewayContract.initialize(
+            admin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            PESSIMISTIC_SELECTOR,
+            verifierContract.target,
+            randomPessimisticVKey,
+        );
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
 
@@ -152,6 +166,16 @@ describe('Upgradeable to PPV2', () => {
             timelock.address,
             emergencyCouncil.address,
         );
+
+        // Add default pp key to ALGateway
+        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
+        await expect(
+            aggLayerGatewayContract
+                .connect(aggLayerAdmin)
+                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey),
+        )
+            .to.emit(aggLayerGatewayContract, 'RouteAdded')
+            .withArgs(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey);
 
         // fund sequencer address with Matic tokens
         await polTokenContract.transfer(trustedSequencer.address, ethers.parseEther('1000'));

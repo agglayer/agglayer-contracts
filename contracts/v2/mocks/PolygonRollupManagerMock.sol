@@ -76,7 +76,6 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
         // Since it's mock, use admin for everything
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
     function prepareMockCalculateRoot(bytes32[] memory localExitRoots) public {
