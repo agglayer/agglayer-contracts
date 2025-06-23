@@ -28,6 +28,7 @@ import {
 } from '../../src/utils-aggchain-ECDSA';
 
 const randomPessimisticVKey = computeRandomBytes(32);
+const randomPessimisticDefaultVKey = computeRandomBytes(32);
 
 describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
     // SIGNERS
@@ -81,7 +82,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
                 '', // description
-                ethers.ZeroHash, // programVKey
+                randomPessimisticVKey, // programVKey
             ),
         )
             .to.emit(rollupManagerContract, 'AddNewRollupType')
@@ -93,7 +94,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
                 '', // description
-                ethers.ZeroHash, // programVKey
+                randomPessimisticVKey, // programVKey
             );
         return Number(lastRollupTypeID) + 1;
     }
@@ -222,6 +223,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             verifierContract.target,
             randomPessimisticVKey,
         );
+
         // Grant role to agglayer admin
         await aggLayerGatewayContract.connect(admin).grantRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address);
         // Add permission to add default aggchain verification key
@@ -290,6 +292,16 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // check precalculated address
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
+
+        // Add default pp key to ALGateway
+        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
+        await expect(
+            aggLayerGatewayContract
+                .connect(addPPRoute)
+                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey),
+        )
+            .to.emit(aggLayerGatewayContract, 'RouteAdded')
+            .withArgs(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey);
 
         await polygonZkEVMBridgeContract.initialize(
             NETWORK_ID_MAINNET,

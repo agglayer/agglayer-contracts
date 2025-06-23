@@ -239,6 +239,9 @@ contract PolygonRollupManager is
     // Current rollup manager version
     string public constant ROLLUP_MANAGER_VERSION = "v1.0.0";
 
+    // default selector for pessimistic proof at ALGateway, used to force pessimistic consensus chains to use pp from ALGateway-
+    bytes4 public constant DEFAULT_PP_SELECTOR = 0xffff0000;
+
     // Hardcoded address used to indicate that this address triggered in an event should not be considered as valid.
     address private constant _NO_ADDRESS =
         0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
@@ -410,11 +413,6 @@ contract PolygonRollupManager is
     event SetBatchFee(uint256 newBatchFee);
 
     /**
-     * @dev Emitted when rollup manager is upgraded
-     */
-    event UpdateRollupManagerVersion(string rollupManagerVersion);
-
-    /**
      * @notice Emitted when a ALGateway or Pessimistic chain verifies a pessimistic proof
      * @param rollupID Rollup ID
      * @param prevPessimisticRoot Previous pessimistic root
@@ -492,9 +490,7 @@ contract PolygonRollupManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(5) {
-        emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
-    }
+    function initialize() external virtual reinitializer(5) {}
 
     ///////////////////////////////////////
     // Rollups management functions
@@ -1357,11 +1353,15 @@ contract PolygonRollupManager is
                 proof
             );
         } else {
-            // Verify proof
-            ISP1Verifier(rollup.verifier).verifyProof(
-                rollup.programVKey,
-                inputPessimisticBytes,
+            // Append the default PP selector to the proof
+            // proof[0:4]: 4 bytes selector pp
+            bytes memory proofWithPPSelector = abi.encodePacked(
+                DEFAULT_PP_SELECTOR,
                 proof
+            );
+            aggLayerGateway.verifyPessimisticProof(
+                inputPessimisticBytes,
+                proofWithPPSelector
             );
         }
 

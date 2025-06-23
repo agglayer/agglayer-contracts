@@ -10,7 +10,12 @@ import {
     PolygonPessimisticConsensus,
 } from '../../../typechain-types';
 
-import { VerifierType, computeInputPessimisticBytes, computeConsensusHashEcdsa } from '../../../src/pessimistic-utils';
+import {
+    VerifierType,
+    computeInputPessimisticBytes,
+    computeConsensusHashEcdsa,
+    computeRandomBytes,
+} from '../../../src/pessimistic-utils';
 import inputProof from './test-inputs/input.json';
 import { encodeInitializeBytesLegacy } from '../../../src/utils-common-aggchain';
 
@@ -21,6 +26,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let trustedAggregator: any;
     let trustedSequencer: any;
     let admin: any;
+    let aggLayerAdmin: any;
 
     let verifierContract: SP1VerifierPlonk;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
@@ -32,6 +38,8 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
+    const PESSIMISTIC_SELECTOR = '0x00000001';
+    const randomPessimisticVKey = computeRandomBytes(32);
 
     // BRidge constants
     const networkIDMainnet = 0;
@@ -57,7 +65,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, admin, timelock, emergencyCouncil] = await ethers.getSigners();
+        [deployer, trustedAggregator, admin, timelock, emergencyCouncil, aggLayerAdmin] = await ethers.getSigners();
         trustedSequencer = inputProof.signer;
         // deploy mock verifier
         const VerifierRollupHelperFactory = await ethers.getContractFactory('SP1VerifierPlonk');
@@ -88,6 +96,17 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
             initializer: false,
             unsafeAllow: ['constructor'],
         });
+
+        // Initialize aggLayerGateway
+        await aggLayerGatewayContract.initialize(
+            admin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            PESSIMISTIC_SELECTOR,
+            verifierContract.target,
+            randomPessimisticVKey,
+        );
 
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
@@ -138,6 +157,16 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
 
+        // Add default pp key to ALGateway
+        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
+        await expect(
+            aggLayerGatewayContract
+                .connect(aggLayerAdmin)
+                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, inputProof.vkey),
+        )
+            .to.emit(aggLayerGatewayContract, 'RouteAdded')
+            .withArgs(defaultSelector, verifierContract.target, inputProof.vkey);
+
         await polygonZkEVMBridgeContract.initialize(
             networkIDMainnet,
             ethers.ZeroAddress, // zero for ether
@@ -148,14 +177,12 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         );
 
         // Initialize Mock
-        await expect(
-            rollupManagerContract.initializeMock(
-                trustedAggregator.address,
-                admin.address,
-                timelock.address,
-                emergencyCouncil.address,
-            ),
-        ).to.emit(rollupManagerContract, 'UpdateRollupManagerVersion');
+        rollupManagerContract.initializeMock(
+            trustedAggregator.address,
+            admin.address,
+            timelock.address,
+            emergencyCouncil.address,
+        );
 
         // fund sequencer address with Matic tokens
         await polTokenContract.transfer(trustedSequencer, ethers.parseEther('1000'));
