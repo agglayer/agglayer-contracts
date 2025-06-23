@@ -29,6 +29,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let trustedSequencer: any;
     let admin: any;
     let beneficiary: any;
+    let aggLayerAdmin: any;
 
     let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
@@ -40,6 +41,10 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
+
+    const PESSIMISTIC_SELECTOR = '0x00000001';
+    const randomPessimisticVKey = computeRandomBytes(32);
+    const randomPessimisticDefaultVKey = computeRandomBytes(32);
 
     // Bridge constants
     const networkIDMainnet = 0;
@@ -64,7 +69,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary] =
+        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary, aggLayerAdmin] =
             await ethers.getSigners();
 
         // deploy mock verifier
@@ -96,6 +101,17 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
             initializer: false,
             unsafeAllow: ['constructor'],
         });
+
+        // Initialize aggLayerGateway
+        await aggLayerGatewayContract.initialize(
+            admin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            PESSIMISTIC_SELECTOR,
+            verifierContract.target,
+            randomPessimisticVKey,
+        );
 
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
@@ -142,9 +158,15 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
 
         await rollupManagerContract.waitForDeployment();
 
-        // check precalculated address
-        // expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
-        // expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
+        // Add default pp key to ALGateway
+        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
+        await expect(
+            aggLayerGatewayContract
+                .connect(aggLayerAdmin)
+                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey),
+        )
+            .to.emit(aggLayerGatewayContract, 'RouteAdded')
+            .withArgs(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey);
 
         await polygonZkEVMBridgeContract.initialize(
             networkIDMainnet,
@@ -156,14 +178,12 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         );
 
         // Initialize Mock
-        await expect(
-            rollupManagerContract.initializeMock(
-                trustedAggregator.address,
-                admin.address,
-                timelock.address,
-                emergencyCouncil.address,
-            ),
-        ).to.emit(rollupManagerContract, 'UpdateRollupManagerVersion');
+        rollupManagerContract.initializeMock(
+            trustedAggregator.address,
+            admin.address,
+            timelock.address,
+            emergencyCouncil.address,
+        );
 
         // fund sequencer address with Matic tokens
         await polTokenContract.transfer(trustedSequencer.address, ethers.parseEther('1000'));
