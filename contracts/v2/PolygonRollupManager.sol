@@ -239,9 +239,6 @@ contract PolygonRollupManager is
     // Current rollup manager version
     string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.2";
 
-    // default selector for pessimistic proof at ALGateway, used to force pessimistic consensus chains to use pp from ALGateway-
-    bytes4 public constant DEFAULT_PP_SELECTOR = 0xffff0000;
-
     // Hardcoded address used to indicate that this address triggered in an event should not be considered as valid.
     address private constant _NO_ADDRESS =
         0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
@@ -1343,27 +1340,11 @@ contract PolygonRollupManager is
             aggchainData
         );
 
-        if (rollup.rollupVerifierType == VerifierType.ALGateway) {
-            // Verify proof. The pessimistic proof selector is attached at the first 4 bytes of the proof
-            // proof[0:4]: 4 bytes selector pp
-            // proof[4:8]: 4 bytes selector SP1 verifier
-            // proof[8:]: proof
-            aggLayerGateway.verifyPessimisticProof(
-                inputPessimisticBytes,
-                proof
-            );
-        } else {
-            // Append the default PP selector to the proof
-            // proof[0:4]: 4 bytes selector pp
-            bytes memory proofWithPPSelector = abi.encodePacked(
-                DEFAULT_PP_SELECTOR,
-                proof
-            );
-            aggLayerGateway.verifyPessimisticProof(
-                inputPessimisticBytes,
-                proofWithPPSelector
-            );
-        }
+        // Verify proof. The pessimistic proof selector is attached at the first 4 bytes of the proof
+        // proof[0:4]: 4 bytes selector pp
+        // proof[4:8]: 4 bytes selector SP1 verifier
+        // proof[8:]: proof
+        aggLayerGateway.verifyPessimisticProof(inputPessimisticBytes, proof);
 
         // Update aggregation parameters
         lastAggregationTimestamp = uint64(block.timestamp);

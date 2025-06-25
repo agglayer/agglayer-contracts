@@ -50,7 +50,6 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     const polTokenInitialBalance = ethers.parseEther('20000000');
     const PESSIMISTIC_SELECTOR = '0x00000001';
     const randomPessimisticVKey = computeRandomBytes(32);
-    const randomPessimisticDefaultVKey = computeRandomBytes(32);
 
     const rollupTypeIDPessimistic = 1;
     const rollupTypeIDAlGateway = 2;
@@ -187,16 +186,6 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             timelock.address,
             emergencyCouncil.address,
         );
-
-        // Add default pp key to ALGateway
-        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
-        await expect(
-            aggLayerGatewayContract
-                .connect(aggLayerAdmin)
-                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey),
-        )
-            .to.emit(aggLayerGatewayContract, 'RouteAdded')
-            .withArgs(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey);
 
         // fund sequencer address with Matic tokens
         await polTokenContract.transfer(trustedSequencer.address, ethers.parseEther('1000'));
@@ -486,7 +475,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
@@ -771,7 +760,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
@@ -1109,7 +1098,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
