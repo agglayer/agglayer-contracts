@@ -39,7 +39,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
     const PESSIMISTIC_SELECTOR = '0x00000001';
-    const randomPessimisticVKey = computeRandomBytes(32);
+    const programVKey = inputProof.vkey;
 
     // BRidge constants
     const networkIDMainnet = 0;
@@ -105,7 +105,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
             aggLayerAdmin.address,
             PESSIMISTIC_SELECTOR,
             verifierContract.target,
-            randomPessimisticVKey,
+            programVKey,
         );
 
         const nonceProxyBridge =
@@ -156,16 +156,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         // check precalculated address
         expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
-
-        // Add default pp key to ALGateway
-        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
-        await expect(
-            aggLayerGatewayContract
-                .connect(aggLayerAdmin)
-                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, inputProof.vkey),
-        )
-            .to.emit(aggLayerGatewayContract, 'RouteAdded')
-            .withArgs(defaultSelector, verifierContract.target, inputProof.vkey);
 
         await polygonZkEVMBridgeContract.initialize(
             networkIDMainnet,
@@ -236,7 +226,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const forkID = 11; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
-        const programVKey = inputProof.vkey;
         const rollupTypeID = 1;
 
         // correct add new rollup via timelock
@@ -277,7 +266,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const l1InfoTreeLeafCount = 2;
         const newLER = inputProof['pp-inputs']['new-local-exit-root'];
         const newPPRoot = inputProof['pp-inputs']['new-pessimistic-root'];
-        const proofPP = inputProof.proof;
+        const proofPP = `${PESSIMISTIC_SELECTOR}${inputProof.proof.slice(2)}`;
 
         // not trusted aggregator
         await expect(
