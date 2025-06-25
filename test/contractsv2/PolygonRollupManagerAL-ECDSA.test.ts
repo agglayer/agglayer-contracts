@@ -68,7 +68,6 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA', () => {
     const randomNewStateRoot = computeRandomBytes(32);
     const CUSTOM_DATA_ECDSA = encodeAggchainDataECDSA(AGGCHAIN_VKEY_SELECTOR, randomNewStateRoot);
     const randomPessimisticVKey = computeRandomBytes(32);
-    const randomPessimisticDefaultVKey = computeRandomBytes(32);
 
     upgrades.silenceWarnings();
 
@@ -277,16 +276,6 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA', () => {
 
         // check precalculated address
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
-
-        // Add default pp key to ALGateway
-        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
-        await expect(
-            aggLayerGatewayContract
-                .connect(aggLayerAdmin)
-                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey),
-        )
-            .to.emit(aggLayerGatewayContract, 'RouteAdded')
-            .withArgs(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey);
 
         await polygonZkEVMBridgeContract.initialize(
             NETWORK_ID_MAINNET,
@@ -649,7 +638,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA', () => {
         // check JS function computeInputPessimisticBytes
         const newLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const newPPRoot = '0x0000000000000000000000000000000000000000000000000000000000000002';
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         // verify pessimistic from the created pessimistic rollup
         await expect(
