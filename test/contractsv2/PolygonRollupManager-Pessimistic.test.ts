@@ -44,7 +44,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
 
     const PESSIMISTIC_SELECTOR = '0x00000001';
     const randomPessimisticVKey = computeRandomBytes(32);
-    const randomPessimisticDefaultVKey = computeRandomBytes(32);
 
     // Bridge constants
     const networkIDMainnet = 0;
@@ -157,16 +156,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         })) as unknown as PolygonRollupManagerMock;
 
         await rollupManagerContract.waitForDeployment();
-
-        // Add default pp key to ALGateway
-        const defaultSelector = await rollupManagerContract.DEFAULT_PP_SELECTOR();
-        await expect(
-            aggLayerGatewayContract
-                .connect(aggLayerAdmin)
-                .addPessimisticVKeyRoute(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey),
-        )
-            .to.emit(aggLayerGatewayContract, 'RouteAdded')
-            .withArgs(defaultSelector, verifierContract.target, randomPessimisticDefaultVKey);
 
         await polygonZkEVMBridgeContract.initialize(
             networkIDMainnet,
@@ -820,7 +809,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const unexistentL1InfoTreeCount = 2;
         const newLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const newPPRoot = '0x0000000000000000000000000000000000000000000000000000000000000002';
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         // not trusted aggregator
         await expect(
