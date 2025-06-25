@@ -335,7 +335,7 @@ interface IPolygonRollupManager {
     error InvalidVerifierAddress();
 
     /**
-     * @dev Thrown when trying to migrate a rollup tot a non pessimistic rollup type with `initMigrationToPP` function.
+     * @dev Thrown when trying to migrate a rollup to a non pessimistic rollup type with `initMigrationToPP` function.
      */
     error NewRollupTypeMustBePessimistic();
 
