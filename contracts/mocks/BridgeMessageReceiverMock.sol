@@ -83,7 +83,8 @@ contract BridgeMessageReceiverMock is IBridgeMessageReceiver {
     ) external payable {
         (
             bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] memory smtProofLocalExitRoot1,
-            bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] memory smtProofRollupExitRoot1,
+            bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH]
+                memory smtProofRollupExitRoot1,
             uint256 globalIndex1,
             bytes32 mainnetExitRoot1,
             bytes32 rollupExitRoot1,
@@ -93,19 +94,22 @@ contract BridgeMessageReceiverMock is IBridgeMessageReceiver {
             address destinationAddress1,
             uint256 amount1,
             bytes memory metadata1
-        ) = abi.decode(claimData1, (
-            bytes32[32],
-            bytes32[32],
-            uint256,
-            bytes32,
-            bytes32,
-            uint32,
-            address,
-            uint32,
-            address,
-            uint256,
-            bytes
-        ));
+        ) = abi.decode(
+                claimData1,
+                (
+                    bytes32[32],
+                    bytes32[32],
+                    uint256,
+                    bytes32,
+                    bytes32,
+                    uint32,
+                    address,
+                    uint32,
+                    address,
+                    uint256,
+                    bytes
+                )
+            );
         // claimMessage destinationAddress == this contract
         bridgeAddress.claimMessage(
             smtProofLocalExitRoot1,
@@ -122,7 +126,7 @@ contract BridgeMessageReceiverMock is IBridgeMessageReceiver {
         );
         // revert with "DestinationNetworkInvalid"
         (bool success, ) = address(bridgeAddress).call(
-             abi.encodeCall(
+            abi.encodeCall(
                 IPolygonZkEVMBridgeV2.claimMessage,
                 (
                     smtProofLocalExitRoot1,
@@ -150,23 +154,24 @@ contract BridgeMessageReceiverMock is IBridgeMessageReceiver {
             address token3,
             bool forceUpdateGlobalExitRoot3,
             bytes memory permitData3
-        ) = abi.decode(bridgeAsset, (
-            uint32,
-            address,
-            uint256,
-            address,
-            bool,
-            bytes
-        ));
+        ) = abi.decode(
+                bridgeAsset,
+                (uint32, address, uint256, address, bool, bytes)
+            );
 
         (bool success2, ) = address(bridgeAddress).call{value: msg.value}(
-                    abi.encodeCall(
-                        IPolygonZkEVMBridgeV2.bridgeAsset,
-                        (
-                            destinationNetwork3, destinationAddress3, amount3, token3, forceUpdateGlobalExitRoot3, permitData3
-                        )
-                    )
-                );
+            abi.encodeCall(
+                IPolygonZkEVMBridgeV2.bridgeAsset,
+                (
+                    destinationNetwork3,
+                    destinationAddress3,
+                    amount3,
+                    token3,
+                    forceUpdateGlobalExitRoot3,
+                    permitData3
+                )
+            )
+        );
 
         require(success2 == true);
 
@@ -175,7 +180,8 @@ contract BridgeMessageReceiverMock is IBridgeMessageReceiver {
         // claimMessage destinationAddress == EOA
         (
             bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] memory smtProofLocalExitRoot2,
-            bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] memory smtProofRollupExitRoot2,
+            bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH]
+                memory smtProofRollupExitRoot2,
             uint256 globalIndex2,
             bytes32 mainnetExitRoot2,
             bytes32 rollupExitRoot2,
@@ -185,19 +191,22 @@ contract BridgeMessageReceiverMock is IBridgeMessageReceiver {
             address destinationAddress2,
             uint256 amount2,
             bytes memory metadata2
-        ) = abi.decode(claimData2, (
-            bytes32[32],
-            bytes32[32],
-            uint256,
-            bytes32,
-            bytes32,
-            uint32,
-            address,
-            uint32,
-            address,
-            uint256,
-            bytes
-        ));
+        ) = abi.decode(
+                claimData2,
+                (
+                    bytes32[32],
+                    bytes32[32],
+                    uint256,
+                    bytes32,
+                    bytes32,
+                    uint32,
+                    address,
+                    uint32,
+                    address,
+                    uint256,
+                    bytes
+                )
+            );
 
         bridgeAddress.claimMessage(
             smtProofLocalExitRoot2,
