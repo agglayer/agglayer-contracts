@@ -223,6 +223,7 @@ describe('PolygonZkEVMBridge Contract claimMessage reentrancy', () => {
             .withArgs(globalIndex2, originNetwork, tokenAddress, reentrancyContractAddress, amount);
 
         expect(true).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
+        expect(true).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal2, indexRollup + 1));
 
         // Try claim again with the same parameters destinationAddress == deployer
         const index2 = 1;
@@ -253,5 +254,215 @@ describe('PolygonZkEVMBridge Contract claimMessage reentrancy', () => {
                 metadata,
             ),
         ).revertedWithCustomError(polygonZkEVMBridgeContract, 'AlreadyClaimed');
+    });
+
+    it('should testClaim function (BridgeMessageReceiverMock)', async () => {
+        const originNetwork = networkIDRollup;
+        const tokenAddress = ethers.ZeroAddress;
+        const amount = ethers.parseEther('10');
+        const destinationNetwork = networkIDMainnet;
+        const deployerAddress = deployer.address;
+        // contract with onMessageReceived with .claimMessage
+        const reentrancyContractAddress = reentrancyContract.target;
+
+        const metadata = '0x'; // since is ether does not have metadata
+        const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
+
+        const mainnetExitRoot = await polygonZkEVMGlobalExitRoot.lastMainnetExitRoot();
+
+        // compute root merkle tree in Js
+        const height = 32;
+        const merkleTreeLocal = new MerkleTreeBridge(height);
+        // add first leaf with destinationAddress == contract
+        const leafValue2 = getLeafValue(
+            LEAF_TYPE_MESSAGE,
+            originNetwork,
+            tokenAddress,
+            destinationNetwork,
+            reentrancyContractAddress,
+            amount,
+            metadataHash,
+        );
+        merkleTreeLocal.add(leafValue2);
+        // add 2 leafs with destinationAddress == deployer
+        const leafValue = getLeafValue(
+            LEAF_TYPE_MESSAGE,
+            originNetwork,
+            tokenAddress,
+            destinationNetwork,
+            deployerAddress,
+            amount,
+            metadataHash,
+        );
+        merkleTreeLocal.add(leafValue);
+        merkleTreeLocal.add(leafValue);
+
+        const rootLocalRollup = merkleTreeLocal.getRoot();
+
+        // Try claim with 10 rollup leafs
+        const merkleTreeRollup = new MerkleTreeBridge(height);
+        for (let i = 0; i < 10; i++) {
+            merkleTreeRollup.add(rootLocalRollup);
+        }
+
+        const rootRollup = merkleTreeRollup.getRoot();
+
+        // check only rollup account with update rollup exit root
+        await expect(polygonZkEVMGlobalExitRoot.updateExitRoot(rootRollup)).to.be.revertedWithCustomError(
+            polygonZkEVMGlobalExitRoot,
+            'OnlyAllowedContracts',
+        );
+
+        // add rollup Merkle root
+        await expect(polygonZkEVMGlobalExitRoot.connect(rollupManager).updateExitRoot(rootRollup))
+            .to.emit(polygonZkEVMGlobalExitRoot, 'UpdateGlobalExitRoot')
+            .withArgs(mainnetExitRoot, rootRollup);
+
+        // check roots
+        const rollupExitRootSC = await polygonZkEVMGlobalExitRoot.lastRollupExitRoot();
+        expect(rollupExitRootSC).to.be.equal(rootRollup);
+
+        const computedGlobalExitRoot = calculateGlobalExitRoot(mainnetExitRoot, rollupExitRootSC);
+        expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
+
+        // check merkle proof
+
+        // Merkle proof local
+        const indexLocal = 1;
+        const proofLocal = merkleTreeLocal.getProofTreeByIndex(indexLocal);
+        // Merkle proof local
+        const indexRollup = 5;
+        const proofRollup = merkleTreeRollup.getProofTreeByIndex(indexRollup);
+
+        // check merkle proof
+        const globalIndex = computeGlobalIndex(indexLocal, indexRollup, false);
+
+        // verify merkle proof
+        expect(verifyMerkleProof(leafValue, proofLocal, indexLocal, rootLocalRollup)).to.be.equal(true);
+        expect(
+            await polygonZkEVMBridgeContract.verifyMerkleProof(leafValue, proofLocal, indexLocal, rootLocalRollup),
+        ).to.be.equal(true);
+
+        // update reentrancy contract with parameters for claim 2 (destinationAddress == deployer)
+        await expect(
+            reentrancyContract.updateParameters(
+                proofLocal,
+                proofRollup,
+                globalIndex,
+                mainnetExitRoot,
+                rollupExitRootSC,
+                originNetwork,
+                tokenAddress,
+                destinationNetwork,
+                deployerAddress,
+                amount,
+                metadata,
+            ),
+        ).to.emit(reentrancyContract, 'UpdateParameters');
+
+        const indexLocal2 = 0;
+        const proofLocal2 = merkleTreeLocal.getProofTreeByIndex(indexLocal2);
+        const globalIndex2 = computeGlobalIndex(indexLocal2, indexRollup, false);
+
+        // Try claim again with the same parameters destinationAddress == deployer
+        const index2 = 1;
+        const proof2 = merkleTreeLocal.getProofTreeByIndex(index2);
+
+        expect(verifyMerkleProof(leafValue, proof2, index2, rootLocalRollup)).to.be.equal(true);
+        expect(verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rollupExitRootSC)).to.be.equal(true);
+
+        // This is used just to pay ether to the SovereignChainBridge smart contract and be able to claim it afterwards
+        await ethers.provider.send('hardhat_setBalance', [
+            polygonZkEVMBridgeContract.target,
+            ethers.toBeHex(amount + amount + amount),
+        ]);
+
+        // Try claim again with the same parameters destinationAddress == deployer
+        const index3 = 2;
+        const proof3 = merkleTreeLocal.getProofTreeByIndex(index3);
+        const globalIndex3 = computeGlobalIndex(index3, indexRollup, false);
+
+        expect(verifyMerkleProof(leafValue, proof3, index3, rootLocalRollup)).to.be.equal(true);
+        expect(verifyMerkleProof(rootLocalRollup, proofRollup, indexRollup, rollupExitRootSC)).to.be.equal(true);
+
+        // claim message with destinationAddress == reentrancyContract
+        // ClaimEvent first with destinationAddress == deployer
+        // ClaimEvent second with destinationAddress == reentrancyContract
+        const claim1 = ethers.AbiCoder.defaultAbiCoder().encode(
+            [
+                'bytes32[32]',
+                'bytes32[32]',
+                'uint256',
+                'bytes32',
+                'bytes32',
+                'uint32',
+                'address',
+                'uint32',
+                'address',
+                'uint256',
+                'bytes',
+            ],
+            [
+                proofLocal2,
+                proofRollup,
+                globalIndex2,
+                mainnetExitRoot,
+                rollupExitRootSC,
+                originNetwork,
+                tokenAddress,
+                destinationNetwork,
+                reentrancyContractAddress,
+                amount,
+                metadata,
+            ],
+        );
+
+        const claim2 = ethers.AbiCoder.defaultAbiCoder().encode(
+            [
+                'bytes32[32]',
+                'bytes32[32]',
+                'uint256',
+                'bytes32',
+                'bytes32',
+                'uint32',
+                'address',
+                'uint32',
+                'address',
+                'uint256',
+                'bytes',
+            ],
+            [
+                proof3,
+                proofRollup,
+                globalIndex3,
+                mainnetExitRoot,
+                rollupExitRootSC,
+                originNetwork,
+                tokenAddress,
+                destinationNetwork,
+                deployerAddress,
+                amount,
+                metadata,
+            ],
+        );
+
+        const bridgeAsset = ethers.AbiCoder.defaultAbiCoder().encode(
+            ['uint32', 'address', 'uint256', 'address', 'bool', 'bytes'],
+            [originNetwork, deployerAddress, amount, tokenAddress, true, '0x'],
+        );
+
+        await expect(reentrancyContract.testClaim(claim1, bridgeAsset, claim2, { value: amount }))
+            .to.emit(polygonZkEVMBridgeContract, 'ClaimEvent')
+            .withArgs(globalIndex, originNetwork, tokenAddress, deployerAddress, amount)
+            .to.emit(polygonZkEVMBridgeContract, 'ClaimEvent')
+            .withArgs(globalIndex2, originNetwork, tokenAddress, reentrancyContractAddress, amount)
+            // .revertedWithCustomError(polygonZkEVMBridgeContract, 'DestinationNetworkInvalid')
+            .to.emit(polygonZkEVMBridgeContract, 'BridgeEvent')
+            .to.emit(polygonZkEVMBridgeContract, 'ClaimEvent')
+            .withArgs(globalIndex3, originNetwork, tokenAddress, deployerAddress, amount);
+
+        expect(true).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal, indexRollup + 1));
+        expect(true).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(indexLocal2, indexRollup + 1));
+        expect(true).to.be.equal(await polygonZkEVMBridgeContract.isClaimed(index3, indexRollup + 1));
     });
 });
