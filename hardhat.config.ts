@@ -262,6 +262,12 @@ const config: HardhatUserConfig = {
                     evmVersion: 'cancun',
                 },
             },
+            'contracts/mocks/BridgeMessageReceiverMock.sol': {
+                version: '0.8.28',
+                settings: {
+                    viaIR: true,
+                },
+            },
         },
     },
     networks: {
