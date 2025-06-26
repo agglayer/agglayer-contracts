@@ -588,6 +588,14 @@ contract PolygonZkEVMBridgeV2 is
             keccak256(metadata)
         );
 
+        emit ClaimEvent(
+            globalIndex,
+            originNetwork,
+            originTokenAddress,
+            destinationAddress,
+            amount
+        );
+
         // Transfer funds
         if (
             originTokenAddress == address(0) &&
@@ -678,14 +686,6 @@ contract PolygonZkEVMBridgeV2 is
                 }
             }
         }
-
-        emit ClaimEvent(
-            globalIndex,
-            originNetwork,
-            originTokenAddress,
-            destinationAddress,
-            amount
-        );
     }
 
     /**
@@ -749,6 +749,14 @@ contract PolygonZkEVMBridgeV2 is
             keccak256(metadata)
         );
 
+        emit ClaimEvent(
+            globalIndex,
+            originNetwork,
+            originAddress,
+            destinationAddress,
+            amount
+        );
+
         // Execute message
         bool success;
         if (address(WETHToken) == address(0)) {
@@ -778,14 +786,6 @@ contract PolygonZkEVMBridgeV2 is
         if (!success) {
             revert MessageFailed();
         }
-
-        emit ClaimEvent(
-            globalIndex,
-            originNetwork,
-            originAddress,
-            destinationAddress,
-            amount
-        );
     }
 
     /**
@@ -935,11 +935,18 @@ contract PolygonZkEVMBridgeV2 is
 
         // Get origin network from global index
         if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
-            // the network is mainnet, therefore sourceBridgeNetwork is 0
+            // The network is mainnet, therefore sourceBridgeNetwork is 0
 
             // Last 32 bits are leafIndex
             leafIndex = uint32(globalIndex);
 
+            // Reconstruct global index to assert that all unused bits are 0
+            require(
+                _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) == globalIndex,
+                InvalidGlobalIndex()
+            );
+
+            // Verify merkle proof
             if (
                 !verifyMerkleProof(
                     leafValue,
@@ -951,12 +958,19 @@ contract PolygonZkEVMBridgeV2 is
                 revert InvalidSmtProof();
             }
         } else {
-            // the network is a rollup, therefore sourceBridgeNetwork must be decoded
+            // The network is a rollup, therefore sourceBridgeNetwork must be decoded
             uint32 indexRollup = uint32(globalIndex >> 32);
             sourceBridgeNetwork = indexRollup + 1;
 
             // Last 32 bits are leafIndex
             leafIndex = uint32(globalIndex);
+
+            // Reconstruct global index to assert that all unused bits are 0
+            require(
+                (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
+                    globalIndex,
+                InvalidGlobalIndex()
+            );
 
             // Verify merkle proof against rollup exit root
             if (
