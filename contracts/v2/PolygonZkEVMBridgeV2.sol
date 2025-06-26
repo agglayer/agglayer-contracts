@@ -588,6 +588,14 @@ contract PolygonZkEVMBridgeV2 is
             keccak256(metadata)
         );
 
+        emit ClaimEvent(
+            globalIndex,
+            originNetwork,
+            originTokenAddress,
+            destinationAddress,
+            amount
+        );
+
         // Transfer funds
         if (
             originTokenAddress == address(0) &&
@@ -678,14 +686,6 @@ contract PolygonZkEVMBridgeV2 is
                 }
             }
         }
-
-        emit ClaimEvent(
-            globalIndex,
-            originNetwork,
-            originTokenAddress,
-            destinationAddress,
-            amount
-        );
     }
 
     /**
@@ -749,6 +749,14 @@ contract PolygonZkEVMBridgeV2 is
             keccak256(metadata)
         );
 
+        emit ClaimEvent(
+            globalIndex,
+            originNetwork,
+            originAddress,
+            destinationAddress,
+            amount
+        );
+
         // Execute message
         bool success;
         if (address(WETHToken) == address(0)) {
@@ -778,14 +786,6 @@ contract PolygonZkEVMBridgeV2 is
         if (!success) {
             revert MessageFailed();
         }
-
-        emit ClaimEvent(
-            globalIndex,
-            originNetwork,
-            originAddress,
-            destinationAddress,
-            amount
-        );
     }
 
     /**
@@ -967,7 +967,7 @@ contract PolygonZkEVMBridgeV2 is
 
             // Reconstruct global index to assert that all unused bits are 0
             require(
-               (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
+                (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
                     globalIndex,
                 InvalidGlobalIndex()
             );
