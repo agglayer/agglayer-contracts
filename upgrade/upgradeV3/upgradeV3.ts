@@ -14,8 +14,6 @@ import * as upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
 const pathOutputJson = path.join(__dirname, './upgrade_output.json');
 
 async function main() {

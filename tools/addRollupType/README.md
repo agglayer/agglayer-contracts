@@ -7,6 +7,16 @@ npm i
 ```
 
 ## Setup
+
+- Set env variables
+
+```
+cp .env.example .env
+```
+
+Fill `.env` with your `ETHERSCAN_API_KEY` and `DEPLOYER_PRIVATE_KEY`
+
+
 - Config file `add_rollup_type.json`:
   - `type`: Specify the type of rollup creation, only available:
       - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
@@ -22,15 +32,16 @@ npm i
   - `timelockDelay`: timelock delay
   - `timelockSalt(optional)`: timelock salt
   - `predecessor(optional)`: timelock predecessor
-  - `deployerPvtKey(optional)`: private key deployer
-    - First option will load `deployerPvtKey`. Otherwise, `process.env.MNEMONIC` will be loaded from the `.env` file
   - `maxFeePerGas(optional)`: string, Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it
   - `maxPriorityFeePerGas(optional)`: string, Set `maxPriorityFeePerGas`, must define as well `maxFeePerGas` to use it
   - `multiplierGas(optional)`: number, Gas multiplier with 3 decimals. If `maxFeePerGas` and `maxPriorityFeePerGas` are set, this will not take effect
+  - `customALGatewayAddress`: "0x..." -> In case the user wants to set a custom ALGateway address for the aggchain instead of picking it from rollup manager
+
 - A network should be selected when running the script
   - examples: `--sepolia` or `--mainnet`
   - This uses variables set in `hardhat.config.ts`
   - Which uses some environment variables that should be set in `.env`
+
 > All paths are from root repository
 
 ## Usage
