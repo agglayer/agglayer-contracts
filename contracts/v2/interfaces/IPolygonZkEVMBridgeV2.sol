@@ -124,6 +124,11 @@ interface IPolygonZkEVMBridgeV2 {
      */
     error InvalidZeroProxyAdminOwner(address proxyAdmin);
 
+    /**
+     * @dev Thrown when the global index has any unused bits set to 1
+     */
+    error InvalidGlobalIndex();
+
     function wrappedTokenToTokenInfo(
         address destinationAddress
     ) external view returns (uint32, address);

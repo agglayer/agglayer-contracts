@@ -366,6 +366,16 @@ const config: HardhatUserConfig = {
                 count: 20,
             },
         },
+        opSepolia: {
+            url: 'https://sepolia.optimism.io',
+            chainId: 11155420,
+            accounts: {
+                mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
+                path: "m/44'/60'/0'/0",
+                initialIndex: 0,
+                count: 20,
+            },
+        },
     },
     gasReporter: {
         enabled: !!process.env.REPORT_GAS,
@@ -381,6 +391,7 @@ const config: HardhatUserConfig = {
             mainnet: `${process.env.ETHERSCAN_API_KEY}`,
             zkevmDevnet: `${process.env.ETHERSCAN_API_KEY}`,
             custom: `${process.env.CUSTOM_ETHERSCAN_API_KEY}`,
+            opSepolia: `${process.env.ETHERSCAN_API_KEY}`,
         },
         customChains: [
             {
@@ -413,6 +424,14 @@ const config: HardhatUserConfig = {
                 urls: {
                     apiURL: `${process.env.CUSTOM_API_URL}`,
                     browserURL: `${process.env.CUSTOM_BROWSER_URL}`,
+                },
+            },
+            {
+                network: 'opSepolia',
+                chainId: 11155420,
+                urls: {
+                    apiURL: 'https://api.etherscan.io/v2/api?chainid=11155420',
+                    browserURL: 'https://sepolia-optimistic.etherscan.io',
                 },
             },
         ],

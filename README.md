@@ -1,4 +1,4 @@
-# zkevm-contracts
+# agglayer-contracts
 
 Smart contract implementation which will be used by the polygon zkevm
 
