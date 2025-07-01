@@ -1320,6 +1320,10 @@ contract PolygonRollupManager is
                 InvalidNewLocalExitRoot()
             );
             // In this special case, we consider lastLocalExitRoot is zero.
+            // This is intentional, as we need a valid prover input.
+            // Since the proof includes all bridges involved in the network, we assume
+            // lastLocalExitRoot is bytes32(0), and the expectedNewLocalExitRoot will
+            // already contain the full network state (lastLocalExitRoot).
             rollup.lastLocalExitRoot = bytes32(0);
             // Finally, after proving the "bootstrapCertificate", the migration will be completed
             isRollupMigratingToPP[rollupID] = false;
