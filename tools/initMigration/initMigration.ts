@@ -7,7 +7,7 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { PolygonRollupManager } from '../../typechain-types';
 import { transactionTypes, genOperation } from '../utils';
-import initMigrationToPPParams from './initMigrationToPP.json';
+import initMigrationParams from './initMigration.json';
 import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
 import { logger } from '../../src/logger';
 import { decodeScheduleData } from '../../upgrade/utils';
@@ -15,17 +15,17 @@ import { decodeScheduleData } from '../../upgrade/utils';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const dateStr = new Date().toISOString();
-const pathOutputJson = path.join(__dirname, `./initMigrationToPP-${dateStr}.json`);
+const pathOutputJson = path.join(__dirname, `./initMigration-${dateStr}.json`);
 
 async function main() {
     /*
      * Check parameters
      * Check that every necessary parameter is fulfilled
      */
-    const mandatoryParameters = ['type', 'rollupID', 'newRollupTypeID', 'polygonRollupManagerAddress'];
+    const mandatoryParameters = ['type', 'rollupID', 'newRollupTypeID', 'upgradeData', 'polygonRollupManagerAddress'];
 
     // check create rollup type
-    switch (initMigrationToPPParams.type) {
+    switch (initMigrationParams.type) {
         case transactionTypes.EOA:
         case transactionTypes.MULTISIG:
             break;
@@ -33,23 +33,23 @@ async function main() {
             mandatoryParameters.push('timelockDelay');
             break;
         default:
-            throw new Error(`Invalid type ${initMigrationToPPParams.type}`);
+            throw new Error(`Invalid type ${initMigrationParams.type}`);
     }
 
-    checkParams(initMigrationToPPParams, mandatoryParameters);
+    checkParams(initMigrationParams, mandatoryParameters);
 
-    logger.info(`Starting script to update rollup from ${initMigrationToPPParams.type}`);
+    logger.info(`Starting script to update rollup from ${initMigrationParams.type}`);
 
     // Load provider
     logger.info('Load provider');
-    const currentProvider = getProviderAdjustingMultiplierGas(initMigrationToPPParams, ethers);
+    const currentProvider = getProviderAdjustingMultiplierGas(initMigrationParams, ethers);
 
     // Load deployer
     logger.info('Load deployer');
-    const deployer = await getDeployerFromParameters(currentProvider, initMigrationToPPParams, ethers);
+    const deployer = await getDeployerFromParameters(currentProvider, initMigrationParams, ethers);
     logger.info(`Using with: ${deployer.address}`);
 
-    const { type, polygonRollupManagerAddress, rollupID, newRollupTypeID } = initMigrationToPPParams;
+    const { type, polygonRollupManagerAddress, rollupID, newRollupTypeID, upgradeData } = initMigrationParams;
 
     // Load Rollup manager
     const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
@@ -61,13 +61,17 @@ async function main() {
 
     if (type === transactionTypes.TIMELOCK) {
         logger.info('Creating timelock tx to add default vkey...');
-        const salt = initMigrationToPPParams.timelockSalt || ethers.ZeroHash;
-        const predecessor = initMigrationToPPParams.predecessor || ethers.ZeroHash;
+        const salt = initMigrationParams.timelockSalt || ethers.ZeroHash;
+        const predecessor = initMigrationParams.predecessor || ethers.ZeroHash;
         const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
         const operation = genOperation(
             polygonRollupManagerAddress,
             0, // value
-            PolygonRollupManagerFactory.interface.encodeFunctionData('initMigrationToPP', [rollupID, newRollupTypeID]),
+            PolygonRollupManagerFactory.interface.encodeFunctionData('initMigration', [
+                rollupID,
+                newRollupTypeID,
+                upgradeData,
+            ]),
             predecessor, // predecessor
             salt, // salt
         );
@@ -78,7 +82,7 @@ async function main() {
             operation.data,
             operation.predecessor,
             operation.salt,
-            initMigrationToPPParams.timelockDelay,
+            initMigrationParams.timelockDelay,
         ]);
         // Execute operation
         const executeData = timelockContractFactory.interface.encodeFunctionData('execute', [
@@ -95,17 +99,18 @@ async function main() {
         // Decode the scheduleData for better readability
         outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, PolygonRollupManagerFactory);
     } else if (type === transactionTypes.MULTISIG) {
-        logger.info('Creating calldata to initMigrationToPP from multisig...');
-        const tx = PolygonRollupManagerFactory.interface.encodeFunctionData('initMigrationToPP', [
+        logger.info('Creating calldata to initMigration from multisig...');
+        const tx = PolygonRollupManagerFactory.interface.encodeFunctionData('initMigration', [
             rollupID,
             newRollupTypeID,
+            upgradeData,
         ]);
         outputJson.polygonRollupManagerAddress = polygonRollupManagerAddress;
         outputJson.rollupID = rollupID;
         outputJson.newRollupTypeID = newRollupTypeID;
         outputJson.tx = tx;
     } else {
-        logger.info('Send tx to initMigrationToPP...');
+        logger.info('Send tx to initMigration...');
         logger.info('Check deployer role');
         const UPDATE_ROLLUP_ROLE = ethers.id('UPDATE_ROLLUP_ROLE');
         if ((await rollupManagerContract.hasRole(UPDATE_ROLLUP_ROLE, deployer.address)) === false) {
@@ -114,9 +119,11 @@ async function main() {
             );
             process.exit(1);
         }
-        logger.info('Sending transaction to initMigrationToPP...');
+        logger.info('Sending transaction to initMigration...');
         try {
-            const tx = await rollupManagerContract.connect(deployer).initMigrationToPP(rollupID, newRollupTypeID);
+            const tx = await rollupManagerContract
+                .connect(deployer)
+                .initMigration(rollupID, newRollupTypeID, upgradeData);
             await tx.wait();
             outputJson.polygonRollupManagerAddress = polygonRollupManagerAddress;
             outputJson.rollupID = rollupID;

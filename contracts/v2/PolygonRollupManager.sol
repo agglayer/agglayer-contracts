@@ -318,8 +318,8 @@ contract PolygonRollupManager is
     // Timestamp when the last emergency state was deactivated
     uint64 public lastDeactivatedEmergencyStateTimestamp;
 
-    // Mapping to track chains in migration to PP
-    mapping(uint32 rollupID => bool) public isRollupMigratingToPP;
+    // Mapping to track chains in migration
+    mapping(uint32 rollupID => bool) public isRollupMigrating;
 
     /**
      * @dev Emitted when a new rollup type is added
@@ -447,17 +447,17 @@ contract PolygonRollupManager is
     );
 
     /**
-     * @dev Emitted when `initMigrationToPP` is called
+     * @dev Emitted when `initMigration` is called
      * @param rollupID Rollup ID that is being migrated
      * @param newRollupTypeID New rollup type ID that the rollup will be migrated to
      */
-    event InitMigrationToPP(uint32 indexed rollupID, uint32 newRollupTypeID);
+    event InitMigration(uint32 indexed rollupID, uint32 newRollupTypeID);
 
     /**
-     * @dev Emitted when a rollup completes the migration to Pessimistic, just after proving bootstrapped batch
+     * @dev Emitted when a rollup completes the migration to Pessimistic or ALGateway, just after proving bootstrapped batch
      * @param rollupID Rollup ID that completed the migration
      */
-    event CompletedMigrationToPP(uint32 indexed rollupID);
+    event CompletedMigration(uint32 indexed rollupID);
 
     /**
      * @param _globalExitRootManager Global exit root manager address
@@ -945,9 +945,16 @@ contract PolygonRollupManager is
         emit UpdateRollup(rollupID, newRollupTypeID, lastVerifiedBatch);
     }
 
-    function initMigrationToPP(
+    /**
+     * @notice Function to init migration to PP or ALGateway
+     * @param rollupID Rollup ID that is being migrated
+     * @param newRollupTypeID New rollup type ID that the rollup will be migrated to
+     * @param upgradeData Upgrade data
+     */
+    function initMigration(
         uint32 rollupID,
-        uint32 newRollupTypeID
+        uint32 newRollupTypeID,
+        bytes memory upgradeData
     ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
         /// @dev Rollup existence check is done at `_updateRollup`function
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
@@ -964,25 +971,25 @@ contract PolygonRollupManager is
             AllSequencedMustBeVerified()
         );
 
-        // NewRollupType must be pessimistic
+        // NewRollupType must be pessimistic or ALGateway
         require(
-            rollupTypeMap[newRollupTypeID].rollupVerifierType ==
-                VerifierType.Pessimistic,
-            NewRollupTypeMustBePessimistic()
+            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+                VerifierType.StateTransition,
+            NewRollupTypeMustBePessimisticOrALGateway()
         );
 
-        // Add rollupID to migration to PP mapping
-        isRollupMigratingToPP[rollupID] = true;
+        // Add rollupID to migration mapping
+        isRollupMigrating[rollupID] = true;
 
-        // Update rollup type to pessimistic
+        // Update rollup type to new type
         _updateRollup(
             ITransparentUpgradeableProxy(rollup.rollupContract),
             newRollupTypeID,
-            new bytes(0)
+            upgradeData
         );
 
         // Emit event
-        emit InitMigrationToPP(rollupID, newRollupTypeID);
+        emit InitMigration(rollupID, newRollupTypeID);
     }
 
     /**
@@ -1303,8 +1310,8 @@ contract PolygonRollupManager is
             revert L1InfoTreeLeafCountInvalid();
         }
 
-        // In case of a chain in migration to PP, the inputs are a special case.
-        if (isRollupMigratingToPP[rollupID]) {
+        // In case of a chain in migration, the inputs are a special case.
+        if (isRollupMigrating[rollupID]) {
             bytes32 expectedNewLocalExitRoot = rollup.lastLocalExitRoot;
 
             // If the lastLocalExitRoot is zero, it means that the rollup has never verified a batch with bridges
@@ -1322,10 +1329,10 @@ contract PolygonRollupManager is
             // In this special case, we consider lastLocalExitRoot is zero.
             rollup.lastLocalExitRoot = bytes32(0);
             // Finally, after proving the "bootstrapCertificate", the migration will be completed
-            isRollupMigratingToPP[rollupID] = false;
+            isRollupMigrating[rollupID] = false;
 
             // Emit event
-            emit CompletedMigrationToPP(rollupID);
+            emit CompletedMigration(rollupID);
         }
 
         bytes memory inputPessimisticBytes = _getInputPessimisticBytes(

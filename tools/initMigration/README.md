@@ -1,5 +1,5 @@
-# Init migration to PP
-Script to call `initMigrationToPP` function in the `PolygonRollupManager.sol` smart contract.
+# Init migration
+Script to call `initMigration` function in the `PolygonRollupManager.sol` smart contract.
 
 ## Install
 ```
@@ -7,7 +7,7 @@ npm i
 ```
 
 ## Setup
-### initMigrationToPP
+### initMigration
 - Config file
   - `type`: Specify the type of rollup creation, only available:
         - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
@@ -30,28 +30,28 @@ npm i
 ### Call 'updateRollup'
 - Copy configuration file:
 ```
-cp ./tools/initMigrationToPP/initMigrationToPP.json.example ./tools/initMigrationToPP/initMigrationToPP.json
+cp ./tools/initMigration/initMigration.json.example ./tools/initMigration/initMigration.json
 ```
 
 - Set your parameters
 - Run tool:
 ```
-npx hardhat run ./tools/initMigrationToPP/initMigrationToPP.ts --network <network>
+npx hardhat run ./tools/initMigration/initMigration.ts --network <network>
 ```
 
-### 'initMigrationToPP'  from an EOA
+### 'initMigration'  from an EOA
 
-Running the tool, the initMigrationToPP transaction will be sent directly
+Running the tool, the initMigration transaction will be sent directly
 
-### 'initMigrationToPP'  Multisig
+### 'initMigration'  Multisig
 
 - Output: Transaction to update the rollup
 
-### Generate 'initMigrationToPP' data to the Timelock SC
+### Generate 'initMigration' data to the Timelock SC
 - Set your parameters
 - Run tool:
 ```
-npx hardhat run ./tools/initMigrationToPP/initMigrationToPP.ts --network <network>
+npx hardhat run ./tools/initMigration/initMigration.ts --network <network>
 ```
 - Output:
   - scheduleData
