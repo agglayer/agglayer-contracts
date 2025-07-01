@@ -959,10 +959,9 @@ contract PolygonRollupManager is
         );
 
         // No pending batches to verify allowed before migration
-        require(
-            rollup.lastBatchSequenced == rollup.lastVerifiedBatch,
-            AllSequencedMustBeVerified()
-        );
+        if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
+            revert AllSequencedMustBeVerified();
+        }
 
         // NewRollupType must be pessimistic
         require(
