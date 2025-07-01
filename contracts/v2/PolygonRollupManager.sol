@@ -1840,8 +1840,8 @@ contract PolygonRollupManager is
             bytes32 lastLocalExitRoot,
             uint64 lastBatchSequenced,
             uint64 lastVerifiedBatch,
-            uint64 _legacyLastPendingState,
-            uint64 _legacyLastPendingStateConsolidated,
+            uint64 legacyLastPendingState,
+            uint64 legacyLastPendingStateConsolidated,
             uint64 lastVerifiedBatchBeforeUpgrade,
             uint64 rollupTypeID,
             VerifierType rollupVerifierType
@@ -1856,8 +1856,8 @@ contract PolygonRollupManager is
         lastLocalExitRoot = rollup.lastLocalExitRoot;
         lastBatchSequenced = rollup.lastBatchSequenced;
         lastVerifiedBatch = rollup.lastVerifiedBatch;
-        _legacyLastPendingState = rollup._legacyLastPendingState;
-        _legacyLastPendingStateConsolidated = rollup
+        legacyLastPendingState = rollup._legacyLastPendingState;
+        legacyLastPendingStateConsolidated = rollup
             ._legacyLastPendingStateConsolidated;
         lastVerifiedBatchBeforeUpgrade = rollup.lastVerifiedBatchBeforeUpgrade;
         rollupTypeID = rollup.rollupTypeID;
