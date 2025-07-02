@@ -959,10 +959,9 @@ contract PolygonRollupManager is
         );
 
         // No pending batches to verify allowed before migration
-        require(
-            rollup.lastBatchSequenced == rollup.lastVerifiedBatch,
-            AllSequencedMustBeVerified()
-        );
+        if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
+            revert AllSequencedMustBeVerified();
+        }
 
         // NewRollupType must be pessimistic
         require(
@@ -1320,6 +1319,10 @@ contract PolygonRollupManager is
                 InvalidNewLocalExitRoot()
             );
             // In this special case, we consider lastLocalExitRoot is zero.
+            // This is intentional, as we need a valid prover input.
+            // Since the proof includes all bridges involved in the network, we assume
+            // lastLocalExitRoot is bytes32(0), and the expectedNewLocalExitRoot will
+            // already contain the full network state (lastLocalExitRoot).
             rollup.lastLocalExitRoot = bytes32(0);
             // Finally, after proving the "bootstrapCertificate", the migration will be completed
             isRollupMigratingToPP[rollupID] = false;
@@ -1836,8 +1839,8 @@ contract PolygonRollupManager is
             bytes32 lastLocalExitRoot,
             uint64 lastBatchSequenced,
             uint64 lastVerifiedBatch,
-            uint64 _legacyLastPendingState,
-            uint64 _legacyLastPendingStateConsolidated,
+            uint64 legacyLastPendingState,
+            uint64 legacyLastPendingStateConsolidated,
             uint64 lastVerifiedBatchBeforeUpgrade,
             uint64 rollupTypeID,
             VerifierType rollupVerifierType
@@ -1852,8 +1855,8 @@ contract PolygonRollupManager is
         lastLocalExitRoot = rollup.lastLocalExitRoot;
         lastBatchSequenced = rollup.lastBatchSequenced;
         lastVerifiedBatch = rollup.lastVerifiedBatch;
-        _legacyLastPendingState = rollup._legacyLastPendingState;
-        _legacyLastPendingStateConsolidated = rollup
+        legacyLastPendingState = rollup._legacyLastPendingState;
+        legacyLastPendingStateConsolidated = rollup
             ._legacyLastPendingStateConsolidated;
         lastVerifiedBatchBeforeUpgrade = rollup.lastVerifiedBatchBeforeUpgrade;
         rollupTypeID = rollup.rollupTypeID;
