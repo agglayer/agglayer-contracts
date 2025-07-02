@@ -28,6 +28,7 @@ describe('Upgradeable to PPV2', () => {
     let trustedSequencer: any;
     let admin: any;
     let beneficiary: any;
+    let aggLayerAdmin: any;
 
     let polTokenContract: ERC20PermitMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
@@ -43,6 +44,8 @@ describe('Upgradeable to PPV2', () => {
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
+    const PESSIMISTIC_SELECTOR = '0x00000001';
+    const randomPessimisticVKey = computeRandomBytes(32);
 
     const rollupTypeIDPessimistic = 1;
 
@@ -50,7 +53,7 @@ describe('Upgradeable to PPV2', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary] =
+        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary, aggLayerAdmin] =
             await ethers.getSigners();
 
         // deploy mock verifier
@@ -83,6 +86,16 @@ describe('Upgradeable to PPV2', () => {
             unsafeAllow: ['constructor'],
         });
 
+        // Initialize aggLayerGateway
+        await aggLayerGatewayContract.initialize(
+            admin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            PESSIMISTIC_SELECTOR,
+            verifierContract.target,
+            randomPessimisticVKey,
+        );
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
 
@@ -386,7 +399,7 @@ describe('Upgradeable to PPV2', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
@@ -672,7 +685,7 @@ describe('Upgradeable to PPV2', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
@@ -1011,7 +1024,7 @@ describe('Upgradeable to PPV2', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
