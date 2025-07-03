@@ -237,11 +237,15 @@ contract PolygonRollupManager is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Current rollup manager version
-    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.0";
+    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.1";
 
     // Hardcoded address used to indicate that this address triggered in an event should not be considered as valid.
     address private constant _NO_ADDRESS =
         0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
+
+    // Root value of an 32 levels empty merkle tree, where leaves are 32 zeroes bytes
+    bytes32 private constant _EMPTY_TREE_ROOT =
+        0x27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757;
 
     // Global Exit Root address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -313,6 +317,9 @@ contract PolygonRollupManager is
 
     // Timestamp when the last emergency state was deactivated
     uint64 public lastDeactivatedEmergencyStateTimestamp;
+
+    // Mapping to track chains in migration
+    mapping(uint32 rollupID => bool) public isRollupMigrating;
 
     /**
      * @dev Emitted when a new rollup type is added
@@ -440,6 +447,19 @@ contract PolygonRollupManager is
     );
 
     /**
+     * @dev Emitted when `initMigration` is called
+     * @param rollupID Rollup ID that is being migrated
+     * @param newRollupTypeID New rollup type ID that the rollup will be migrated to
+     */
+    event InitMigration(uint32 indexed rollupID, uint32 newRollupTypeID);
+
+    /**
+     * @dev Emitted when a rollup completes the migration to Pessimistic or ALGateway, just after proving bootstrapped batch
+     * @param rollupID Rollup ID that completed the migration
+     */
+    event CompletedMigration(uint32 indexed rollupID);
+
+    /**
      * @param _globalExitRootManager Global exit root manager address
      * @param _pol POL token address
      * @param _bridgeAddress Bridge address
@@ -472,7 +492,7 @@ contract PolygonRollupManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(4) {
+    function initialize() external virtual reinitializer(5) {
         emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
@@ -857,6 +877,18 @@ contract PolygonRollupManager is
         uint32 newRollupTypeID,
         bytes memory upgradeData
     ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
+        uint32 rollupID = rollupAddressToID[address(rollupContract)];
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+        // Only allow update rollupVerifierType when updating to ALGateway
+        if (
+            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+            VerifierType.ALGateway &&
+            rollup.rollupVerifierType !=
+            rollupTypeMap[newRollupTypeID].rollupVerifierType
+        ) {
+            revert UpdateNotCompatible();
+        }
+
         _updateRollup(rollupContract, newRollupTypeID, upgradeData);
     }
 
@@ -896,14 +928,6 @@ contract PolygonRollupManager is
             revert RollupTypeObsolete();
         }
 
-        // Only allow update rollupVerifierType when updating to ALGateway
-        if (
-            newRollupType.rollupVerifierType != VerifierType.ALGateway &&
-            rollup.rollupVerifierType != newRollupType.rollupVerifierType
-        ) {
-            revert UpdateNotCompatible();
-        }
-
         // Update rollup parameters
         rollup.verifier = newRollupType.verifier;
         rollup.forkID = newRollupType.forkID;
@@ -919,6 +943,52 @@ contract PolygonRollupManager is
             upgradeData
         );
         emit UpdateRollup(rollupID, newRollupTypeID, lastVerifiedBatch);
+    }
+
+    /**
+     * @notice Function to init migration to PP or ALGateway
+     * @param rollupID Rollup ID that is being migrated
+     * @param newRollupTypeID New rollup type ID that the rollup will be migrated to
+     * @param upgradeData Upgrade data
+     */
+    function initMigration(
+        uint32 rollupID,
+        uint32 newRollupTypeID,
+        bytes memory upgradeData
+    ) external onlyRole(_UPDATE_ROLLUP_ROLE) {
+        /// @dev Rollup existence check is done at `_updateRollup`function
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+
+        // Only for StateTransition chains
+        require(
+            rollup.rollupVerifierType == VerifierType.StateTransition,
+            OnlyStateTransitionChains()
+        );
+
+        // No pending batches to verify allowed before migration
+        if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
+            revert AllSequencedMustBeVerified();
+        }
+
+        // NewRollupType must be pessimistic or ALGateway
+        require(
+            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+                VerifierType.StateTransition,
+            NewRollupTypeMustBePessimisticOrALGateway()
+        );
+
+        // Add rollupID to migration mapping
+        isRollupMigrating[rollupID] = true;
+
+        // Update rollup type to new type
+        _updateRollup(
+            ITransparentUpgradeableProxy(rollup.rollupContract),
+            newRollupTypeID,
+            upgradeData
+        );
+
+        // Emit event
+        emit InitMigration(rollupID, newRollupTypeID);
     }
 
     /**
@@ -1238,6 +1308,36 @@ contract PolygonRollupManager is
         if (l1InfoRoot == bytes32(0)) {
             revert L1InfoTreeLeafCountInvalid();
         }
+
+        // In case of a chain in migration, the inputs are a special case.
+        if (isRollupMigrating[rollupID]) {
+            bytes32 expectedNewLocalExitRoot = rollup.lastLocalExitRoot;
+
+            // If the lastLocalExitRoot is zero, it means that the rollup has never verified a batch with bridges
+            if (rollup.lastLocalExitRoot == bytes32(0)) {
+                // To proof the transition, the expected newLocalExitRoot must be to root of an empty 32 levels tree
+                expectedNewLocalExitRoot = _EMPTY_TREE_ROOT;
+            }
+
+            // If we are migrating, the proof is proving a "bootstrapCertificate" containing all the bridges involved in the network since the genesis.
+            // It's a hard requirement that the newLocalExitRoot matches the current lastLocalExitRoot meaning that the certificates covers all the bridges
+            require(
+                expectedNewLocalExitRoot == newLocalExitRoot,
+                InvalidNewLocalExitRoot()
+            );
+            // In this special case, we consider lastLocalExitRoot is zero.
+            // This is intentional, as we need a valid prover input.
+            // Since the proof includes all bridges involved in the network, we assume
+            // lastLocalExitRoot is bytes32(0), and the expectedNewLocalExitRoot will
+            // already contain the full network state (lastLocalExitRoot).
+            rollup.lastLocalExitRoot = bytes32(0);
+            // Finally, after proving the "bootstrapCertificate", the migration will be completed
+            isRollupMigrating[rollupID] = false;
+
+            // Emit event
+            emit CompletedMigration(rollupID);
+        }
+
         bytes memory inputPessimisticBytes = _getInputPessimisticBytes(
             rollupID,
             rollup,
@@ -1246,6 +1346,7 @@ contract PolygonRollupManager is
             newPessimisticRoot,
             aggchainData
         );
+
         if (rollup.rollupVerifierType == VerifierType.ALGateway) {
             // Verify proof. The pessimistic proof selector is attached at the first 4 bytes of the proof
             // proof[0:4]: 4 bytes selector pp
@@ -1745,8 +1846,8 @@ contract PolygonRollupManager is
             bytes32 lastLocalExitRoot,
             uint64 lastBatchSequenced,
             uint64 lastVerifiedBatch,
-            uint64 _legacyLastPendingState,
-            uint64 _legacyLastPendingStateConsolidated,
+            uint64 legacyLastPendingState,
+            uint64 legacyLastPendingStateConsolidated,
             uint64 lastVerifiedBatchBeforeUpgrade,
             uint64 rollupTypeID,
             VerifierType rollupVerifierType
@@ -1761,8 +1862,8 @@ contract PolygonRollupManager is
         lastLocalExitRoot = rollup.lastLocalExitRoot;
         lastBatchSequenced = rollup.lastBatchSequenced;
         lastVerifiedBatch = rollup.lastVerifiedBatch;
-        _legacyLastPendingState = rollup._legacyLastPendingState;
-        _legacyLastPendingStateConsolidated = rollup
+        legacyLastPendingState = rollup._legacyLastPendingState;
+        legacyLastPendingStateConsolidated = rollup
             ._legacyLastPendingStateConsolidated;
         lastVerifiedBatchBeforeUpgrade = rollup.lastVerifiedBatchBeforeUpgrade;
         rollupTypeID = rollup.rollupTypeID;

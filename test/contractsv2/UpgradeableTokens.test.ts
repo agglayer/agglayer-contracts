@@ -50,7 +50,6 @@ describe('Upgradeable Tokens', () => {
             rollupManager,
             receiver,
             emergencyBridgePauser,
-            ,
             proxiedTokensManager,
             bridgeManager,
             bridgeManager2,
