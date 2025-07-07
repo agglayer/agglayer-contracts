@@ -240,6 +240,12 @@ const config: HardhatUserConfig = {
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },
+            'contracts/mocks/BridgeMessageReceiverMock.sol': {
+                version: '0.8.28',
+                settings: {
+                    viaIR: true,
+                },
+            },
         },
     },
     networks: {
