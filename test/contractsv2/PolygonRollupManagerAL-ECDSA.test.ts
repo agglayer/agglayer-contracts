@@ -77,7 +77,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA', () => {
         await expect(
             rollupManagerContract.connect(timelock).addNewRollupType(
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
@@ -89,7 +89,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA', () => {
             .withArgs(
                 Number(lastRollupTypeID) + 1 /* rollupTypeID */,
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis

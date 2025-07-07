@@ -229,17 +229,15 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const rollupTypeID = 1;
 
         // correct add new rollup via timelock
-        await rollupManagerContract
-            .connect(timelock)
-            .addNewRollupType(
-                PolygonPPConsensusContract.target,
-                verifierContract.target,
-                forkID,
-                VerifierType.Pessimistic,
-                genesis,
-                description,
-                programVKey,
-            );
+        await rollupManagerContract.connect(timelock).addNewRollupType(
+            PolygonPPConsensusContract.target,
+            ethers.ZeroAddress, // verifier
+            forkID,
+            VerifierType.Pessimistic,
+            genesis,
+            description,
+            ethers.ZeroHash, // program vkey, is zero for pessimistic, got from ALGateway
+        );
 
         // create new pessimistic: only admin
         const chainID = 1;
@@ -340,7 +338,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const expectedRollupData = [
             newZKEVMAddress,
             chainID,
-            verifierContract.target,
+            ethers.ZeroAddress, // verifierAddress
             forkID,
             newLER,
             0,
@@ -349,7 +347,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
             rollupTypeID,
             VerifierType.Pessimistic,
             newPPRoot,
-            programVKey,
+            ethers.ZeroHash, // programVKey
         ];
 
         expect(expectedRollupData).to.be.deep.equal(resRollupData);
