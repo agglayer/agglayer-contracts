@@ -76,7 +76,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         await expect(
             rollupManagerContract.connect(timelock).addNewRollupType(
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
@@ -88,7 +88,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             .withArgs(
                 Number(lastRollupTypeID) + 1 /* rollupTypeID */,
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress,
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
@@ -222,6 +222,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             verifierContract.target,
             randomPessimisticVKey,
         );
+
         // Grant role to agglayer admin
         await aggLayerGatewayContract.connect(admin).grantRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address);
         // Add permission to add default aggchain verification key
@@ -277,16 +278,12 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             ],
         });
         // Initialize rollup manager Mock v3
-        await expect(
-            rollupManagerContract.initializeMock(
-                trustedAggregator.address,
-                admin.address,
-                timelock.address,
-                emergencyCouncil.address,
-            ),
-        )
-            .to.emit(rollupManagerContract, 'UpdateRollupManagerVersion')
-            .withArgs('al-v0.3.1');
+        rollupManagerContract.initializeMock(
+            trustedAggregator.address,
+            admin.address,
+            timelock.address,
+            emergencyCouncil.address,
+        );
 
         // check precalculated address
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
@@ -536,7 +533,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // check JS function computeInputPessimisticBytes
         const newLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const newPPRoot = '0x0000000000000000000000000000000000000000000000000000000000000002';
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}10000000`;
 
         // verify pessimistic from the created pessimistic rollup
         await expect(

@@ -237,7 +237,7 @@ contract PolygonRollupManager is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Current rollup manager version
-    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.1";
+    string public constant ROLLUP_MANAGER_VERSION = "al-v0.3.2";
 
     // Hardcoded address used to indicate that this address triggered in an event should not be considered as valid.
     address private constant _NO_ADDRESS =
@@ -410,11 +410,6 @@ contract PolygonRollupManager is
     event SetBatchFee(uint256 newBatchFee);
 
     /**
-     * @dev Emitted when rollup manager is upgraded
-     */
-    event UpdateRollupManagerVersion(string rollupManagerVersion);
-
-    /**
      * @notice Emitted when a ALGateway or Pessimistic chain verifies a pessimistic proof
      * @param rollupID Rollup ID
      * @param prevPessimisticRoot Previous pessimistic root
@@ -492,9 +487,7 @@ contract PolygonRollupManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(5) {
-        emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
-    }
+    function initialize() external virtual reinitializer(5) {}
 
     ///////////////////////////////////////
     // Rollups management functions
@@ -531,8 +524,12 @@ contract PolygonRollupManager is
         uint32 rollupTypeID = ++rollupTypeCount;
 
         if (rollupVerifierType == VerifierType.Pessimistic) {
-            // No genesis on pessimistic rollups
-            if (genesis != bytes32(0)) revert InvalidRollupType();
+            // Those params should be zero for Pessimistic rollup types
+            if (
+                genesis != bytes32(0) ||
+                verifier != address(0) ||
+                programVKey != bytes32(0)
+            ) revert InvalidRollupType();
         } else if (rollupVerifierType == VerifierType.ALGateway) {
             // Those params should be zero for ALGateway rollup types
             if (
@@ -1347,23 +1344,11 @@ contract PolygonRollupManager is
             aggchainData
         );
 
-        if (rollup.rollupVerifierType == VerifierType.ALGateway) {
-            // Verify proof. The pessimistic proof selector is attached at the first 4 bytes of the proof
-            // proof[0:4]: 4 bytes selector pp
-            // proof[4:8]: 4 bytes selector SP1 verifier
-            // proof[8:]: proof
-            aggLayerGateway.verifyPessimisticProof(
-                inputPessimisticBytes,
-                proof
-            );
-        } else {
-            // Verify proof
-            ISP1Verifier(rollup.verifier).verifyProof(
-                rollup.programVKey,
-                inputPessimisticBytes,
-                proof
-            );
-        }
+        // Verify proof. The pessimistic proof selector is attached at the first 4 bytes of the proof
+        // proof[0:4]: 4 bytes selector pp
+        // proof[4:8]: 4 bytes selector SP1 verifier
+        // proof[8:]: proof
+        aggLayerGateway.verifyPessimisticProof(inputPessimisticBytes, proof);
 
         // Update aggregation parameters
         lastAggregationTimestamp = uint64(block.timestamp);

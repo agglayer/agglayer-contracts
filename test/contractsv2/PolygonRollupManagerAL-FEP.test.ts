@@ -127,7 +127,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         await expect(
             rollupManagerContract.connect(timelock).addNewRollupType(
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
@@ -139,7 +139,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             .withArgs(
                 Number(lastRollupTypeID) + 1 /* rollupTypeID */,
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
@@ -659,7 +659,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         // check JS function computeInputPessimisticBytes
         const newLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const newPPRoot = '0x0000000000000000000000000000000000000000000000000000000000000002';
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         // verify pessimistic from the created pessimistic rollup
         await expect(
