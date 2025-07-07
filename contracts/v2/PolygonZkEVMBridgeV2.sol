@@ -542,7 +542,6 @@ contract PolygonZkEVMBridgeV2 is
      * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
      * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
      * note that only the rollup index will be used only in case the mainnet flag is 0
-     * note that global index do not assert the unused bits to 0.
      * This means that when synching the events, the globalIndex must be decoded the same way that in the Smart contract
      * to avoid possible synch attacks
      * @param mainnetExitRoot Mainnet exit root
@@ -703,7 +702,6 @@ contract PolygonZkEVMBridgeV2 is
      * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
      * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
      * note that only the rollup index will be used only in case the mainnet flag is 0
-     * note that global index do not assert the unused bits to 0.
      * This means that when synching the events, the globalIndex must be decoded the same way that in the Smart contract
      * to avoid possible synch attacks
      * @param mainnetExitRoot Mainnet exit root
