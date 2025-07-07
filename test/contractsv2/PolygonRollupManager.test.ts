@@ -2462,28 +2462,26 @@ describe('Polygon Rollup Manager', () => {
         const newRandomTypeID = 3;
         const rollupVerifierTypeNew = 1;
         await expect(
-            rollupManagerContract
-                .connect(timelock)
-                .addNewRollupType(
-                    PolygonZKEVMEtrogContract.target,
-                    verifierContract.target,
-                    forkID,
-                    rollupVerifierTypeNew,
-                    programVKey,
-                    description,
-                    genesisRandom,
-                ),
+            rollupManagerContract.connect(timelock).addNewRollupType(
+                PolygonZKEVMEtrogContract.target,
+                ethers.ZeroAddress, // verifier address
+                forkID,
+                rollupVerifierTypeNew,
+                ethers.ZeroHash, // genesis
+                description,
+                programVKey,
+            ),
         )
             .to.emit(rollupManagerContract, 'AddNewRollupType')
             .withArgs(
                 newRandomTypeID,
                 PolygonZKEVMEtrogContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 forkID,
                 rollupVerifierTypeNew,
-                programVKey,
+                ethers.ZeroHash, // genesis
                 description,
-                genesisRandom,
+                programVKey,
             );
 
         // assert new rollup type
@@ -2491,12 +2489,12 @@ describe('Polygon Rollup Manager', () => {
 
         const expectedEtrogRollupType = [
             PolygonZKEVMEtrogContract.target,
-            verifierContract.target,
+            ethers.ZeroAddress, // verifier address
             forkID,
             rollupVerifierTypeNew,
             false,
+            ethers.ZeroHash, // genesis
             programVKey,
-            genesisRandom,
         ];
         expect(createdEtrogRollupType).to.be.deep.equal(expectedEtrogRollupType);
 

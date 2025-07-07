@@ -76,24 +76,24 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         await expect(
             rollupManagerContract.connect(timelock).addNewRollupType(
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
                 '', // description
-                randomPessimisticVKey, // programVKey
+                ethers.ZeroHash, // programVKey
             ),
         )
             .to.emit(rollupManagerContract, 'AddNewRollupType')
             .withArgs(
                 Number(lastRollupTypeID) + 1 /* rollupTypeID */,
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress,
                 0, // fork id
                 VerifierType.Pessimistic,
                 ethers.ZeroHash, // genesis
                 '', // description
-                randomPessimisticVKey, // programVKey
+                ethers.ZeroHash, // programVKey
             );
         return Number(lastRollupTypeID) + 1;
     }

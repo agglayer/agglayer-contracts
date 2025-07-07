@@ -524,8 +524,12 @@ contract PolygonRollupManager is
         uint32 rollupTypeID = ++rollupTypeCount;
 
         if (rollupVerifierType == VerifierType.Pessimistic) {
-            // No genesis on pessimistic rollups
-            if (genesis != bytes32(0)) revert InvalidRollupType();
+            // Those params should be zero for Pessimistic rollup types
+            if (
+                genesis != bytes32(0) ||
+                verifier != address(0) ||
+                programVKey != bytes32(0)
+            ) revert InvalidRollupType();
         } else if (rollupVerifierType == VerifierType.ALGateway) {
             // Those params should be zero for ALGateway rollup types
             if (
