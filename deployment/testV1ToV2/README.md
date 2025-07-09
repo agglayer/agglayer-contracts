@@ -1,6 +1,6 @@
 ## Important note
 
-This is just a test deployment to test the upgradability between previous and new systems from the node prespective
+This is just a test deployment to test the upgradability between previous and new systems from the node perspective
 
 ## Requirements
 
@@ -14,7 +14,7 @@ cd deployment
 cp deploy_parameters.json.example deploy_parameters.json
 ```
 
-Fill created `deploy_parameters.json` with appropiate parameters.
+Fill created `deploy_parameters.json` with appropriate parameters.
 See below for more information about the `deploy_parameters.json`
 
 ```
@@ -31,15 +31,15 @@ deploy:testnet:v1ToV2:localhost
 -   `trustedAggregator`:address, Trusted aggregator address
 -   `trustedAggregatorTimeout`: uint64, If a sequence is not verified in this timeout everyone can verify it
 -   `pendingStateTimeout`: uint64, Once a pending state exceeds this timeout it can be consolidated by everyone
--   `emergencyCouncilAddress`:address, Emergency council addres
--   `polTokenAddress`: address, Matic token address, only if deploy on testnet can be left blank and will fullfilled by the scripts.
--   `zkEVMDeployerAddress`: address, Address of the `PolygonZkEVMDeployer`. Can be left blank, will be fullfilled automatically with the `deploy:deployer:ZkEVM:goerli` script.
+-   `emergencyCouncilAddress`:address, Emergency council address
+-   `polTokenAddress`: address, Matic token address, only if deploy on testnet can be left blank and will fulfilled by the scripts.
+-   `zkEVMDeployerAddress`: address, Address of the `PolygonZkEVMDeployer`. Can be left blank, will be fulfilled automatically with the `deploy:deployer:ZkEVM:goerli` script.
 
 -   `realVerifier`: bool, Indicates whether deploy a real verifier or not for the new created
 -   `trustedSequencerURL`: string, trustedSequencer URL
 -   `networkName`: string, networkName
 -   `description`:string, Description of the new rollup type
--   `trustedSequencer`: address, trusted sequencer addresss
+-   `trustedSequencer`: address, trusted sequencer address
 -   `chainID`: uint64, chainID of the new rollup
 -   `adminZkEVM`:address, Admin address, can adjust Rollup parameters
 -   `forkID`: uint64, Fork ID of the new rollup, indicates the prover (zkROM/executor) version
