@@ -6,13 +6,14 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/Ow
 import {GlobalExitRootManagerL2SovereignChain} from "./GlobalExitRootManagerL2SovereignChain.sol";
 
 /**
- * Contract responsible to manage the insertions of GERs into the GlobalExitRootManagerL2SovereignChain
+ * @title AggOracleManager
+ * @notice Contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
  */
 contract AggOracleManager is OwnableUpgradeable {
     /**
-     * @notice Struct to store voted GERs
-     * @param votes Current votes of this report
-     * @param timestamp Slot of the report
+     * @notice Struct to store votes for GERs
+     * @param votes Current number of votes for this report
+     * @param timestamp Timestamp when the report was first proposed
      */
     struct Report {
         uint64 votes;
@@ -20,13 +21,30 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     // Custom errors
-    error QuorumCannotBe0();
+
+    /// @notice Thrown when the quorum value is zero.
+    error QuorumCannotBeZero();
+
+    /// @notice Thrown when the caller is not an oracle member.
     error NotOracleMember();
+
+    /// @notice Thrown when the address is already an oracle member.
     error AlreadyOracleMember();
+
+    /// @notice Thrown when the provided oracle member index does not match the address.
     error OracleMemberIndexMismatch();
+
+    /// @notice Thrown when the address was not an oracle member.
     error WasNotOracleMember();
+
+    /// @notice Thrown when the oracle member is not found.
     error OracleMemberNotFound();
+
+    /// @notice Thrown when the proposed GER is invalid (zero or reserved value).
     error InvalidProposedGER();
+
+    /// @notice Thrown when the oracle member address is the zero address.
+    error OracleMemberCannotBeZero();
 
     // This value is reserved as an initial voted GER to mark an oracle address as active
     bytes32 public constant INITIAL_PROPOSED_GER = bytes32(uint256(1));
@@ -37,7 +55,7 @@ contract AggOracleManager is OwnableUpgradeable {
     GlobalExitRootManagerL2SovereignChain
         public immutable GLOBAL_EXIT_ROOT_MANAGER;
 
-    // This array is used only to easily get the current oracle members information
+    // This array is used only to easily get the current oracle members' information
     address[] public aggOracleMembers;
 
     // Number of reports that must match to consolidate a new rewards root (N/M)
@@ -60,16 +78,6 @@ contract AggOracleManager is OwnableUpgradeable {
     /// @dev Emitted when a global exit root is consolidated
     event ConsolidatedGlobalExitRoot(bytes32 consolidatedGlobalExitRoot);
 
-    /// @dev Emitted when a report is submitted
-    event SubmitReport(
-        uint256 slotNumber,
-        bytes32 newRewardsRoot,
-        address oracleMember
-    );
-
-    /// @dev Emitted when a report is consolidated
-    event ReportConsolidated(uint256 slotNumber, bytes32 newRewardsRoot);
-
     /// @dev Emitted when the quorum is updated
     event UpdateQuorum(uint64 newQuorum);
 
@@ -80,7 +88,7 @@ contract AggOracleManager is OwnableUpgradeable {
     event RemoveAggOracleMember(address oracleMemberRemoved);
 
     /**
-     * Disable initializers on the implementation following the best practices
+     * @notice Disables initializers on the implementation, following best practices.
      */
     constructor(GlobalExitRootManagerL2SovereignChain globalExitRootManager) {
         GLOBAL_EXIT_ROOT_MANAGER = globalExitRootManager;
@@ -88,18 +96,19 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     /**
-     * @param _owner Governance address
-     * @param _aggOracleMembers Subscription collateral
-     * @param _quorum Pool Fee
+     * @notice Initializes the contract.
+     * @param _owner Owner of the contract, presumably a timelock
+     * @param _aggOracleMembers Initial oracle members
+     * @param _quorum Quorum required for consolidation
      */
     function initialize(
         address _owner,
         address[] calldata _aggOracleMembers,
         uint64 _quorum
     ) external initializer {
-        require(_quorum != 0, QuorumCannotBe0());
+        require(_quorum != 0, QuorumCannotBeZero());
 
-        // Set initialize parameters
+        // Set initialization parameters
         quorum = _quorum;
 
         // Add oracle members
@@ -107,10 +116,10 @@ contract AggOracleManager is OwnableUpgradeable {
             _addOracleMember(_aggOracleMembers[i]);
         }
 
-        // Initialize OZ libs
+        // Initialize OpenZeppelin OwnableUpgradeable
         __Ownable_init(_owner);
 
-        // Emit events
+        // Emit event
         emit UpdateQuorum(_quorum);
     }
 
@@ -119,9 +128,9 @@ contract AggOracleManager is OwnableUpgradeable {
     ///////////////////
 
     /**
-     * @notice Propose a global exit root
-     * This function can only be called by an oracle member
-     * If the quorum is reached, consolidate GER
+     * @notice Propose a global exit root.
+     * This function can only be called by an oracle member.
+     * If the quorum is reached, the GER is consolidated.
      * @param proposedGlobalExitRoot Global exit root proposed
      */
     function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external {
@@ -195,8 +204,8 @@ contract AggOracleManager is OwnableUpgradeable {
     ////////////////////////
 
     /**
-     * @notice Add an oracle member
-     * Only the governance can call this function
+     * @notice Add an oracle member.
+     * Only the owner can call this function.
      * @param newOracleMember Address of the new oracle member
      */
     function addOracleMember(address newOracleMember) external onlyOwner {
@@ -204,11 +213,15 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     /**
-     * @notice Add an oracle member
-     * Only the governance can call this function
+     * @notice Internal function to add an oracle member.
      * @param newOracleMember Address of the new oracle member
      */
     function _addOracleMember(address newOracleMember) internal {
+        require(
+            newOracleMember != address(0),
+            OracleMemberCannotBeZero()
+        );
+
         require(
             addressToLastProposedGER[newOracleMember] == bytes32(0),
             AlreadyOracleMember()
@@ -224,10 +237,10 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     /**
-     * @notice Remove an oracle member
-     * Only the governance can call this function
-     * @param oracleMemberAddress Address of the removed oracle member
-     * @param oracleMemberIndex Index of the removed oracle member
+     * @notice Remove an oracle member.
+     * Only the owner can call this function.
+     * @param oracleMemberAddress Address of the oracle member to remove
+     * @param oracleMemberIndex Index of the oracle member to remove
      */
     function removeOracleMember(
         address oracleMemberAddress,
@@ -272,19 +285,19 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     /**
-     * @notice Update the quorum value
-     * Only the governance can call this function
-     * @param newQuorum new quorum
+     * @notice Update the quorum value.
+     * Only the owner can call this function.
+     * @param newQuorum New quorum value
      */
     function updateQuorum(uint64 newQuorum) external onlyOwner {
-        require(newQuorum != 0, QuorumCannotBe0());
+        require(newQuorum != 0, QuorumCannotBeZero());
         quorum = newQuorum;
         emit UpdateQuorum(newQuorum);
     }
 
     /**
-     * @notice Transfer the globalExitRootUpdater role
-     * This is a two step process, the pending globalExitRootUpdater must accept to finalize the process
+     * @notice Transfer the globalExitRootUpdater role.
+     * This is a two-step process; the pending globalExitRootUpdater must accept to finalize the process.
      * @param _newGlobalExitRootUpdater Address of the new globalExitRootUpdater
      */
     function transferGlobalExitRootUpdater(
@@ -296,7 +309,7 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     /**
-     * @notice Accept the global exit root updated role
+     * @notice Accept the globalExitRootUpdater role.
      */
     function acceptGlobalExitRootUpdater() external onlyOwner {
         GLOBAL_EXIT_ROOT_MANAGER.acceptGlobalExitRootUpdater();
@@ -307,8 +320,8 @@ contract AggOracleManager is OwnableUpgradeable {
     ///////////////////
 
     /**
-     * @notice Return oracle member index
-     * @param oracleMember oracle member address
+     * @notice Returns the index of an oracle member.
+     * @param oracleMember Oracle member address
      */
     function getAggOracleMemberIndex(
         address oracleMember
@@ -324,14 +337,14 @@ contract AggOracleManager is OwnableUpgradeable {
     }
 
     /**
-     * @notice Return all the oracle members
+     * @notice Returns all the oracle members.
      */
     function getAllAggOracleMembers() external view returns (address[] memory) {
         return aggOracleMembers;
     }
 
     /**
-     * @notice Return oracle members count
+     * @notice Returns the number of oracle members.
      */
     function getAggOracleMembersCount() external view returns (uint256) {
         return aggOracleMembers.length;
