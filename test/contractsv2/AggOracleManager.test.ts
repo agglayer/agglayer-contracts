@@ -52,7 +52,7 @@ describe('AggOracleManager tests', () => {
     it('should check deployment and initialization', async () => {
         // Check constants
         expect(await aggOracleManagerContract.INITIAL_PROPOSED_GER()).to.be.equal(INITIAL_PROPOSED_GER);
-        expect(await aggOracleManagerContract.GLOBAL_EXIT_ROOT_MANAGER()).to.be.equal(
+        expect(await aggOracleManagerContract.globalExitRootManagerL2Sovereign()).to.be.equal(
             globalExitRootManagerContract.target,
         );
 
@@ -102,7 +102,7 @@ describe('AggOracleManager tests', () => {
         // Test with quorum = 0
         await expect(
             aggOracleManagerContract.initialize(owner.address, [oracle1.address], 0),
-        ).to.be.revertedWithCustomError(aggOracleManagerContract, 'QuorumCannotBe0');
+        ).to.be.revertedWithCustomError(aggOracleManagerContract, 'QuorumCannotBeZero');
 
         // Test duplicate oracle members
         await expect(
@@ -380,7 +380,7 @@ describe('AggOracleManager tests', () => {
             it('should revert with QuorumCannotBe0', async () => {
                 await expect(aggOracleManagerContract.connect(owner).updateQuorum(0)).to.be.revertedWithCustomError(
                     aggOracleManagerContract,
-                    'QuorumCannotBe0',
+                    'QuorumCannotBeZero',
                 );
             });
         });

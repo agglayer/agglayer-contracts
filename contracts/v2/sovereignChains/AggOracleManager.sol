@@ -4,12 +4,13 @@ pragma solidity 0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/OwnableUpgradeable.sol";
 import {GlobalExitRootManagerL2SovereignChain} from "./GlobalExitRootManagerL2SovereignChain.sol";
+import {IAggOracleManager} from "../interfaces/IAggOracleManager.sol";
 
 /**
  * @title AggOracleManager
  * @notice Contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
  */
-contract AggOracleManager is OwnableUpgradeable {
+contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
     /**
      * @notice Struct to store votes for GERs
      * @param votes Current number of votes for this report
@@ -20,32 +21,6 @@ contract AggOracleManager is OwnableUpgradeable {
         uint64 timestamp;
     }
 
-    // Custom errors
-
-    /// @notice Thrown when the quorum value is zero.
-    error QuorumCannotBeZero();
-
-    /// @notice Thrown when the caller is not an oracle member.
-    error NotOracleMember();
-
-    /// @notice Thrown when the address is already an oracle member.
-    error AlreadyOracleMember();
-
-    /// @notice Thrown when the provided oracle member index does not match the address.
-    error OracleMemberIndexMismatch();
-
-    /// @notice Thrown when the address was not an oracle member.
-    error WasNotOracleMember();
-
-    /// @notice Thrown when the oracle member is not found.
-    error OracleMemberNotFound();
-
-    /// @notice Thrown when the proposed GER is invalid (zero or reserved value).
-    error InvalidProposedGER();
-
-    /// @notice Thrown when the oracle member address is the zero address.
-    error OracleMemberCannotBeZero();
-
     // This value is reserved as an initial voted GER to mark an oracle address as active
     bytes32 public constant INITIAL_PROPOSED_GER = bytes32(uint256(1));
     // 0x0000000000000000000000000000000000000000000000000000000000000001;
@@ -53,7 +28,7 @@ contract AggOracleManager is OwnableUpgradeable {
     // Global exit root manager L2
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     GlobalExitRootManagerL2SovereignChain
-        public immutable GLOBAL_EXIT_ROOT_MANAGER;
+        public immutable globalExitRootManagerL2Sovereign;
 
     // This array is used only to easily get the current oracle members' information
     address[] public aggOracleMembers;
@@ -67,31 +42,11 @@ contract AggOracleManager is OwnableUpgradeable {
     // GER --> Report(votes)
     mapping(bytes32 => Report) public proposedGERToReport;
 
-    // Events
-
-    /// @dev Emitted when a global exit root is proposed
-    event ProposedGlobalExitRoot(
-        bytes32 proposedGlobalExitRoot,
-        address proposer
-    );
-
-    /// @dev Emitted when a global exit root is consolidated
-    event ConsolidatedGlobalExitRoot(bytes32 consolidatedGlobalExitRoot);
-
-    /// @dev Emitted when the quorum is updated
-    event UpdateQuorum(uint64 newQuorum);
-
-    /// @dev Emitted when a new oracle member is added
-    event AddAggOracleMember(address newOracleMember);
-
-    /// @dev Emitted when an oracle member is removed
-    event RemoveAggOracleMember(address oracleMemberRemoved);
-
     /**
      * @notice Disables initializers on the implementation, following best practices.
      */
     constructor(GlobalExitRootManagerL2SovereignChain globalExitRootManager) {
-        GLOBAL_EXIT_ROOT_MANAGER = globalExitRootManager;
+        globalExitRootManagerL2Sovereign = globalExitRootManager;
         _disableInitializers();
     }
 
@@ -186,7 +141,7 @@ contract AggOracleManager is OwnableUpgradeable {
             delete proposedGERToReport[proposedGlobalExitRoot];
 
             // Consolidate report
-            GLOBAL_EXIT_ROOT_MANAGER.insertGlobalExitRoot(
+            globalExitRootManagerL2Sovereign.insertGlobalExitRoot(
                 proposedGlobalExitRoot
             );
             emit ConsolidatedGlobalExitRoot(proposedGlobalExitRoot);
@@ -303,7 +258,7 @@ contract AggOracleManager is OwnableUpgradeable {
     function transferGlobalExitRootUpdater(
         address _newGlobalExitRootUpdater
     ) external onlyOwner {
-        GLOBAL_EXIT_ROOT_MANAGER.transferGlobalExitRootUpdater(
+        globalExitRootManagerL2Sovereign.transferGlobalExitRootUpdater(
             _newGlobalExitRootUpdater
         );
     }
@@ -312,7 +267,7 @@ contract AggOracleManager is OwnableUpgradeable {
      * @notice Accept the globalExitRootUpdater role.
      */
     function acceptGlobalExitRootUpdater() external onlyOwner {
-        GLOBAL_EXIT_ROOT_MANAGER.acceptGlobalExitRootUpdater();
+        globalExitRootManagerL2Sovereign.acceptGlobalExitRootUpdater();
     }
 
     ///////////////////
