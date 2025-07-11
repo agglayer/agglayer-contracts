@@ -89,7 +89,7 @@ contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
      * @param proposedGlobalExitRoot Global exit root proposed
      */
     function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external {
-        // Check if it's a valid oracle member
+        // Check if the proposed GER it's not any of the reserved values
         require(
             proposedGlobalExitRoot != INITIAL_PROPOSED_GER &&
                 proposedGlobalExitRoot != bytes32(0),
