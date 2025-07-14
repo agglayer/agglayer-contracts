@@ -3,14 +3,14 @@
 pragma solidity 0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/OwnableUpgradeable.sol";
-import {GlobalExitRootManagerL2SovereignChain} from "./GlobalExitRootManagerL2SovereignChain.sol";
-import {IAggOracleManager} from "../interfaces/IAggOracleManager.sol";
+import {IGlobalExitRootManagerL2SovereignChain} from "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import {IAggOracleCommittee} from "../interfaces/IAggOracleCommittee.sol";
 
 /**
- * @title AggOracleManager
+ * @title AggOracleCommittee
  * @notice Contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
  */
-contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
+contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
     /**
      * @notice Struct to store votes for GERs
      * @param votes Current number of votes for this report
@@ -27,7 +27,7 @@ contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
 
     // Global exit root manager L2
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    GlobalExitRootManagerL2SovereignChain
+    IGlobalExitRootManagerL2SovereignChain
         public immutable globalExitRootManagerL2Sovereign;
 
     // This array is used only to easily get the current oracle members' information
@@ -45,7 +45,7 @@ contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
     /**
      * @notice Disables initializers on the implementation, following best practices.
      */
-    constructor(GlobalExitRootManagerL2SovereignChain globalExitRootManager) {
+    constructor(IGlobalExitRootManagerL2SovereignChain globalExitRootManager) {
         globalExitRootManagerL2Sovereign = globalExitRootManager;
         _disableInitializers();
     }
@@ -62,6 +62,11 @@ contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
         uint64 _quorum
     ) external initializer {
         require(_quorum != 0, QuorumCannotBeZero());
+
+        require(
+            _quorum <= _aggOracleMembers.length,
+            QuorumCannotBeGreaterThanAggOracleMembers()
+        );
 
         // Set initialization parameters
         quorum = _quorum;
@@ -172,10 +177,7 @@ contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
      * @param newOracleMember Address of the new oracle member
      */
     function _addOracleMember(address newOracleMember) internal {
-        require(
-            newOracleMember != address(0),
-            OracleMemberCannotBeZero()
-        );
+        require(newOracleMember != address(0), OracleMemberCannotBeZero());
 
         require(
             addressToLastProposedGER[newOracleMember] == bytes32(0),
@@ -242,10 +244,12 @@ contract AggOracleManager is IAggOracleManager, OwnableUpgradeable {
     /**
      * @notice Update the quorum value.
      * Only the owner can call this function.
+     * It is expected that the quorum and the oracle member will be updated atomically from a smart contract.
      * @param newQuorum New quorum value
      */
     function updateQuorum(uint64 newQuorum) external onlyOwner {
         require(newQuorum != 0, QuorumCannotBeZero());
+
         quorum = newQuorum;
         emit UpdateQuorum(newQuorum);
     }

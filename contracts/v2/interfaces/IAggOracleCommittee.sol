@@ -2,13 +2,13 @@
 
 pragma solidity 0.8.28;
 
-import {GlobalExitRootManagerL2SovereignChain} from "../sovereignChains/GlobalExitRootManagerL2SovereignChain.sol";
+import {IGlobalExitRootManagerL2SovereignChain} from "./IGlobalExitRootManagerL2SovereignChain.sol";
 
 /**
- * @title IAggOracleManager
- * @notice Interface for the AggOracleManager contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
+ * @title IAggOracleCommittee
+ * @notice Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
  */
-interface IAggOracleManager {
+interface IAggOracleCommittee {
     // Custom errors
 
     /// @notice Thrown when the quorum value is zero.
@@ -42,6 +42,9 @@ interface IAggOracleManager {
         bytes32 proposedGlobalExitRoot,
         address proposer
     );
+
+    /// @notice Thrown when the quorum is greater than the number of oracle members.
+    error QuorumCannotBeGreaterThanAggOracleMembers();
 
     /// @dev Emitted when a global exit root is consolidated
     event ConsolidatedGlobalExitRoot(bytes32 consolidatedGlobalExitRoot);
@@ -140,7 +143,10 @@ interface IAggOracleManager {
     function INITIAL_PROPOSED_GER() external view returns (bytes32);
 
     /// @notice Global exit root manager L2
-    function globalExitRootManagerL2Sovereign() external view returns (GlobalExitRootManagerL2SovereignChain);
+    function globalExitRootManagerL2Sovereign()
+        external
+        view
+        returns (IGlobalExitRootManagerL2SovereignChain);
 
     /// @notice Array of oracle members
     function aggOracleMembers(uint256 index) external view returns (address);
@@ -149,5 +155,7 @@ interface IAggOracleManager {
     function quorum() external view returns (uint64);
 
     /// @notice Oracle member address --> current voted GER
-    function addressToLastProposedGER(address oracleMember) external view returns (bytes32);
-} 
+    function addressToLastProposedGER(
+        address oracleMember
+    ) external view returns (bytes32);
+}
