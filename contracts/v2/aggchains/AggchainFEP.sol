@@ -434,8 +434,8 @@ contract AggchainFEP is AggchainBase {
     ///
     /// @param aggchainData custom bytes provided by the chain
     ///     aggchainData:
-    ///     Field:           | _aggchainVKeyVersion | _outputRoot  | _l2BlockNumber |
-    ///     length (bits):   | 16                   | 256          | 256            |
+    ///     Field:           | _aggchainVKeySelector | _outputRoot  | _l2BlockNumber |
+    ///     length (bits):   | 32                    | 256          | 256            |
     ///
     /// aggchainData._aggchainVKeySelector First 4 bytes of the aggchain vkey selector
     /// aggchainData._outputRoot Proposed new output root
