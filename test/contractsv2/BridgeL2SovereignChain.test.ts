@@ -2250,6 +2250,23 @@ describe('BridgeL2SovereignChain Contract', () => {
             ),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
 
+        // Check Invalid global index
+        await expect(
+            sovereignChainBridgeContract.claimAsset(
+                proofLocal,
+                proofRollup,
+                globalIndex + 2n ** 64n + 2n ** 65n,
+                mainnetExitRoot,
+                rollupExitRootSC,
+                originNetwork,
+                tokenAddress,
+                destinationNetwork,
+                destinationAddress,
+                amount,
+                metadata,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
         await expect(
             sovereignChainBridgeContract.claimAsset(
                 proofLocal,

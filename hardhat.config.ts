@@ -181,7 +181,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500, // Should have the same optimizations as PolygonTransparentProxy
+                        runs: 100, // Should have the same optimizations as PolygonTransparentProxy
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
@@ -192,7 +192,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500, // Should have the same optimizations as PolygonTransparentProxy
+                        runs: 100, // Should have the same optimizations as PolygonTransparentProxy
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
@@ -203,7 +203,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500, // Should have the same optimizations as PolygonTransparentProxy
+                        runs: 100, // Should have the same optimizations as PolygonTransparentProxy
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
@@ -214,7 +214,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500,
+                        runs: 100,
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
