@@ -234,6 +234,7 @@ contract AggchainECDSA is AggchainBase {
         (, bytes32 newStateRoot) = abi.decode(aggchainData, (bytes4, bytes32));
 
         // Emit event
+        /// @notice newStateRoot is not constrained for ECDSA aggchain, this value it's untrusted and informational.
         emit OnVerifyPessimisticECDSA(newStateRoot);
     }
 }

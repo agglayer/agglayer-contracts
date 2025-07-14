@@ -65,7 +65,7 @@ contract PolygonZkEVMBridgeV2 is
     uint256 internal constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
 
     // Current bridge version
-    string public constant BRIDGE_VERSION = "v1.0.0";
+    string public constant BRIDGE_VERSION = "v1.0.1";
 
     // Network identifier
     uint32 public networkID;
@@ -440,7 +440,7 @@ contract PolygonZkEVMBridgeV2 is
         bytes calldata metadata
     ) external payable ifNotEmergencyState {
         // If exist a gas token, only allow call this function without value
-        if (msg.value != 0 && address(WETHToken) != address(0)) {
+        if (msg.value != 0 && gasTokenAddress != address(0)) {
             revert NoValueInMessagesOnGasTokenNetworks();
         }
 
