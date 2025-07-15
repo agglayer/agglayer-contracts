@@ -342,6 +342,64 @@ describe('AggOracleCommittee tests', () => {
             expect(reportAfter.timestamp).to.equal(timestamp); // Timestamp should not change
             expect(reportAfter.votes).to.equal(2); // Votes should increase
         });
+
+        it('Should fail when oracle tries to vote for the same GER twice', async () => {
+            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
+
+            // Oracle1 proposes GER
+            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
+
+            // Oracle1 tries to vote for the same GER again
+            await expect(
+                aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'AlreadyVotedForThisGER');
+        });
+
+        it('Should allow consolidateGlobalExitRoot when quorum is reached', async () => {
+            // Set quorum to 3
+            await aggOracleCommitteeContract.connect(owner).updateQuorum(3);
+            
+            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
+
+            // First two votes
+            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
+            await aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER);
+
+            // Lower quorum to 2
+            await aggOracleCommitteeContract.connect(owner).updateQuorum(2);
+
+            // Now consolidate should work
+            await expect(aggOracleCommitteeContract.consolidateGlobalExitRoot(proposedGER))
+                .to.emit(aggOracleCommitteeContract, 'ConsolidatedGlobalExitRoot')
+                .withArgs(proposedGER)
+                .to.emit(globalExitRootManagerContract, 'UpdateHashChainValue');
+
+            // Check that the report was deleted after consolidation
+            const report = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
+            expect(report.votes).to.equal(0);
+            expect(report.timestamp).to.equal(0);
+        });
+
+        it('Should fail consolidateGlobalExitRoot when quorum is not reached', async () => {
+            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
+
+            // Only one vote when quorum is 2
+            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
+
+            // Try to consolidate - should fail
+            await expect(
+                aggOracleCommitteeContract.consolidateGlobalExitRoot(proposedGER),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'QuorumNotReached');
+        });
+
+        it('Should fail consolidateGlobalExitRoot for non-existent GER', async () => {
+            const nonExistentGER = ethers.solidityPacked(['uint256'], [999]);
+
+            // Try to consolidate a GER that was never proposed
+            await expect(
+                aggOracleCommitteeContract.consolidateGlobalExitRoot(nonExistentGER),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'QuorumNotReached');
+        });
     });
 
     describe('Global Exit Root Updater Role Transfer', () => {
@@ -512,7 +570,7 @@ describe('AggOracleCommittee tests', () => {
             expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER)).votes).to.equal(0);
         });
 
-        it('Should handle initializing with zero oracle members', async () => {
+        it('Should fail to initialize with quorum greater than oracle members', async () => {
             const quorum = 1;
             const oracleMembers: string[] = [];
 
@@ -524,9 +582,10 @@ describe('AggOracleCommittee tests', () => {
                 unsafeAllow: ['constructor'],
             })) as unknown as AggOracleCommittee;
 
-            await newAggOracleCommittee.initialize(owner.address, oracleMembers, quorum);
-
-            expect(await newAggOracleCommittee.getAggOracleMembersCount()).to.equal(0);
+            // Should fail because quorum (1) > oracle members (0)
+            await expect(
+                newAggOracleCommittee.initialize(owner.address, oracleMembers, quorum),
+            ).to.be.revertedWithCustomError(newAggOracleCommittee, 'QuorumCannotBeGreaterThanAggOracleMembers');
         });
 
         it('Should handle vote on first proposal after being added as oracle', async () => {
