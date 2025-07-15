@@ -63,28 +63,34 @@ async function main() {
         }
 
         const trimmedArtifactInitCode = trimSolcIpfs(artifactInitCode);
-        const trimmedInitCode = trimSolcIpfs(initCode);
+        const trimmedInitCodeFull = trimSolcIpfs(initCode);
 
-        if (trimmedInitCode === trimmedArtifactInitCode) {
-            found = true;
-            console.log(`Contract at ${address} matches artifact: ${contractName}`);
-            const abi = artifact.abi;
-            const constructorAbi = abi && abi.find((x: any) => x.type === 'constructor');
-            if (constructorAbi && constructorAbi.inputs.length > 0) {
-                const argTypes = constructorAbi.inputs.map((x: any) => x.type);
-                const argNames = constructorAbi.inputs.map((x: any) => x.name);
-                // The encoded constructor args are after the bytecode (excluding IPFS hash)
-                const encodedArgs = `0x${trimSolcIpfs(initCode).slice(trimmedArtifactInitCode.length)}`;
-                try {
-                    const decoded = ethers.AbiCoder.defaultAbiCoder().decode(argTypes, encodedArgs);
-                    for (let i = 0; i < argNames.length; i++) {
-                        console.log(`  ${argNames[i]}:`, decoded[i]);
+        // Only compare if artifact code is long enough
+        if (trimmedArtifactInitCode.length > 20) {
+            // Trim the deployed initCode to the length of the artifact code
+            const trimmedInitCode = trimmedInitCodeFull.slice(0, trimmedArtifactInitCode.length);
+
+            if (trimmedInitCode === trimmedArtifactInitCode) {
+                found = true;
+                console.log(`Contract at ${address} matches artifact: ${contractName}`);
+                const abi = artifact.abi;
+                const constructorAbi = abi && abi.find((x: any) => x.type === 'constructor');
+                if (constructorAbi && constructorAbi.inputs.length > 0) {
+                    const argTypes = constructorAbi.inputs.map((x: any) => x.type);
+                    const argNames = constructorAbi.inputs.map((x: any) => x.name);
+                    // The encoded constructor args are after the bytecode (excluding IPFS hash)
+                    const encodedArgs = `0x${trimmedInitCodeFull.slice(trimmedArtifactInitCode.length)}`;
+                    try {
+                        const decoded = ethers.AbiCoder.defaultAbiCoder().decode(argTypes, encodedArgs);
+                        for (let i = 0; i < argNames.length; i++) {
+                            console.log(`  ${argNames[i]}:`, decoded[i]);
+                        }
+                    } catch (e) {
+                        console.log('  Could not decode constructor arguments.');
                     }
-                } catch (e) {
-                    console.log('  Could not decode constructor arguments.');
+                } else {
+                    console.log('  No constructor arguments.');
                 }
-            } else {
-                console.log('  No constructor arguments.');
             }
         }
     }
