@@ -22,6 +22,9 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
     }
 
     // This value is reserved as an initial voted GER to mark an oracle address as active
+    string public constant VERSION = "v1.0.0";
+
+    // This value is reserved as an initial voted GER to mark an oracle address as active
     bytes32 public constant INITIAL_PROPOSED_GER = bytes32(uint256(1));
     // 0x0000000000000000000000000000000000000000000000000000000000000001;
 
@@ -107,6 +110,12 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
         // Check if it's a valid oracle member
         require(lastProposedGER != bytes32(0), NotOracleMember());
 
+        // Check if the proposed GER is not the same as the last voted report
+        require(
+            lastProposedGER != proposedGlobalExitRoot,
+            AlreadyVotedForThisGER()
+        );
+
         // If it's not the initial report hash, check last report voted
         if (lastProposedGER != INITIAL_PROPOSED_GER) {
             Report storage lastVotedReport = proposedGERToReport[
@@ -143,13 +152,7 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
 
         // Check if it reaches the quorum
         if (currentVotedReport.votes >= quorum) {
-            delete proposedGERToReport[proposedGlobalExitRoot];
-
-            // Consolidate report
-            globalExitRootManagerL2Sovereign.insertGlobalExitRoot(
-                proposedGlobalExitRoot
-            );
-            emit ConsolidatedGlobalExitRoot(proposedGlobalExitRoot);
+            _consolidateGlobalExitRoot(proposedGlobalExitRoot);
         } else {
             // Store submitted report with a new added vote
             proposedGERToReport[proposedGlobalExitRoot] = currentVotedReport;
@@ -157,6 +160,35 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
             // Store voted report hash
             addressToLastProposedGER[msg.sender] = proposedGlobalExitRoot;
         }
+    }
+
+    /**
+     * @notice Consolidate a global exit root that has reached quorum.
+     * This function it's meant to be called if the quorum was lowered, and there's a GER that has
+     * enough votes to be consolidated after updating it. Otherwise the consolidation happens automatically.
+     * @param globalExitRoot Global exit root to consolidate
+     */
+    function consolidateGlobalExitRoot(bytes32 globalExitRoot) external {
+        Report memory currentVotedReport = proposedGERToReport[globalExitRoot];
+
+        // Global exit root must have reached the quorum
+        // Notice that quorum cannot be 0
+        require(currentVotedReport.votes >= quorum, QuorumNotReached());
+
+        _consolidateGlobalExitRoot(globalExitRoot);
+    }
+
+    /**
+     * @notice Internal function to consolidate a global exit root.
+     * @param globalExitRoot Global exit root to consolidate
+     */
+    function _consolidateGlobalExitRoot(bytes32 globalExitRoot) internal {
+        // Delete the report
+        delete proposedGERToReport[globalExitRoot];
+
+        // Consolidate report
+        globalExitRootManagerL2Sovereign.insertGlobalExitRoot(globalExitRoot);
+        emit ConsolidatedGlobalExitRoot(globalExitRoot);
     }
 
     ////////////////////////
@@ -269,6 +301,7 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
 
     /**
      * @notice Accept the globalExitRootUpdater role.
+     * This is the second step from a two-step process. Previously transferGlobalExitRootUpdater must have been called targeting this address.
      */
     function acceptGlobalExitRootUpdater() external onlyOwner {
         globalExitRootManagerL2Sovereign.acceptGlobalExitRootUpdater();

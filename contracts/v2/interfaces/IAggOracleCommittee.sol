@@ -35,6 +35,12 @@ interface IAggOracleCommittee {
     /// @notice Thrown when the oracle member address is the zero address.
     error OracleMemberCannotBeZero();
 
+    /// @notice Thrown when the oracle member has already voted for the proposed GER.
+    error AlreadyVotedForThisGER();
+
+    /// @notice Thrown when the quorum has not been reached for a global exit root.
+    error QuorumNotReached();
+
     // Events
 
     /// @dev Emitted when a global exit root is proposed
@@ -79,6 +85,14 @@ interface IAggOracleCommittee {
      * @param proposedGlobalExitRoot Global exit root proposed
      */
     function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external;
+
+    /**
+     * @notice Consolidate a global exit root that has reached quorum.
+     * This function it's meant to be called if the quorum was lowered, and there's a GER that has
+     * enough votes to be consolidated after updating it.
+     * @param globalExitRoot Global exit root to consolidate
+     */
+    function consolidateGlobalExitRoot(bytes32 globalExitRoot) external;
 
     /**
      * @notice Add an oracle member.
