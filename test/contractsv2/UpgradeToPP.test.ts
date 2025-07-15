@@ -48,6 +48,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
+    const randomPessimisticVKey = computeRandomBytes(32);
 
     const rollupTypeIDPessimistic = 1;
     const rollupTypeIDAlGateway = 2;
@@ -105,6 +106,16 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             unsafeAllow: ['constructor'],
         });
 
+        // Initialize aggLayerGateway
+        await aggLayerGatewayContract.initialize(
+            admin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            aggLayerAdmin.address,
+            PESSIMISTIC_SELECTOR,
+            verifierContract.target,
+            randomPessimisticVKey,
+        );
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
 
@@ -192,32 +203,20 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
-        const programVKey = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
         await rollupManagerContract
             .connect(timelock)
             .addNewRollupType(
                 PolygonPPConsensusContract.target,
-                verifierContract.target,
+                ethers.ZeroAddress,
                 forkID,
                 VerifierType.Pessimistic,
                 genesis,
                 description,
-                programVKey,
+                ethers.ZeroHash,
             );
 
         // Create ALGateway rollup type
-        // Initialize aggLayerGateway
-        await aggLayerGatewayContract.initialize(
-            admin.address,
-            aggLayerAdmin.address,
-            aggLayerAdmin.address,
-            aggLayerAdmin.address,
-            PESSIMISTIC_SELECTOR,
-            verifierContract.target,
-            programVKey,
-        );
-
         // create aggchainFEP implementation
         const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
         aggchainFEPContract = await aggchainFEPFactory.deploy(
@@ -463,7 +462,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
@@ -748,7 +747,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
@@ -1086,7 +1085,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newWrongLER = '0x0000000000000000000000000000000000000000000000000000000000000001';
         const lastLER = rollupData[4];
         const newPPRoot = computeRandomBytes(32);
-        const proofPP = '0x00';
+        const proofPP = `${PESSIMISTIC_SELECTOR}00`;
 
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
