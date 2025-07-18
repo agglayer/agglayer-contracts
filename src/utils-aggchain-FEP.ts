@@ -112,6 +112,7 @@ export function encodeInitializeBytesAggchainFEPv1(
     initAggchainVKeySelector,
     vKeyManager,
 ) {
+    const sortedInitParams = sortInitParamsAggchainFEP(initParams);
     return ethers.AbiCoder.defaultAbiCoder().encode(
         [
             'tuple(uint256, bytes32, bytes32, uint256, uint256, uint256, address, bytes32, bytes32)',
@@ -120,7 +121,13 @@ export function encodeInitializeBytesAggchainFEPv1(
             'bytes4',
             'address',
         ],
-        [Object.values(initParams), useDefaultGateway, initOwnedAggchainVKey, initAggchainVKeySelector, vKeyManager],
+        [
+            Object.values(sortedInitParams),
+            useDefaultGateway,
+            initOwnedAggchainVKey,
+            initAggchainVKeySelector,
+            vKeyManager,
+        ],
     );
 }
 
