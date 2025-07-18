@@ -659,7 +659,7 @@ contract AggchainFEP is AggchainBase {
         bytes32 _aggregationVkey,
         bytes32 _rangeVkeyCommitment
     ) external onlyOwner {
-        require(_configName != bytes32(0), "L2OutputOracle: config name cannot be empty");Expand commentComment on line R543ResolvedCode has comments. Press enter to view.
+        require(_configName != bytes32(0), "L2OutputOracle: config name cannot be empty");
         require(!isValidOpSuccinctConfig(opSuccinctConfigs[_configName]), "L2OutputOracle: config already exists");
 
         OpSuccinctConfig memory newConfig = OpSuccinctConfig({
