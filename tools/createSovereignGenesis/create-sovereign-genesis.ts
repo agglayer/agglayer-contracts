@@ -115,6 +115,13 @@ async function main() {
             logger.error('quorum must exist and be bigger than 0');
             process.exit(1);
         }
+
+        if (createGenesisSovereignParams.quorum > createGenesisSovereignParams.aggOracleCommittee.length) {
+            logger.error(
+                `quorum must be smaller or equal than the number of aggOracleCommittee members (${createGenesisSovereignParams.aggOracleCommittee.length})`,
+            );
+            process.exit(1);
+        }
     } else {
         if (
             createGenesisSovereignParams.globalExitRootUpdater === undefined ||

@@ -6,8 +6,6 @@ import { getContractAddress } from '@ethersproject/address';
 import { GENESIS_CONTRACT_NAMES } from '../../../src/utils-common-aggchain';
 import { padTo32Bytes, padTo20Bytes } from './deployment-utils';
 import { checkParams } from '../../../src/utils';
-import { AggOracleCommittee__factory } from '../../../typechain-types';
-import util from 'util';
 
 // constants
 // Those contracts names came from the genesis creation:
@@ -300,12 +298,20 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
         injectedTx.to = null;
         injectedTx.data = deployAggOracle.data;
-        const txObject = ethers.Transaction.from(injectedTx);
-        expect(txObject.from).to.equal(ethers.recoverAddress(txObject.unsignedHash, txObject.signature as any));
+        const txObjectDeployAggOracleImpl = ethers.Transaction.from(injectedTx);
+        expect(txObjectDeployAggOracleImpl.from).to.equal(
+            ethers.recoverAddress(
+                txObjectDeployAggOracleImpl.unsignedHash,
+                txObjectDeployAggOracleImpl.signature as any,
+            ),
+        );
 
-        const txDeployAggORacleCommitee = processorUtils.rawTxToCustomRawTx(txObject.serialized);
+        const txDeployAggORacleCommitee = processorUtils.rawTxToCustomRawTx(txObjectDeployAggOracleImpl.serialized);
         batch2.addRawTx(txDeployAggORacleCommitee);
-        aggOracleImplementationAddress = getContractAddress({ from: txObject.from, nonce: injectedTx.nonce });
+        aggOracleImplementationAddress = getContractAddress({
+            from: txObjectDeployAggOracleImpl.from,
+            nonce: injectedTx.nonce,
+        });
 
         // Deploy proxy
         /*
