@@ -440,7 +440,7 @@ contract PolygonZkEVMBridgeV2 is
         bytes calldata metadata
     ) external payable ifNotEmergencyState {
         // If exist a gas token, only allow call this function without value
-        if (msg.value != 0 && address(WETHToken) != address(0)) {
+        if (msg.value != 0 && gasTokenAddress != address(0)) {
             revert NoValueInMessagesOnGasTokenNetworks();
         }
 
