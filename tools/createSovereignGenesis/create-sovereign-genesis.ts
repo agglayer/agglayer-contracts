@@ -43,13 +43,13 @@ async function main() {
         'gasTokenAddress',
         'sovereignWETHAddress',
         'sovereignWETHAddressIsNotMintable',
-        'globalExitRootUpdater',
         'globalExitRootRemover',
         'emergencyBridgePauser',
         'emergencyBridgeUnpauser',
         'proxiedTokensManager',
         'setPreMintAccounts',
         'setTimelockParameters',
+        'useAggOracleCommittee',
     ];
 
     // check global parameters
@@ -76,8 +76,57 @@ async function main() {
         });
     }
 
-    // check timelock parameters
+    if (createGenesisSovereignParams.useAggOracleCommittee === true) {
+        if (
+            createGenesisSovereignParams.aggOracleCommittee === undefined ||
+            createGenesisSovereignParams.aggOracleCommittee === ''
+        ) {
+            logger.error('useAggOracleCommittee is set to true but missing parameter aggOracleCommittee');
+            process.exit(1);
+        }
+        if (
+            createGenesisSovereignParams.globalExitRootUpdater !== undefined &&
+            createGenesisSovereignParams.globalExitRootUpdater !== '' &&
+            createGenesisSovereignParams.globalExitRootUpdater !== ethers.ZeroAddress
+        ) {
+            logger.error('globalExitRootUpdater should not be set if using aggOracleCommittee');
+            process.exit(1);
+        }
+
+        // Check all aggOracleCommittee parameters
+        const nullifierAddress = {} as any;
+
+        createGenesisSovereignParams.aggOracleCommittee.forEach((aggOracleCommittee) => {
+            if (ethers.isAddress(aggOracleCommittee) === false) {
+                logger.error(`aggOracleCommittees ${aggOracleCommittee}: not a valid address`);
+                process.exit(1);
+            } else {
+                // check if address is not duplicated
+                if (nullifierAddress[aggOracleCommittee] !== undefined) {
+                    logger.error(`aggOracleCommittees ${aggOracleCommittee}: duplicated address`);
+                    process.exit(1);
+                } else {
+                    nullifierAddress[aggOracleCommittee] = true;
+                }
+            }
+        });
+
+        if (createGenesisSovereignParams.quorum === undefined || createGenesisSovereignParams.quorum < 1) {
+            logger.error('quorum must exist and be bigger than 0');
+            process.exit(1);
+        }
+    } else {
+        if (
+            createGenesisSovereignParams.globalExitRootUpdater === undefined ||
+            createGenesisSovereignParams.globalExitRootUpdater === ''
+        ) {
+            logger.error('globalExitRootUpdater must be set, even if it is zeor address');
+            process.exit(1);
+        }
+    }
+
     if (createGenesisSovereignParams.setTimelockParameters === true) {
+        // check timelock parameters
         if (
             createGenesisSovereignParams.timelockParameters === undefined ||
             createGenesisSovereignParams.timelockParameters === ''
@@ -194,6 +243,9 @@ async function main() {
         emergencyBridgePauser: createGenesisSovereignParams.emergencyBridgePauser,
         emergencyBridgeUnpauser: createGenesisSovereignParams.emergencyBridgeUnpauser,
         proxiedTokensManager: createGenesisSovereignParams.proxiedTokensManager,
+        useAggOracleCommittee: createGenesisSovereignParams.useAggOracleCommittee,
+        aggOracleCommittee: createGenesisSovereignParams.aggOracleCommittee,
+        quorum: createGenesisSovereignParams.quorum,
     };
 
     logger.info('Update genesis-base to the SovereignContracts');
