@@ -658,7 +658,7 @@ contract AggchainFEP is AggchainBase {
         bytes32 _rollupConfigHash,
         bytes32 _aggregationVkey,
         bytes32 _rangeVkeyCommitment
-    ) external onlyOwner {
+    ) external onlyRollupManager {
         require(_configName != bytes32(0), "L2OutputOracle: config name cannot be empty");
         require(!isValidOpSuccinctConfig(opSuccinctConfigs[_configName]), "L2OutputOracle: config already exists");
 
