@@ -329,7 +329,7 @@ describe('AggOracleCommittee tests', () => {
             await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
 
             const reportBefore = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            const timestamp = reportBefore.timestamp;
+            const { timestamp } = reportBefore;
 
             // Add time delay
             await ethers.provider.send('evm_increaseTime', [100]);
@@ -358,7 +358,7 @@ describe('AggOracleCommittee tests', () => {
         it('Should allow consolidateGlobalExitRoot when quorum is reached', async () => {
             // Set quorum to 3
             await aggOracleCommitteeContract.connect(owner).updateQuorum(3);
-            
+
             const proposedGER = ethers.solidityPacked(['uint256'], [42]);
 
             // First two votes
