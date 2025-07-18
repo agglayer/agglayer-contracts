@@ -28,7 +28,6 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         'bridgeManager',
         'sovereignWETHAddress',
         'sovereignWETHAddressIsNotMintable',
-        'globalExitRootUpdater',
         'globalExitRootRemover',
         'emergencyBridgePauser',
         'emergencyBridgeUnpauser',
@@ -258,7 +257,6 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         bridgeManager,
         sovereignWETHAddress,
         sovereignWETHAddressIsNotMintable,
-        globalExitRootUpdater,
         globalExitRootRemover,
         emergencyBridgePauser,
         emergencyBridgeUnpauser,
@@ -290,6 +288,70 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     expect(txObject.from).to.equal(ethers.recoverAddress(txObject.unsignedHash, txObject.signature as any));
     batch2.addRawTx(txInitializeBridge);
 
+    // deploy aggOracle if necessary
+    let globalExitRootUpdater;
+    let aggOracleImplementationAddress;
+    if (initializeParams.useAggOracleCommittee === true) {
+        const aggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee');
+        // Get deploy transaction for agg oracle commitee
+        const deployAggOracle = await aggOracleCommitteeFactory.getDeployTransaction(gerProxy.address);
+
+        injectedTx.to = null;
+        injectedTx.data = deployAggOracle.data;
+        const txObjectDeployAggOracleImpl = ethers.Transaction.from(injectedTx);
+        expect(txObjectDeployAggOracleImpl.from).to.equal(
+            ethers.recoverAddress(
+                txObjectDeployAggOracleImpl.unsignedHash,
+                txObjectDeployAggOracleImpl.signature as any,
+            ),
+        );
+
+        const txDeployAggORacleCommitee = processorUtils.rawTxToCustomRawTx(txObjectDeployAggOracleImpl.serialized);
+        batch2.addRawTx(txDeployAggORacleCommitee);
+        aggOracleImplementationAddress = getContractAddress({
+            from: txObjectDeployAggOracleImpl.from,
+            nonce: injectedTx.nonce,
+        });
+
+        // Deploy proxy
+        /*
+         * deploy aggORacle proxy and initialize
+         */
+        const transparentProxyFactory = await ethers.getContractFactory(
+            '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+        );
+
+        // create initialize transaction
+        // Initialize aggOracle Manager
+        const initializeAggOracleCommittee = aggOracleCommitteeFactory.interface.encodeFunctionData('initialize', [
+            proxiedTokensManager, // TODO
+            initializeParams.aggOracleCommittee,
+            initializeParams.quorum,
+        ]);
+
+        const deployAggOracleProxy = (
+            await transparentProxyFactory.getDeployTransaction(
+                aggOracleImplementationAddress as string, // must have bytecode
+                proxiedTokensManager as string,
+                initializeAggOracleCommittee,
+            )
+        ).data;
+
+        // Update injectedTx to initialize GER
+        injectedTx.to = null;
+        injectedTx.data = deployAggOracleProxy;
+
+        const txObject2 = ethers.Transaction.from(injectedTx);
+        const txDeployProxyAggORacle = processorUtils.rawTxToCustomRawTx(txObject2.serialized);
+        expect(txObject2.from).to.equal(ethers.recoverAddress(txObject2.unsignedHash, txObject2.signature as any));
+        batch2.addRawTx(txDeployProxyAggORacle);
+
+        const aggOracleAddress = getContractAddress({ from: txObject2.from, nonce: txObject2.nonce });
+        globalExitRootUpdater = aggOracleAddress;
+    } else {
+        checkParams(initializeParams, ['globalExitRootUpdater']);
+        globalExitRootUpdater = initializeParams.globalExitRootUpdater;
+    }
     // Initialize GER Manager
     const initializeGERData = gerFactory.interface.encodeFunctionData('initialize', [
         globalExitRootUpdater,
@@ -307,7 +369,48 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
     // Execute batch
     await batch2.executeTxs();
+
     await zkEVMDB2.consolidate(batch2);
+
+    if (initializeParams.useAggOracleCommittee === true) {
+        // add aggOracleCommitee implementation to genesis file
+        const aggOracleImplStorage = Object.entries(await zkEVMDB2.dumpStorage(aggOracleImplementationAddress)).reduce(
+            (acc, [key, value]) => {
+                acc[key] = padTo32Bytes(value);
+                return acc;
+            },
+            {},
+        );
+
+        const aggOracleCommiteeImplObject = {
+            contractName: GENESIS_CONTRACT_NAMES.AGG_ORACLE_IMPL,
+            balance: '0',
+            nonce: '1',
+            address: aggOracleImplementationAddress,
+            storage: aggOracleImplStorage,
+            bytecode: `0x${await zkEVMDB2.getBytecode(aggOracleImplementationAddress)}`,
+        };
+        genesis.genesis.push(aggOracleCommiteeImplObject);
+
+        // add aggOracleCommitee proxy to genesis file
+        const aggOracleStorage = Object.entries(await zkEVMDB2.dumpStorage(globalExitRootUpdater)).reduce(
+            (acc, [key, value]) => {
+                acc[key] = padTo32Bytes(value);
+                return acc;
+            },
+            {},
+        );
+
+        const aggOracleCommiteeObject = {
+            contractName: GENESIS_CONTRACT_NAMES.AGG_ORACLE_PROXY,
+            balance: '0',
+            nonce: '1',
+            address: globalExitRootUpdater,
+            storage: aggOracleStorage,
+            bytecode: `0x${await zkEVMDB2.getBytecode(globalExitRootUpdater)}`,
+        };
+        genesis.genesis.push(aggOracleCommiteeObject);
+    }
 
     // Update bridgeProxy storage and nonce
     bridgeProxy.contractName = GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_PROXY;
