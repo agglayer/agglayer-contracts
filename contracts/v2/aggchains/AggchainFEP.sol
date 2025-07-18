@@ -658,7 +658,7 @@ contract AggchainFEP is AggchainBase {
         bytes32 _rollupConfigHash,
         bytes32 _aggregationVkey,
         bytes32 _rangeVkeyCommitment
-    ) external onlyRollupManager {
+    ) external onlyAggchainManager {
         require(_configName != bytes32(0), "L2OutputOracle: config name cannot be empty");
         require(!isValidOpSuccinctConfig(opSuccinctConfigs[_configName]), "L2OutputOracle: config already exists");
 
@@ -677,7 +677,7 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Deletes an OP Succinct configuration.
     /// @param _configName The name of the configuration to delete.
-    function deleteOpSuccinctConfig(bytes32 _configName) external onlyOwner {
+    function deleteOpSuccinctConfig(bytes32 _configName) external onlyAggchainManager {
         delete opSuccinctConfigs[_configName];
         emit OpSuccinctConfigDeleted(_configName);
     }
