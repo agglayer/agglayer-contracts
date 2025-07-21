@@ -27,7 +27,7 @@
         "adminAddress": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
         "minDelay": 3600
     },
-    "setPreMintAccounts": true,
+    "useAggOracleCommittee": true,
     "aggOracleCommittee": ["0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66", "0xb420EAAbFeFA05b39dE520f811325A463E023954"],
     "quorum": 1,
     "formatGenesis": "geth"

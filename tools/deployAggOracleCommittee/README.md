@@ -25,7 +25,7 @@ Key features:
 1. Copy the example parameters file:
 
 ```bash
-cp deploy_parameters.json.example deploy_parameters.json
+cp tools/deployAggOracleCommittee/deploy_parameters.json.example tools/deployAggOracleCommittee/deploy_parameters.json
 ```
 
 2. Edit `deploy_parameters.json` with your specific configuration:
@@ -50,14 +50,7 @@ cp deploy_parameters.json.example deploy_parameters.json
 ### Using Hardhat:
 
 ```bash
-cd tools/deployAggOracleCommittee
-npx hardhat run deployAggOracleCommittee.ts --network <YOUR_NETWORK>
-```
-
-### Using npm scripts:
-
-```bash
-npm run deploy:aggOracleCommittee -- --network <YOUR_NETWORK>
+npx hardhat run tools/deployAggOracleCommittee/deployAggOracleCommittee.ts --network <YOUR_NETWORK>
 ```
 
 ## Output
@@ -82,6 +75,7 @@ After deployment, the owner can:
 2. **Remove oracle members**: Call `removeOracleMember(address, index)`
 3. **Update quorum**: Call `updateQuorum(uint64)`
 4. **Transfer globalExitRootUpdater role**: Call `transferGlobalExitRootUpdater(address)`
+5. **Accept globalExitRootUpdater role**: Call `acceptGlobalExitRootUpdater()`
 
 Oracle members can:
 
