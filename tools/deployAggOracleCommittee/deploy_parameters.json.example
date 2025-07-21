@@ -7,7 +7,6 @@
         "0x0000000000000000000000000000000000000003"
     ],
     "quorum": 2,
-    "deployerAddress": "",
     "maxFeePerGas": "",
     "maxPriorityFeePerGas": "",
     "multiplierGas": "",
