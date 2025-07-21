@@ -160,6 +160,35 @@ contract BridgeL2SovereignChain is
     );
 
     /**
+     * @dev Emitted when a claim is set by calling a permissioned function
+     * @param leafIndex Index of the leaf of the set claim in the Merkle tree
+     * @param sourceNetwork Identifier of the source network of the claim (0 = Ethereum).
+     */
+    event SetClaimPermissioned(uint32 leafIndex, uint32 sourceNetwork);
+
+    /**
+     * @dev Emitted when local exit tree is updated by calling a permissioned function
+     * @param newDepositCount The resulting deposit count after the rollback
+     * @param newRoot The resulting root of the local exit tree after the rollback
+     */
+    event UpdateLocalExitTreePermissioned(
+        uint256 newDepositCount,
+        bytes32 newRoot
+    );
+
+    /**
+     * @dev Emitted when local balance tree is updated by calling a permissioned function
+     * @param originNetwork The origin network of the updated leaf
+     * @param originTokenAddress The origin token address of the updated leaf
+     * @param newAmount The new amount set for this token
+     */
+    event UpdateLocalBalanceTreePermissioned(
+        uint32 indexed originNetwork,
+        address indexed originTokenAddress,
+        uint256 newAmount
+    );
+
+    /**
      * Disable initializers on the implementation following the best practices
      */
     constructor() PolygonZkEVMBridgeV2() {
@@ -543,9 +572,12 @@ contract BridgeL2SovereignChain is
         );
     }
 
+    /////////////////////////////////
+    //// Permissioned functions ////
+    ////////////////////////////////
     /**
      * @notice Unset multiple claims from the claimedBitmap
-     * @dev This function is a "multi/batch call" to `unsetClaimedBitmap`
+     * @dev This function is a "multi/batch call" to `_unsetClaimedBitmap`
      * @param globalIndexes Global index is defined as:
      * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
      * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
@@ -557,22 +589,16 @@ contract BridgeL2SovereignChain is
             uint256 globalIndex = globalIndexes[i];
 
             // Compute leaf index and sourceBridgeNetwork from global index
-            uint32 leafIndex;
-            uint32 sourceBridgeNetwork;
+            // Last 32 bits are leafIndex
+            uint32 leafIndex = uint32(globalIndex);
+            // If the network is mainnet, sourceBridgeNetwork is 0
+            uint32 sourceBridgeNetwork = 0;
 
             // Get origin network from global index
-            if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
-                // The network is mainnet, therefore sourceBridgeNetwork is 0
-
-                // Last 32 bits are leafIndex
-                leafIndex = uint32(globalIndex);
-            } else {
+            if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG == 0) {
                 // The network is a rollup, therefore sourceBridgeNetwork must be decoded
                 uint32 indexRollup = uint32(globalIndex >> 32);
                 sourceBridgeNetwork = indexRollup + 1;
-
-                // Last 32 bits are leafIndex
-                leafIndex = uint32(globalIndex);
             }
 
             // Unset the claim
@@ -587,6 +613,91 @@ contract BridgeL2SovereignChain is
             emit UpdatedUnsetGlobalIndexHashChain(
                 bytes32(globalIndex),
                 unsetGlobalIndexHashChain
+            );
+        }
+    }
+
+    /**
+     * @notice Set multiple claims from the claimedBitmap
+     * @dev This function is a "multi/batch call" to `_setAndCheckClaimed`
+     * @param globalIndexes Global index is defined as:
+     * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
+     */
+    function setMultipleClaims(
+        uint256[] memory globalIndexes
+    ) external onlyGlobalExitRootRemover {
+        for (uint256 i = 0; i < globalIndexes.length; i++) {
+            uint256 globalIndex = globalIndexes[i];
+
+            // Compute leaf index and sourceBridgeNetwork from global index
+            // Last 32 bits are leafIndex
+            uint32 leafIndex = uint32(globalIndex);
+            // If the network is mainnet, sourceBridgeNetwork is 0
+            uint32 sourceBridgeNetwork = 0;
+
+            // Get origin network from global index
+            if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG == 0) {
+                // The network is a rollup, therefore sourceBridgeNetwork must be decoded
+                uint32 indexRollup = uint32(globalIndex >> 32);
+                sourceBridgeNetwork = indexRollup + 1;
+            }
+
+            // Set the claim
+            _setAndCheckClaimed(leafIndex, sourceBridgeNetwork);
+
+            emit SetClaimPermissioned(leafIndex, sourceBridgeNetwork);
+        }
+    }
+
+    /**
+     * @notice Updates the local exit tree
+     * @dev Permissioned function by the GlobalExitRootRemover role
+     * @param newDepositCount The resulting deposit count after the rollback
+     * @param newFrontier The updated frontier of the local exit tree
+     */
+    function updateLocalExitTree(
+        uint256 newDepositCount,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
+    ) external onlyGlobalExitRootRemover {
+        _rollbackTree(newDepositCount, newFrontier);
+        // emit event
+        emit UpdateLocalExitTreePermissioned(newDepositCount, getRoot());
+    }
+
+    /**
+     * @notice Update local balance tree leafs
+     * @dev Permissioned function by the GlobalExitRootRemover role
+     * @param originNetwork The origin network of the token, involved in the tokenInfoHash to generate the key to be updated at localBalanceTree
+     * @param originTokenAddress The origin address of the token, involved in the tokenInfoHash to generate the key to be updated at localBalanceTree
+     * @dev The key is generated as keccak256(abi.encodePacked(originNetwork, originTokenAddress))
+     * @param amount The new amount of the local balance tree leaf
+     */
+    function updateLocalBalanceTree(
+        uint32[] memory originNetwork,
+        address[] memory originTokenAddress,
+        uint256[] memory amount
+    ) external onlyGlobalExitRootRemover {
+        if (
+            originNetwork.length != originTokenAddress.length ||
+            originNetwork.length != amount.length
+        ) {
+            revert InputArraysLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < originNetwork.length; i++) {
+            // Compute token info hash
+            bytes32 tokenInfoHash = keccak256(
+                abi.encodePacked(originNetwork[i], originTokenAddress[i])
+            );
+            // Update the local balance tree
+            localBalanceTree[tokenInfoHash] = amount[i];
+
+            // Emit event
+            emit UpdateLocalBalanceTreePermissioned(
+                originNetwork[i],
+                originTokenAddress[i],
+                amount[i]
             );
         }
     }

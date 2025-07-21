@@ -2808,4 +2808,364 @@ describe('BridgeL2SovereignChain Contract', () => {
             .to.emit(sovereignChainBridgeContract, 'AcceptEmergencyBridgePauserRole')
             .withArgs(emergencyBridgePauser.address, deployer.address);
     });
+
+    // Test for setMultipleClaims function
+    it('should setMultipleClaims with proper permissions and events', async () => {
+        // Setup test data
+        const indexLocal1 = 5;
+        const indexLocal2 = 10;
+        const indexRollup = 3;
+
+        const globalIndex1 = computeGlobalIndex(indexLocal1, indexRollup, false);
+        const globalIndex2 = computeGlobalIndex(indexLocal2, indexRollup, false);
+        const globalIndexes = [globalIndex1, globalIndex2];
+
+        // Test permission check - should fail with non-GlobalExitRootRemover
+        await expect(
+            sovereignChainBridgeContract.connect(rollupManager).setMultipleClaims(globalIndexes),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyGlobalExitRootRemover');
+
+        // Verify claims are not set initially
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(false);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(false);
+
+        // Test successful setting of multiple claims
+        await expect(sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims(globalIndexes))
+            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .withArgs(indexLocal1, indexRollup + 1)
+            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .withArgs(indexLocal2, indexRollup + 1);
+
+        // Verify claims are now set
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(true);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(true);
+
+        // Test setting already claimed indexes - should fail
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([globalIndex1]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'AlreadyClaimed');
+
+        // Test with mainnet flag
+        const mainnetGlobalIndex = computeGlobalIndex(7, 0, true);
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([mainnetGlobalIndex]),
+        )
+            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .withArgs(7, 0);
+
+        // Verify mainnet claim is set
+        expect(await sovereignChainBridgeContract.isClaimed(7, 0)).to.be.equal(true);
+
+        // Test empty array
+        await sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([]);
+    });
+
+    // Test for updateLocalExitTree function
+    it('should updateLocalExitTree with proper permissions and events', async () => {
+        // Get initial state
+        const initialDepositCount = await sovereignChainBridgeContract.depositCount();
+        const initialRoot = await sovereignChainBridgeContract.getRoot();
+
+        // Create some deposits to have a non-zero tree
+        const amount = ethers.parseEther('1');
+        const destinationAddress = deployer.address;
+        const tokenAddress = ethers.ZeroAddress;
+
+        // Claim some ether first to increase local balance tree
+        await claimBeforeBridge(
+            LEAF_TYPE_ASSET,
+            0, // originNetwork
+            ethers.ZeroAddress, // ether
+            networkIDRollup2, // destinationNetwork
+            destinationAddress,
+            amount * 3n,
+            '0x', // metadata
+            sovereignChainGlobalExitRootContract,
+            sovereignChainBridgeContract,
+            polTokenContract,
+            0,
+        );
+
+        // Make some bridge transactions
+        await sovereignChainBridgeContract.bridgeAsset(
+            networkIDRollup,
+            destinationAddress,
+            amount,
+            tokenAddress,
+            true,
+            '0x',
+            { value: amount },
+        );
+
+        await sovereignChainBridgeContract.bridgeAsset(
+            networkIDRollup,
+            destinationAddress,
+            amount,
+            tokenAddress,
+            true,
+            '0x',
+            { value: amount },
+        );
+
+        const currentDepositCount = await sovereignChainBridgeContract.depositCount();
+        const currentRoot = await sovereignChainBridgeContract.getRoot();
+
+        // Verify we have some deposits
+        expect(currentDepositCount).to.be.greaterThan(initialDepositCount);
+        expect(currentRoot).to.not.equal(initialRoot);
+
+        // Test permission check - should fail with non-GlobalExitRootRemover
+        const newDepositCount = Number(initialDepositCount);
+        const newFrontier = new Array(32).fill(ethers.ZeroHash);
+
+        await expect(
+            sovereignChainBridgeContract.connect(rollupManager).updateLocalExitTree(newDepositCount, newFrontier),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyGlobalExitRootRemover');
+
+        // Test invalid rollback (new count >= current count)
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalExitTree(Number(currentDepositCount), newFrontier),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NewDepositCountGreaterThanCurrent');
+
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalExitTree(Number(currentDepositCount) + 1, newFrontier),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NewDepositCountGreaterThanCurrent');
+
+        // Test successful rollback - first verify the transaction emits the event
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalExitTree(newDepositCount, newFrontier),
+        ).to.emit(sovereignChainBridgeContract, 'UpdateLocalExitTreePermissioned');
+
+        // Verify the state was rolled back
+        expect(await sovereignChainBridgeContract.depositCount()).to.be.equal(newDepositCount);
+
+        // Verify the event was emitted with correct parameters
+        const rootAfterRollback = await sovereignChainBridgeContract.getRoot();
+        const filter = sovereignChainBridgeContract.filters.UpdateLocalExitTreePermissioned();
+        const events = await sovereignChainBridgeContract.queryFilter(filter);
+        const lastEvent = events[events.length - 1];
+        expect(lastEvent.args[0]).to.be.equal(newDepositCount); // newDepositCount
+        expect(lastEvent.args[1]).to.be.equal(rootAfterRollback); // newRoot
+
+        // The root should be different (rolled back to frontier state)
+        const rolledBackRoot = await sovereignChainBridgeContract.getRoot();
+        expect(rolledBackRoot).to.not.equal(currentRoot);
+    });
+
+    // Test for updateLocalBalanceTree function
+    it('should updateLocalBalanceTree with proper permissions and validation', async () => {
+        // Test permission check - should fail with non-GlobalExitRootRemover
+        const originNetworks = [networkIDMainnet, networkIDRollup];
+        const originTokenAddresses = [ethers.ZeroAddress, polTokenContract.target];
+        const amounts = [ethers.parseEther('100'), ethers.parseEther('50')];
+
+        await expect(
+            sovereignChainBridgeContract
+                .connect(rollupManager)
+                .updateLocalBalanceTree(originNetworks, originTokenAddresses, amounts),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyGlobalExitRootRemover');
+
+        // Test input arrays length mismatch
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalBalanceTree([networkIDMainnet], originTokenAddresses, amounts),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
+
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalBalanceTree(originNetworks, [ethers.ZeroAddress], amounts),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
+
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalBalanceTree(originNetworks, originTokenAddresses, [ethers.parseEther('100')]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InputArraysLengthMismatch');
+
+        // Calculate expected token info hashes
+        const tokenInfoHash1 = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [originNetworks[0], originTokenAddresses[0]]),
+        );
+        const tokenInfoHash2 = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [originNetworks[1], originTokenAddresses[1]]),
+        );
+
+        // Verify initial state (should be 0)
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(0);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(0);
+
+        // Test successful update with event verification
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalBalanceTree(originNetworks, originTokenAddresses, amounts),
+        )
+            .to.emit(sovereignChainBridgeContract, 'UpdateLocalBalanceTreePermissioned')
+            .withArgs(originNetworks[0], originTokenAddresses[0], amounts[0])
+            .to.emit(sovereignChainBridgeContract, 'UpdateLocalBalanceTreePermissioned')
+            .withArgs(originNetworks[1], originTokenAddresses[1], amounts[1]);
+
+        // Verify the updates
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(amounts[0]);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(amounts[1]);
+
+        // Test updating to different values
+        const newAmounts = [ethers.parseEther('200'), ethers.parseEther('75')];
+
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .updateLocalBalanceTree(originNetworks, originTokenAddresses, newAmounts);
+
+        // Verify the updates
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(newAmounts[0]);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(newAmounts[1]);
+
+        // Test updating to zero (clearing balance)
+        const zeroAmounts = [0, 0];
+
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .updateLocalBalanceTree(originNetworks, originTokenAddresses, zeroAmounts);
+
+        // Verify the updates
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(0);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(0);
+
+        // Test with empty arrays
+        await sovereignChainBridgeContract.connect(globalExitRootRemover).updateLocalBalanceTree([], [], []);
+
+        // Test with same network ID (should still work as it's not checking for current network exclusion like other functions)
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .updateLocalBalanceTree([networkIDRollup2], [polTokenContract.target], [ethers.parseEther('25')]);
+
+        const selfNetworkTokenInfoHash = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [networkIDRollup2, polTokenContract.target]),
+        );
+        expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(
+            ethers.parseEther('25'),
+        );
+    });
+
+    // Combined test demonstrating interaction between all three new functions
+    it('should handle complex scenario with setMultipleClaims, updateLocalExitTree, and updateLocalBalanceTree', async () => {
+        // Setup: Create some bridge activity and claims
+        const amount = ethers.parseEther('10');
+        const destinationAddress = acc1.address;
+
+        // Claim some tokens first to have balance for bridging
+        await claimBeforeBridge(
+            LEAF_TYPE_ASSET,
+            networkIDMainnet, // originNetwork
+            ethers.ZeroAddress, // ether
+            networkIDRollup2, // destinationNetwork
+            destinationAddress,
+            amount * 2n,
+            '0x', // metadata
+            sovereignChainGlobalExitRootContract,
+            sovereignChainBridgeContract,
+            polTokenContract,
+            0,
+        );
+
+        // Make a bridge transaction
+        await sovereignChainBridgeContract.bridgeAsset(
+            networkIDRollup,
+            destinationAddress,
+            amount,
+            ethers.ZeroAddress,
+            true,
+            '0x',
+            { value: amount },
+        );
+
+        const depositCountAfterBridge = await sovereignChainBridgeContract.depositCount();
+        const rootAfterBridge = await sovereignChainBridgeContract.getRoot();
+
+        // Set up some claims to test setMultipleClaims
+        const indexLocal1 = 15;
+        const indexLocal2 = 20;
+        const indexRollup = 5;
+        const globalIndex1 = computeGlobalIndex(indexLocal1, indexRollup, false);
+        const globalIndex2 = computeGlobalIndex(indexLocal2, indexRollup, false);
+
+        // Use setMultipleClaims to set the claims
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([globalIndex1, globalIndex2]),
+        )
+            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .withArgs(indexLocal1, indexRollup + 1)
+            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .withArgs(indexLocal2, indexRollup + 1);
+
+        // Verify claims are set
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(true);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(true);
+
+        // Update local balance tree with some values
+        const originNetworks = [networkIDMainnet, networkIDRollup];
+        const originTokenAddresses = [ethers.ZeroAddress, polTokenContract.target];
+        const balanceAmounts = [ethers.parseEther('500'), ethers.parseEther('250')];
+
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .updateLocalBalanceTree(originNetworks, originTokenAddresses, balanceAmounts);
+
+        // Verify balance tree updates
+        const tokenInfoHash1 = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [originNetworks[0], originTokenAddresses[0]]),
+        );
+        const tokenInfoHash2 = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [originNetworks[1], originTokenAddresses[1]]),
+        );
+
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(balanceAmounts[0]);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(balanceAmounts[1]);
+
+        // Rollback the local exit tree to an earlier state
+        const rollbackDepositCount = Number(depositCountAfterBridge) - 1;
+        const newFrontier = new Array(32).fill(ethers.ZeroHash);
+
+        // First verify the transaction emits the event
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .updateLocalExitTree(rollbackDepositCount, newFrontier),
+        ).to.emit(sovereignChainBridgeContract, 'UpdateLocalExitTreePermissioned');
+
+        // Verify the rollback
+        expect(await sovereignChainBridgeContract.depositCount()).to.be.equal(rollbackDepositCount);
+
+        // Verify the event was emitted with correct parameters
+        const rootAfterRollback = await sovereignChainBridgeContract.getRoot();
+        const filter = sovereignChainBridgeContract.filters.UpdateLocalExitTreePermissioned();
+        const events = await sovereignChainBridgeContract.queryFilter(filter);
+        const lastEvent = events[events.length - 1];
+        expect(lastEvent.args[0]).to.be.equal(rollbackDepositCount); // rollbackDepositCount
+        expect(lastEvent.args[1]).to.be.equal(rootAfterRollback); // newRoot
+        expect(await sovereignChainBridgeContract.getRoot()).to.not.equal(rootAfterBridge);
+
+        // Verify that claims and balance tree updates are still intact after rollback
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(true);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(true);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(balanceAmounts[0]);
+        expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(balanceAmounts[1]);
+
+        // Finally, unset the claims using existing unsetMultipleClaims to verify interoperability
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .unsetMultipleClaims([globalIndex1, globalIndex2]);
+
+        // Verify claims are now unset
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(false);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(false);
+    });
 });
