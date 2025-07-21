@@ -95,6 +95,26 @@ contract DepositContractBase {
     }
 
     /**
+     * @notice Rollback the merkle tree to a previous state
+     * @param newDepositCount New deposit count (leaf count) to rollback to
+     * @param newFrontier New frontiers (branch array)
+     */
+    function _rollbackTree(
+        uint256 newDepositCount,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
+    ) internal {
+        if (newDepositCount >= depositCount) {
+            revert NewDepositCountGreaterThanCurrent();
+        }
+
+        for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
+            _branch[i] = newFrontier[i];
+        }
+
+        depositCount = newDepositCount;
+    }
+
+    /**
      * @notice Verify merkle proof
      * @param leafHash Leaf hash
      * @param smtProof Smt proof
