@@ -167,22 +167,22 @@ contract BridgeL2SovereignChain is
     event SetClaimPermissioned(uint32 leafIndex, uint32 sourceNetwork);
 
     /**
-     * @dev Emitted when local exit tree is updated by calling a permissioned function
-     * @param newDepositCount The resulting deposit count after the rollback
-     * @param newRoot The resulting root of the local exit tree after the rollback
+     * @dev Emitted when local exit tree is set by calling a permissioned function
+     * @param newDepositCount The resulting deposit count after setting the tree
+     * @param newRoot The resulting root of the local exit tree after setting
      */
-    event UpdateLocalExitTreePermissioned(
+    event SetLocalExitTreePermissioned(
         uint256 newDepositCount,
         bytes32 newRoot
     );
 
     /**
-     * @dev Emitted when local balance tree is updated by calling a permissioned function
-     * @param originNetwork The origin network of the updated leaf
-     * @param originTokenAddress The origin token address of the updated leaf
+     * @dev Emitted when local balance tree is set by calling a permissioned function
+     * @param originNetwork The origin network of the set leaf
+     * @param originTokenAddress The origin token address of the set leaf
      * @param newAmount The new amount set for this token
      */
-    event UpdateLocalBalanceTreePermissioned(
+    event SetLocalBalanceTreePermissioned(
         uint32 indexed originNetwork,
         address indexed originTokenAddress,
         uint256 newAmount
@@ -651,29 +651,29 @@ contract BridgeL2SovereignChain is
     }
 
     /**
-     * @notice Updates the local exit tree
+     * @notice Sets the local exit tree to a specific state
      * @dev Permissioned function by the GlobalExitRootRemover role
-     * @param newDepositCount The resulting deposit count after the rollback
-     * @param newFrontier The updated frontier of the local exit tree
+     * @param newDepositCount The deposit count to set for the tree
+     * @param newFrontier The frontier to set for the local exit tree
      */
-    function updateLocalExitTree(
+    function setLocalExitTree(
         uint256 newDepositCount,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
     ) external onlyGlobalExitRootRemover {
         _rollbackTree(newDepositCount, newFrontier);
         // emit event
-        emit UpdateLocalExitTreePermissioned(newDepositCount, getRoot());
+        emit SetLocalExitTreePermissioned(newDepositCount, getRoot());
     }
 
     /**
-     * @notice Update local balance tree leaves
+     * @notice Set local balance tree leaves to specific amounts
      * @dev Permissioned function by the GlobalExitRootRemover role
-     * @param originNetwork The origin network of the token, involved in the tokenInfoHash to generate the key to be updated at localBalanceTree
-     * @param originTokenAddress The origin address of the token, involved in the tokenInfoHash to generate the key to be updated at localBalanceTree
+     * @param originNetwork The origin network of the token, involved in the tokenInfoHash to generate the key to be set at localBalanceTree
+     * @param originTokenAddress The origin address of the token, involved in the tokenInfoHash to generate the key to be set at localBalanceTree
      * @dev The key is generated as keccak256(abi.encodePacked(originNetwork, originTokenAddress))
-     * @param amount The new amount of the local balance tree leaf
+     * @param amount The amount to set for the local balance tree leaf
      */
-    function updateLocalBalanceTree(
+    function setLocalBalanceTree(
         uint32[] memory originNetwork,
         address[] memory originTokenAddress,
         uint256[] memory amount
@@ -690,11 +690,11 @@ contract BridgeL2SovereignChain is
             bytes32 tokenInfoHash = keccak256(
                 abi.encodePacked(originNetwork[i], originTokenAddress[i])
             );
-            // Update the local balance tree
+            // Set the local balance tree
             localBalanceTree[tokenInfoHash] = amount[i];
 
             // Emit event
-            emit UpdateLocalBalanceTreePermissioned(
+            emit SetLocalBalanceTreePermissioned(
                 originNetwork[i],
                 originTokenAddress[i],
                 amount[i]
