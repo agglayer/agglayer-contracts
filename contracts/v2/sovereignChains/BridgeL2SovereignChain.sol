@@ -666,7 +666,7 @@ contract BridgeL2SovereignChain is
     }
 
     /**
-     * @notice Update local balance tree leafs
+     * @notice Update local balance tree leaves
      * @dev Permissioned function by the GlobalExitRootRemover role
      * @param originNetwork The origin network of the token, involved in the tokenInfoHash to generate the key to be updated at localBalanceTree
      * @param originTokenAddress The origin address of the token, involved in the tokenInfoHash to generate the key to be updated at localBalanceTree
