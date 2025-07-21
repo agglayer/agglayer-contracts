@@ -1,0 +1,31 @@
+> This template is not meant to be automatically generated in GitHub, but it is useful to have it easily accessible when we create a release.
+
+## Contracts Versions
+* ⚠️ `PolygonRollupManager`: ~~v2.1.0~~ -> v2.1.1
+* `PolygonZkEVMBridgeV2`: v2.0.1
+* `PolygonZkEVMGlobalExitRootV2`: v2.0.0
+* `AggLayerGateway`: v1.0.0
+* `BridgeL2SovereignChain`: v2.0.0
+* `GlobalExitRootManagerL2SovereignChain`: v2.0.0
+* `AggchainFEP`: v1.0.0
+* `AggchainECDSA`: v1.0.0
+
+## 🚀 What's New
+- [Brief description of new features]
+
+## ⚠️ Breaking Changes
+- **Config File Changes**: [Describe any configuration file modifications]
+- **API Changes**: [Document any breaking API modifications]
+- **Deprecated Features**: [List any features being removed]
+
+## 📋 Configuration Updates
+- **Config Diff**: [Link to diff showing configuration changes]
+- **Updated Config File**: [Direct GitHub link to the exact config file version]
+- **Migration Guide**: [Step-by-step instructions for updating existing configs]
+
+## ✅ Testing & Validation
+- **Passing CI Run**: [Link to successful e2e test execution]
+- **Test Coverage**: [Confirmation of test coverage for new features]
+
+## 📦 Full Changelog
+[Auto-generated PR list and detailed changes]

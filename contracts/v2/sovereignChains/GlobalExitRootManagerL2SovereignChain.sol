@@ -15,7 +15,7 @@ contract GlobalExitRootManagerL2SovereignChain is
     Initializable
 {
     // Current contract version
-    string public constant GER_SOVEREIGN_VERSION = "al-v0.3.0";
+    string public constant GER_SOVEREIGN_VERSION = "v2.0.0";
 
     // globalExitRootUpdater address
     address public globalExitRootUpdater;

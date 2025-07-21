@@ -56,7 +56,7 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Op L2OO Semantic version.
     /// @custom:semver v2.0.0
-    string public constant version = "v2.0.0";
+    string public constant AGGCHAIN_FEP_VERSION = "v1.0.0";
 
     ////////////////////////////////////////////////////////////
     //                       Storage                          //

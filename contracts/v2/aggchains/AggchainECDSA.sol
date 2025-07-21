@@ -22,6 +22,10 @@ contract AggchainECDSA is AggchainBase {
     // Aggchain type selector, hardcoded value used to force the last 2 bytes of aggchain selector to retrieve  the aggchain verification key
     bytes2 public constant AGGCHAIN_TYPE = 0;
 
+    /// @notice Op L2OO Semantic version.
+    /// @custom:semver v2.0.0
+    string public constant AGGCHAIN_ECDSA_VERSION = "v1.0.0";
+
     ////////////////////////////////////////////////////////////
     //                       Events                           //
     ////////////////////////////////////////////////////////////
