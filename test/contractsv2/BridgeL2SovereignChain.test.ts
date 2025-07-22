@@ -2809,6 +2809,109 @@ describe('BridgeL2SovereignChain Contract', () => {
             .withArgs(emergencyBridgePauser.address, deployer.address);
     });
 
+    // Test for unsetMultipleClaims function
+    it('should unsetMultipleClaims with proper permissions and validation', async () => {
+        // Setup test data - first we need to set some claims to unset them later
+        const indexLocal1 = 15;
+        const indexLocal2 = 20;
+        const indexRollup = 4;
+
+        const globalIndex1 = computeGlobalIndex(indexLocal1, indexRollup, false);
+        const globalIndex2 = computeGlobalIndex(indexLocal2, indexRollup, false);
+        const globalIndexes = [globalIndex1, globalIndex2];
+
+        // First set the claims so we can unset them
+        await sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims(globalIndexes);
+
+        // Verify claims are initially set
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(true);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(true);
+
+        // Test permission check - should fail with non-GlobalExitRootRemover
+        await expect(
+            sovereignChainBridgeContract.connect(rollupManager).unsetMultipleClaims(globalIndexes),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyGlobalExitRootRemover');
+
+        // Test successful unsetting of multiple claims - verify events are emitted
+        await expect(sovereignChainBridgeContract.connect(globalExitRootRemover).unsetMultipleClaims(globalIndexes))
+            .to.emit(sovereignChainBridgeContract, 'UpdatedUnsetGlobalIndexHashChain')
+            .to.emit(sovereignChainBridgeContract, 'UpdatedUnsetGlobalIndexHashChain');
+
+        // Verify claims are now unset
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(false);
+        expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(false);
+
+        // Test unsetting already unset claims - should fail
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).unsetMultipleClaims([globalIndex1]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'ClaimNotSet');
+
+        // Test with mainnet flag - first set a mainnet claim
+        const mainnetGlobalIndex = computeGlobalIndex(25, 0, true);
+        await sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([mainnetGlobalIndex]);
+        expect(await sovereignChainBridgeContract.isClaimed(25, 0)).to.be.equal(true);
+
+        // Now unset the mainnet claim
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).unsetMultipleClaims([mainnetGlobalIndex]),
+        ).to.emit(sovereignChainBridgeContract, 'UpdatedUnsetGlobalIndexHashChain');
+
+        // Verify mainnet claim is unset
+        expect(await sovereignChainBridgeContract.isClaimed(25, 0)).to.be.equal(false);
+
+        // Test empty array (should work but do nothing)
+        await sovereignChainBridgeContract.connect(globalExitRootRemover).unsetMultipleClaims([]);
+
+        // Test invalid globalIndex with unused bits set to non-zero (rollup case)
+        const invalidGlobalIndexRollup = (1n << 255n) | (BigInt(indexRollup) << 32n) | BigInt(indexLocal1);
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).unsetMultipleClaims([invalidGlobalIndexRollup]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test invalid globalIndex with unused bits set to non-zero (mainnet case)
+        const invalidGlobalIndexMainnet = (1n << 255n) | (1n << 64n) | BigInt(indexLocal1);
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .unsetMultipleClaims([invalidGlobalIndexMainnet]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test mixed valid and invalid globalIndexes - should fail on the first invalid one
+        const validGlobalIndex = computeGlobalIndex(30, indexRollup, false);
+        await sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([validGlobalIndex]);
+
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .unsetMultipleClaims([validGlobalIndex, invalidGlobalIndexRollup]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Verify the valid claim is still set (transaction should have reverted completely)
+        expect(await sovereignChainBridgeContract.isClaimed(30, indexRollup + 1)).to.be.equal(true);
+
+        // Test edge case: maximum valid values for rollup case
+        const maxLeafIndex = (1 << 32) - 1; // 2^32 - 1
+        const maxRollupIndex = (1 << 32) - 1; // 2^32 - 1
+        const maxValidRollupGlobalIndex = (BigInt(maxRollupIndex) << 32n) | BigInt(maxLeafIndex);
+
+        // This should be valid (no mainnet flag, so first 192 bits should be 0)
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setMultipleClaims([maxValidRollupGlobalIndex]);
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .unsetMultipleClaims([maxValidRollupGlobalIndex]);
+
+        // Test edge case: mainnet with maximum leaf index
+        const maxValidMainnetGlobalIndex = (1n << 64n) | BigInt(maxLeafIndex); // mainnet flag + leafIndex
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setMultipleClaims([maxValidMainnetGlobalIndex]);
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .unsetMultipleClaims([maxValidMainnetGlobalIndex]);
+    });
+
     // Test for setMultipleClaims function
     it('should setMultipleClaims with proper permissions and events', async () => {
         // Setup test data
@@ -2858,6 +2961,20 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         // Test empty array
         await sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([]);
+
+        // Test invalid globalIndex with unused bits set to non-zero (rollup case)
+        // This should have unused bits set to 1, which should be rejected
+        const invalidGlobalIndexRollup = (1n << 255n) | (BigInt(indexRollup) << 32n) | BigInt(indexLocal1);
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([invalidGlobalIndexRollup]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test invalid globalIndex with unused bits set to non-zero (mainnet case)
+        // This should have unused bits set to 1, which should be rejected
+        const invalidGlobalIndexMainnet = (1n << 255n) | (1n << 64n) | BigInt(indexLocal1); // mainnet flag + unused bits + leafIndex
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([invalidGlobalIndexMainnet]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
     });
 
     // Test for setLocalExitTree function

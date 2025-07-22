@@ -599,6 +599,23 @@ contract BridgeL2SovereignChain is
                 // The network is a rollup, therefore sourceBridgeNetwork must be decoded
                 uint32 indexRollup = uint32(globalIndex >> 32);
                 sourceBridgeNetwork = indexRollup + 1;
+
+                // Reconstruct global index to assert that all unused bits are 0
+                require(
+                    (uint256(indexRollup) << uint256(32)) +
+                        uint256(leafIndex) ==
+                        globalIndex,
+                    InvalidGlobalIndex()
+                );
+            } else {
+                // The network is mainnet, therefore sourceBridgeNetwork is 0
+
+                // Reconstruct global index to assert that all unused bits are 0
+                require(
+                    _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) ==
+                        globalIndex,
+                    InvalidGlobalIndex()
+                );
             }
 
             // Unset the claim
@@ -641,6 +658,23 @@ contract BridgeL2SovereignChain is
                 // The network is a rollup, therefore sourceBridgeNetwork must be decoded
                 uint32 indexRollup = uint32(globalIndex >> 32);
                 sourceBridgeNetwork = indexRollup + 1;
+
+                // Reconstruct global index to assert that all unused bits are 0
+                require(
+                    (uint256(indexRollup) << uint256(32)) +
+                        uint256(leafIndex) ==
+                        globalIndex,
+                    InvalidGlobalIndex()
+                );
+            } else {
+                // The network is mainnet, therefore sourceBridgeNetwork is 0
+
+                // Reconstruct global index to assert that all unused bits are 0
+                require(
+                    _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) ==
+                        globalIndex,
+                    InvalidGlobalIndex()
+                );
             }
 
             // Set the claim
