@@ -218,7 +218,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const rollupTypeID = 1;

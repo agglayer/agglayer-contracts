@@ -223,7 +223,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const programVKey = ethers.ZeroHash;
@@ -321,7 +321,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const programVKey = ethers.ZeroHash;
@@ -469,7 +469,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const programVKey = ethers.ZeroHash;
@@ -595,7 +595,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const programVKey = ethers.ZeroHash;
@@ -635,7 +635,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await rollupManagerContract.connect(admin).attachAggchainToAL(rollupTypeID, chainID, initializeBytesAggchain);
 
         // Try to add a new rollup type
-        const newForkID = 11; // just metadata for pessimistic consensus
+        const newForkID = 0; // just metadata for pessimistic consensus
         const newProgramVKey = ethers.ZeroHash;
         const newRollupTypeID = 2;
         const newVerifier = ethers.ZeroAddress as unknown as Address;
@@ -695,7 +695,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const rollupTypeID = 1;
@@ -751,7 +751,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await PolygonPPConsensusContract.waitForDeployment();
 
         // Try to add a new rollup type
-        const forkID = 11; // just metadata for pessimistic consensus
+        const forkID = 0; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
         const rollupTypeID = 1;
