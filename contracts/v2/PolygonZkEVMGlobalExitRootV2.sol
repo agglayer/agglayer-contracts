@@ -25,7 +25,7 @@ contract PolygonZkEVMGlobalExitRootV2 is
     address public immutable rollupManager;
 
     // Current Global Exit Root Manager version
-    string public constant GER_VERSION = "v2.0.0";
+    string public constant GER_VERSION = "v1.0.0";
 
     // Store every l1InfoLeaf
     mapping(uint32 leafCount => bytes32 l1InfoRoot) public l1InfoRootMap;
