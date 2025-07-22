@@ -340,9 +340,6 @@ describe('Polygon Rollup manager upgraded', () => {
             unsafeAllowRenames: true,
             unsafeAllowCustomTypes: true,
             unsafeSkipStorageCheck: true,
-            call: {
-                fn: 'initialize',
-            },
         });
     });
 

@@ -487,7 +487,8 @@ contract PolygonRollupManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(5) {}
+    /// @dev Currently unused , keeping it here for keeping track of the last used reinitializer version
+    // function initialize() external virtual reinitializer(5) {}
 
     ///////////////////////////////////////
     // Rollups management functions
@@ -523,15 +524,11 @@ contract PolygonRollupManager is
 
         uint32 rollupTypeID = ++rollupTypeCount;
 
-        if (rollupVerifierType == VerifierType.Pessimistic) {
-            // Those params should be zero for Pessimistic rollup types
-            if (
-                genesis != bytes32(0) ||
-                verifier != address(0) ||
-                programVKey != bytes32(0)
-            ) revert InvalidRollupType();
-        } else if (rollupVerifierType == VerifierType.ALGateway) {
-            // Those params should be zero for ALGateway rollup types
+        if (
+            rollupVerifierType == VerifierType.Pessimistic ||
+            rollupVerifierType == VerifierType.ALGateway
+        ) {
+            // Those params should be zero for ALGateway and Pessimistic rollup types
             if (
                 verifier != address(0) ||
                 forkID != 0 ||
