@@ -566,6 +566,13 @@ contract BridgeL2SovereignChain is
 
                 // Last 32 bits are leafIndex
                 leafIndex = uint32(globalIndex);
+
+                // Reconstruct global index to assert that all unused bits are 0
+                require(
+                    _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) ==
+                        globalIndex,
+                    InvalidGlobalIndex()
+                );
             } else {
                 // The network is a rollup, therefore sourceBridgeNetwork must be decoded
                 uint32 indexRollup = uint32(globalIndex >> 32);
@@ -573,6 +580,14 @@ contract BridgeL2SovereignChain is
 
                 // Last 32 bits are leafIndex
                 leafIndex = uint32(globalIndex);
+
+                // Reconstruct global index to assert that all unused bits are 0
+                require(
+                    (uint256(indexRollup) << uint256(32)) +
+                        uint256(leafIndex) ==
+                        globalIndex,
+                    InvalidGlobalIndex()
+                );
             }
 
             // Unset the claim

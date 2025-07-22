@@ -10,12 +10,7 @@ import {
     PolygonPessimisticConsensus,
 } from '../../../typechain-types';
 
-import {
-    VerifierType,
-    computeInputPessimisticBytes,
-    computeConsensusHashEcdsa,
-    computeRandomBytes,
-} from '../../../src/pessimistic-utils';
+import { VerifierType, computeInputPessimisticBytes, computeConsensusHashEcdsa } from '../../../src/pessimistic-utils';
 import inputProof from './test-inputs/input.json';
 import { encodeInitializeBytesLegacy } from '../../../src/utils-common-aggchain';
 
