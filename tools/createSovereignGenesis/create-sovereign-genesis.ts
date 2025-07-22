@@ -123,10 +123,7 @@ async function main() {
             process.exit(1);
         }
     } else {
-        if (
-            createGenesisSovereignParams.globalExitRootUpdater === undefined ||
-            !ethers.isAddress(createGenesisSovereignParams.globalExitRootUpdater)
-        ) {
+        if (!ethers.isAddress(createGenesisSovereignParams.globalExitRootUpdater)) {
             logger.error('globalExitRootUpdater must be set, even if it is zero address');
             process.exit(1);
         }

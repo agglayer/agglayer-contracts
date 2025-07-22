@@ -337,7 +337,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
             )
         ).data;
 
-        // Update injectedTx to initialize GER
+        // Update injectedTx to initialize AggOracleProxy
         injectedTx.to = null;
         injectedTx.data = deployAggOracleProxy;
 
