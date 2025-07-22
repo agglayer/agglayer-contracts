@@ -421,10 +421,10 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     it('should add an existing rollup: PolygonConsensusPessimistic', async () => {
         // add existing rollup
         const rollupAddress = '0xAa000000000000000000000000000000000000Bb';
-        const forkID = 1;
+        const forkID = 0;
         const chainID = 1;
         const initLER = '0xff000000000000000000000000000000000000000000000000000000000000ff';
-        const programVKey = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        const programVKey = ethers.ZeroHash;
         const initPessimisticRoot = ethers.id('initPessimisticRoot');
 
         // add existing rollup: pessimistic type
@@ -434,7 +434,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         await expect(
             rollupManagerContract.connect(timelock).addExistingRollup(
                 rollupAddress,
-                verifierContract.target,
+                ethers.ZeroAddress, // verifier address
                 forkID,
                 chainID,
                 initLER,

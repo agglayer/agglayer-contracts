@@ -774,14 +774,10 @@ contract PolygonRollupManager is
         rollup.rollupVerifierType = rollupVerifierType;
 
         // Check verifier type
-        if (rollupVerifierType == VerifierType.Pessimistic) {
-            rollup.programVKey = programVKey;
-            rollup.lastPessimisticRoot = initPessimisticRoot;
-            rollup.lastLocalExitRoot = initRoot;
-            if (verifier.code.length == 0) {
-                revert InvalidVerifierAddress();
-            }
-        } else if (rollupVerifierType == VerifierType.ALGateway) {
+        if (
+            rollupVerifierType == VerifierType.Pessimistic ||
+            rollupVerifierType == VerifierType.ALGateway
+        ) {
             if (
                 verifier != address(0) ||
                 forkID != 0 ||
