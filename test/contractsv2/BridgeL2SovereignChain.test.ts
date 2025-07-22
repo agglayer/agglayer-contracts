@@ -1840,6 +1840,50 @@ describe('BridgeL2SovereignChain Contract', () => {
                     computeGlobalIndex(index2, indexRollup, false),
                 ]),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'ClaimNotSet');
+
+        // Test InvalidGlobalIndex validation for unsetMultipleClaims
+        // Test invalid globalIndex with unused bits set to non-zero (rollup case)
+        const invalidGlobalIndexRollup = (1n << 255n) | (BigInt(indexRollup) << 32n) | BigInt(indexLocal);
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).unsetMultipleClaims([invalidGlobalIndexRollup]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test invalid globalIndex with unused bits set to non-zero (mainnet case)
+        const invalidGlobalIndexMainnet = (1n << 255n) | (1n << 64n) | BigInt(indexLocal); // mainnet flag + unused bits + leafIndex
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .unsetMultipleClaims([invalidGlobalIndexMainnet]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test with multiple globalIndexes, one invalid and one valid - should fail on the first invalid one
+        const validGlobalIndex = computeGlobalIndex(indexLocal + 2, indexRollup, false);
+
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .unsetMultipleClaims([invalidGlobalIndexRollup, validGlobalIndex]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test edge case: maximum valid values (should NOT revert with InvalidGlobalIndex)
+        const maxLeafIndex = (1 << 32) - 1; // 2^32 - 1
+        const maxRollupIndex = (1 << 32) - 1; // 2^32 - 1
+        const maxValidRollupGlobalIndex = (BigInt(maxRollupIndex) << 32n) | BigInt(maxLeafIndex);
+
+        // This should fail because the claim doesn't exist, but NOT because of InvalidGlobalIndex
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .unsetMultipleClaims([maxValidRollupGlobalIndex]),
+        ).to.not.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
+
+        // Test edge case: maximum valid mainnet globalIndex (should NOT revert with InvalidGlobalIndex)
+        const maxValidMainnetGlobalIndex = (1n << 64n) | BigInt(maxLeafIndex); // mainnet flag + leafIndex
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .unsetMultipleClaims([maxValidMainnetGlobalIndex]),
+        ).to.not.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidGlobalIndex');
     });
 
     it('should claim tokens from Rollup to Mainnet, failing deploy wrapped', async () => {

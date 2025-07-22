@@ -754,7 +754,6 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         const forkID = 11; // just metadata for pessimistic consensus
         const genesis = ethers.ZeroHash;
         const description = 'new pessimistic consensus';
-        const programVKey = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         const rollupTypeID = 1;
 
         // correct add new rollup via timelock
