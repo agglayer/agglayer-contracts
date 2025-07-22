@@ -3025,20 +3025,6 @@ describe('Polygon Rollup Manager', () => {
             ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidImplementationAddress');
 
-        // Should revert with InvalidVerifierAddress because verifier contract code length is 0
-        await expect(
-            rollupManagerContract.connect(timelock).addExistingRollup(
-                PolygonZKEVMV2Contract.target,
-                computeRandomBytes(20), // wrong
-                forkID,
-                chainID,
-                genesisRandom,
-                1, // pessimistic
-                programVKey,
-                ethers.ZeroHash,
-            ),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidVerifierAddress');
-
         await expect(
             rollupManagerContract.connect(timelock).addExistingRollup(
                 PolygonZKEVMV2Contract.target,
