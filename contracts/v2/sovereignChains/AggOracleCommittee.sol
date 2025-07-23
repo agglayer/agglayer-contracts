@@ -235,6 +235,11 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
         address oracleMemberAddress,
         uint256 oracleMemberIndex
     ) external onlyOwner {
+        require(
+            oracleMemberIndex < aggOracleMembers.length,
+            OracleMemberIndexOutOfBounds()
+        );
+
         bytes32 lastVotedReportHash = addressToLastProposedGER[
             oracleMemberAddress
         ];
