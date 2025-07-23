@@ -14,9 +14,9 @@ contract DepositContractBase {
     error MerkleTreeFull();
 
     /**
-     * @dev Cannot rollback to a higher depositCount than the current one
+     * @dev Thrown when the new deposit count exceeds the maximum allowed
      */
-    error NewDepositCountGreaterThanCurrent();
+    error NewDepositCountExceedsMax();
 
     // Merkle tree levels
     uint256 internal constant _DEPOSIT_CONTRACT_TREE_DEPTH = 32;
@@ -38,6 +38,13 @@ contract DepositContractBase {
      */
     /// @custom:oz-renamed-from _gap
     uint256[10] private __gap;
+
+    /**
+     * @dev Emitted when tree frontier is set by calling resetTree function
+     * @param treeDepth The depth of the set frontier
+     * @param frontier The new frontier (branch array) root hash at given depth
+     */
+    event SetTreeFrontier(uint256 treeDepth, bytes32 frontier);
 
     /**
      * @notice Computes and returns the merkle root
@@ -72,7 +79,7 @@ contract DepositContractBase {
         bytes32 node = leaf;
 
         // Avoid overflowing the Merkle tree (and prevent edge case in computing `_branch`)
-        if (depositCount >= _MAX_DEPOSIT_COUNT) {
+        if (depositCount > _MAX_DEPOSIT_COUNT) {
             revert MerkleTreeFull();
         }
 
@@ -95,20 +102,22 @@ contract DepositContractBase {
     }
 
     /**
-     * @notice Rollback the merkle tree to a previous state
-     * @param newDepositCount New deposit count (leaf count) to rollback to
-     * @param newFrontier New frontiers (branch array)
+     * @notice Reset the merkle tree to a specific state
+     * @param newDepositCount New deposit count (leaf count) to set for the tree
+     * @param newFrontier New frontiers (branch array) to set for the tree
      */
-    function _rollbackTree(
+    function _resetTree(
         uint256 newDepositCount,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
     ) internal {
-        if (newDepositCount >= depositCount) {
-            revert NewDepositCountGreaterThanCurrent();
+        // Check that newDepositCount is within the maximum supported leafs in a 32 height merkle tree
+        if (newDepositCount >= _MAX_DEPOSIT_COUNT) {
+            revert NewDepositCountExceedsMax();
         }
 
         for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
             _branch[i] = newFrontier[i];
+            emit SetTreeFrontier(i, newFrontier[i]);
         }
 
         depositCount = newDepositCount;
