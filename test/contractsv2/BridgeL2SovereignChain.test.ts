@@ -3040,7 +3040,7 @@ describe('BridgeL2SovereignChain Contract', () => {
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyGlobalExitRootRemover');
 
         // Test invalid reset (new count exceeds maximum)
-        const maxDepositCount = (2 ** 32) - 1; // _MAX_DEPOSIT_COUNT 
+        const maxDepositCount = 2 ** 32 - 1; // _MAX_DEPOSIT_COUNT
         await expect(
             sovereignChainBridgeContract
                 .connect(globalExitRootRemover)
@@ -3048,14 +3048,16 @@ describe('BridgeL2SovereignChain Contract', () => {
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NewDepositCountExceedsMax');
 
         // Test successful reset - first verify the transaction emits the events
-        const resetTx = await sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalExitTree(newDepositCount, newFrontier);
+        const resetTx = await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setLocalExitTree(newDepositCount, newFrontier);
 
         // Verify SetLocalExitTree event is emitted
         await expect(resetTx).to.emit(sovereignChainBridgeContract, 'SetLocalExitTree');
 
         // Verify SetTreeFrontier events are emitted - should be 32 events (one for each tree depth level)
         const receipt = await resetTx.wait();
-        const setTreeFrontierEvents = receipt.logs.filter(log => {
+        const setTreeFrontierEvents = receipt.logs.filter((log) => {
             try {
                 const parsed = sovereignChainBridgeContract.interface.parseLog(log);
                 return parsed && parsed.name === 'SetTreeFrontier';
@@ -3174,7 +3176,11 @@ describe('BridgeL2SovereignChain Contract', () => {
         // Test with empty arrays
         await sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalBalanceTree([], [], []);
 
-        // Test with same network ID (should still work as it's not checking for current network exclusion like other functions)
+        // Test with same network ID (should be skipped - tokens from current network are not processed)
+        const initialSelfNetworkBalance = await sovereignChainBridgeContract.localBalanceTree(
+            ethers.keccak256(ethers.solidityPacked(['uint32', 'address'], [networkIDRollup2, polTokenContract.target])),
+        );
+
         await sovereignChainBridgeContract
             .connect(globalExitRootRemover)
             .setLocalBalanceTree([networkIDRollup2], [polTokenContract.target], [ethers.parseEther('25')]);
@@ -3182,9 +3188,38 @@ describe('BridgeL2SovereignChain Contract', () => {
         const selfNetworkTokenInfoHash = ethers.keccak256(
             ethers.solidityPacked(['uint32', 'address'], [networkIDRollup2, polTokenContract.target]),
         );
+
+        // Should remain unchanged (0) because tokens from current network are skipped
         expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(
-            ethers.parseEther('25'),
+            initialSelfNetworkBalance,
         );
+        expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(0);
+
+        // Test mixed array with tokens from current network and other networks
+        // Only tokens from other networks should be processed
+        await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setLocalBalanceTree(
+                [networkIDMainnet, networkIDRollup2, networkIDRollup],
+                [ethers.ZeroAddress, polTokenContract.target, polTokenContract.target],
+                [ethers.parseEther('100'), ethers.parseEther('50'), ethers.parseEther('75')],
+            );
+
+        // Check that only non-current network tokens were processed
+        const mainnetTokenHash = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [networkIDMainnet, ethers.ZeroAddress]),
+        );
+        const rollupTokenHash = ethers.keccak256(
+            ethers.solidityPacked(['uint32', 'address'], [networkIDRollup, polTokenContract.target]),
+        );
+
+        expect(await sovereignChainBridgeContract.localBalanceTree(mainnetTokenHash)).to.be.equal(
+            ethers.parseEther('100'),
+        ); // Processed (different network)
+        expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(0); // Skipped (current network)
+        expect(await sovereignChainBridgeContract.localBalanceTree(rollupTokenHash)).to.be.equal(
+            ethers.parseEther('75'),
+        ); // Processed (different network)
     });
 
     // Combined test demonstrating interaction between all three new functions
@@ -3276,7 +3311,7 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         // Verify SetTreeFrontier events are emitted correctly (light verification for complex test)
         const receipt = await resetTx.wait();
-        const setTreeFrontierEvents = receipt.logs.filter(log => {
+        const setTreeFrontierEvents = receipt.logs.filter((log) => {
             try {
                 const parsed = sovereignChainBridgeContract.interface.parseLog(log);
                 return parsed && parsed.name === 'SetTreeFrontier';
@@ -3348,8 +3383,6 @@ describe('BridgeL2SovereignChain Contract', () => {
             { value: amount },
         );
 
-        const currentDepositCount = await sovereignChainBridgeContract.depositCount();
-
         // Test 1: Reset with all zero hashes
         const newDepositCount1 = 0;
         const allZeroFrontier = new Array(32).fill(ethers.ZeroHash);
@@ -3359,7 +3392,7 @@ describe('BridgeL2SovereignChain Contract', () => {
             .setLocalExitTree(newDepositCount1, allZeroFrontier);
 
         const receipt1 = await resetTx1.wait();
-        const setTreeFrontierEvents1 = receipt1.logs.filter(log => {
+        const setTreeFrontierEvents1 = receipt1.logs.filter((log) => {
             try {
                 const parsed = sovereignChainBridgeContract.interface.parseLog(log);
                 return parsed && parsed.name === 'SetTreeFrontier';
@@ -3389,7 +3422,7 @@ describe('BridgeL2SovereignChain Contract', () => {
             .setLocalExitTree(newDepositCount2, mixedFrontier);
 
         const receipt2 = await resetTx2.wait();
-        const setTreeFrontierEvents2 = receipt2.logs.filter(log => {
+        const setTreeFrontierEvents2 = receipt2.logs.filter((log) => {
             try {
                 const parsed = sovereignChainBridgeContract.interface.parseLog(log);
                 return parsed && parsed.name === 'SetTreeFrontier';
@@ -3407,13 +3440,11 @@ describe('BridgeL2SovereignChain Contract', () => {
         }
 
         // Test 3: Reset with maximum valid deposit count
-        const maxValidDepositCount = (2 ** 32) - 1; // _MAX_DEPOSIT_COUNT
+        const maxValidDepositCount = 2 ** 32 - 1; // _MAX_DEPOSIT_COUNT
         const specificFrontier = new Array(32);
         for (let i = 0; i < 32; i++) {
             // Create specific hash pattern for max test
-            specificFrontier[i] = ethers.keccak256(
-                ethers.solidityPacked(['string', 'uint256'], [`max_test_level`, i])
-            );
+            specificFrontier[i] = ethers.keccak256(ethers.solidityPacked(['string', 'uint256'], [`max_test_level`, i]));
         }
 
         const resetTx3 = await sovereignChainBridgeContract
@@ -3421,7 +3452,7 @@ describe('BridgeL2SovereignChain Contract', () => {
             .setLocalExitTree(maxValidDepositCount, specificFrontier);
 
         const receipt3 = await resetTx3.wait();
-        const setTreeFrontierEvents3 = receipt3.logs.filter(log => {
+        const setTreeFrontierEvents3 = receipt3.logs.filter((log) => {
             try {
                 const parsed = sovereignChainBridgeContract.interface.parseLog(log);
                 return parsed && parsed.name === 'SetTreeFrontier';
