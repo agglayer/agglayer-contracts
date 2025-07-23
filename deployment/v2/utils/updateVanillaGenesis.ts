@@ -324,15 +324,18 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         // create initialize transaction
         // Initialize aggOracle Manager
         const initializeAggOracleCommittee = aggOracleCommitteeFactory.interface.encodeFunctionData('initialize', [
-            proxiedTokensManager, // TODO
+            initializeParams.aggOracleOwner,
             initializeParams.aggOracleCommittee,
             initializeParams.quorum,
         ]);
 
+        const proxyAdminAddress = genesis.genesis.find(function (obj) {
+            return obj.contractName === GENESIS_CONTRACT_NAMES.PROXY_ADMIN;
+        }).address;
         const deployAggOracleProxy = (
             await transparentProxyFactory.getDeployTransaction(
                 aggOracleImplementationAddress as string, // must have bytecode
-                proxiedTokensManager as string,
+                proxyAdminAddress as string,
                 initializeAggOracleCommittee,
             )
         ).data;
@@ -691,6 +694,73 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     expect(polygonDeployerObj.storage['0x0000000000000000000000000000000000000000000000000000000000000000']).to.include(
         deployerAddressObj.address.toLowerCase().slice(2),
     );
+
+    // Additional storage slot checks for agg oracle
+    const sovereignContractObj = genesis.genesis.find(function (obj) {
+        return obj.contractName === GENESIS_CONTRACT_NAMES.AGG_ORACLE_PROXY;
+    });
+
+    if (sovereignContractObj) {
+        // Storage value of proxy implementation
+        expect(
+            sovereignContractObj.storage['0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'],
+        ).to.include(aggOracleImplementationAddress.toLowerCase().slice(2));
+
+        // Admin slot check (TransparentUpgradeableProxy pattern)
+        expect(
+            sovereignContractObj.storage['0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'],
+        ).to.include(proxyAdminObject.address.toLowerCase().slice(2));
+
+        // Initialized slot check
+        expect(
+            sovereignContractObj.storage['0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00'],
+        ).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+
+        // Storage slot 0 check
+        function toPaddedHex32(val: string | number | bigint): string {
+            return ethers.zeroPadValue(ethers.toBeHex(val), 32);
+        }
+        expect(
+            sovereignContractObj.storage['0x0000000000000000000000000000000000000000000000000000000000000000'],
+        ).to.equal(toPaddedHex32(initializeParams.aggOracleCommittee.length));
+
+        // Storage slot 1 check
+        expect(
+            sovereignContractObj.storage['0x0000000000000000000000000000000000000000000000000000000000000001'],
+        ).to.equal(toPaddedHex32(initializeParams.quorum));
+
+        // Check aggOracleMembers array storage slots
+        if (initializeParams.aggOracleCommittee && Array.isArray(initializeParams.aggOracleCommittee)) {
+            // The dynamic array is stored at slot 0 (aggOracleMembers)
+            // Length is at slot 0, elements start at keccak256(0)
+            const keccakSlot0 = ethers.keccak256(ethers.zeroPadValue('0x00', 32));
+            for (let i = 0; i < initializeParams.aggOracleCommittee.length; i++) {
+                const memberAddress = initializeParams.aggOracleCommittee[i];
+                // Compute slot: keccak256(0) + i
+                const slot = ethers.toBeHex(BigInt(keccakSlot0) + BigInt(i), 32);
+                expect(sovereignContractObj.storage[slot]).to.include(memberAddress.toLowerCase().slice(2));
+            }
+
+            // Storage slot 2: mapping(address => bytes32) public addressToLastProposedGER;
+            // For each address, the mapping slot is keccak256(pad32(address) ++ pad32(2))
+            // All should point to INITIAL_PROPOSED_GER = bytes32(uint256(1))
+            const INITIAL_PROPOSED_GER = ethers.zeroPadValue('0x01', 32);
+            for (let i = 0; i < initializeParams.aggOracleCommittee.length; i++) {
+                const memberAddress = initializeParams.aggOracleCommittee[i];
+                // mapping(address => bytes32) at slot 2: keccak256(pad32(address) ++ pad32(2))
+                const paddedAddress = ethers.zeroPadValue(memberAddress, 32);
+                const paddedSlot = ethers.zeroPadValue('0x02', 32);
+                const mappingSlot = ethers.keccak256(ethers.concat([paddedAddress, paddedSlot]));
+                expect(sovereignContractObj.storage[mappingSlot]).to.equal(INITIAL_PROPOSED_GER);
+            }
+        }
+
+        // Storage slot 0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300 check
+        // Owner slot OZ
+        expect(
+            sovereignContractObj.storage['0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300'],
+        ).to.include(toPaddedHex32(initializeParams.aggOracleOwner));
+    }
 
     // Create a new zkEVM to generate a genesis an empty system address storage
     const zkEVMDB3 = await ZkEVMDB.newZkEVM(

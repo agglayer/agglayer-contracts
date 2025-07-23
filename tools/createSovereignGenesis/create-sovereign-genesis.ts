@@ -21,6 +21,7 @@ import { GENESIS_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 // read files
 import genesisBase from './genesis-base.json';
 import createGenesisSovereignParams from './create-genesis-sovereign-params.json';
+import { create } from 'domain';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -120,6 +121,10 @@ async function main() {
             logger.error(
                 `quorum must be smaller or equal than the number of aggOracleCommittee members (${createGenesisSovereignParams.aggOracleCommittee.length})`,
             );
+            process.exit(1);
+        }
+        if (!ethers.isAddress(createGenesisSovereignParams.aggOracleOwner)) {
+            logger.error('aggOracleOwner must be set');
             process.exit(1);
         }
     } else {
@@ -250,6 +255,7 @@ async function main() {
         useAggOracleCommittee: createGenesisSovereignParams.useAggOracleCommittee,
         aggOracleCommittee: createGenesisSovereignParams.aggOracleCommittee,
         quorum: createGenesisSovereignParams.quorum,
+        aggOracleOwner: createGenesisSovereignParams.aggOracleOwner,
     };
 
     logger.info('Update genesis-base to the SovereignContracts');
