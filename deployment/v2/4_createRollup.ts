@@ -88,6 +88,8 @@ async function main() {
     ];
     const supportedConsensus = arraySupportedLegacyConsensus.concat(arraySupportedAggchains);
 
+    console.log(`Consensus: ${consensusContract} \n`);
+
     if (!supportedConsensus.includes(consensusContract)) {
         throw new Error(`Consensus contract not supported, supported contracts are: ${supportedConsensus}`);
     }
@@ -351,28 +353,34 @@ async function main() {
         }
     } else {
         // deploy Verifier
-        let verifierContract;
-        let verifierName;
-        if (realVerifier === true) {
-            if (consensusContract !== 'PolygonPessimisticConsensus') {
-                verifierName = `FflonkVerifier_${forkID}`;
-                const VerifierRollup = await ethers.getContractFactory(verifierName, deployer);
-                verifierContract = await VerifierRollup.deploy();
-                await verifierContract.waitForDeployment();
-            } else {
+        if (consensusContract === 'PolygonPessimisticConsensus') {
+            rollupVerifierType = 1;
+            genesisFinal = ethers.ZeroHash;
+            // verifierAddress = address(0)
+            // programVKey must be 0x00.00 for pessimistic types
+            verifierAddress = ethers.ZeroAddress;
+        } else {
+            let verifierContract;
+            let verifierName;
+            if (realVerifier === true) {
                 verifierName = 'SP1VerifierPlonk';
                 const VerifierRollup = await ethers.getContractFactory(verifierName, deployer);
                 verifierContract = await VerifierRollup.deploy();
                 await verifierContract.waitForDeployment();
+            } else {
+                verifierName = 'VerifierRollupHelperMock';
+                const VerifierRollupHelperFactory = await ethers.getContractFactory(verifierName, deployer);
+                verifierContract = await VerifierRollupHelperFactory.deploy();
+                await verifierContract.waitForDeployment();
             }
-        } else {
-            verifierName = 'VerifierRollupHelperMock';
-            const VerifierRollupHelperFactory = await ethers.getContractFactory(verifierName, deployer);
-            verifierContract = await VerifierRollupHelperFactory.deploy();
-            await verifierContract.waitForDeployment();
-        }
 
-        verifierAddress = verifierContract.target;
+            verifierAddress = verifierContract.target;
+            console.log('#######################\n');
+            console.log('Verifier name:', verifierName);
+            console.log('Verifier deployed to:', verifierAddress);
+            rollupVerifierType = 0;
+            genesisFinal = genesis.root;
+        }
         initializeBytesAggchainRollupManager = utilsAggchain.encodeInitializeBytesLegacy(
             adminZkEVM,
             trustedSequencer,
@@ -380,26 +388,10 @@ async function main() {
             trustedSequencerURL,
             networkName,
         );
-        console.log('#######################\n');
-        console.log('Verifier name:', verifierName);
-        console.log('Verifier deployed to:', verifierAddress);
-
-        if (consensusContract === 'PolygonPessimisticConsensus') {
-            rollupVerifierType = 1;
-            genesisFinal = ethers.ZeroHash;
-        } else {
-            rollupVerifierType = 0;
-            genesisFinal = genesis.root;
-            // programVKey must be 0x00.00 for no pessimistic consensus
-        }
     }
 
     // Sanity checks
-    if (consensusContract === 'PolygonPessimisticConsensus') {
-        if (genesisFinal !== ethers.ZeroHash) {
-            throw new Error(`genesis should be 0x for ${consensusContract}`);
-        }
-    } else if (arraySupportedAggchains.includes(consensusContract)) {
+    if (consensusContract === 'PolygonPessimisticConsensus' || arraySupportedAggchains.includes(consensusContract)) {
         if (verifierAddress !== ethers.ZeroAddress) {
             throw new Error(`For ${consensusContract}: verifier == address(0)`);
         } else if (forkID !== 0) {
