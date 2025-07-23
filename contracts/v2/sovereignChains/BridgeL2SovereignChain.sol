@@ -160,29 +160,26 @@ contract BridgeL2SovereignChain is
     );
 
     /**
-     * @dev Emitted when a claim is set by calling a permissioned function
+     * @dev Emitted when a claim is set
      * @param leafIndex Index of the leaf of the set claim in the Merkle tree
      * @param sourceNetwork Identifier of the source network of the claim (0 = Ethereum).
      */
-    event SetClaimPermissioned(uint32 leafIndex, uint32 sourceNetwork);
+    event SetClaim(uint32 leafIndex, uint32 sourceNetwork);
 
     /**
-     * @dev Emitted when local exit tree is set by calling a permissioned function
+     * @dev Emitted when local exit tree is reset to a specific state
      * @param newDepositCount The resulting deposit count after setting the tree
      * @param newRoot The resulting root of the local exit tree after setting
      */
-    event SetLocalExitTreePermissioned(
-        uint256 newDepositCount,
-        bytes32 newRoot
-    );
+    event SetLocalExitTree(uint256 newDepositCount, bytes32 newRoot);
 
     /**
-     * @dev Emitted when local balance tree is set by calling a permissioned function
+     * @dev Emitted when local balance tree is updated
      * @param originNetwork The origin network of the set leaf
      * @param originTokenAddress The origin token address of the set leaf
      * @param newAmount The new amount set for this token
      */
-    event SetLocalBalanceTreePermissioned(
+    event SetLocalBalanceTree(
         uint32 indexed originNetwork,
         address indexed originTokenAddress,
         uint256 newAmount
@@ -572,9 +569,6 @@ contract BridgeL2SovereignChain is
         );
     }
 
-    /////////////////////////////////
-    //// Permissioned functions ////
-    ////////////////////////////////
     /**
      * @notice Unset multiple claims from the claimedBitmap
      * @dev This function is a "multi/batch call" to `_unsetClaimedBitmap`
@@ -680,7 +674,7 @@ contract BridgeL2SovereignChain is
             // Set the claim
             _setAndCheckClaimed(leafIndex, sourceBridgeNetwork);
 
-            emit SetClaimPermissioned(leafIndex, sourceBridgeNetwork);
+            emit SetClaim(leafIndex, sourceBridgeNetwork);
         }
     }
 
@@ -694,9 +688,9 @@ contract BridgeL2SovereignChain is
         uint256 newDepositCount,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
     ) external onlyGlobalExitRootRemover {
-        _rollbackTree(newDepositCount, newFrontier);
+        _resetTree(newDepositCount, newFrontier);
         // emit event
-        emit SetLocalExitTreePermissioned(newDepositCount, getRoot());
+        emit SetLocalExitTree(newDepositCount, getRoot());
     }
 
     /**
@@ -720,6 +714,11 @@ contract BridgeL2SovereignChain is
         }
 
         for (uint256 i = 0; i < originNetwork.length; i++) {
+            // If the token is from this chain does not modify the Local Balance Tree
+            if (originNetwork[i] == networkID) {
+                continue;
+            }
+
             // Compute token info hash
             bytes32 tokenInfoHash = keccak256(
                 abi.encodePacked(originNetwork[i], originTokenAddress[i])
@@ -728,7 +727,7 @@ contract BridgeL2SovereignChain is
             localBalanceTree[tokenInfoHash] = amount[i];
 
             // Emit event
-            emit SetLocalBalanceTreePermissioned(
+            emit SetLocalBalanceTree(
                 originNetwork[i],
                 originTokenAddress[i],
                 amount[i]

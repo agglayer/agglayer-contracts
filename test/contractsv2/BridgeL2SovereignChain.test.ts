@@ -2934,9 +2934,9 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         // Test successful setting of multiple claims
         await expect(sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims(globalIndexes))
-            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetClaim')
             .withArgs(indexLocal1, indexRollup + 1)
-            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetClaim')
             .withArgs(indexLocal2, indexRollup + 1);
 
         // Verify claims are now set
@@ -2953,7 +2953,7 @@ describe('BridgeL2SovereignChain Contract', () => {
         await expect(
             sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([mainnetGlobalIndex]),
         )
-            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetClaim')
             .withArgs(7, 0);
 
         // Verify mainnet claim is set
@@ -3039,38 +3039,55 @@ describe('BridgeL2SovereignChain Contract', () => {
             sovereignChainBridgeContract.connect(rollupManager).setLocalExitTree(newDepositCount, newFrontier),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyGlobalExitRootRemover');
 
-        // Test invalid rollback (new count >= current count)
+        // Test invalid reset (new count exceeds maximum)
+        const maxDepositCount = (2 ** 32) - 1; // _MAX_DEPOSIT_COUNT 
         await expect(
             sovereignChainBridgeContract
                 .connect(globalExitRootRemover)
-                .setLocalExitTree(Number(currentDepositCount), newFrontier),
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NewDepositCountGreaterThanCurrent');
+                .setLocalExitTree(maxDepositCount + 1, newFrontier),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NewDepositCountExceedsMax');
 
-        await expect(
-            sovereignChainBridgeContract
-                .connect(globalExitRootRemover)
-                .setLocalExitTree(Number(currentDepositCount) + 1, newFrontier),
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NewDepositCountGreaterThanCurrent');
+        // Test successful reset - first verify the transaction emits the events
+        const resetTx = await sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalExitTree(newDepositCount, newFrontier);
 
-        // Test successful rollback - first verify the transaction emits the event
-        await expect(
-            sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalExitTree(newDepositCount, newFrontier),
-        ).to.emit(sovereignChainBridgeContract, 'SetLocalExitTreePermissioned');
+        // Verify SetLocalExitTree event is emitted
+        await expect(resetTx).to.emit(sovereignChainBridgeContract, 'SetLocalExitTree');
 
-        // Verify the state was rolled back
+        // Verify SetTreeFrontier events are emitted - should be 32 events (one for each tree depth level)
+        const receipt = await resetTx.wait();
+        const setTreeFrontierEvents = receipt.logs.filter(log => {
+            try {
+                const parsed = sovereignChainBridgeContract.interface.parseLog(log);
+                return parsed && parsed.name === 'SetTreeFrontier';
+            } catch {
+                return false;
+            }
+        });
+
+        // Should have exactly 32 SetTreeFrontier events (one for each tree depth level)
+        expect(setTreeFrontierEvents.length).to.be.equal(32);
+
+        // Verify each SetTreeFrontier event has correct parameters
+        for (let i = 0; i < 32; i++) {
+            const parsedEvent = sovereignChainBridgeContract.interface.parseLog(setTreeFrontierEvents[i]);
+            expect(parsedEvent.args.treeDepth).to.be.equal(i); // treeDepth should be 0-31
+            expect(parsedEvent.args.frontier).to.be.equal(newFrontier[i]); // frontier should match newFrontier array
+        }
+
+        // Verify the state was reset
         expect(await sovereignChainBridgeContract.depositCount()).to.be.equal(newDepositCount);
 
-        // Verify the event was emitted with correct parameters
-        const rootAfterRollback = await sovereignChainBridgeContract.getRoot();
-        const filter = sovereignChainBridgeContract.filters.SetLocalExitTreePermissioned();
+        // Verify the SetLocalExitTree event was emitted with correct parameters
+        const rootAfterReset = await sovereignChainBridgeContract.getRoot();
+        const filter = sovereignChainBridgeContract.filters.SetLocalExitTree();
         const events = await sovereignChainBridgeContract.queryFilter(filter);
         const lastEvent = events[events.length - 1];
         expect(lastEvent.args[0]).to.be.equal(newDepositCount); // newDepositCount
-        expect(lastEvent.args[1]).to.be.equal(rootAfterRollback); // newRoot
+        expect(lastEvent.args[1]).to.be.equal(rootAfterReset); // newRoot
 
-        // The root should be different (rolled back to frontier state)
-        const rolledBackRoot = await sovereignChainBridgeContract.getRoot();
-        expect(rolledBackRoot).to.not.equal(currentRoot);
+        // The root should be different (reset to frontier state)
+        const resetRoot = await sovereignChainBridgeContract.getRoot();
+        expect(resetRoot).to.not.equal(currentRoot);
     });
 
     // Test for setLocalBalanceTree function
@@ -3123,9 +3140,9 @@ describe('BridgeL2SovereignChain Contract', () => {
                 .connect(globalExitRootRemover)
                 .setLocalBalanceTree(originNetworks, originTokenAddresses, amounts),
         )
-            .to.emit(sovereignChainBridgeContract, 'SetLocalBalanceTreePermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetLocalBalanceTree')
             .withArgs(originNetworks[0], originTokenAddresses[0], amounts[0])
-            .to.emit(sovereignChainBridgeContract, 'SetLocalBalanceTreePermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetLocalBalanceTree')
             .withArgs(originNetworks[1], originTokenAddresses[1], amounts[1]);
 
         // Verify the updates
@@ -3216,9 +3233,9 @@ describe('BridgeL2SovereignChain Contract', () => {
         await expect(
             sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims([globalIndex1, globalIndex2]),
         )
-            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetClaim')
             .withArgs(indexLocal1, indexRollup + 1)
-            .to.emit(sovereignChainBridgeContract, 'SetClaimPermissioned')
+            .to.emit(sovereignChainBridgeContract, 'SetClaim')
             .withArgs(indexLocal2, indexRollup + 1);
 
         // Verify claims are set
@@ -3245,30 +3262,45 @@ describe('BridgeL2SovereignChain Contract', () => {
         expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(balanceAmounts[0]);
         expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash2)).to.be.equal(balanceAmounts[1]);
 
-        // Rollback the local exit tree to an earlier state
-        const rollbackDepositCount = Number(depositCountAfterBridge) - 1;
+        // Reset the local exit tree to an earlier state
+        const resetDepositCount = Number(depositCountAfterBridge) - 1;
         const newFrontier = new Array(32).fill(ethers.ZeroHash);
 
-        // First verify the transaction emits the event
-        await expect(
-            sovereignChainBridgeContract
-                .connect(globalExitRootRemover)
-                .setLocalExitTree(rollbackDepositCount, newFrontier),
-        ).to.emit(sovereignChainBridgeContract, 'SetLocalExitTreePermissioned');
+        // Execute the reset transaction and verify all events
+        const resetTx = await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setLocalExitTree(resetDepositCount, newFrontier);
 
-        // Verify the rollback
-        expect(await sovereignChainBridgeContract.depositCount()).to.be.equal(rollbackDepositCount);
+        // Verify SetLocalExitTree event is emitted
+        await expect(resetTx).to.emit(sovereignChainBridgeContract, 'SetLocalExitTree');
 
-        // Verify the event was emitted with correct parameters
-        const rootAfterRollback = await sovereignChainBridgeContract.getRoot();
-        const filter = sovereignChainBridgeContract.filters.SetLocalExitTreePermissioned();
+        // Verify SetTreeFrontier events are emitted correctly (light verification for complex test)
+        const receipt = await resetTx.wait();
+        const setTreeFrontierEvents = receipt.logs.filter(log => {
+            try {
+                const parsed = sovereignChainBridgeContract.interface.parseLog(log);
+                return parsed && parsed.name === 'SetTreeFrontier';
+            } catch {
+                return false;
+            }
+        });
+
+        // Should have exactly 32 SetTreeFrontier events
+        expect(setTreeFrontierEvents.length).to.be.equal(32);
+
+        // Verify the reset
+        expect(await sovereignChainBridgeContract.depositCount()).to.be.equal(resetDepositCount);
+
+        // Verify the SetLocalExitTree event was emitted with correct parameters
+        const rootAfterReset = await sovereignChainBridgeContract.getRoot();
+        const filter = sovereignChainBridgeContract.filters.SetLocalExitTree();
         const events = await sovereignChainBridgeContract.queryFilter(filter);
         const lastEvent = events[events.length - 1];
-        expect(lastEvent.args[0]).to.be.equal(rollbackDepositCount); // rollbackDepositCount
-        expect(lastEvent.args[1]).to.be.equal(rootAfterRollback); // newRoot
+        expect(lastEvent.args[0]).to.be.equal(resetDepositCount); // resetDepositCount
+        expect(lastEvent.args[1]).to.be.equal(rootAfterReset); // newRoot
         expect(await sovereignChainBridgeContract.getRoot()).to.not.equal(rootAfterBridge);
 
-        // Verify that claims and balance tree updates are still intact after rollback
+        // Verify that claims and balance tree updates are still intact after reset
         expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(true);
         expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(true);
         expect(await sovereignChainBridgeContract.localBalanceTree(tokenInfoHash1)).to.be.equal(balanceAmounts[0]);
@@ -3282,5 +3314,131 @@ describe('BridgeL2SovereignChain Contract', () => {
         // Verify claims are now unset
         expect(await sovereignChainBridgeContract.isClaimed(indexLocal1, indexRollup + 1)).to.be.equal(false);
         expect(await sovereignChainBridgeContract.isClaimed(indexLocal2, indexRollup + 1)).to.be.equal(false);
+    });
+
+    // Dedicated test for SetTreeFrontier event with different frontier values
+    it('should emit SetTreeFrontier events with correct parameters for different frontiers', async () => {
+        // Setup: Create some bridge activity first
+        const amount = ethers.parseEther('5');
+        const destinationAddress = acc1.address;
+
+        // Claim some ether first to have balance for bridging
+        await claimBeforeBridge(
+            LEAF_TYPE_ASSET,
+            networkIDMainnet, // originNetwork
+            ethers.ZeroAddress, // ether
+            networkIDRollup2, // destinationNetwork
+            destinationAddress,
+            amount * 2n,
+            '0x', // metadata
+            sovereignChainGlobalExitRootContract,
+            sovereignChainBridgeContract,
+            polTokenContract,
+            0,
+        );
+
+        // Make some bridge transactions to have meaningful deposit count
+        await sovereignChainBridgeContract.bridgeAsset(
+            networkIDRollup,
+            destinationAddress,
+            amount,
+            ethers.ZeroAddress,
+            true,
+            '0x',
+            { value: amount },
+        );
+
+        const currentDepositCount = await sovereignChainBridgeContract.depositCount();
+
+        // Test 1: Reset with all zero hashes
+        const newDepositCount1 = 0;
+        const allZeroFrontier = new Array(32).fill(ethers.ZeroHash);
+
+        const resetTx1 = await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setLocalExitTree(newDepositCount1, allZeroFrontier);
+
+        const receipt1 = await resetTx1.wait();
+        const setTreeFrontierEvents1 = receipt1.logs.filter(log => {
+            try {
+                const parsed = sovereignChainBridgeContract.interface.parseLog(log);
+                return parsed && parsed.name === 'SetTreeFrontier';
+            } catch {
+                return false;
+            }
+        });
+
+        // Verify all 32 events have zero hashes
+        expect(setTreeFrontierEvents1.length).to.be.equal(32);
+        for (let i = 0; i < 32; i++) {
+            const parsedEvent = sovereignChainBridgeContract.interface.parseLog(setTreeFrontierEvents1[i]);
+            expect(parsedEvent.args.treeDepth).to.be.equal(i);
+            expect(parsedEvent.args.frontier).to.be.equal(ethers.ZeroHash);
+        }
+
+        // Test 2: Reset with mixed values frontier
+        const newDepositCount2 = 5;
+        const mixedFrontier = new Array(32);
+        for (let i = 0; i < 32; i++) {
+            // Create different hash for each level
+            mixedFrontier[i] = ethers.keccak256(ethers.toUtf8Bytes(`frontier_level_${i}`));
+        }
+
+        const resetTx2 = await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setLocalExitTree(newDepositCount2, mixedFrontier);
+
+        const receipt2 = await resetTx2.wait();
+        const setTreeFrontierEvents2 = receipt2.logs.filter(log => {
+            try {
+                const parsed = sovereignChainBridgeContract.interface.parseLog(log);
+                return parsed && parsed.name === 'SetTreeFrontier';
+            } catch {
+                return false;
+            }
+        });
+
+        // Verify all 32 events have correct mixed values
+        expect(setTreeFrontierEvents2.length).to.be.equal(32);
+        for (let i = 0; i < 32; i++) {
+            const parsedEvent = sovereignChainBridgeContract.interface.parseLog(setTreeFrontierEvents2[i]);
+            expect(parsedEvent.args.treeDepth).to.be.equal(i);
+            expect(parsedEvent.args.frontier).to.be.equal(mixedFrontier[i]);
+        }
+
+        // Test 3: Reset with maximum valid deposit count
+        const maxValidDepositCount = (2 ** 32) - 1; // _MAX_DEPOSIT_COUNT
+        const specificFrontier = new Array(32);
+        for (let i = 0; i < 32; i++) {
+            // Create specific hash pattern for max test
+            specificFrontier[i] = ethers.keccak256(
+                ethers.solidityPacked(['string', 'uint256'], [`max_test_level`, i])
+            );
+        }
+
+        const resetTx3 = await sovereignChainBridgeContract
+            .connect(globalExitRootRemover)
+            .setLocalExitTree(maxValidDepositCount, specificFrontier);
+
+        const receipt3 = await resetTx3.wait();
+        const setTreeFrontierEvents3 = receipt3.logs.filter(log => {
+            try {
+                const parsed = sovereignChainBridgeContract.interface.parseLog(log);
+                return parsed && parsed.name === 'SetTreeFrontier';
+            } catch {
+                return false;
+            }
+        });
+
+        // Verify all 32 events with specific pattern
+        expect(setTreeFrontierEvents3.length).to.be.equal(32);
+        for (let i = 0; i < 32; i++) {
+            const parsedEvent = sovereignChainBridgeContract.interface.parseLog(setTreeFrontierEvents3[i]);
+            expect(parsedEvent.args.treeDepth).to.be.equal(i);
+            expect(parsedEvent.args.frontier).to.be.equal(specificFrontier[i]);
+        }
+
+        // Verify final state
+        expect(await sovereignChainBridgeContract.depositCount()).to.be.equal(maxValidDepositCount);
     });
 });
