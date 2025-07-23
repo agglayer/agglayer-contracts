@@ -79,7 +79,7 @@ contract DepositContractBase {
         bytes32 node = leaf;
 
         // Avoid overflowing the Merkle tree (and prevent edge case in computing `_branch`)
-        if (depositCount > _MAX_DEPOSIT_COUNT) {
+        if (depositCount >= _MAX_DEPOSIT_COUNT) {
             revert MerkleTreeFull();
         }
 
@@ -111,7 +111,7 @@ contract DepositContractBase {
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
     ) internal {
         // Check that newDepositCount is within the maximum supported leafs in a 32 height merkle tree
-        if (newDepositCount >= _MAX_DEPOSIT_COUNT) {
+        if (newDepositCount > _MAX_DEPOSIT_COUNT) {
             revert NewDepositCountExceedsMax();
         }
 

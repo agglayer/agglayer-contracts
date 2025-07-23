@@ -714,7 +714,9 @@ contract BridgeL2SovereignChain is
         }
 
         for (uint256 i = 0; i < originNetwork.length; i++) {
-            // If the token is from this chain does not modify the Local Balance Tree
+            // Skip tokens from the current network to avoid modifying the Local Balance Tree
+            // for tokens that are already managed locally. This ensures that only tokens
+            // from other networks are updated in the Local Balance Tree.
             if (originNetwork[i] == networkID) {
                 continue;
             }
