@@ -689,8 +689,13 @@ contract BridgeL2SovereignChain is
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
     ) external onlyGlobalExitRootRemover {
         _resetTree(newDepositCount, newFrontier);
+
+        // Update GER
+        bytes32 newGER = getRoot();
+        globalExitRootManager.updateExitRoot(newGER);
+
         // emit event
-        emit SetLocalExitTree(newDepositCount, getRoot());
+        emit SetLocalExitTree(newDepositCount, newGER);
     }
 
     /**
@@ -714,11 +719,9 @@ contract BridgeL2SovereignChain is
         }
 
         for (uint256 i = 0; i < originNetwork.length; i++) {
-            // Skip tokens from the current network to avoid modifying the Local Balance Tree
-            // for tokens that are already managed locally. This ensures that only tokens
-            // from other networks are updated in the Local Balance Tree.
+            // Ensures that only tokens from other networks are updated in the Local Balance Tree.
             if (originNetwork[i] == networkID) {
-                continue;
+                revert InvalidLBTLeaf();
             }
 
             // Compute token info hash
