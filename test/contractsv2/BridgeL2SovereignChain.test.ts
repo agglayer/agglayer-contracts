@@ -3176,36 +3176,32 @@ describe('BridgeL2SovereignChain Contract', () => {
         // Test with empty arrays
         await sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalBalanceTree([], [], []);
 
-        // Test with same network ID (should be skipped - tokens from current network are not processed)
-        const initialSelfNetworkBalance = await sovereignChainBridgeContract.localBalanceTree(
-            ethers.keccak256(ethers.solidityPacked(['uint32', 'address'], [networkIDRollup2, polTokenContract.target])),
-        );
+        // Test with same network ID (should revert with InvalidLBTLeaf)
+        await expect(
+            sovereignChainBridgeContract
+                .connect(globalExitRootRemover)
+                .setLocalBalanceTree([networkIDRollup2], [polTokenContract.target], [ethers.parseEther('25')]),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLBTLeaf');
 
-        await sovereignChainBridgeContract
-            .connect(globalExitRootRemover)
-            .setLocalBalanceTree([networkIDRollup2], [polTokenContract.target], [ethers.parseEther('25')]);
+        // Test with mixed array containing tokens from current network (should revert on first current network token)
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalBalanceTree(
+                [networkIDMainnet, networkIDRollup2, networkIDRollup], // networkIDRollup2 is current network
+                [ethers.ZeroAddress, polTokenContract.target, polTokenContract.target],
+                [ethers.parseEther('100'), ethers.parseEther('50'), ethers.parseEther('75')],
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLBTLeaf');
 
-        const selfNetworkTokenInfoHash = ethers.keccak256(
-            ethers.solidityPacked(['uint32', 'address'], [networkIDRollup2, polTokenContract.target]),
-        );
-
-        // Should remain unchanged (0) because tokens from current network are skipped
-        expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(
-            initialSelfNetworkBalance,
-        );
-        expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(0);
-
-        // Test mixed array with tokens from current network and other networks
-        // Only tokens from other networks should be processed
+        // Test with only tokens from other networks (should work fine)
         await sovereignChainBridgeContract
             .connect(globalExitRootRemover)
             .setLocalBalanceTree(
-                [networkIDMainnet, networkIDRollup2, networkIDRollup],
-                [ethers.ZeroAddress, polTokenContract.target, polTokenContract.target],
-                [ethers.parseEther('100'), ethers.parseEther('50'), ethers.parseEther('75')],
+                [networkIDMainnet, networkIDRollup],
+                [ethers.ZeroAddress, polTokenContract.target],
+                [ethers.parseEther('100'), ethers.parseEther('75')],
             );
 
-        // Check that only non-current network tokens were processed
+        // Verify that tokens from other networks were processed correctly
         const mainnetTokenHash = ethers.keccak256(
             ethers.solidityPacked(['uint32', 'address'], [networkIDMainnet, ethers.ZeroAddress]),
         );
@@ -3215,11 +3211,19 @@ describe('BridgeL2SovereignChain Contract', () => {
 
         expect(await sovereignChainBridgeContract.localBalanceTree(mainnetTokenHash)).to.be.equal(
             ethers.parseEther('100'),
-        ); // Processed (different network)
-        expect(await sovereignChainBridgeContract.localBalanceTree(selfNetworkTokenInfoHash)).to.be.equal(0); // Skipped (current network)
+        );
         expect(await sovereignChainBridgeContract.localBalanceTree(rollupTokenHash)).to.be.equal(
             ethers.parseEther('75'),
-        ); // Processed (different network)
+        );
+
+        // Test additional edge case: array where current network token is at different positions
+        await expect(
+            sovereignChainBridgeContract.connect(globalExitRootRemover).setLocalBalanceTree(
+                [networkIDRollup, networkIDRollup2], // networkIDRollup2 is current network, at position 1
+                [polTokenContract.target, polTokenContract.target],
+                [ethers.parseEther('50'), ethers.parseEther('25')],
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLBTLeaf');
     });
 
     // Combined test demonstrating interaction between all three new functions

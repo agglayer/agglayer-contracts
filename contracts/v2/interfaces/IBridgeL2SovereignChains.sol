@@ -66,6 +66,11 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error InvalidZeroNetworkID();
 
     /**
+     * @dev Thrown when trying set a LFT leaf with same origin network thank chain network ID
+     */
+    error InvalidLBTLeaf();
+
+    /**
      @dev Thrown when trying to substract more rather than available balance
      */
     error LocalBalanceTreeUnderflow(
