@@ -1,0 +1,25 @@
+{
+    "network": {
+        "chainID": 1001,
+        "rollupID": 1001,
+        "networkName": "OutpostChain",
+        "tokenName": "Wrapped Ether",
+        "tokenSymbol": "WETH", 
+        "tokenDecimals": 18
+    },
+    "timelock": {
+        "timelockDelay": 3600,
+        "timelockAdminAddress": "0xYourTimelockAdminAddress"
+    },
+    "bridge": {
+        "bridgeManager": "0xYourBridgeManagerAddress",
+        "sovereignWETHAddress": "0x0000000000000000000000000000000000000000",
+        "sovereignWETHAddressIsNotMintable": false,
+        "emergencyBridgePauser": "0xYourEmergencyPauserAddress",
+        "emergencyBridgeUnpauser": "0xYourEmergencyUnpauserAddress"
+    },
+    "globalExitRoot": {
+        "globalExitRootUpdater": "0xYourGlobalExitRootUpdaterAddress",
+        "globalExitRootRemover": "0xYourGlobalExitRootRemoverAddress"
+    }
+} 

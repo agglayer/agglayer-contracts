@@ -30,6 +30,8 @@ const config: HardhatUserConfig = {
             '@openzeppelin/contracts4/token/ERC20/presets/ERC20PresetFixedSupply.sol',
             '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol',
             '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol',
+            '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
+            '@openzeppelin/contracts/governance/TimelockController.sol',
         ], // ,
         // keep: true
     },
