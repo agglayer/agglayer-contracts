@@ -1,9 +1,8 @@
-
 > This CHANGELOG is a bit different; we are only adding the versions for the first time.
 > In the Breaking Changes section, we’ve listed the versions that have been changed.
 > In the New Features section, we’ve listed the versions that didn’t exist before.
 
-## [v11.0.0] - 2025-07-21 (First ChangeLog)
+## [v11.0.0] - 2025-07-24
 
 ### 🚨 Breaking Changes
 - contracts/v2/PolygonRollupManager.sol: al-v0.3.1 -> v1.0.0
@@ -15,10 +14,29 @@
 ### ✨ New Features
 - ➕ New! contracts/v2/AggLayerGateway.sol: v1.0.0
 - ➕ New! contracts/v2/aggchains/AggchainECDSA.sol: v1.0.0
-- ➕ New! contracts/v2/aggchains/AggchainFEP.sol: v1.0.0
 
 ### 📝 Updates / 🐛 Bugfixes
 - New tooling package (v11.0.0)
 
-### 📜 Changelog (commits)
-- new versions
+### 📜 Changelog (PRs)
+[PR #478](https://github.com/agglayer/agglayer-contracts/pull/478) - Feature/zk evm to pp
+[PR #500](https://github.com/agglayer/agglayer-contracts/pull/500) - Slack Release Notification Bot
+[PR #498](https://github.com/agglayer/agglayer-contracts/pull/498) - Add build & push docker GHA
+[PR #494](https://github.com/agglayer/agglayer-contracts/pull/494) - Feature/merge zkevm to pp
+[PR #495](https://github.com/agglayer/agglayer-contracts/pull/495) - add test invalid global index
+[PR #489](https://github.com/agglayer/agglayer-contracts/pull/489) - fix: update readme
+[PR #493](https://github.com/agglayer/agglayer-contracts/pull/493) - add audit report migration
+[PR #492](https://github.com/agglayer/agglayer-contracts/pull/492) - fix getGitInfo tool upgrade v0.3.1
+[PR #491](https://github.com/agglayer/agglayer-contracts/pull/491) - Update migration ALGateway
+[PR #490](https://github.com/agglayer/agglayer-contracts/pull/490) - Remediations migration
+[PR #483](https://github.com/agglayer/agglayer-contracts/pull/483) - add rollupTypes maiunnet 10, 11 and 12
+[PR #486](https://github.com/agglayer/agglayer-contracts/pull/486) - check global index
+[PR #487](https://github.com/agglayer/agglayer-contracts/pull/487) - fix comment
+[PR #482](https://github.com/agglayer/agglayer-contracts/pull/482) - merge tests & validate upgrade zkevmetrog
+[PR #471](https://github.com/agglayer/agglayer-contracts/pull/471) - add tools to update rangeVkeyCommitment & aggregationVkey
+[PR #472](https://github.com/agglayer/agglayer-contracts/pull/472) - Feature/sp1 v5
+[PR #475](https://github.com/agglayer/agglayer-contracts/pull/475) - fix initialize rollup tool
+[PR #481](https://github.com/agglayer/agglayer-contracts/pull/481) - add OZ comment renamed & test validateUpgrade
+[PR #479](https://github.com/agglayer/agglayer-contracts/pull/479) - Feature/add test migrate
+
+

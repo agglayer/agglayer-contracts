@@ -5,6 +5,8 @@ import readline from 'readline';
 
 const changelogPath = path.join(__dirname, './CHANGELOG.md');
 const PREVIOUS_TAG = process.argv[2];
+const NEW_TAG = process.argv[3];
+const repoUrl = 'https://github.com/agglayer/agglayer-contracts';
 
 const contracts = [
     'contracts/v2/PolygonRollupManager.sol',
@@ -58,13 +60,31 @@ function classifyContractChange(oldVersion: string, newVersion: string): 'breaki
     return null;
 }
 
-function getCommits(fromTag: string, toTag: string): string[] {
+function getMergedPRs(fromTag: string, toTag: string): string[] {
     const range = `${fromTag}..${toTag}`;
     try {
-        const log = execSync(`git log --pretty=format:"- %s" ${range}`).toString();
-        return log.split('\n').filter((line) => line);
-    } catch {
-        throw Error(`Failed to get commits for range ${range}`);
+        const log = execSync(`git log ${range} --merges --pretty=format:"%H%n%s%n%b%n---END---"`).toString();
+        const entries = log
+            .split('---END---')
+            .map((entry) => entry.trim())
+            .filter(Boolean);
+        const prStrings: string[] = [];
+        // eslint-disable-next-line no-restricted-syntax
+        for (const entry of entries) {
+            const lines = entry.split('\n').map((l) => l.trim());
+            const subject = lines[1]; // e.g., "Merge pull request #123 from ..."
+            const body = lines.slice(2).find((l) => l); // first non-empty line = PR title
+
+            const match = subject.match(/Merge pull request #(\d+)/);
+            if (match && body) {
+                const prNumber = parseInt(match[1], 10);
+                const url = `${repoUrl}/pull/${prNumber}`;
+                prStrings.push(`[PR #${prNumber}](${url}) - ${body}`);
+            }
+        }
+        return prStrings;
+    } catch (err: any) {
+        throw new Error(`Failed to get merged PRs: ${err.message}`);
     }
 }
 
@@ -97,7 +117,7 @@ function updateChangelog(
         entry += `\n### 📝 Updates / 🐛 Bugfixes\n${notes.join('\n')}\n`;
     }
     if (commits.length) {
-        entry += `\n### 📜 Changelog (commits)\n${commits.join('\n')}\n`;
+        entry += `\n### 📜 Changelog (PRs)\n${commits.join('\n')}\n`;
     }
 
     entry += `\n---\n`;
@@ -155,8 +175,9 @@ async function main() {
         }
     });
 
-    const newRelease = calculateNewRelease(PREVIOUS_TAG, { breaking: hasBreaking, feature: hasFeature });
-    const commits = getCommits(PREVIOUS_TAG, 'HEAD');
+    const newTag = NEW_TAG || 'HEAD';
+    const newRelease = NEW_TAG || calculateNewRelease(PREVIOUS_TAG, { breaking: hasBreaking, feature: hasFeature });
+    const commits = getMergedPRs(PREVIOUS_TAG, newTag);
 
     const toolingAnswer = await askToolingUpdate();
     if (toolingAnswer === 3) {
