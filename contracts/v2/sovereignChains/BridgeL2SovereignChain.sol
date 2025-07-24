@@ -587,9 +587,6 @@ contract BridgeL2SovereignChain is
         );
     }
 
-    /////////////////////////////////
-    //// Permissioned functions ////
-    ////////////////////////////////
     /**
      * @notice Unset multiple claims from the claimedBitmap
      * @dev This function is a "multi/batch call" to `_unsetClaimedBitmap`
