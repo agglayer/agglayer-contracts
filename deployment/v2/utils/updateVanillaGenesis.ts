@@ -18,6 +18,10 @@ const supportedGERManagers = ['PolygonZkEVMGlobalExitRootL2 implementation'];
 const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'PolygonZkEVMBridgeV2 implementation'];
 const supportedBridgeContractsProxy = ['PolygonZkEVMBridgeV2 proxy', 'PolygonZkEVMBridge proxy'];
 
+function toPaddedHex32(val: string | number | bigint): string {
+    return ethers.zeroPadValue(ethers.toBeHex(val), 32);
+}
+
 async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     // Check initialize params
     const mandatoryUpgradeParameters = [
@@ -717,9 +721,6 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         ).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
 
         // Storage slot 0 check
-        function toPaddedHex32(val: string | number | bigint): string {
-            return ethers.zeroPadValue(ethers.toBeHex(val), 32);
-        }
         expect(
             sovereignContractObj.storage['0x0000000000000000000000000000000000000000000000000000000000000000'],
         ).to.equal(toPaddedHex32(initializeParams.aggOracleCommittee.length));

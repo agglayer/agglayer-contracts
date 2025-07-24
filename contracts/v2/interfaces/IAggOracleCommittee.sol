@@ -54,7 +54,7 @@ interface IAggOracleCommittee {
 
     /// @notice Thrown when the oracle member index is out of bounds.
     error OracleMemberIndexOutOfBounds();
-    
+
     /// @dev Emitted when a global exit root is consolidated
     event ConsolidatedGlobalExitRoot(bytes32 consolidatedGlobalExitRoot);
 

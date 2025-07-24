@@ -21,7 +21,6 @@ import { GENESIS_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 // read files
 import genesisBase from './genesis-base.json';
 import createGenesisSovereignParams from './create-genesis-sovereign-params.json';
-import { create } from 'domain';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 

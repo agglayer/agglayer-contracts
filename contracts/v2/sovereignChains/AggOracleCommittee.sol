@@ -21,7 +21,7 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
         uint64 timestamp;
     }
 
-    // This value is reserved as an initial voted GER to mark an oracle address as active
+    // Version
     string public constant VERSION = "v1.0.0";
 
     // This value is reserved as an initial voted GER to mark an oracle address as active
@@ -151,6 +151,10 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
         emit ProposedGlobalExitRoot(proposedGlobalExitRoot, msg.sender);
 
         // Check if it reaches the quorum
+        // Note that addressToLastProposedGER is not updated in case consoldiation happens
+        // Since the mapping used to keep track which report an oracle is voting currently,
+        // to avoid double voting, if it's consolidated is not worth to update it.
+        // Therefore can happen that an oracle always "consolidates" reports and keeps the INITIAL_PROPOSED_GER
         if (currentVotedReport.votes >= quorum) {
             _consolidateGlobalExitRoot(proposedGlobalExitRoot);
         } else {
