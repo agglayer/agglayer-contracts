@@ -41,6 +41,9 @@ interface IAggOracleCommittee {
     /// @notice Thrown when the quorum has not been reached for a global exit root.
     error QuorumNotReached();
 
+    /// @notice Thrown when the global exit root manager address is the zero address.
+    error GlobalExitRootManagerCannotBeZero();
+
     // Events
 
     /// @dev Emitted when a global exit root is proposed

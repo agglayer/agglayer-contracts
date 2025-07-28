@@ -314,7 +314,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         batch2.addRawTx(txDeployAggORacleCommitee);
         aggOracleImplementationAddress = getContractAddress({
             from: txObjectDeployAggOracleImpl.from,
-            nonce: injectedTx.nonce,
+            nonce: txObjectDeployAggOracleImpl.nonce,
         });
 
         // Deploy proxy
@@ -348,12 +348,17 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         injectedTx.to = null;
         injectedTx.data = deployAggOracleProxy;
 
-        const txObject2 = ethers.Transaction.from(injectedTx);
-        const txDeployProxyAggORacle = processorUtils.rawTxToCustomRawTx(txObject2.serialized);
-        expect(txObject2.from).to.equal(ethers.recoverAddress(txObject2.unsignedHash, txObject2.signature as any));
+        const txDeployAggOracleProxy = ethers.Transaction.from(injectedTx);
+        const txDeployProxyAggORacle = processorUtils.rawTxToCustomRawTx(txDeployAggOracleProxy.serialized);
+        expect(txDeployAggOracleProxy.from).to.equal(
+            ethers.recoverAddress(txDeployAggOracleProxy.unsignedHash, txDeployAggOracleProxy.signature as any),
+        );
         batch2.addRawTx(txDeployProxyAggORacle);
 
-        const aggOracleAddress = getContractAddress({ from: txObject2.from, nonce: txObject2.nonce });
+        const aggOracleAddress = getContractAddress({
+            from: txDeployAggOracleProxy.from,
+            nonce: txDeployAggOracleProxy.nonce,
+        });
         globalExitRootUpdater = aggOracleAddress;
     } else {
         checkParams(initializeParams, ['globalExitRootUpdater']);

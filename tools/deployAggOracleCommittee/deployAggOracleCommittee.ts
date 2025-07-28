@@ -25,6 +25,12 @@ async function main() {
     ];
     checkParams(deployParameters, mandatoryUpgradeParameters);
     const { globalExitRootManagerL2SovereignAddress, ownerAddress, aggOracleMembers, quorum } = deployParameters;
+
+    // Check zero address for globalExitRootManagerL2Sovereign
+    if (globalExitRootManagerL2SovereignAddress === ethers.ZeroAddress) {
+        throw new Error('globalExitRootManagerL2SovereignAddress cannot be zero address');
+    }
+
     // Load provider
     const currentProvider = getProviderAdjustingMultiplierGas(deployParameters, ethers);
 
@@ -33,7 +39,7 @@ async function main() {
     console.log('deploying with: ', deployer.address);
 
     const proxyAdmin = await upgrades.admin.getInstance();
-    const proxyOwnerAddress = await proxyAdmin.owner();
+    const proxyAdminOwnerAddress = await proxyAdmin.owner();
 
     /*
      * Deployment of AggOracleCommittee
@@ -104,8 +110,8 @@ async function main() {
         aggOracleCommitteeAddress: aggOracleCommitteeContract.target,
         deployer: deployer.address,
         proxyAdminAddress: proxyAdmin.target,
-        proxyOwnerAddress,
-        ownerAddress,
+        proxyAdminOwnerAddress,
+        aggOracleOwnerAddress: ownerAddress,
         globalExitRootManagerL2SovereignAddress,
         aggOracleMembers,
         quorum,

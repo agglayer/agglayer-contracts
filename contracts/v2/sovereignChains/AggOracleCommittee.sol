@@ -49,6 +49,11 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
      * @notice Disables initializers on the implementation, following best practices.
      */
     constructor(IGlobalExitRootManagerL2SovereignChain globalExitRootManager) {
+        require(
+            address(globalExitRootManager) != address(0),
+            GlobalExitRootManagerCannotBeZero()
+        );
+
         globalExitRootManagerL2Sovereign = globalExitRootManager;
         _disableInitializers();
     }
