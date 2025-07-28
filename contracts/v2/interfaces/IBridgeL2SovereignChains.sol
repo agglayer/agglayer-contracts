@@ -66,6 +66,26 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error InvalidZeroNetworkID();
 
     /**
+     * @dev Thrown when an invalid deposit count is provided for LET operations
+     */
+    error InvalidDepositCount();
+
+    /**
+     * @dev Thrown when the leaves array length doesn't match the expected deposit count
+     */
+    error InvalidLeavesLength();
+
+    /**
+     * @dev Thrown when the expected root doesn't match the computed root
+     */
+    error InvalidExpectedRoot();
+
+    /**
+     * @dev Thrown when the subtree frontier doesn't match the parent tree structure
+     */
+    error InvalidSubtreeFrontier();
+
+    /**
      * @dev Thrown when trying set a LFT leaf with same origin network thank chain network ID
      */
     error InvalidLBTLeaf();
