@@ -167,11 +167,18 @@ contract BridgeL2SovereignChain is
     event SetClaim(uint32 leafIndex, uint32 sourceNetwork);
 
     /**
-     * @dev Emitted when local exit tree is reset to a specific state
-     * @param newDepositCount The resulting deposit count after setting the tree
-     * @param newRoot The resulting root of the local exit tree after setting
+     * @dev Emitted when local exit tree is moved backward
+     * @param newDepositCount The resulting deposit count after moving backward
+     * @param newRoot The resulting root of the local exit tree after moving backward
      */
-    event SetLocalExitTree(uint256 newDepositCount, bytes32 newRoot);
+    event BackwardLET(uint256 newDepositCount, bytes32 newRoot);
+
+    /**
+     * @dev Emitted when local exit tree is moved forward
+     * @param newDepositCount The resulting deposit count after moving forward
+     * @param newRoot The resulting root of the local exit tree after moving forward
+     */
+    event ForwardLET(uint256 newDepositCount, bytes32 newRoot);
 
     /**
      * @dev Emitted when local balance tree is updated
@@ -679,23 +686,100 @@ contract BridgeL2SovereignChain is
     }
 
     /**
-     * @notice Sets the local exit tree to a specific state
+     * @notice Move the LET backward to a previous state with a lower deposit count
      * @dev Permissioned function by the GlobalExitRootRemover role
-     * @param newDepositCount The deposit count to set for the tree
-     * @param newFrontier The frontier to set for the local exit tree
+     * @dev Validates that the new tree state is a valid subtree of the current tree
+     * @param newDepositCount The new deposit count (must be less than current)
+     * @param newFrontier The frontier of the subtree at newDepositCount
+     * @param nextLeaf The leaf that comes immediately after the last leaf of the subset.
+     * This is the leaf at position `newDepositCount` in the current tree.
+     * For example: if the subset has 5 leaves (positions 0,1,2,3,4), then nextLeaf
+     * is the actual leaf stored at position 5 in the current (larger) tree.
+     * This leaf must exist in the current tree and serves as proof that the subset
+     * is indeed contained within the current tree structure.
+     * @param proof Merkle proof showing nextLeaf exists at position newDepositCount in current tree
      */
-    function setLocalExitTree(
+    function backwardLET(
         uint256 newDepositCount,
-        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier,
+        bytes32 nextLeaf,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata proof
     ) external onlyGlobalExitRootRemover {
-        _resetTree(newDepositCount, newFrontier);
+        // Validate that new deposit count is less than current
+        if (newDepositCount >= depositCount) {
+            revert InvalidDepositCount();
+        }
+
+        // 1. Verify that nextLeaf exists at position newDepositCount in current tree.
+        // NextLeaf is the leaf that comes immediately after the last leaf of the subset
+        // If the subset has 5 leaves (positions 0,1,2,3,4), nextLeaf is the actual
+        // leaf stored at position 5 in the current (larger) tree
+        /// @dev This check is a must because new frontier must match with proof siblings at subtree inclusion verification.
+        if (
+            !verifyMerkleProof(
+                nextLeaf,
+                proof,
+                uint32(newDepositCount),
+                getRoot()
+            )
+        ) {
+            revert InvalidSmtProof();
+        }
+
+        // 2. Verify that newFrontier is a valid subtree frontier by checking it matches
+        // the Merkle proof siblings at appropriate heights
+        if (!_isValidSubtreeFrontier(newDepositCount, newFrontier, proof)) {
+            revert InvalidSubtreeFrontier();
+        }
+
+        // Rollback tree to the new state
+        for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
+            _branch[i] = newFrontier[i];
+        }
+
+        depositCount = newDepositCount;
 
         // Update GER
         bytes32 newGER = getRoot();
         globalExitRootManager.updateExitRoot(newGER);
 
         // emit event
-        emit SetLocalExitTree(newDepositCount, newGER);
+        emit BackwardLET(newDepositCount, newGER);
+    }
+
+    /**
+     * @notice Move the LET forward by adding new leaves in bulk
+     * @dev Permissioned function by the GlobalExitRootRemover role
+     * @dev Adds new leaves incrementally and validates against expected root as health check
+     * @param newLeaves Array of new leaf hashes to add to the current tree
+     * @param expectedStateRoot The expected root after adding all new leaves (health check)
+     */
+    function forwardLET(
+        bytes32[] calldata newLeaves,
+        bytes32 expectedStateRoot
+    ) external onlyGlobalExitRootRemover {
+        // Validate that newLeaves array is not empty
+        if (newLeaves.length == 0) {
+            revert InvalidLeavesLength();
+        }
+
+        // Add each new leaf incrementally using the optimized _addLeaf function
+        // _addLeaf automatically handles depositCount increment and MAX_DEPOSIT_COUNT validation
+        for (uint256 i = 0; i < newLeaves.length; i++) {
+            _addLeaf(newLeaves[i]);
+        }
+
+        // Health check: verify the final root matches the expected state root
+        bytes32 computedRoot = getRoot();
+        if (computedRoot != expectedStateRoot) {
+            revert InvalidExpectedRoot();
+        }
+
+        // Update GER
+        globalExitRootManager.updateExitRoot(computedRoot);
+
+        // emit event with the new deposit count
+        emit ForwardLET(depositCount, computedRoot);
     }
 
     /**
