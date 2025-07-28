@@ -25,7 +25,7 @@ contract DepositContractBase {
     uint256 internal constant _MAX_DEPOSIT_COUNT =
         2 ** _DEPOSIT_CONTRACT_TREE_DEPTH - 1;
 
-    // Branch array which contains the necessary sibilings to compute the next root when a new
+    // Branch array which contains the necessary siblings to compute the next root when a new
     // leaf is inserted
     bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] internal _branch;
 
@@ -38,13 +38,6 @@ contract DepositContractBase {
      */
     /// @custom:oz-renamed-from _gap
     uint256[10] private __gap;
-
-    /**
-     * @dev Emitted when tree frontier is set by calling resetTree function
-     * @param treeDepth The depth of the set frontier
-     * @param frontier The new frontier (branch array) root hash at given depth
-     */
-    event SetTreeFrontier(uint256 treeDepth, bytes32 frontier);
 
     /**
      * @notice Computes and returns the merkle root
@@ -102,28 +95,6 @@ contract DepositContractBase {
     }
 
     /**
-     * @notice Reset the merkle tree to a specific state
-     * @param newDepositCount New deposit count (leaf count) to set for the tree
-     * @param newFrontier New frontiers (branch array) to set for the tree
-     */
-    function _resetTree(
-        uint256 newDepositCount,
-        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier
-    ) internal {
-        // Check that newDepositCount is within the maximum supported leafs in a 32 height merkle tree
-        if (newDepositCount > _MAX_DEPOSIT_COUNT) {
-            revert NewDepositCountExceedsMax();
-        }
-
-        for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
-            _branch[i] = newFrontier[i];
-            emit SetTreeFrontier(i, newFrontier[i]);
-        }
-
-        depositCount = newDepositCount;
-    }
-
-    /**
      * @notice Verify merkle proof
      * @param leafHash Leaf hash
      * @param smtProof Smt proof
@@ -164,5 +135,39 @@ contract DepositContractBase {
         }
 
         return node;
+    }
+
+    /**
+     * @notice Validates that a frontier represents a valid subtree
+     * @dev Checks that frontier elements match Merkle proof siblings at appropriate heights
+     * @param subTreeLeafCount The number of leaves in the subtree
+     * @param subTreeFrontier The proposed frontier of the subtree
+     * @param currentTreeProof The Merkle proof siblings from the current tree
+     * @return true if the subtree frontier is valid
+     */
+    function _isValidSubtreeFrontier(
+        uint256 subTreeLeafCount,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata subTreeFrontier,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata currentTreeProof
+    ) internal pure returns (bool) {
+        // Verify subtree frontier consistency with the proof
+        uint256 index = subTreeLeafCount;
+        uint256 height = 0;
+
+        // Check each height where subtree frontier should have elements
+        while (index != 0 && height < _DEPOSIT_CONTRACT_TREE_DEPTH) {
+            if ((index & 1) == 1) {
+                // At this height, subtree has an element that must match proof sibling
+                if (subTreeFrontier[height] != currentTreeProof[height]) {
+                    return false; // Frontier element doesn't match proof
+                }
+            }
+            // If bit is 0, subtree doesn't have element at this height (skip check)
+
+            height++;
+            index >>= 1;
+        }
+
+        return true; // All validations passed
     }
 }
