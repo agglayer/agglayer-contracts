@@ -146,10 +146,11 @@ export function getStorageReadWrites(trace) {
 }
 
 /**
- * Retrieves the current Git commit hash and repository URL
+ * Retrieves the current Git commit hash, repository URL and tag
+ * @param {Boolean} criticalTooling - (optional) if true, throws an error if no tag
  * @returns An object containing the commit hash and repository URL, or null if an error occurs
  */
-export function getGitInfo(): { commit: string; repo: string } | null {
+export function getGitInfo(criticalTooling = false): { commit: string; repo: string; tag: string } {
     try {
         // Get the latest commit hash
         const commit = execSync('git rev-parse HEAD').toString().trim();
@@ -157,7 +158,16 @@ export function getGitInfo(): { commit: string; repo: string } | null {
         // Get the repository URL
         const repo = execSync('git config --get remote.origin.url').toString().trim();
 
-        return { commit, repo };
+        // Get tag if available
+        const tag = execSync('git tag --points-at HEAD').toString().trim();
+
+        if (criticalTooling && !tag) {
+            throw new Error(
+                'Error: This tool is critical. There is no tag associated with the version being used. It must be executed from a tag.',
+            );
+        }
+
+        return { commit, repo, tag };
     } catch (error) {
         throw new Error(`getGitInfo: ${error}`);
     }
