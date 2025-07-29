@@ -240,6 +240,16 @@ const config: HardhatUserConfig = {
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },
+            'contracts/v2/lib/bridgeLib.sol': {
+                version: '0.8.28',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 0, // should have same runs than PolygonZkEVMBridgeV2
+                    },
+                    evmVersion: 'shanghai', // Same evm version than PolygonZkEVMBridgeV2
+                }, // try yul optimizer
+            },
         },
     },
     networks: {

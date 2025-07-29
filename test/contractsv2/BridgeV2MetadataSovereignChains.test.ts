@@ -1,7 +1,12 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import { ERC20PermitMock, GlobalExitRootManagerL2SovereignChain, BridgeL2SovereignChain } from '../../typechain-types';
+import {
+    ERC20PermitMock,
+    GlobalExitRootManagerL2SovereignChain,
+    BridgeL2SovereignChain,
+    BridgeLib,
+} from '../../typechain-types';
 import {
     createPermitSignature,
     ifacePermit,
@@ -19,6 +24,7 @@ describe('SovereignBridge Contract', () => {
     let sovereignChainBridgeContract: BridgeL2SovereignChain;
     let polTokenContract: ERC20PermitMock;
     let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
+    let bridgeLibContract: BridgeLib;
 
     let deployer: any;
     let rollupManager: any;
@@ -71,6 +77,10 @@ describe('SovereignBridge Contract', () => {
             emergencyBridgePauser.address,
             proxiedTokensManager.address,
         );
+
+        // get bridge lib instance
+        const bridgeLibAddress = await sovereignChainBridgeContract.bridgeLib();
+        bridgeLibContract = await ethers.getContractAt('BridgeLib', bridgeLibAddress);
 
         // deploy token
         const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
@@ -472,7 +482,7 @@ describe('SovereignBridge Contract', () => {
                 true,
                 ethers.ZeroHash,
             ),
-        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NotValidSignature');
+        ).to.be.revertedWithCustomError(bridgeLibContract, 'NotValidSignature');
 
         const dataPermit = ifacePermit.encodeFunctionData('permit', [
             deployer.address,
