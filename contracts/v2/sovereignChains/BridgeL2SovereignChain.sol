@@ -18,7 +18,18 @@ contract BridgeL2SovereignChain is
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
 
     // Current bridge version
-    string public constant BRIDGE_SOVEREIGN_VERSION = "v1.0.0";
+    string public constant BRIDGE_SOVEREIGN_VERSION = "v2.0.0";
+
+    // Struct to represent leaf data for forwardLET function
+    struct LeafData {
+        uint8 leafType;
+        uint32 originNetwork;
+        address originAddress;
+        uint32 destinationNetwork;
+        address destinationAddress;
+        uint256 amount;
+        bytes32 metadataHash;
+    }
 
     // Map to store wrappedAddresses that are not mintable
     mapping(address wrappedAddress => bool isNotMintable)
@@ -750,12 +761,12 @@ contract BridgeL2SovereignChain is
     /**
      * @notice Move the LET forward by adding new leaves in bulk
      * @dev Permissioned function by the GlobalExitRootRemover role
-     * @dev Adds new leaves incrementally and validates against expected root as health check
-     * @param newLeaves Array of new leaf hashes to add to the current tree
+     * @dev Adds new leaves incrementally using structured data and validates against expected root as health check
+     * @param newLeaves Array of leaf data to add to the current tree
      * @param expectedStateRoot The expected root after adding all new leaves (health check)
      */
     function forwardLET(
-        bytes32[] calldata newLeaves,
+        LeafData[] calldata newLeaves,
         bytes32 expectedStateRoot
     ) external onlyGlobalExitRootRemover {
         // Validate that newLeaves array is not empty
@@ -763,10 +774,19 @@ contract BridgeL2SovereignChain is
             revert InvalidLeavesLength();
         }
 
-        // Add each new leaf incrementally using the optimized _addLeaf function
-        // _addLeaf automatically handles depositCount increment and MAX_DEPOSIT_COUNT validation
+        // Add each new leaf incrementally using the _addLeafBridge function
+        // _addLeafBridge automatically handles depositCount increment and MAX_DEPOSIT_COUNT validation
         for (uint256 i = 0; i < newLeaves.length; i++) {
-            _addLeaf(newLeaves[i]);
+            LeafData memory leaf = newLeaves[i];
+            _addLeafBridge(
+                leaf.leafType,
+                leaf.originNetwork,
+                leaf.originAddress,
+                leaf.destinationNetwork,
+                leaf.destinationAddress,
+                leaf.amount,
+                leaf.metadataHash
+            );
         }
 
         // Health check: verify the final root matches the expected state root
@@ -1053,7 +1073,9 @@ contract BridgeL2SovereignChain is
         uint256 globalIndex = uint256(leafIndex) +
             uint256(sourceBridgeNetwork) *
             _MAX_LEAFS_PER_NETWORK;
+
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
+
         uint256 mask = 1 << bitPos;
         uint256 flipped = claimedBitMap[wordPos] ^= mask;
         if (flipped & mask != 0) {
@@ -1076,6 +1098,7 @@ contract BridgeL2SovereignChain is
             _MAX_LEAFS_PER_NETWORK;
 
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
+
         uint256 mask = (1 << bitPos);
         return (claimedBitMap[wordPos] & mask) == mask;
     }
@@ -1093,7 +1116,9 @@ contract BridgeL2SovereignChain is
         uint256 globalIndex = uint256(leafIndex) +
             uint256(sourceBridgeNetwork) *
             _MAX_LEAFS_PER_NETWORK;
+
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
+
         uint256 mask = 1 << bitPos;
         uint256 flipped = claimedBitMap[wordPos] ^= mask;
         if (flipped & mask == 0) {

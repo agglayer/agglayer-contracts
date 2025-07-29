@@ -35,6 +35,7 @@ export const GENESIS_CONTRACT_NAMES = {
     PROXY_ADMIN: 'ProxyAdmin',
     POLYGON_TIMELOCK: 'PolygonZkEVMTimelock',
     POLYGON_DEPLOYER: 'PolygonZkEVMDeployer',
+    BRIDGE_LIB: `BridgeLib`,
     AGG_ORACLE_PROXY: 'AggOracleCommittee proxy',
     AGG_ORACLE_IMPL: 'AggOracleCommittee implementation',
 };
