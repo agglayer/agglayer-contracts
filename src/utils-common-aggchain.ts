@@ -41,6 +41,8 @@ export const GENESIS_CONTRACT_NAMES = {
     ROLLUP_MANAGER_IMPLEMENTATION: 'PolygonRollupManager implementation',
     AGGLAYER_GATEWAY_IMPLEMENTATION: 'AggLayerGateway implementation',
     GER_IMPLEMENTATION: 'PolygonZkEVMGlobalExitRootV2 implementation',
+    POLYGON_ZKEVM_DEPLOYER: 'PolygonZkEVMDeployer',
+    DEPLOYER: 'deployer',
 };
 /// //////////////////////////////
 /// // Functions for Aggchain ////
