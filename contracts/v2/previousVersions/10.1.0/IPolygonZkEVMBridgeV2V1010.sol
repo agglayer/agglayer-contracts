@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
-import "../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
+import "../../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 
-interface IPolygonZkEVMBridgeV2 {
+interface IPolygonZkEVMBridgeV2V1010 {
     /**
      * @dev Thrown when the destination network is invalid
      */
@@ -45,9 +45,24 @@ interface IPolygonZkEVMBridgeV2 {
     error AlreadyClaimed();
 
     /**
+     * @dev Thrown when the owner of permit does not match the sender
+     */
+    error NotValidOwner();
+
+    /**
+     * @dev Thrown when the spender of the permit does not match this contract address
+     */
+    error NotValidSpender();
+
+    /**
      * @dev Thrown when the amount of the permit does not match
      */
     error NotValidAmount();
+
+    /**
+     * @dev Thrown when the permit data contains an invalid signature
+     */
+    error NotValidSignature();
 
     /**
      * @dev Thrown when sender is not the rollup manager

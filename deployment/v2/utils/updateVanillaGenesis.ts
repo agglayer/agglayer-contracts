@@ -175,9 +175,6 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         from: sovereignBridgeAddress,
         nonce: 2,
     });
-    // Check nonce is 3
-    const bridgeState = await zkEVMDB.getCurrentAccountState(sovereignBridgeAddress);
-    expect(Number(bridgeState.nonce)).to.equal(3);
 
     // Check if the genesis contains TokenWrappedImplementation contract
     let tokenWrappedImplementationObject = genesis.genesis.find(function (obj) {
@@ -210,6 +207,48 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         // Check bytecode of the TokenWrappedImplementation contract
         expect(tokenWrappedImplementationObject.bytecode).to.equal(
             `0x${await zkEVMDB.getBytecode(precalculatedAddressTokenWrappedImplementation)}`,
+        );
+    }
+
+    // Compute the address of the bridgeLib contract deployed by the deployed sovereign bridge with nonce 3
+    const precalculatedAddressBridgeLib = ethers.getCreateAddress({
+        from: sovereignBridgeAddress,
+        nonce: 3,
+    });
+
+    // Check nonce is 4
+    const bridgeState = await zkEVMDB.getCurrentAccountState(sovereignBridgeAddress);
+    expect(Number(bridgeState.nonce)).to.equal(4);
+
+    // Check if the genesis contains TokenWrappedImplementation contract
+    let bridgeLibImplementationObject = genesis.genesis.find(function (obj) {
+        return obj.contractName === GENESIS_CONTRACT_NAMES.BRIDGE_LIB;
+    });
+
+    // If its not contained add it to the genesis
+    if (typeof bridgeLibImplementationObject === 'undefined') {
+        const bridgeLibImplementationDeployedBytecode = `0x${await zkEVMDB.getBytecode(precalculatedAddressBridgeLib)}`;
+        bridgeLibImplementationObject = {
+            contractName: GENESIS_CONTRACT_NAMES.BRIDGE_LIB,
+            balance: '0',
+            nonce: '1',
+            address: precalculatedAddressBridgeLib,
+            bytecode: bridgeLibImplementationDeployedBytecode,
+        };
+        bridgeLibImplementationObject.storage = await zkEVMDB.dumpStorage(precalculatedAddressBridgeLib);
+        bridgeLibImplementationObject.storage = Object.entries(bridgeLibImplementationObject.storage).reduce(
+            (acc, [key, value]) => {
+                acc[key] = padTo32Bytes(value);
+                return acc;
+            },
+            {},
+        );
+        genesis.genesis.push(bridgeLibImplementationObject);
+    } else {
+        bridgeLibImplementationObject.address = precalculatedAddressBridgeLib;
+        // Check bytecode of the BridgeLibImplementation contract
+        expect(bridgeLibImplementationObject.bytecode).to.equal(
+            `0x${await zkEVMDB.getBytecode(precalculatedAddressBridgeLib)}`,
         );
     }
 
@@ -534,6 +573,9 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
     // Check bridge implementation bytecode contains tokenWrappedImplementation contract address
     expect(oldBridge.bytecode).to.include(precalculatedAddressTokenWrappedImplementation.toLowerCase().slice(2));
+
+    // Check bridge implementation bytecode contains bridgeLib contract address
+    expect(oldBridge.bytecode).to.include(precalculatedAddressBridgeLib.toLowerCase().slice(2));
 
     // Check bridge implementation has initializer disabled
     expect(oldBridge.storage['0x0000000000000000000000000000000000000000000000000000000000000000'].slice(-2)).to.equal(
