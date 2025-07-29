@@ -37,6 +37,9 @@ contract AggLayerGateway is
     bytes32 internal constant AL_FREEZE_PP_ROUTE_ROLE =
         keccak256("AL_FREEZE_PP_ROUTE_ROLE");
 
+    // Current AggLayerGateway version
+    string public constant AGGLAYER_GATEWAY_VERSION = "v1.0.0";
+
     ////////////////////////////////////////////////////////////
     //                       Mappings                         //
     ////////////////////////////////////////////////////////////
