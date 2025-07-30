@@ -1066,4 +1066,12 @@ contract BridgeL2SovereignChain is
             _increaseLocalBalanceTree(_MAINNET_NETWORK_ID, address(0), amount);
         }
     }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external view override returns (string memory) {
+        return BRIDGE_SOVEREIGN_VERSION;
+    }
 }

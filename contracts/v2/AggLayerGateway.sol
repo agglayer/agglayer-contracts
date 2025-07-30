@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 import {ISP1Verifier} from "./interfaces/ISP1Verifier.sol";
 import {IAggLayerGateway} from "./interfaces/IAggLayerGateway.sol";
+import {IVersion} from "./interfaces/IVersion.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable5/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/AccessControlUpgradeable.sol";
-
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
 /**
@@ -16,7 +16,8 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable5/acc
 contract AggLayerGateway is
     Initializable,
     AccessControlUpgradeable,
-    IAggLayerGateway
+    IAggLayerGateway,
+    IVersion
 {
     ////////////////////////////////////////////////////////////
     //                  Constants & Immutables                //
@@ -317,5 +318,13 @@ contract AggLayerGateway is
         }
 
         return defaultAggchainVKeys[defaultAggchainSelector];
+    }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external view override returns (string memory) {
+        return AGGLAYER_GATEWAY_VERSION;
     }
 }
