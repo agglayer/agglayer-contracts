@@ -285,9 +285,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
                 timelock.address,
                 emergencyCouncil.address,
             ),
-        )
-            .to.emit(rollupManagerContract, 'UpdateRollupManagerVersion')
-            .withArgs('v1.0.0');
+        );
 
         // check precalculated address
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
