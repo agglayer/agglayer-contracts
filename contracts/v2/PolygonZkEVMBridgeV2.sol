@@ -1450,7 +1450,7 @@ contract PolygonZkEVMBridgeV2 is
      * @notice Function to retrieve the current version of the contract.
      * @return version of the contract.
      */
-    function version() external view virtual override returns (string memory) {
+    function version() external pure virtual returns (string memory) {
         return BRIDGE_VERSION;
     }
 }
