@@ -56,7 +56,7 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Op L2OO Semantic version.
     /// @custom:semver v2.0.0
-    string public constant version = "v2.0.0";
+    string public constant AGGCHAIN_FEP_VERSION = "v2.0.0";
 
     ////////////////////////////////////////////////////////////
     //                       Storage                          //
@@ -715,5 +715,13 @@ contract AggchainFEP is AggchainBase {
             oldOptimisticModeManager,
             optimisticModeManager
         );
+    }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external pure returns (string memory) {
+        return AGGCHAIN_FEP_VERSION;
     }
 }

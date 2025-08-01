@@ -204,6 +204,8 @@ describe('AggchainECDSA', () => {
         await expect(
             aggchainECDSAcontract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
         ).to.be.revertedWith('Initializable: contract is already initialized');
+
+        expect(await aggchainECDSAcontract.version()).to.be.equal('v1.0.0');
     });
 
     // PolygonConsensusBase

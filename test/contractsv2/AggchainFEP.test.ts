@@ -263,6 +263,8 @@ describe('AggchainFEP', () => {
         await expect(
             aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
         ).to.be.revertedWith('Initializable: contract is already initialized');
+
+        expect(await aggchainFEPContract.version()).to.be.equal('v2.0.0');
     });
 
     it('should check the v1 initialized parameters', async () => {

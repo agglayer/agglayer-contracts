@@ -115,6 +115,7 @@ describe('AggLayerGateway tests', () => {
 
     it('should check the initialize parameters', async () => {
         expect(await aggLayerGatewayContract.hasRole(DEFAULT_ADMIN_ROLE, defaultAdmin.address)).to.be.equal(true);
+        expect(await aggLayerGatewayContract.version()).to.be.equal('v1.0.0');
     });
 
     it("should check error 'contract is already initialized'", async () => {

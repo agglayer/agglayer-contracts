@@ -3,6 +3,7 @@
 pragma solidity 0.8.28;
 
 import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "./interfaces/IVersion.sol";
 import "./lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "../lib/GlobalExitRootLib.sol";
 import "./lib/DepositContractBase.sol";
@@ -14,7 +15,8 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 contract PolygonZkEVMGlobalExitRootV2 is
     PolygonZkEVMGlobalExitRootBaseStorage,
     DepositContractBase,
-    Initializable
+    Initializable,
+    IVersion
 {
     // PolygonZkEVMBridge address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -174,5 +176,13 @@ contract PolygonZkEVMGlobalExitRootV2 is
             keccak256(
                 abi.encodePacked(newGlobalExitRoot, lastBlockHash, timestamp)
             );
+    }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external pure returns (string memory) {
+        return GER_VERSION;
     }
 }

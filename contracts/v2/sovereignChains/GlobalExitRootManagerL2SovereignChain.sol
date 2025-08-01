@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import "../../PolygonZkEVMGlobalExitRootL2.sol";
 import "../lib/Hashes.sol";
 import "../../v2/interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import "../../v2/interfaces/IVersion.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
@@ -12,7 +13,8 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 contract GlobalExitRootManagerL2SovereignChain is
     PolygonZkEVMGlobalExitRootL2,
     IGlobalExitRootManagerL2SovereignChain,
-    Initializable
+    Initializable,
+    IVersion
 {
     // Current contract version
     string public constant GER_SOVEREIGN_VERSION = "v1.0.0";
@@ -291,5 +293,13 @@ contract GlobalExitRootManagerL2SovereignChain is
             oldGlobalExitRootRemover,
             globalExitRootRemover
         );
+    }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external pure returns (string memory) {
+        return GER_SOVEREIGN_VERSION;
     }
 }

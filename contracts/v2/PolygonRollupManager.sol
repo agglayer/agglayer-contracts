@@ -19,6 +19,7 @@ import "./interfaces/ISP1Verifier.sol";
 import "./interfaces/IPolygonRollupManager.sol";
 import "./interfaces/IAggchainBase.sol";
 import "./interfaces/IAggLayerGateway.sol";
+import "./interfaces/IVersion.sol";
 import "./lib/Hashes.sol";
 
 /**
@@ -33,7 +34,8 @@ contract PolygonRollupManager is
     LegacyZKEVMStateVariables,
     PolygonConstantsBase,
     IPolygonRollupManager,
-    ReentrancyGuardTransient
+    ReentrancyGuardTransient,
+    IVersion
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -1933,5 +1935,13 @@ contract PolygonRollupManager is
         rollupVerifierType = rollup.rollupVerifierType;
         lastPessimisticRoot = rollup.lastPessimisticRoot;
         programVKey = rollup.programVKey;
+    }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external pure returns (string memory) {
+        return ROLLUP_MANAGER_VERSION;
     }
 }

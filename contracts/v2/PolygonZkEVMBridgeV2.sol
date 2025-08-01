@@ -13,6 +13,7 @@ import "./lib/BytecodeStorer.sol";
 import {ITokenWrappedBridgeUpgradeable, TokenWrappedBridgeUpgradeable, IERC20Metadata} from "./lib/TokenWrappedBridgeUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts5/proxy/ERC1967/ERC1967Utils.sol";
 import {IProxyAdmin} from "./interfaces/IProxyAdmin.sol";
+import {IVersion} from "./interfaces/IVersion.sol";
 
 /**
  * PolygonZkEVMBridge that will be deployed on Ethereum and all Polygon rollups
@@ -21,7 +22,8 @@ import {IProxyAdmin} from "./interfaces/IProxyAdmin.sol";
 contract PolygonZkEVMBridgeV2 is
     DepositContractV2,
     EmergencyManager,
-    IPolygonZkEVMBridgeV2
+    IPolygonZkEVMBridgeV2,
+    IVersion
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
 
@@ -1442,5 +1444,13 @@ contract PolygonZkEVMBridgeV2 is
 
         // Last 20 bytes of hash to address
         return address(uint160(uint256(hashCreate2)));
+    }
+
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external pure virtual returns (string memory) {
+        return BRIDGE_VERSION;
     }
 }

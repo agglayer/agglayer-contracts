@@ -5,12 +5,17 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "./PolygonConsensusBase.sol";
 import "../interfaces/IAggLayerGateway.sol";
 import "../interfaces/IAggchainBase.sol";
+import "../interfaces/IVersion.sol";
 
 /**
  * @title AggchainBase
  * @notice Base contract for aggchain implementations. This contract is imported by other aggchain implementations to reuse the common logic.
  */
-abstract contract AggchainBase is PolygonConsensusBase, IAggchainBase {
+abstract contract AggchainBase is
+    PolygonConsensusBase,
+    IAggchainBase,
+    IVersion
+{
     ////////////////////////////////////////////////////////////
     //                  Constants & Immutables                //
     ////////////////////////////////////////////////////////////

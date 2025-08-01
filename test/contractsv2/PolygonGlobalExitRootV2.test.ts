@@ -58,6 +58,7 @@ describe('Polygon Global exit root v2', () => {
 
         expect(await polygonZkEVMGlobalExitRootV2.lastRollupExitRoot()).to.be.equal(ethers.ZeroHash);
         expect(await polygonZkEVMGlobalExitRootV2.lastMainnetExitRoot()).to.be.equal(ethers.ZeroHash);
+        expect(await polygonZkEVMGlobalExitRootV2.version()).to.be.equal('v1.0.0');
     });
 
     it('should update root and check global exit root', async () => {
