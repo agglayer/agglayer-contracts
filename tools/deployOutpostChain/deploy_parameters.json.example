@@ -3,8 +3,8 @@
         "chainID": 1001,
         "rollupID": 1001,
         "networkName": "OutpostChain",
-        "tokenName": "Wrapped Ether",
-        "tokenSymbol": "WETH", 
+        "tokenName": "baseETH",
+        "tokenSymbol": "BETH",
         "tokenDecimals": 18
     },
     "timelock": {
@@ -21,5 +21,14 @@
     "globalExitRoot": {
         "globalExitRootUpdater": "0xYourGlobalExitRootUpdaterAddress",
         "globalExitRootRemover": "0xYourGlobalExitRootRemoverAddress"
+    },
+    "aggOracleCommittee": {
+        "useAggOracleCommittee": false,
+        "aggOracleOwner": "0xYourAggOracleOwnerAddress",
+        "aggOracleMembers": [
+            "0xYourOracleMember1Address",
+            "0xYourOracleMember2Address"
+        ],
+        "quorum": 1
     }
-} 
+}

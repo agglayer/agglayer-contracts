@@ -132,7 +132,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 0, // should have same runs than BridgeL2SovereignChain
+                        runs: 800, // should have same runs than BridgeL2SovereignChain
                     },
                     evmVersion: 'shanghai',
                 },
@@ -152,7 +152,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 0, // should have same runs than PolygonZkEVMBridgeV2
+                        runs: 800, // should have same runs than PolygonZkEVMBridgeV2
                     },
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
@@ -226,7 +226,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 0,
+                        runs: 800,
                     },
                     evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
                 },
@@ -247,7 +247,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 0, // should have same runs than PolygonZkEVMBridgeV2
+                        runs: 800, // should have same runs than PolygonZkEVMBridgeV2
                     },
                     evmVersion: 'shanghai', // Same evm version than PolygonZkEVMBridgeV2
                 }, // try yul optimizer
