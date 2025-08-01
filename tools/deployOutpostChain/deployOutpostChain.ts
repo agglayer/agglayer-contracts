@@ -55,6 +55,28 @@ async function main() {
     const proxyAdmin = await deployProxyAdmin(timelock.target as string, deployer);
     outputJson.proxyAdminAddress = proxyAdmin.target;
 
+    // Step 2.5: Deploy AggOracleCommittee if enabled
+    let { globalExitRootUpdater } = deployParameters.globalExitRoot;
+    if (deployParameters.aggOracleCommittee?.useAggOracleCommittee === true) {
+        logger.info('\n=== Step 2.5: Deploying AggOracleCommittee ===');
+
+        // We need to calculate the GER Manager address first to deploy AggOracleCommittee
+        const currentNonce = await deployer.getNonce();
+        // After AggOracle: impl (nonce+0), proxy (nonce+1), then GER: impl (nonce+2), proxy (nonce+3)
+        const precalculatedGERManagerAddress = ethers.getCreateAddress({
+            from: deployer.address,
+            nonce: currentNonce + 3, // GER Manager proxy will be at nonce+3
+        });
+
+        const aggOracle = await deployAggOracleCommittee(precalculatedGERManagerAddress, proxyAdmin, deployer);
+        outputJson.aggOracleCommitteeAddress = aggOracle.proxy;
+        outputJson.aggOracleCommitteeImplementation = aggOracle.implementation;
+
+        // Use AggOracleCommittee as globalExitRootUpdater
+        globalExitRootUpdater = aggOracle.proxy;
+        logger.info(`✅ Using AggOracleCommittee as globalExitRootUpdater: ${globalExitRootUpdater}`);
+    }
+
     // Step 3: Pre-calculate Bridge proxy address for GER Manager deployment
     logger.info('\n=== Step 3: Pre-calculating Bridge proxy address ===');
     const currentNonce = await deployer.getNonce();
@@ -76,6 +98,7 @@ async function main() {
         precalculatedBridgeAddress, // Use pre-calculated Bridge address
         proxyAdmin, // Pass the centralized ProxyAdmin
         deployer,
+        globalExitRootUpdater, // Pass the determined globalExitRootUpdater
     );
     outputJson.globalExitRootManagerL2SovereignChainAddress = gerManager.proxy;
     outputJson.globalExitRootManagerL2SovereignChainImplementation = gerManager.implementation;
@@ -109,7 +132,7 @@ async function main() {
 
     // Step 7: Generate final output
     logger.info('\n=== Step 7: Generating deployment output ===');
-    const finalOutput = generateFinalOutput(outputJson, deployParameters);
+    const finalOutput = generateFinalOutput(outputJson, deployParameters, globalExitRootUpdater);
 
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -120,7 +143,7 @@ async function main() {
 }
 
 /**
- * Validate deployment parameters using enhanced checkParams utility
+ * Validates all deployment parameters from the configuration
  */
 function validateDeploymentParameters() {
     const mandatoryParams = [
@@ -135,8 +158,58 @@ function validateDeploymentParameters() {
         'bridge.bridgeManager',
         'bridge.emergencyBridgePauser',
         'bridge.emergencyBridgeUnpauser',
-        'globalExitRoot.globalExitRootUpdater',
     ];
+
+    // Check if AggOracleCommittee is being used
+    if (deployParameters.aggOracleCommittee?.useAggOracleCommittee === true) {
+        // If using AggOracleCommittee, validate its parameters
+        const aggOracleParams = [
+            'aggOracleCommittee.aggOracleOwner',
+            'aggOracleCommittee.aggOracleMembers',
+            'aggOracleCommittee.quorum',
+        ];
+        mandatoryParams.push(...aggOracleParams);
+
+        // Validate that globalExitRootUpdater is not set when using AggOracleCommittee
+        if (
+            deployParameters.globalExitRoot?.globalExitRootUpdater !== undefined &&
+            deployParameters.globalExitRoot?.globalExitRootUpdater !== '' &&
+            deployParameters.globalExitRoot?.globalExitRootUpdater !== ethers.ZeroAddress
+        ) {
+            throw new Error('globalExitRootUpdater should not be set when using AggOracleCommittee');
+        }
+
+        // Validate oracle members
+        const nullifierAddress = {} as any;
+        deployParameters.aggOracleCommittee.aggOracleMembers.forEach((oracleMember: string) => {
+            if (!ethers.isAddress(oracleMember)) {
+                throw new Error(`aggOracleMembers ${oracleMember}: not a valid address`);
+            }
+            // Check if address is not duplicated
+            if (nullifierAddress[oracleMember] !== undefined) {
+                throw new Error(`aggOracleMembers ${oracleMember}: duplicated address`);
+            }
+            nullifierAddress[oracleMember] = true;
+        });
+
+        // Validate quorum
+        if (deployParameters.aggOracleCommittee.quorum < 1) {
+            throw new Error('quorum must be bigger than 0');
+        }
+        if (deployParameters.aggOracleCommittee.quorum > deployParameters.aggOracleCommittee.aggOracleMembers.length) {
+            throw new Error(
+                `quorum must be smaller or equal than the number of aggOracleCommittee members (${deployParameters.aggOracleCommittee.aggOracleMembers.length})`,
+            );
+        }
+
+        logger.info('✅ AggOracleCommittee parameters validated');
+    } else {
+        // If not using AggOracleCommittee, globalExitRootUpdater is mandatory
+        mandatoryParams.push('globalExitRoot.globalExitRootUpdater');
+    }
+
+    // Always validate globalExitRootRemover (it's always needed)
+    mandatoryParams.push('globalExitRoot.globalExitRootRemover');
 
     // Use enhanced checkParams from utils with address validation
     checkParams(deployParameters, mandatoryParams, true);
@@ -322,6 +395,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     bridgeProxyAddress: string,
     proxyAdmin: any,
     deployer: any,
+    globalExitRootUpdater: string,
 ): Promise<{ proxy: string; implementation: string }> {
     const GERManagerFactory = await ethers.getContractFactory('GlobalExitRootManagerL2SovereignChain', deployer);
 
@@ -334,7 +408,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     // Step 2: Prepare initialization data for atomic initialization
     logger.info('📍 Step 2: Preparing initialization data...');
     const initializeData = GERManagerFactory.interface.encodeFunctionData('initialize', [
-        deployParameters.globalExitRoot.globalExitRootUpdater,
+        globalExitRootUpdater,
         deployParameters.globalExitRoot.globalExitRootRemover,
     ]);
 
@@ -363,10 +437,77 @@ async function deployGlobalExitRootManagerL2SovereignChain(
 }
 
 /**
+ * Deploy AggOracleCommittee contract (upgradeable proxy)
+ */
+async function deployAggOracleCommittee(
+    gerManagerAddress: string,
+    proxyAdmin: any,
+    deployer: any,
+): Promise<{
+    proxy: string;
+    implementation: string;
+}> {
+    const AggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee', deployer);
+
+    logger.info('📍 Step 1: Deploying AggOracleCommittee implementation...');
+    const aggOracleImplementation = await AggOracleCommitteeFactory.deploy(gerManagerAddress);
+    await aggOracleImplementation.waitForDeployment();
+    logger.info(`✅ AggOracleCommittee implementation deployed: ${aggOracleImplementation.target}`);
+
+    logger.info('📍 Step 2: Deploying AggOracleCommittee proxy with centralized ProxyAdmin...');
+    const transparentProxyFactory = await ethers.getContractFactory(
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+        deployer,
+    );
+
+    // Prepare initialization call data
+    const initializeData = AggOracleCommitteeFactory.interface.encodeFunctionData('initialize', [
+        deployParameters.aggOracleCommittee.aggOracleOwner,
+        deployParameters.aggOracleCommittee.aggOracleMembers,
+        deployParameters.aggOracleCommittee.quorum,
+    ]);
+
+    const aggOracleProxy = await transparentProxyFactory.deploy(
+        aggOracleImplementation.target, // Implementation address
+        proxyAdmin.target, // Use centralized ProxyAdmin
+        initializeData, // Initialization data for atomic initialization
+    );
+    await aggOracleProxy.waitForDeployment();
+    logger.info(`✅ AggOracleCommittee proxy deployed and initialized: ${aggOracleProxy.target}`);
+
+    logger.info(`✅ AggOracleCommittee implementation: ${aggOracleImplementation.target}`);
+
+    return {
+        proxy: aggOracleProxy.target as string,
+        implementation: aggOracleImplementation.target as string,
+    };
+}
+
+/**
  * Generate final output JSON with deployment information
  */
-function generateFinalOutput(outputJson: any, deployParams: any): any {
+function generateFinalOutput(outputJson: any, deployParams: any, actualGlobalExitRootUpdater: string): any {
     const currentDateTime = new Date().toISOString().replace('T', ' ').split('.')[0]; // YYYY-MM-DD HH:MM:SS
+
+    const configuration: any = {
+        timelockDelay: deployParams.timelock.timelockDelay,
+        timelockAdmin: deployParams.timelock.timelockAdminAddress,
+        bridgeManager: deployParams.bridge.bridgeManager,
+        emergencyBridgePauser: deployParams.bridge.emergencyBridgePauser,
+        emergencyBridgeUnpauser: deployParams.bridge.emergencyBridgeUnpauser,
+        globalExitRootUpdater: actualGlobalExitRootUpdater, // Show the actual globalExitRootUpdater used
+        globalExitRootRemover: deployParams.globalExitRoot.globalExitRootRemover,
+    };
+
+    // Add AggOracleCommittee configuration if it was deployed
+    if (deployParams.aggOracleCommittee?.useAggOracleCommittee === true) {
+        configuration.aggOracleCommittee = {
+            useAggOracleCommittee: true,
+            aggOracleOwner: deployParams.aggOracleCommittee.aggOracleOwner,
+            aggOracleMembers: deployParams.aggOracleCommittee.aggOracleMembers,
+            quorum: deployParams.aggOracleCommittee.quorum,
+        };
+    }
 
     return {
         deploymentDate: currentDateTime,
@@ -378,15 +519,7 @@ function generateFinalOutput(outputJson: any, deployParams: any): any {
             gasTokenNetwork: deployParams.network.chainID,
         },
         contracts: outputJson,
-        configuration: {
-            timelockDelay: deployParams.timelock.timelockDelay,
-            timelockAdmin: deployParams.timelock.timelockAdminAddress,
-            bridgeManager: deployParams.bridge.bridgeManager,
-            emergencyBridgePauser: deployParams.bridge.emergencyBridgePauser,
-            emergencyBridgeUnpauser: deployParams.bridge.emergencyBridgeUnpauser,
-            globalExitRootUpdater: deployParams.globalExitRoot.globalExitRootUpdater,
-            globalExitRootRemover: deployParams.globalExitRoot.globalExitRootRemover,
-        },
+        configuration,
     };
 }
 
@@ -403,10 +536,15 @@ async function runBasicVerification(deployConfig: any, outputJson: any) {
     // Step 2: Verify Timelock Contract
     await verifyTimelockContract(deployConfig, outputJson);
 
-    // Step 3: Verify Bridge Contract
+    // Step 3: Verify AggOracleCommittee Contract (if deployed)
+    if (deployConfig.aggOracleCommittee?.useAggOracleCommittee === true) {
+        await verifyAggOracleCommitteeContract(deployConfig, outputJson);
+    }
+
+    // Step 4: Verify Bridge Contract
     await verifyBridgeContract(deployConfig, outputJson);
 
-    // Step 4: Verify GER Manager Contract
+    // Step 5: Verify GER Manager Contract
     await verifyGERManagerContract(deployConfig, outputJson);
 
     logger.info('✅ Comprehensive verification passed successfully!');
@@ -768,10 +906,19 @@ async function verifyGERManagerContract(deployConfig: any, outputJson: any) {
 
     // Verify global exit root updater
     const globalExitRootUpdater = await gerManager.globalExitRootUpdater();
-    if (globalExitRootUpdater.toLowerCase() !== deployConfig.globalExitRoot.globalExitRootUpdater.toLowerCase()) {
-        throw new Error(
-            `GER updater mismatch. Expected: ${deployConfig.globalExitRoot.globalExitRootUpdater}, Got: ${globalExitRootUpdater}`,
-        );
+
+    // Determine expected globalExitRootUpdater based on whether AggOracleCommittee is used
+    let expectedUpdater: string;
+    if (deployConfig.aggOracleCommittee?.useAggOracleCommittee === true) {
+        // When using AggOracleCommittee, it should be the updater
+        expectedUpdater = outputJson.aggOracleCommitteeAddress;
+    } else {
+        // When not using AggOracleCommittee, use the configured updater
+        expectedUpdater = deployConfig.globalExitRoot.globalExitRootUpdater;
+    }
+
+    if (globalExitRootUpdater.toLowerCase() !== expectedUpdater.toLowerCase()) {
+        throw new Error(`GER updater mismatch. Expected: ${expectedUpdater}, Got: ${globalExitRootUpdater}`);
     }
     logger.info(`✅ GER Manager updater: ${globalExitRootUpdater}`);
 
@@ -804,6 +951,116 @@ async function verifyGERManagerContract(deployConfig: any, outputJson: any) {
         throw new Error(`GER Manager proxy admin mismatch. Expected: ${expectedAdmin}, Got: ${gerProxyAdmin}`);
     }
     logger.info(`✅ ProxyAdmin correctly manages GER Manager proxy`);
+}
+
+/**
+ * Verify AggOracleCommittee contract - address, bytecode, initialization, configuration, immutables
+ */
+async function verifyAggOracleCommitteeContract(deployConfig: any, outputJson: any) {
+    logger.info('🔍 Verifying AggOracleCommittee contract...');
+
+    // Verify proxy address format and bytecode existence
+    if (!ethers.isAddress(outputJson.aggOracleCommitteeAddress)) {
+        throw new Error(`AggOracleCommittee proxy invalid address: ${outputJson.aggOracleCommitteeAddress}`);
+    }
+
+    const proxyCode = await ethers.provider.getCode(outputJson.aggOracleCommitteeAddress);
+    if (proxyCode === '0x') {
+        throw new Error(`AggOracleCommittee proxy at ${outputJson.aggOracleCommitteeAddress} has no bytecode`);
+    }
+    logger.info(`✅ AggOracleCommittee proxy deployed: ${outputJson.aggOracleCommitteeAddress}`);
+
+    // Verify implementation address format and bytecode existence
+    if (!ethers.isAddress(outputJson.aggOracleCommitteeImplementation)) {
+        throw new Error(
+            `AggOracleCommittee implementation invalid address: ${outputJson.aggOracleCommitteeImplementation}`,
+        );
+    }
+
+    const implCode = await ethers.provider.getCode(outputJson.aggOracleCommitteeImplementation);
+    if (implCode === '0x') {
+        throw new Error(
+            `AggOracleCommittee implementation at ${outputJson.aggOracleCommitteeImplementation} has no bytecode`,
+        );
+    }
+    logger.info(`✅ AggOracleCommittee implementation deployed: ${outputJson.aggOracleCommitteeImplementation}`);
+
+    // Verify AggOracleCommittee initialization (slot 0 for OpenZeppelin initializer)
+    const initializerSlot = await ethers.provider.getStorage(outputJson.aggOracleCommitteeAddress, 0);
+    const initializerVersion = ethers.toBigInt(initializerSlot);
+    if (initializerVersion === 0n) {
+        throw new Error('AggOracleCommittee appears to not be initialized (initializer version is 0)');
+    }
+    logger.info(`✅ AggOracleCommittee is initialized (version: ${initializerVersion})`);
+
+    // Verify AggOracleCommittee configuration
+    const aggOracle = (await ethers.getContractAt('AggOracleCommittee', outputJson.aggOracleCommitteeAddress)) as any;
+
+    // Verify owner (from OwnableUpgradeable)
+    const owner = await aggOracle.owner();
+    if (owner.toLowerCase() !== deployConfig.aggOracleCommittee.aggOracleOwner.toLowerCase()) {
+        throw new Error(
+            `AggOracleCommittee owner mismatch. Expected: ${deployConfig.aggOracleCommittee.aggOracleOwner}, Got: ${owner}`,
+        );
+    }
+    logger.info(`✅ AggOracleCommittee owner: ${owner}`);
+
+    // Verify quorum
+    const quorum = await aggOracle.quorum();
+    if (Number(quorum) !== deployConfig.aggOracleCommittee.quorum) {
+        throw new Error(
+            `AggOracleCommittee quorum mismatch. Expected: ${deployConfig.aggOracleCommittee.quorum}, Got: ${quorum}`,
+        );
+    }
+    logger.info(`✅ AggOracleCommittee quorum: ${quorum}`);
+
+    // Verify aggOracleMembers (compare lengths and check if all expected members are present)
+    const expectedMembers = deployConfig.aggOracleCommittee.aggOracleMembers.map((member: string) =>
+        member.toLowerCase(),
+    );
+    const actualMembersCount = await aggOracle.getAggOracleMembersCount();
+
+    if (Number(actualMembersCount) !== expectedMembers.length) {
+        throw new Error(
+            `AggOracleCommittee members length mismatch. Expected: ${expectedMembers.length}, Got: ${actualMembersCount}`,
+        );
+    }
+
+    // Check each member individually
+    for (let i = 0; i < expectedMembers.length; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        const actualMember = await aggOracle.aggOracleMembers(i);
+        if (!expectedMembers.includes(actualMember.toLowerCase())) {
+            throw new Error(
+                `AggOracleCommittee member at index ${i} not expected. Got: ${actualMember}, Expected one of: ${expectedMembers.join(', ')}`,
+            );
+        }
+    }
+    logger.info(`✅ AggOracleCommittee has ${actualMembersCount} members matching configuration`);
+
+    // Verify globalExitRootManagerL2Sovereign (immutable) and dependency
+    const gerManagerAddress = await aggOracle.globalExitRootManagerL2Sovereign();
+    if (gerManagerAddress.toLowerCase() !== outputJson.globalExitRootManagerL2SovereignChainAddress.toLowerCase()) {
+        throw new Error(
+            `AggOracleCommittee globalExitRootManagerL2Sovereign mismatch. Expected: ${outputJson.globalExitRootManagerL2SovereignChainAddress}, Got: ${gerManagerAddress}`,
+        );
+    }
+    logger.info(`✅ AggOracleCommittee -> GER Manager: ${gerManagerAddress}`);
+
+    // Verify ProxyAdmin is the admin
+    const aggOracleProxyAdmin = await ethers.provider.getStorage(
+        outputJson.aggOracleCommitteeAddress,
+        '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103', // EIP-1967 admin slot
+    );
+
+    const expectedAdmin = ethers.zeroPadValue(outputJson.proxyAdminAddress.toLowerCase(), 32);
+
+    if (aggOracleProxyAdmin.toLowerCase() !== expectedAdmin.toLowerCase()) {
+        throw new Error(
+            `AggOracleCommittee proxy admin mismatch. Expected: ${expectedAdmin}, Got: ${aggOracleProxyAdmin}`,
+        );
+    }
+    logger.info(`✅ ProxyAdmin correctly manages AggOracleCommittee proxy`);
 }
 
 // Execute deployment
