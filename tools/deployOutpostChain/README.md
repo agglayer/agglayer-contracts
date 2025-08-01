@@ -8,13 +8,30 @@ The script deploys the following contracts using standard OpenZeppelin Upgrades:
 
 1. **ProxyAdmin** - Admin contract for managing proxy contracts
 2. **TimelockController** - OpenZeppelin's standard timelock contract that owns the ProxyAdmin
-3. **BridgeL2SovereignChain** - Bridge contract for outpost chain (with proxy)
-4. **GlobalExitRootManagerL2SovereignChain** - Global exit root manager (with proxy)
+3. **AggOracleCommittee** - _(Optional)_ Oracle committee for managing global exit root updates
+4. **BridgeL2SovereignChain** - Bridge contract for outpost chain (with proxy)
+5. **GlobalExitRootManagerL2SovereignChain** - Global exit root manager (with proxy)
+
+### Bridge Internal Contracts
+
+The Bridge deployment involves 4 internal contracts that are automatically deployed:
+
+**During Bridge Implementation Constructor (PolygonZkEVMBridgeV2):**
+
+- **WrappedTokenBytecodeStorer** - Stores the bytecode for wrapped token deployments (reduces bridge contract size)
+- **WrappedTokenBridgeImplementation** - Implementation contract used as template for all wrapped tokens deployed via proxy pattern
+- **BridgeLib** - Library contract containing bridge-related functions (reduces bridge contract size)
+
+**During Bridge Initialization:**
+
+- **WETH Token** - Wrapped ETH token specific to this outpost chain (deployed via `_deployWrappedToken()` if no `sovereignWETHAddress` is provided)
+
 
 ## Features
 
 - ✅ **Standard Deployments**: Simple, straightforward contract deployments
-- ✅ **Proxy Patterns**: Bridge and GER Manager use transparent proxy pattern
+- ✅ **Proxy Patterns**: Bridge, GER Manager, and AggOracleCommittee use transparent proxy pattern
+- ✅ **Optional Oracle Committee**: Deploy AggOracleCommittee for decentralized global exit root management
 - ✅ **Proper Governance**: Timelock contract owns the ProxyAdmin for secure upgrades
 - ✅ **Automated Parameter Calculation**: Gas token address, network, and proxy manager auto-derived
 - ✅ **Simplified Configuration**: Fewer manual parameters required for outpost setup
@@ -30,8 +47,27 @@ All contracts are deployed using OpenZeppelin's upgrades framework:
 
 - ✅ **TimelockController**: Deployed first as the governance timelock
 - ✅ **ProxyAdmin**: Deployed with TimelockController as initial owner
-- ✅ **BridgeL2SovereignChain**: Deployed with upgrades.deployProxy() and initialized
-- ✅ **GlobalExitRootManagerL2SovereignChain**: Deployed with upgrades.deployProxy() and initialized
+- ✅ **AggOracleCommittee**: _(Optional)_ Deployed if `useAggOracleCommittee` is true
+- ✅ **BridgeL2SovereignChain**: Deployed with manual proxy deployment and separate initialization
+- ✅ **GlobalExitRootManagerL2SovereignChain**: Deployed with atomic proxy initialization
+
+### AggOracleCommittee Integration
+
+When `useAggOracleCommittee` is enabled:
+
+1. **AggOracleCommittee** is deployed with the pre-calculated GER Manager address
+2. **AggOracleCommittee address** becomes the `globalExitRootUpdater` for the GER Manager
+3. **Oracle members** can propose global exit roots that are consolidated when quorum is reached
+4. **Ownership** of the AggOracleCommittee is set to the specified `aggOracleOwner`
+
+**Without AggOracleCommittee:**
+
+- `globalExitRootUpdater` from configuration is used directly
+
+**With AggOracleCommittee:**
+
+- `globalExitRootUpdater` from configuration **must not be set**
+- AggOracleCommittee address automatically becomes the `globalExitRootUpdater`
 
 ### Circular Dependency Handling
 
@@ -45,7 +81,7 @@ Since Bridge and GER Manager reference each other, we use deterministic address 
 **Technical Details:**
 
 - Uses `deployer.getNonce()` to get current nonce
-- Bridge proxy deploys at `nonce + 1` (implementation at `nonce`, proxy at `nonce + 1`)
+- Bridge proxy deploys at calculated nonce position
 - Address verification ensures deterministic deployment worked correctly
 
 ## Setup
@@ -133,11 +169,42 @@ rollupID: 1001 → hex: 0x000003e9 → repeated 5×: 0x000003e9000003e9000003e90
 ```json
 {
     "globalExitRoot": {
-        "globalExitRootUpdater": "0x...",
+        "globalExitRootUpdater": "0x...", // Required ONLY if not using AggOracleCommittee
         "globalExitRootRemover": "0x..."
     }
 }
 ```
+
+### AggOracleCommittee Configuration _(Optional)_
+
+```json
+{
+    "aggOracleCommittee": {
+        "useAggOracleCommittee": true, // Set to true to deploy AggOracleCommittee
+        "aggOracleOwner": "0x...", // Owner of the AggOracleCommittee (usually timelock)
+        "aggOracleMembers": [
+            "0x...", // Oracle member 1
+            "0x...", // Oracle member 2
+            "0x..." // Oracle member N
+        ],
+        "quorum": 2 // Minimum number of oracle members needed to consolidate a GER
+    }
+}
+```
+
+**AggOracleCommittee Parameters:**
+
+- **`useAggOracleCommittee`**: Boolean flag to enable/disable AggOracleCommittee deployment
+- **`aggOracleOwner`**: Address that will own the AggOracleCommittee contract (can add/remove members, change quorum)
+- **`aggOracleMembers`**: Array of addresses that can propose global exit roots
+- **`quorum`**: Minimum number of oracle members that must vote for a GER to be consolidated
+
+**Important Constraints:**
+
+- ✅ `quorum` must be ≥ 1 and ≤ number of `aggOracleMembers`
+- ✅ All `aggOracleMembers` addresses must be unique and valid
+- ✅ When `useAggOracleCommittee` is `true`, **do not set** `globalExitRootUpdater`
+- ✅ When `useAggOracleCommittee` is `false`, `globalExitRootUpdater` **is required**
 
 ## Usage
 
@@ -166,50 +233,56 @@ Rollup ID: 1001
 ✅ TimelockController (OpenZeppelin) deployed: 0xTimelockAddress123...
 
 === Step 2: Deploying ProxyAdmin with Timelock as owner ===
-✅ ProxyAdmin deployed with Timelock as owner: 0xProxyAdminAddress456...
+✅ ProxyAdmin deployed with Timelock as owner: 0xProxyAdminAddress...
+
+=== Step 2.5: Deploying AggOracleCommittee ===
+✅ AggOracleCommittee implementation deployed: 0xAggOracleImplementation...
+✅ AggOracleCommittee proxy deployed and initialized: 0xAggOracleAddress789...
+✅ Using AggOracleCommittee as globalExitRootUpdater: 0xAggOracleAddress789...
 
 === Step 3: Pre-calculating Bridge proxy address ===
-📍 Pre-calculated Bridge proxy address: 0xPreCalculatedAddress123...
-👤 Deployer address: 0x1234567890123456789012345678901234567890
-🔢 Current nonce: 44
+📍 Pre-calculated Bridge proxy address: 0xPreCalculatedAddress...
 
 === Step 4: Deploying GlobalExitRootManagerL2SovereignChain ===
-✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): 0xGERManagerAddress789...
+✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): 0xGERManagerAddress...
 
 === Step 5: Deploying BridgeL2SovereignChain ===
 🧮 Derived gas token address from rollupID 1001: 0x000003e9000003e9000003e9000003e9000003e9
-✅ BridgeL2SovereignChain proxy (initialized): 0xPreCalculatedAddress123...
+✅ BridgeL2SovereignChain proxy (initialized): 0xPreCalculatedAddress...
 
 === Step 5.1: Verifying address prediction ===
-✅ Address prediction successful! Bridge deployed at expected address: 0xPreCalculatedAddress123...
+✅ Address prediction successful! Bridge deployed at expected address: 0xPreCalculatedAddress...
 
 🎉 Deployment completed successfully!
 ```
 
 **The script will:**
 
-1. ✅ Validate all deployment parameters
+1. ✅ Validate all deployment parameters (including AggOracleCommittee if enabled)
 2. ✅ Deploy TimelockController contract
 3. ✅ Deploy ProxyAdmin contract with Timelock as owner
-4. ✅ Pre-calculate Bridge proxy address using nonce prediction
-5. ✅ Deploy GlobalExitRootManagerL2SovereignChain with pre-calculated Bridge address
-6. ✅ Deploy BridgeL2SovereignChain with actual GER Manager address
-7. ✅ Verify actual Bridge address matches pre-calculated address
-8. ✅ Run verification tests
-9. ✅ Generate deployment output JSON
+4. ✅ Deploy AggOracleCommittee _(if enabled)_ and use it as globalExitRootUpdater
+5. ✅ Pre-calculate Bridge proxy address using nonce prediction
+6. ✅ Deploy GlobalExitRootManagerL2SovereignChain with appropriate globalExitRootUpdater
+7. ✅ Deploy BridgeL2SovereignChain with actual GER Manager address
+8. ✅ Verify actual Bridge address matches pre-calculated address
+9. ✅ Run verification tests (including AggOracleCommittee if deployed)
+10. ✅ Generate deployment output JSON
 
 ### Output File
 
-A JSON file `deploy_output_YYYY-MM-DD.json` will be created with all deployment information:
+A JSON file `deploy_output_YYYY-MM-DD_HH-MM-SS.json` will be created with all deployment information:
+
+**Without AggOracleCommittee:**
 
 ```json
 {
-    "deploymentDate": "2024-01-01",
+    "deploymentDate": "2024-01-01 14:30:25",
     "network": {
         "chainID": 1001,
         "rollupID": 1001,
         "networkName": "OutpostChain",
-        "derivedGasTokenAddress": "0x000003e9000003e9000003e9000003e9000003e9",
+        "gasTokenAddress": "0x000003e9000003e9000003e9000003e9000003e9",
         "gasTokenNetwork": 1001
     },
     "contracts": {
@@ -218,7 +291,10 @@ A JSON file `deploy_output_YYYY-MM-DD.json` will be created with all deployment 
         "bridgeL2SovereignChainAddress": "0x...",
         "bridgeL2SovereignChainImplementation": "0x...",
         "globalExitRootManagerL2SovereignChainAddress": "0x...",
-        "globalExitRootManagerL2SovereignChainImplementation": "0x..."
+        "globalExitRootManagerL2SovereignChainImplementation": "0x...",
+        "wrappedTokenBytecodeStorer": "0x...",
+        "wrappedTokenBridgeImplementation": "0x...",
+        "WETH": "0x..."
     },
     "configuration": {
         "timelockDelay": 3600,
@@ -226,54 +302,100 @@ A JSON file `deploy_output_YYYY-MM-DD.json` will be created with all deployment 
         "bridgeManager": "0x...",
         "emergencyBridgePauser": "0x...",
         "emergencyBridgeUnpauser": "0x...",
-        "globalExitRootUpdater": "0x...",
+        "globalExitRootUpdater": "0x...", // From configuration
         "globalExitRootRemover": "0x..."
     }
 }
 ```
 
-## Key Changes from CREATE3 Version
+**With AggOracleCommittee:**
 
-### ✅ **Simplified Deployment**
+```json
+{
+    "deploymentDate": "2024-01-01 14:30:25",
+    "network": {
+        "chainID": 1001,
+        "rollupID": 1001,
+        "networkName": "OutpostChain",
+        "gasTokenAddress": "0x000003e9000003e9000003e9000003e9000003e9",
+        "gasTokenNetwork": 1001
+    },
+    "contracts": {
+        "proxyAdminAddress": "0x...",
+        "timelockAddress": "0x...",
+        "aggOracleCommitteeAddress": "0x...", // Added when AggOracleCommittee is deployed
+        "aggOracleCommitteeImplementation": "0x...", // Added when AggOracleCommittee is deployed
+        "bridgeL2SovereignChainAddress": "0x...",
+        "bridgeL2SovereignChainImplementation": "0x...",
+        "globalExitRootManagerL2SovereignChainAddress": "0x...",
+        "globalExitRootManagerL2SovereignChainImplementation": "0x...",
+        "wrappedTokenBytecodeStorer": "0x...",
+        "wrappedTokenBridgeImplementation": "0x...",
+        "WETH": "0x..."
+    },
+    "configuration": {
+        "timelockDelay": 3600,
+        "timelockAdmin": "0x...",
+        "bridgeManager": "0x...",
+        "emergencyBridgePauser": "0x...",
+        "emergencyBridgeUnpauser": "0x...",
+        "globalExitRootUpdater": "0x...", // AggOracleCommittee address (automatically used)
+        "globalExitRootRemover": "0x...",
+        "aggOracleCommittee": {
+            // Added when AggOracleCommittee is deployed
+            "useAggOracleCommittee": true,
+            "aggOracleOwner": "0x...",
+            "aggOracleMembers": ["0x...", "0x..."],
+            "quorum": 2
+        }
+    }
+}
+```
 
-- **Before**: Complex CREATE3 factory deployment with pre-calculated addresses
-- **After**: Standard OpenZeppelin upgrades deployment
+## AggOracleCommittee Usage
 
-### ✅ **No Address Determinism**
+### When to Use AggOracleCommittee
 
-- **Before**: Same addresses across all chains using CREATE3
-- **After**: Different addresses per chain (standard behavior)
+Use AggOracleCommittee when you want:
 
-### ✅ **Easier Debugging**
+- **Decentralized GER Management**: Multiple oracle members can propose global exit roots
+- **Consensus-Based Updates**: Require quorum of oracle members to consolidate GERs
+- **Governance Control**: Owner can add/remove oracle members and adjust quorum
+- **Security**: Prevents single point of failure for global exit root updates
 
-- **Before**: Complex CREATE3 proxy bytecode and salt management
-- **After**: Standard deployment patterns, easier to understand and debug
+### How AggOracleCommittee Works
 
-### ✅ **Faster Deployment**
+1. **Oracle Members** call `proposeGlobalExitRoot(bytes32 ger)` to vote for a GER
+2. **Quorum Reached**: When enough members vote for the same GER, it's automatically consolidated
+3. **GER Consolidation**: The GER is sent to the GlobalExitRootManagerL2SovereignChain
+4. **Owner Management**: Contract owner can add/remove members and change quorum
 
-- **Before**: Multiple steps for CREATE3 factory, proxy deployment, initialization
-- **After**: Direct proxy deployment with initialization in one step
+### Configuration Examples
 
-### ✅ **Reduced Complexity**
+**Simple 1-of-1 Oracle:**
 
-- **Before**: Pre-calculation of addresses, frontrunning protection logic
-- **After**: Simple deployment flow with standard patterns
+```json
+{
+    "aggOracleCommittee": {
+        "useAggOracleCommittee": true,
+        "aggOracleOwner": "0xTimelock...",
+        "aggOracleMembers": ["0xOracle1..."],
+        "quorum": 1
+    }
+}
+```
 
-## Important Notes
+**Multi-signature 2-of-3 Oracle:**
 
-✅ **Circular Dependency Resolved**: Bridge and GER Manager dependencies are resolved using deterministic address pre-calculation with `ethers.getCreateAddress()`.
-
-✅ **Address Verification**: The script automatically verifies that actual deployed addresses match pre-calculated addresses, ensuring deployment integrity.
-
-⚠️ **No Address Determinism**: Unlike CREATE3, these deployments will have different addresses on each chain.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Contract Verification**: After deployment, verify contracts on Etherscan using the implementation addresses
-2. **Proxy Admin Ownership**: Ensure the Timelock has proper ownership of the ProxyAdmin
-3. **Bridge Configuration**: Verify the Bridge contract is properly initialized with correct parameters
-4. **GER Manager Setup**: Confirm the GER Manager has the correct bridge address reference
+```json
+{
+    "aggOracleCommittee": {
+        "useAggOracleCommittee": true,
+        "aggOracleOwner": "0xTimelock...",
+        "aggOracleMembers": ["0xOracle1...", "0xOracle2...", "0xOracle3..."],
+        "quorum": 2
+    }
+}
+```
 
 For additional support, check the deployment logs and output JSON file for detailed information about each deployed contract.
