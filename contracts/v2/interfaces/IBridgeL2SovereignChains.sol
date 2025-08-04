@@ -135,6 +135,11 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
      */
     error OnlyPendingEmergencyBridgeUnpauser();
 
+    /**
+     * @dev Thrown when the caller is not the deployer
+     */
+    error OnlyDeployer();
+
     function initialize(
         uint32 _networkID,
         address _gasTokenAddress,
