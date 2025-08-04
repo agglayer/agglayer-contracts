@@ -118,6 +118,24 @@ describe('BridgeL2SovereignChain Contract', () => {
             ),
         ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidInitializeFunction');
 
+        // cannot initialize from a non-deployer account (frontrunning protection)
+        await expect(
+            sovereignChainBridgeContract.connect(acc1).initialize(
+                networkIDRollup2,
+                ethers.ZeroAddress, // zero for ether
+                ethers.ZeroAddress, // zero for ether
+                sovereignChainGlobalExitRootContract.target,
+                rollupManager.address,
+                '0x',
+                ethers.Typed.address(bridgeManager),
+                ethers.ZeroAddress,
+                false,
+                emergencyBridgePauser.address,
+                emergencyBridgePauser.address,
+                proxiedTokensManager.address,
+            ),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyDeployer');
+
         await sovereignChainBridgeContract.initialize(
             networkIDRollup2,
             ethers.ZeroAddress, // zero for ether
@@ -141,7 +159,7 @@ describe('BridgeL2SovereignChain Contract', () => {
             deployer.address,
             tokenInitialBalance,
         );
-        expect(await sovereignChainBridgeContract.version()).to.be.equal('v1.0.0');
+        expect(await sovereignChainBridgeContract.version()).to.be.equal('v2.0.0');
         expect(await sovereignChainGlobalExitRootContract.version()).to.be.equal('v1.0.0');
     });
 

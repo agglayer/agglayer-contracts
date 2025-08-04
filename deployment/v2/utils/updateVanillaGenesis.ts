@@ -101,6 +101,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         },
     };
     let txObject = ethers.Transaction.from(injectedTx);
+    const bridgeDeployer = txObject.from?.toLocaleLowerCase();
     const txDeployBridge = processorUtils.rawTxToCustomRawTx(txObject.serialized);
     // Check ecrecover
     expect(txObject.from).to.equal(ethers.recoverAddress(txObject.unsignedHash, txObject.signature as any));
@@ -263,35 +264,10 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         return acc;
     }, {});
 
-    // Setup a second zkEVM to initialize both contracts
-    const zkEVMDB2 = await ZkEVMDB.newZkEVM(
-        new MemDB(F),
-        poseidon,
-        genesisRoot,
-        accHashInput,
-        genesis.genesis,
-        null,
-        null,
-        chainID,
-    );
-    const batch2 = await zkEVMDB2.buildBatch(
-        1000, // limitTimestamp
-        ethers.ZeroAddress, // trustedSequencer
-        smtUtils.stringToH4(ethers.ZeroHash), // l1InfoRoot
-        ethers.ZeroHash, // Forced block hash
-        undefined,
-        {
-            vcmConfig: {
-                skipCounters: true,
-            },
-        },
-    );
-    // Add changeL2Block tx
-    batch2.addRawTx(`0x${rawChangeL2BlockTx}`);
+    // Initialize bridge
     const gerProxy = genesis.genesis.find(function (obj) {
         return obj.contractName === GENESIS_CONTRACT_NAMES.GER_L2_PROXY;
     });
-    // Initialize bridge
     const {
         rollupID,
         gasTokenAddress,
@@ -326,6 +302,42 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     injectedTx.data = initializeData;
     injectedTx.gasPrice = 0;
     txObject = ethers.Transaction.from(injectedTx);
+    // replace deployer from bridge bytecode
+    const bridgeInitializer = txObject.from?.toLowerCase();
+    expect(oldBridge.bytecode).to.include(bridgeDeployer?.slice(2));
+    // replace deployer in bytecode
+    const bridgeBytecodeWithInitializerAsDeployer = oldBridge.bytecode.replace(
+        bridgeDeployer?.slice(2),
+        bridgeInitializer?.slice(2),
+    );
+    expect(bridgeBytecodeWithInitializerAsDeployer).to.include(bridgeInitializer?.slice(2));
+    oldBridge.bytecode = bridgeBytecodeWithInitializerAsDeployer;
+    // Setup a second zkEVM to initialize both contracts
+    const zkEVMDB2 = await ZkEVMDB.newZkEVM(
+        new MemDB(F),
+        poseidon,
+        genesisRoot,
+        accHashInput,
+        genesis.genesis,
+        null,
+        null,
+        chainID,
+    );
+    const batch2 = await zkEVMDB2.buildBatch(
+        1000, // limitTimestamp
+        ethers.ZeroAddress, // trustedSequencer
+        smtUtils.stringToH4(ethers.ZeroHash), // l1InfoRoot
+        ethers.ZeroHash, // Forced block hash
+        undefined,
+        {
+            vcmConfig: {
+                skipCounters: true,
+            },
+        },
+    );
+    // Add changeL2Block tx
+    batch2.addRawTx(`0x${rawChangeL2BlockTx}`);
+
     const txInitializeBridge = processorUtils.rawTxToCustomRawTx(txObject.serialized);
     // Check ecrecover
     expect(txObject.from).to.equal(ethers.recoverAddress(txObject.unsignedHash, txObject.signature as any));
