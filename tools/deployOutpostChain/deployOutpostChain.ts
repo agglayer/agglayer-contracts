@@ -311,30 +311,23 @@ async function deployBridgeL2SovereignChain(
         deployer,
     );
     /*
-     * TECHNICAL EXPLANATION: Why separated deployment works vs initialization in constructor
+     * FRONTRUNNING PROTECTION: onlyDeployer modifier ensures secure initialization
      *
-     * PROBLEM: When initializing proxy during constructor with initData parameter:
-     * - TransparentUpgradeableProxy constructor calls Address.functionDelegateCall(_logic, _data)
-     * - This delegatecall happens DURING proxy construction (proxy doesn't fully exist yet)
-     * - BridgeL2SovereignChain.initialize() calls _deployWrappedToken()
-     * - _deployWrappedToken() accesses wrappedTokenBytecodeStorer (immutable variable)
-     * - During construction context, immutable variables from implementation bytecode
-     *   may not be accessible correctly through delegatecall
-     * - This causes CREATE2 in _deployWrappedToken() to fail with FailedProxyDeployment()
+     * The BridgeL2SovereignChain contract includes an `onlyDeployer` modifier that restricts
+     * the initialize() function to only be callable by the deployer address (set immutably
+     * in the constructor). This completely eliminates the risk of frontrunning attacks.
      *
-     * SOLUTION: Separated deployment approach:
-     * 1. Deploy proxy with empty initData ('0x') - proxy construction completes successfully
-     * 2. Call initialize() separately after proxy is fully deployed
-     * 3. Now delegatecall happens in clean context where immutable variables are accessible
-     * 4. _deployWrappedToken() can access wrappedTokenBytecodeStorer correctly
-     * 5. CREATE2 works and custom gas token initialization succeeds
+     * DEPLOYER VERIFICATION:
+     * - deployer = msg.sender (set in implementation constructor)
+     * - require(msg.sender == deployer, OnlyDeployer()) (in initialize function)
+     * - This protection is immutable and cannot be bypassed
      *
-     * ROOT CAUSE: Context mismatch during delegatecall in proxy construction phase
-     * - Storage context: proxy (under construction)
-     * - Immutable variables: implementation bytecode
-     * - This hybrid context causes immutable variable access issues
+     * SEPARATED DEPLOYMENT APPROACH:
+     * We still use separated deployment (proxy with empty initData + separate initialize call)
+     * to maintain compatibility with the complex initialization logic that includes calls
+     * to the proxy while it's not ready and the initialization will likely fail if done in a single atomic transaction.
      *
-     * WARNING: There is risk of frontrunning, that is why all initialization parameters are checked at the end of the script.
+     * SECURITY: No frontrunning risk thanks to onlyDeployer protection
      */
     const bridgeProxy = await transparentProxyFactory.deploy(
         bridgeImplementation.target, // Implementation address
@@ -344,8 +337,8 @@ async function deployBridgeL2SovereignChain(
     await bridgeProxy.waitForDeployment();
     logger.info(`✅ Bridge proxy deployed: ${bridgeProxy.target}`);
 
-    // Step 3: Initialize separately with high gas limit
-    logger.info('📍 Step 3: Initializing Bridge proxy separately...');
+    // Step 3: Initialize proxy with onlyDeployer protection (frontrunning-safe)
+    logger.info('📍 Step 3: Initializing Bridge proxy (onlyDeployer protected)...');
     const bridge = BridgeFactory.attach(bridgeProxy.target as string) as any;
 
     // Get timelock address from the proxyAdmin owner
@@ -368,7 +361,6 @@ async function deployBridgeL2SovereignChain(
         deployParameters.bridge.emergencyBridgePauser,
         deployParameters.bridge.emergencyBridgeUnpauser,
         timelockAddress, // proxiedTokensManager set to timelock address (governance)
-        { gasLimit: 15000000 }, // High gas limit for _deployWrappedToken()
     );
     const wrappedTokenBytecodeStorer = await bridge.wrappedTokenBytecodeStorer();
     const wrappedTokenBridgeImplementation = await bridge.getWrappedTokenBridgeImplementation();

@@ -16,6 +16,9 @@ contract BridgeL2SovereignChain is
     IBridgeL2SovereignChains
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
+    // address used to permission the initialization of the contract
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address private immutable deployer;
 
     // Current bridge version
     string public constant BRIDGE_SOVEREIGN_VERSION = "v2.0.0";
@@ -207,6 +210,7 @@ contract BridgeL2SovereignChain is
      * Disable initializers on the implementation following the best practices
      */
     constructor() PolygonZkEVMBridgeV2() {
+        deployer = msg.sender;
         _disableInitializers();
     }
 
@@ -241,6 +245,11 @@ contract BridgeL2SovereignChain is
         address _emergencyBridgeUnpauser,
         address _proxiedTokensManager
     ) public virtual reinitializer(3) {
+        // only the deployer can initialize the contract.
+        /// @dev the complexity of the initializes makes it very complex to deploy a proxy and
+        /// @dev initialize the contract in an atomic transaction, so we need to permission the function to avoid frontrunning attacks
+        require(msg.sender == deployer, OnlyDeployer());
+
         require(
             address(_globalExitRootManager) != address(0),
             InvalidZeroAddress()
