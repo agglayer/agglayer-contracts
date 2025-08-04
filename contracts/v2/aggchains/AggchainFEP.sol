@@ -69,7 +69,7 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Op L2OO Semantic version.
     /// @custom:semver v3.0.0-rc1
-    string public constant version = "v3.0.0-rc1";
+    string public constant AGGCHAIN_FEP_VERSION = "v3.0.0-rc1";
 
     ////////////////////////////////////////////////////////////
     //                       Storage                          //
@@ -118,7 +118,8 @@ contract AggchainFEP is AggchainBase {
     mapping(bytes32 => OpSuccinctConfig) public opSuccinctConfigs;
 
     /// @notice The genesis configuration name.
-    bytes32 public constant GENESIS_CONFIG_NAME = keccak256("opsuccinct_genesis");
+    bytes32 public constant GENESIS_CONFIG_NAME =
+        keccak256("opsuccinct_genesis");
 
     ////////////////////////////////////////////////////////////
     //                         Events                         //
@@ -196,7 +197,10 @@ contract AggchainFEP is AggchainBase {
     /// @param rangeVkeyCommitment The range verification key commitment.
     /// @param rollupConfigHash The rollup config hash.
     event OpSuccinctConfigUpdated(
-        bytes32 indexed configName, bytes32 aggregationVkey, bytes32 rangeVkeyCommitment, bytes32 rollupConfigHash
+        bytes32 indexed configName,
+        bytes32 aggregationVkey,
+        bytes32 rangeVkeyCommitment,
+        bytes32 rollupConfigHash
     );
 
     /// @notice Emitted when an OP Succinct configuration is deleted.
@@ -643,9 +647,13 @@ contract AggchainFEP is AggchainBase {
     /// @notice Validates that an OpSuccinctConfig has all non-zero parameters.
     /// @param _config The OpSuccinctConfig to validate.
     /// @return True if all parameters are non-zero, false otherwise.
-    function isValidOpSuccinctConfig(OpSuccinctConfig memory _config) public pure returns (bool) {
-        return _config.aggregationVkey != bytes32(0) && _config.rangeVkeyCommitment != bytes32(0)
-            && _config.rollupConfigHash != bytes32(0);
+    function isValidOpSuccinctConfig(
+        OpSuccinctConfig memory _config
+    ) public pure returns (bool) {
+        return
+            _config.aggregationVkey != bytes32(0) &&
+            _config.rangeVkeyCommitment != bytes32(0) &&
+            _config.rollupConfigHash != bytes32(0);
     }
 
     /// @notice Updates or creates an OP Succinct configuration.
@@ -659,8 +667,14 @@ contract AggchainFEP is AggchainBase {
         bytes32 _aggregationVkey,
         bytes32 _rangeVkeyCommitment
     ) external onlyAggchainManager {
-        require(_configName != bytes32(0), "L2OutputOracle: config name cannot be empty");
-        require(!isValidOpSuccinctConfig(opSuccinctConfigs[_configName]), "L2OutputOracle: config already exists");
+        require(
+            _configName != bytes32(0),
+            "L2OutputOracle: config name cannot be empty"
+        );
+        require(
+            !isValidOpSuccinctConfig(opSuccinctConfigs[_configName]),
+            "L2OutputOracle: config already exists"
+        );
 
         OpSuccinctConfig memory newConfig = OpSuccinctConfig({
             aggregationVkey: _aggregationVkey,
@@ -668,16 +682,26 @@ contract AggchainFEP is AggchainBase {
             rollupConfigHash: _rollupConfigHash
         });
 
-        require(isValidOpSuccinctConfig(newConfig), "L2OutputOracle: invalid OP Succinct configuration parameters");
+        require(
+            isValidOpSuccinctConfig(newConfig),
+            "L2OutputOracle: invalid OP Succinct configuration parameters"
+        );
 
         opSuccinctConfigs[_configName] = newConfig;
 
-        emit OpSuccinctConfigUpdated(_configName, _aggregationVkey, _rangeVkeyCommitment, _rollupConfigHash);
+        emit OpSuccinctConfigUpdated(
+            _configName,
+            _aggregationVkey,
+            _rangeVkeyCommitment,
+            _rollupConfigHash
+        );
     }
 
     /// @notice Deletes an OP Succinct configuration.
     /// @param _configName The name of the configuration to delete.
-    function deleteOpSuccinctConfig(bytes32 _configName) external onlyAggchainManager {
+    function deleteOpSuccinctConfig(
+        bytes32 _configName
+    ) external onlyAggchainManager {
         delete opSuccinctConfigs[_configName];
         emit OpSuccinctConfigDeleted(_configName);
     }
