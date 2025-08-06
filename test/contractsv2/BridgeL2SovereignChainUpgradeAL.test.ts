@@ -68,7 +68,7 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
-            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'delegatecall'],
         })) as unknown as BridgeL2SovereignChain;
 
         // deploy global exit root manager pessimistic
@@ -276,7 +276,7 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
         const sovereignChainBridgeContract = await ethers.getContractFactory('BridgeL2SovereignChain');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
             initializer: false,
-            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'delegatecall'],
         });
 
         // Gas token network should be zero if gas token address is zero

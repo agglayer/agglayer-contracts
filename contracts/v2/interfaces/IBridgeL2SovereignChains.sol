@@ -140,6 +140,11 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
      */
     error OnlyDeployer();
 
+    /**
+     * @dev Thrown when BridgeLib initialization fails
+     */
+    error BridgeLibInitializeFailed();
+
     function initialize(
         uint32 _networkID,
         address _gasTokenAddress,

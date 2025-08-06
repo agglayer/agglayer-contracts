@@ -245,83 +245,34 @@ contract BridgeL2SovereignChain is
         address _emergencyBridgeUnpauser,
         address _proxiedTokensManager
     ) public virtual reinitializer(3) {
-        // only the deployer can initialize the contract.
-        /// @dev the complexity of the initializes makes it very complex to deploy a proxy and
-        /// @dev initialize the contract in an atomic transaction, so we need to permission the function to avoid frontrunning attacks
-        require(msg.sender == deployer, OnlyDeployer());
+        // Delegate initialization logic to BridgeLib to reduce bytecode size
+        BridgeLib.InitializeBridgeParams memory bridgeParams = BridgeLib
+            .InitializeBridgeParams({
+                deployer: deployer,
+                networkID: _networkID,
+                gasTokenAddress: _gasTokenAddress,
+                gasTokenNetwork: _gasTokenNetwork,
+                globalExitRootManager: _globalExitRootManager,
+                polygonRollupManager: _polygonRollupManager,
+                gasTokenMetadata: _gasTokenMetadata,
+                bridgeManager: _bridgeManager,
+                sovereignWETHAddress: _sovereignWETHAddress,
+                sovereignWETHAddressIsNotMintable: _sovereignWETHAddressIsNotMintable,
+                emergencyBridgePauser: _emergencyBridgePauser,
+                emergencyBridgeUnpauser: _emergencyBridgeUnpauser,
+                proxiedTokensManager: _proxiedTokensManager
+            });
 
-        require(
-            address(_globalExitRootManager) != address(0),
-            InvalidZeroAddress()
+        bytes memory callData = abi.encodeCall(
+            BridgeLib.initializeBridge,
+            (bridgeParams)
         );
-
-        // Network ID must be different from 0 for sovereign chains
-        require(_networkID != 0, InvalidZeroNetworkID());
-
-        networkID = _networkID;
-        globalExitRootManager = _globalExitRootManager;
-        polygonRollupManager = _polygonRollupManager;
-        bridgeManager = _bridgeManager;
-        emergencyBridgePauser = _emergencyBridgePauser;
-        emit AcceptEmergencyBridgePauserRole(address(0), emergencyBridgePauser);
-        emergencyBridgeUnpauser = _emergencyBridgeUnpauser;
-        emit AcceptEmergencyBridgeUnpauserRole(
-            address(0),
-            emergencyBridgeUnpauser
-        );
-
-        // Set proxied tokens manager
-        require(
-            _proxiedTokensManager != address(this),
-            BridgeAddressNotAllowed()
-        );
-
-        // It's not allowed proxiedTokensManager to be zero address. If disabling token upgradability is required, add a not owned account like 0xffff...fffff
-        require(_proxiedTokensManager != address(0), InvalidZeroAddress());
-
-        proxiedTokensManager = _proxiedTokensManager;
-
-        emit AcceptProxiedTokensManagerRole(address(0), proxiedTokensManager);
-
-        // Set gas token
-        if (_gasTokenAddress == address(0)) {
-            // Gas token will be ether
-            if (_gasTokenNetwork != 0) {
-                revert GasTokenNetworkMustBeZeroOnEther();
-            }
-            // Health check for sovereign WETH address
-            if (
-                _sovereignWETHAddress != address(0) ||
-                _sovereignWETHAddressIsNotMintable
-            ) {
-                revert InvalidSovereignWETHAddressParams();
-            }
-            // WETHToken, gasTokenAddress and gasTokenNetwork will be 0
-            // gasTokenMetadata will be empty
-        } else {
-            // Gas token will be an erc20
-            gasTokenAddress = _gasTokenAddress;
-            gasTokenNetwork = _gasTokenNetwork;
-            gasTokenMetadata = _gasTokenMetadata;
-
-            // Set sovereign weth token or create new if not provided
-            if (_sovereignWETHAddress == address(0)) {
-                // Health check for sovereign WETH address is mintable
-                if (_sovereignWETHAddressIsNotMintable == true) {
-                    revert InvalidSovereignWETHAddressParams();
-                }
-                // Create a wrapped token for WETH, with salt == 0
-                WETHToken = _deployWrappedToken(
-                    0, // salt
-                    abi.encode("Wrapped Ether", "WETH", 18)
-                );
-            } else {
-                WETHToken = ITokenWrappedBridgeUpgradeable(
-                    _sovereignWETHAddress
-                );
-                wrappedAddressIsNotMintable[
-                    _sovereignWETHAddress
-                ] = _sovereignWETHAddressIsNotMintable;
+        (bool success, bytes memory returnData) = address(bridgeLib)
+            .delegatecall(callData);
+        if (!success) {
+            // Revert with the original error from BridgeLib
+            assembly ("memory-safe") {
+                revert(add(returnData, 0x20), mload(returnData))
             }
         }
 
@@ -867,7 +818,6 @@ contract BridgeL2SovereignChain is
         bool isNotMintable
     ) external onlyBridgeManager {
         /// @dev Check the token is not native from this network is done at `_setSovereignTokenAddress`
-
         if (
             originTokenAddress == address(0) &&
             originNetwork == _MAINNET_NETWORK_ID

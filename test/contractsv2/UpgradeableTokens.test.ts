@@ -268,7 +268,7 @@ describe('Upgradeable Tokens', () => {
         const sovBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
         sovereignBridgeContract = (await upgrades.deployProxy(sovBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'delegatecall'],
         })) as unknown as BridgeL2SovereignChainPessimistic;
 
         // Make snapshot
@@ -384,7 +384,7 @@ describe('Upgradeable Tokens', () => {
         const wrappedTokenImplementationAddress = await sovereignBridgeContract.getWrappedTokenBridgeImplementation();
         // Upgrade proxy
         sovereignBridgeContract = (await upgrades.upgradeProxy(sovereignBridgeContract.target, sovBridgeFactory, {
-            unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer'],
+            unsafeAllow: ['constructor', 'missing-initializer-call', 'missing-initializer', 'delegatecall'],
             redeployImplementation: 'always',
         })) as unknown as BridgeL2SovereignChain;
 

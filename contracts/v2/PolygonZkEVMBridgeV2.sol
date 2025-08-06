@@ -1111,6 +1111,25 @@ contract PolygonZkEVMBridgeV2 is
     }
 
     /**
+     * @notice Deploy wrapped token - only callable by BridgeLib via delegatecall
+     * @dev This function provides a secure external interface for BridgeLib to deploy wrapped tokens
+     * @param salt Salt for token deployment (bytes32)
+     * @param metadata Token initialization arguments
+     * @return newWrappedTokenProxy The deployed wrapped token proxy
+     * @dev only callable while initializing, so it can only be called by the BridgeLib
+     */
+    function deployWrappedTokenByBridgeLib(
+        bytes32 salt,
+        bytes memory metadata
+    )
+        external
+        onlyInitializing
+        returns (ITokenWrappedBridgeUpgradeable newWrappedTokenProxy)
+    {
+        return _deployWrappedToken(salt, metadata);
+    }
+
+    /**
      * @notice Burn tokens from wrapped token to execute the bridge
      * note This  function has been extracted to be able to override it by other contracts like Bridge2SovereignChain
      * @param tokenWrapped Wrapped token to burnt
@@ -1183,7 +1202,6 @@ contract PolygonZkEVMBridgeV2 is
         bytes memory proxyInitBytecode = abi.encodePacked(
             INIT_BYTECODE_TRANSPARENT_PROXY()
         );
-
         // Deploy wrapped token proxy
         /// @solidity memory-safe-assembly
         assembly {

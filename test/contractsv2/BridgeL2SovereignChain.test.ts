@@ -78,7 +78,7 @@ describe('BridgeL2SovereignChain Contract', () => {
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
-            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'delegatecall'],
         })) as unknown as BridgeL2SovereignChain;
 
         // deploy global exit root manager
@@ -161,6 +161,22 @@ describe('BridgeL2SovereignChain Contract', () => {
         );
         expect(await sovereignChainBridgeContract.version()).to.be.equal('v2.0.0');
         expect(await sovereignChainGlobalExitRootContract.version()).to.be.equal('v1.0.0');
+    });
+
+    it('should revert when deployWrappedTokenByBridgeLib is called outside initialization context', async () => {
+        // Test that deployWrappedTokenByBridgeLib reverts with onlyInitializing modifier
+        // when called after initialization is complete
+        
+        const salt = ethers.ZeroHash; // bytes32 zero for salt
+        const metadata = ethers.AbiCoder.defaultAbiCoder().encode(
+            ['string', 'string', 'uint8'],
+            ['Test Token', 'TEST', 18]
+        );
+
+        // This should revert because the contract is no longer in initializing state
+        await expect(
+            sovereignChainBridgeContract.deployWrappedTokenByBridgeLib(salt, metadata)
+        ).to.be.revertedWith('Initializable: contract is not initializing');
     });
 
     it('Should remap source 6 decimal token to 18 sovereign wrapped token and bridge', async () => {
@@ -324,7 +340,7 @@ describe('BridgeL2SovereignChain Contract', () => {
         const sovereignChainBridgeContract = await ethers.getContractFactory('BridgeL2SovereignChain');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
             initializer: false,
-            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'delegatecall'],
         });
 
         // Gas token network should be zero if gas token address is zero
