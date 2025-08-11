@@ -428,13 +428,6 @@ contract AggchainFEP is AggchainBase {
             revert RollupConfigHashMustBeDifferentThanZero();
         }
 
-        // Initialize genesis configuration
-        opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
-            aggregationVkey: _initParams.aggregationVkey,
-            rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
-            rollupConfigHash: _initParams.rollupConfigHash
-        });
-
         submissionInterval = _initParams.submissionInterval;
         l2BlockTime = _initParams.l2BlockTime;
 
@@ -453,9 +446,16 @@ contract AggchainFEP is AggchainBase {
             startingTimestamp = _initParams.startingTimestamp;
         }
 
-        rollupConfigHash = _initParams.rollupConfigHash;
         optimisticModeManager = _initParams.optimisticModeManager;
 
+        // Initialize genesis configuration
+        opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
+            aggregationVkey: _initParams.aggregationVkey,
+            rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
+            rollupConfigHash: _initParams.rollupConfigHash
+        });
+
+        rollupConfigHash = _initParams.rollupConfigHash;
         aggregationVkey = _initParams.aggregationVkey;
         rangeVkeyCommitment = _initParams.rangeVkeyCommitment;
     }

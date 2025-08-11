@@ -133,6 +133,8 @@ interface IAggchainBaseErrors {
     error SignerURLCannotBeEmpty();
     /// @notice Thrown when the indices for signer removal are not in descending order.
     error IndicesNotInDescendingOrder();
+    /// @notice Thrown when trying to compute the aggchain hash without initializing the signers hash.
+    error AggchainSignersHashNotInitialized();
 }
 
 /**

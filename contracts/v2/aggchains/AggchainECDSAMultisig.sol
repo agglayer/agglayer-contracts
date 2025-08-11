@@ -210,7 +210,7 @@ contract AggchainECDSAMultisig is AggchainBase {
             revert InvalidAggchainType();
         }
 
-        // aggchainParams and aggchainVKey are not used in this implementation
+        // aggchainParams is not used in this implementation (signersHash and threshold are added directly in base)
         return (bytes32(0), bytes32(0));
     }
 
