@@ -117,12 +117,21 @@ contract AggchainECDSAMultisig is AggchainBase {
                     )
                 );
 
-            // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
+            // Check the use default gateway is consistent
+            if (_useDefaultGateway) {
+                if (
+                    _initAggchainVKeySelector != bytes4(0) ||
+                    _initOwnedAggchainVKey != bytes32(0)
+                ) {
+                    revert InvalidInitializer();
+                }
+            } else {
+                if (
+                    getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                    AGGCHAIN_TYPE
+                ) {
+                    revert InvalidAggchainType();
+                }
             }
 
             // Set aggchainBase variables
@@ -150,12 +159,21 @@ contract AggchainECDSAMultisig is AggchainBase {
                     (bool, bytes32, bytes4, address)
                 );
 
-            // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
+            // Check the use default gateway is consistent
+            if (_useDefaultGateway) {
+                if (
+                    _initAggchainVKeySelector != bytes4(0) ||
+                    _initOwnedAggchainVKey != bytes32(0)
+                ) {
+                    revert InvalidInitializer();
+                }
+            } else {
+                if (
+                    getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                    AGGCHAIN_TYPE
+                ) {
+                    revert InvalidAggchainType();
+                }
             }
 
             // Set aggchainBase variables

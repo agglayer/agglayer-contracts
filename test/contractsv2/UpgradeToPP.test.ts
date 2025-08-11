@@ -1356,7 +1356,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             initParams, // init params
             true, // useDefaultGateway
             ethers.ZeroHash, // ownedAggchainVKey
-            '0x00000001', // aggchainVkeySelector
+            '0x00000000', // aggchainVkeySelector (should be zero when useDefaultGateway is true)
             admin.address,
         );
         const FEPRollupContract = aggchainFEPFactory.attach(rollupAddress);
@@ -1374,6 +1374,9 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                     CUSTOM_DATA_FEP,
                 ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidNewLocalExitRoot');
+
+        // Ensure signers hash initialized (empty)
+        await FEPRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
 
         const prevPP = ethers.ZeroHash;
         const prevLER = ethers.ZeroHash;

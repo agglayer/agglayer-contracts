@@ -15,8 +15,6 @@ export const AGGCHAIN_TYPE_ECDSA_MULTISIG = '0x0002';
 
 /**
  * Function to encode the initialize bytes for the ECDSA Multisig chain (version 0 --> initializerVersion = 0)
- * @param {String[]} initialSigners Array of initial signer addresses
- * @param {Number} threshold Required threshold for multisig operations
  * @param {String} useDefaultGateway Indicates if the default gateway is used
  * @param {String} ownedAggchainVKey Owned aggchain vkey
  * @param {String} aggchainVKeySelector Aggchain vkey selectors
@@ -29,8 +27,6 @@ export const AGGCHAIN_TYPE_ECDSA_MULTISIG = '0x0002';
  * @returns {String} encoded value in hexadecimal string
  */
 export function encodeInitializeBytesAggchainECDSAMultisigv0(
-    initialSigners,
-    threshold,
     useDefaultGateway,
     ownedAggchainVKey,
     aggchainVKeySelector,
@@ -42,22 +38,8 @@ export function encodeInitializeBytesAggchainECDSAMultisigv0(
     networkName,
 ) {
     return ethers.AbiCoder.defaultAbiCoder().encode(
+        ['bool', 'bytes32', 'bytes4', 'address', 'address', 'address', 'address', 'string', 'string'],
         [
-            'address[]',
-            'uint32',
-            'bool',
-            'bytes32',
-            'bytes4',
-            'address',
-            'address',
-            'address',
-            'address',
-            'string',
-            'string',
-        ],
-        [
-            initialSigners,
-            threshold,
             useDefaultGateway,
             ownedAggchainVKey,
             aggchainVKeySelector,
@@ -73,8 +55,6 @@ export function encodeInitializeBytesAggchainECDSAMultisigv0(
 
 /**
  * Function to encode the initialize bytes for the ECDSA Multisig chain (version 1 --> initializerVersion = 1)
- * @param {String[]} initialSigners Array of initial signer addresses
- * @param {Number} threshold Required threshold for multisig operations
  * @param {String} useDefaultGateway Indicates if the default gateway is used
  * @param {String} ownedAggchainVKey Owned aggchain vkey
  * @param {String} aggchainVKeySelector Aggchain vkey selectors
@@ -82,16 +62,14 @@ export function encodeInitializeBytesAggchainECDSAMultisigv0(
  * @returns {String} encoded value in hexadecimal string
  */
 export function encodeInitializeBytesAggchainECDSAMultisigv1(
-    initialSigners,
-    threshold,
     useDefaultGateway,
     ownedAggchainVKey,
     aggchainVKeySelector,
     vKeyManager,
 ) {
     return ethers.AbiCoder.defaultAbiCoder().encode(
-        ['address[]', 'uint32', 'bool', 'bytes32', 'bytes4', 'address'],
-        [initialSigners, threshold, useDefaultGateway, ownedAggchainVKey, aggchainVKeySelector, vKeyManager],
+        ['bool', 'bytes32', 'bytes4', 'address'],
+        [useDefaultGateway, ownedAggchainVKey, aggchainVKeySelector, vKeyManager],
     );
 }
 

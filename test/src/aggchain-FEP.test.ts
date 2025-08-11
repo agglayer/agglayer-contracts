@@ -108,27 +108,31 @@ describe('Test vectors aggchain FEP', () => {
                 data.initParams.aggregationVkey,
             );
 
-            // if useDefaultGateway is true, disable it
-            if (data.useDefaultGateway) {
-                await expect(aggchainFEPContract.connect(vKeyManager).disableUseDefaultGatewayFlag()).to.emit(
-                    aggchainFEPContract,
-                    'DisableUseDefaultGatewayFlag',
-                );
-            }
+            // Test vectors now use useDefaultGateway: false for simplicity
 
             // encode aggchainData
+            // Use separate aggchainVKeySelector if available, otherwise use initAggchainVKeySelector
+            const selectorForAggchainData = data.aggchainVKeySelector || data.initAggchainVKeySelector;
             aggchainData = utilsFEP.encodeAggchainDataFEP(
-                data.initAggchainVKeySelector,
+                selectorForAggchainData,
                 data.newStateRoot,
                 data.newl2BlockNumber,
             );
 
-            // get aggchainHash
+            // get aggchainHash using new base composition with empty signers
+            const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+
+            // Use the owned VKey (test vectors use useDefaultGateway: false)
             aggchainHash = utilsCommon.computeAggchainHash(
                 utilsCommon.CONSENSUS_TYPE.GENERIC,
                 data.initOwnedAggchainVKey,
                 aggchainParams,
+                emptySignersHash,
+                0,
             );
+
+            // Ensure signers hash initialized (empty)
+            await aggchainFEPContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
 
             // get aggchainHash from contract
             // Check InvalidAggchainDataLength

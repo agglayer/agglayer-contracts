@@ -264,7 +264,7 @@ describe('AggchainFEP', () => {
             aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
-        expect(await aggchainFEPContract.version()).to.be.equal('v2.0.0');
+        expect(await aggchainFEPContract.version()).to.be.equal('v3.0.0-rc1');
     });
 
     it('should check the v1 initialized parameters', async () => {
@@ -404,6 +404,14 @@ describe('AggchainFEP', () => {
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
         await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
+        // AggchainFEP extends AggchainBase but doesn't use signers
+        // However, we need to initialize the signers hash to avoid AggchainSignersHashNotInitialized error
+        // Initialize with empty signers
+        const expectedEmptyHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+        await expect(aggchainFEPContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0))
+            .to.emit(aggchainFEPContract, 'SignersAndThresholdUpdated')
+            .withArgs([], 0, expectedEmptyHash);
+
         // calculate aggchainHash
         let newStateRoot = ethers.id('newStateRoot');
         let newl2BlockNumber = 104;
@@ -470,7 +478,15 @@ describe('AggchainFEP', () => {
 
         const consensusTypeSC = await aggchainFEPContract.CONSENSUS_TYPE();
 
-        const aggchainHashJS = utilsAggchain.computeAggchainHash(consensusTypeSC, finakVKey, aggchainParamsBytes);
+        // Base now appends signersHash and threshold; we initialized empty signers with threshold 0
+        const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+        const aggchainHashJS = utilsAggchain.computeAggchainHash(
+            consensusTypeSC,
+            finakVKey,
+            aggchainParamsBytes,
+            emptySignersHash,
+            0,
+        );
 
         expect(aggchainHashSC).to.be.equal(aggchainHashJS);
     });
@@ -673,55 +689,11 @@ describe('AggchainFEP', () => {
         const newSubmissionIntervalSC = await aggchainFEPContract.SUBMISSION_INTERVAL();
         expect(newSubmissionIntervalSC).to.be.equal(newSubmissionInterval);
 
-        // rollupConfigHash
-        const oldRollupConfigHash = await aggchainFEPContract.rollupConfigHash();
-        const newRollupConfigHash = ethers.id('newRollupConfigHash');
+        // rollupConfigHash update functionality has been removed from the contract
+        // Configuration is now managed through OpSuccinctConfig structures
 
-        await expect(aggchainFEPContract.updateRollupConfigHash(newRollupConfigHash)).to.be.revertedWithCustomError(
-            aggchainFEPContract,
-            'OnlyAggchainManager',
-        );
-        await expect(
-            aggchainFEPContract.connect(aggchainManager).updateRollupConfigHash(ethers.ZeroHash),
-        ).to.be.revertedWithCustomError(aggchainFEPContract, 'RollupConfigHashMustBeDifferentThanZero');
-        await expect(aggchainFEPContract.connect(aggchainManager).updateRollupConfigHash(newRollupConfigHash))
-            .to.emit(aggchainFEPContract, 'RollupConfigHashUpdated')
-            .withArgs(oldRollupConfigHash, newRollupConfigHash);
-
-        const newRollupConfigHashSC = await aggchainFEPContract.rollupConfigHash();
-        expect(newRollupConfigHashSC).to.be.equal(newRollupConfigHash);
-
-        // rangeVKeyCommitment
-        const oldRangeVKeyCommitment = await aggchainFEPContract.rangeVkeyCommitment();
-        const newRangeVKeyCommitment = ethers.id('newRangeVKeyCommitment');
-
-        await expect(
-            aggchainFEPContract.updateRangeVkeyCommitment(newRangeVKeyCommitment),
-        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyAggchainManager');
-        await expect(
-            aggchainFEPContract.connect(aggchainManager).updateRangeVkeyCommitment(ethers.ZeroHash),
-        ).to.be.revertedWithCustomError(aggchainFEPContract, 'RangeVkeyCommitmentMustBeDifferentThanZero');
-        await expect(aggchainFEPContract.connect(aggchainManager).updateRangeVkeyCommitment(newRangeVKeyCommitment))
-            .to.emit(aggchainFEPContract, 'RangeVkeyCommitmentUpdated')
-            .withArgs(oldRangeVKeyCommitment, newRangeVKeyCommitment);
-
-        const newRangeVKeyCommitmentSC = await aggchainFEPContract.rangeVkeyCommitment();
-        expect(newRangeVKeyCommitmentSC).to.be.equal(newRangeVKeyCommitment);
-
-        // rangeVKeyCommitment
-        const oldAggregationVkey = await aggchainFEPContract.aggregationVkey();
-        const newAggregationVkey = ethers.id('newAggregationVkey');
-
-        await expect(aggchainFEPContract.updateAggregationVkey(newRangeVKeyCommitment)).to.be.revertedWithCustomError(
-            aggchainFEPContract,
-            'OnlyAggchainManager',
-        );
-        await expect(aggchainFEPContract.connect(aggchainManager).updateAggregationVkey(newAggregationVkey))
-            .to.emit(aggchainFEPContract, 'AggregationVkeyUpdated')
-            .withArgs(oldAggregationVkey, newAggregationVkey);
-
-        const newAggregationVkeySC = await aggchainFEPContract.aggregationVkey();
-        expect(newAggregationVkeySC).to.be.equal(newAggregationVkey);
+        // rangeVKeyCommitment and aggregationVkey update functionality has been removed
+        // These are now managed through OpSuccinctConfig structures
 
         // aggchainManager: managing role
         await expect(aggchainFEPContract.transferAggchainManagerRole(deployer.address)).to.be.revertedWithCustomError(
