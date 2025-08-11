@@ -32,9 +32,15 @@ contract AggchainECDSAMultisig is AggchainBase {
     error InvalidInitializer();
 
     ////////////////////////////////////////////////////////////
+    //                         Events                         //
+    ////////////////////////////////////////////////////////////
+    /// @notice Emitted when pessimistic verification is completed.
+    event OnVerifyPessimisticECDSAMultisig();
+
+    ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
     ////////////////////////////////////////////////////////////
-    // @dev Modifier to retrieve initializer version value previous on using the reinitializer modifier, its used in the initialize function.
+    /// @dev Modifier to retrieve initializer version value previous on using the reinitializer modifier, its used in the initialize function.
     modifier getInitializedVersion() {
         // Get initializer version from OZ initializer smart contract
         _initializerVersion = _getInitializedVersion();
@@ -116,7 +122,7 @@ contract AggchainECDSAMultisig is AggchainBase {
                     )
                 );
 
-            // Check the aggchainType embedded the _initAggchainVKeySelector is valid
+            // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
             if (
                 getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
                 AGGCHAIN_TYPE
@@ -154,7 +160,7 @@ contract AggchainECDSAMultisig is AggchainBase {
                     (address[], uint32, bool, bytes32, bytes4, address)
                 );
 
-            // Check the aggchainType embedded the _initAggchainVKeySelector is valid
+            // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
             if (
                 getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
                 AGGCHAIN_TYPE
@@ -180,7 +186,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     ////////////////////////////////////////////////////////////
     //                    Functions: views                    //
     ////////////////////////////////////////////////////////////
-    /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey selector
+    /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey
     ///
     ///     aggchain_hash:
     ///     Field:           | CONSENSUS_TYPE | aggchain_vkey  | aggchain_params  |
@@ -197,12 +203,12 @@ contract AggchainECDSAMultisig is AggchainBase {
     ///
     /// aggchainData._aggchainVKeySelector 4 bytes aggchain vkey selector (ABI-encoded as 32 bytes)
     ///
+    /// @return aggchainVKey The aggchain verification key
     /// @return aggchainParams The computed aggchain parameters hash
-    /// @return aggchainVKeySelector The aggchain verification key selector decoded from the input data
     /// @inheritdoc AggchainBase
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) external view returns (bytes32) {
+    ) public pure override returns (bytes32, bytes32) {
         if (aggchainData.length != 32) {
             revert InvalidAggchainDataLength();
         }
@@ -216,7 +222,7 @@ contract AggchainECDSAMultisig is AggchainBase {
             revert InvalidAggchainType();
         }
 
-        // aggchainParams is unsued
+        // aggchainParams and aggchainVKey are not used in this implementation
         return (bytes32(0), bytes32(0));
     }
 

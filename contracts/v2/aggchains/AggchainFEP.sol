@@ -64,7 +64,7 @@ contract AggchainFEP is AggchainBase {
     //                  Constants & Immutables                //
     ////////////////////////////////////////////////////////////
 
-    // Aggchain type selector, hardcoded value used to force the first 2 byes of aggchain selector to retrieve the aggchain verification key
+    // Aggchain type selector, hardcoded value used to force the first 2 bytes of aggchain selector to retrieve the aggchain verification key
     bytes2 public constant AGGCHAIN_TYPE = 0x0001;
 
     /// @notice Op L2OO Semantic version.
@@ -97,7 +97,7 @@ contract AggchainFEP is AggchainBase {
     bytes32 public aggregationVkey;
 
     /// @notice The 32 byte commitment to the BabyBear representation of the verification key of the range SP1 program. Specifically,
-    /// this verification is the output of converting the [u32; 8] range BabyBear verification key to a [u8; 32] array.
+    /// this verification key is the output of converting the [u32; 8] range BabyBear verification key to a [u8; 32] array.
     bytes32 public rangeVkeyCommitment;
 
     /// @notice The hash of the chain's rollup configuration
@@ -347,7 +347,7 @@ contract AggchainFEP is AggchainBase {
                     )
                 );
 
-            // Check the aggchainType embedded the _initAggchainVKeySelector is valid
+            // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
             if (
                 getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
                 AGGCHAIN_TYPE
@@ -399,7 +399,7 @@ contract AggchainFEP is AggchainBase {
                     )
                 );
 
-            // Check the aggchainType embedded the _initAggchainVKeySelector is valid
+            // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
             if (
                 getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
                 AGGCHAIN_TYPE
@@ -501,7 +501,7 @@ contract AggchainFEP is AggchainBase {
     ///
     /// aggchainData._aggchainVKeySelector First 4 bytes of the aggchain vkey selector
     /// aggchainData._outputRoot Proposed new output root
-    /// aggchainData._l2BlockNumber Proposed new l2 bock number
+    /// aggchainData._l2BlockNumber Proposed new l2 block number
     ///
     /// @return aggchainParams The computed aggchain parameters hash
     /// @return aggchainVKey The aggchain verification key decoded from the input data
@@ -520,7 +520,7 @@ contract AggchainFEP is AggchainBase {
             uint256 _l2BlockNumber
         ) = abi.decode(aggchainData, (bytes4, bytes32, uint256));
 
-        // Check the aggchainType embedded the _aggchainVKeySelector is valid
+        // Check the aggchainType embedded in the _aggchainVKeySelector is valid
         if (
             getAggchainTypeFromSelector(_aggchainVKeySelector) != AGGCHAIN_TYPE
         ) {
@@ -761,7 +761,7 @@ contract AggchainFEP is AggchainBase {
     //         optimisticModeManager functions                //
     ////////////////////////////////////////////////////////////
     /// @notice Starts the optimisticModeManager role transfer
-    /// This is a two step process, the pending optimisticModeManager must accepted to finalize the process
+    /// This is a two step process, the pending optimisticModeManager must accept to finalize the process
     /// @param newOptimisticModeManager Address of the new optimisticModeManager
     function transferOptimisticModeManagerRole(
         address newOptimisticModeManager
