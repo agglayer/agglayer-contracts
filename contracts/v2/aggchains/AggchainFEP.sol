@@ -315,6 +315,9 @@ contract AggchainFEP is AggchainBase {
             (
                 // chain custom params
                 InitParams memory _initParams,
+                // multisig specific params
+                address[] memory _initialAggchainSigners,
+                uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
                 bytes32 _initOwnedAggchainVKey,
@@ -330,6 +333,8 @@ contract AggchainFEP is AggchainBase {
                     initializeBytesAggchain,
                     (
                         InitParams,
+                        address[],
+                        uint32,
                         bool,
                         bytes32,
                         bytes4,
@@ -363,21 +368,19 @@ contract AggchainFEP is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager
+                _vKeyManager,
+                _initialAggchainSigners,
+                _threshold
             );
-
-            // Initialize genesis configuration
-            opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
-                aggregationVkey: _initParams.aggregationVkey,
-                rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
-                rollupConfigHash: _initParams.rollupConfigHash
-            });
         } else if (_initializerVersion == 1) {
             // contract has been previously initialized with all parameters in the PolygonConsensusBase.sol
             // Only initialize the FEP and AggchainBase params
             (
                 // chain custom params
                 InitParams memory _initParams,
+                // multisig specific params
+                address[] memory _initialAggchainSigners,
+                uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
                 bytes32 _initOwnedAggchainVKey,
@@ -385,7 +388,15 @@ contract AggchainFEP is AggchainBase {
                 address _vKeyManager
             ) = abi.decode(
                     initializeBytesAggchain,
-                    (InitParams, bool, bytes32, bytes4, address)
+                    (
+                        InitParams,
+                        address[],
+                        uint32,
+                        bool,
+                        bytes32,
+                        bytes4,
+                        address
+                    )
                 );
 
             // Check the aggchainType embedded the _initAggchainVKeySelector is valid
@@ -404,7 +415,9 @@ contract AggchainFEP is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager
+                _vKeyManager,
+                _initialAggchainSigners,
+                _threshold
             );
         } else {
             // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased
@@ -435,6 +448,13 @@ contract AggchainFEP is AggchainBase {
             revert RollupConfigHashMustBeDifferentThanZero();
         }
 
+        // Initialize genesis configuration
+        opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
+            aggregationVkey: _initParams.aggregationVkey,
+            rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
+            rollupConfigHash: _initParams.rollupConfigHash
+        });
+
         submissionInterval = _initParams.submissionInterval;
         l2BlockTime = _initParams.l2BlockTime;
 
@@ -464,8 +484,7 @@ contract AggchainFEP is AggchainBase {
     //                    Functions: views                    //
     ////////////////////////////////////////////////////////////
 
-    /// @notice Callback while pessimistic proof is being verified from the rollup manager
-    /// @notice Returns the aggchain hash for a given aggchain data
+    /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey
     ///
     ///     aggchain_hash:
     ///     Field:           | CONSENSUS_TYPE | aggchain_vkey  | aggchain_params  |
@@ -484,10 +503,12 @@ contract AggchainFEP is AggchainBase {
     /// aggchainData._outputRoot Proposed new output root
     /// aggchainData._l2BlockNumber Proposed new l2 bock number
     ///
-    /// @return aggchainHash resulting aggchain hash
-    function getAggchainHash(
+    /// @return aggchainParams The computed aggchain parameters hash
+    /// @return aggchainVKey The aggchain verification key decoded from the input data
+    /// @inheritdoc AggchainBase
+    function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) external view returns (bytes32) {
+    ) public view override returns (bytes32, bytes32) {
         if (aggchainData.length != 32 * 3) {
             revert InvalidAggchainDataLength();
         }
@@ -534,14 +555,7 @@ contract AggchainFEP is AggchainBase {
             )
         );
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    CONSENSUS_TYPE,
-                    getAggchainVKey(_aggchainVKeySelector),
-                    aggchainParams
-                )
-            );
+        return (getAggchainVKey(_aggchainVKeySelector), aggchainParams);
     }
 
     /// @notice Getter for the submissionInterval.
@@ -721,48 +735,6 @@ contract AggchainFEP is AggchainBase {
 
         emit SubmissionIntervalUpdated(submissionInterval, _submissionInterval);
         submissionInterval = _submissionInterval;
-    }
-
-    /// @notice Updates the aggregation verification key.
-    /// @param _aggregationVkey The new aggregation verification key.
-    function updateAggregationVkey(
-        bytes32 _aggregationVkey
-    ) external onlyAggchainManager {
-        if (_aggregationVkey == bytes32(0)) {
-            revert AggregationVkeyMustBeDifferentThanZero();
-        }
-
-        emit AggregationVkeyUpdated(aggregationVkey, _aggregationVkey);
-        aggregationVkey = _aggregationVkey;
-    }
-
-    /// @notice Updates the range verification key commitment.
-    /// @param _rangeVkeyCommitment The new range verification key commitment.
-    function updateRangeVkeyCommitment(
-        bytes32 _rangeVkeyCommitment
-    ) external onlyAggchainManager {
-        if (_rangeVkeyCommitment == bytes32(0)) {
-            revert RangeVkeyCommitmentMustBeDifferentThanZero();
-        }
-
-        emit RangeVkeyCommitmentUpdated(
-            rangeVkeyCommitment,
-            _rangeVkeyCommitment
-        );
-        rangeVkeyCommitment = _rangeVkeyCommitment;
-    }
-
-    /// @notice Updates the rollup config hash.
-    /// @param _rollupConfigHash The new rollup config hash.
-    function updateRollupConfigHash(
-        bytes32 _rollupConfigHash
-    ) external onlyAggchainManager {
-        if (_rollupConfigHash == bytes32(0)) {
-            revert RollupConfigHashMustBeDifferentThanZero();
-        }
-
-        emit RollupConfigHashUpdated(rollupConfigHash, _rollupConfigHash);
-        rollupConfigHash = _rollupConfigHash;
     }
 
     /// @notice Enables optimistic mode.

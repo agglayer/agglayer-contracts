@@ -62,6 +62,24 @@ interface IAggchainBaseEvents {
         address oldAggchainManager,
         address newAggchainManager
     );
+
+    /**
+     * @notice Emitted when the aggchainSigners hash is updated.
+     * @param newAggchainSignersHash The new hash of the aggchainSigners array.
+     */
+    event AggchainSignersHashUpdated(bytes32 newAggchainSignersHash);
+
+    /**
+     * @notice Emitted when signers and threshold are updated in a batch operation.
+     * @param aggchainSigners The updated array of signer addresses.
+     * @param newThreshold The new threshold value.
+     * @param newAggchainSignersHash The new hash of the aggchainSigners array.
+     */
+    event SignersAndThresholdUpdated(
+        address[] aggchainSigners,
+        uint32 newThreshold,
+        bytes32 newAggchainSignersHash
+    );
 }
 
 interface IAggchainBaseErrors {
@@ -97,6 +115,24 @@ interface IAggchainBaseErrors {
     error InvalidAggchainDataLength();
     /// @notice Thrown when the aggchainvKeySelectir contains an invalid aggchain type.
     error InvalidAggchainType();
+    /// @notice Thrown when threshold is zero or greater than the number of aggchainSigners.
+    error InvalidThreshold();
+    /// @notice Thrown when trying to add a signer that already exists.
+    error SignerAlreadyExists();
+    /// @notice Thrown when trying to remove a signer that doesn't exist.
+    error SignerDoesNotExist();
+    /// @notice Thrown when the aggchainSigners array is empty.
+    error EmptyAggchainSignersArray();
+    /// @notice Thrown when threshold would be greater than aggchainSigners count after removal.
+    error ThresholdTooHighAfterRemoval();
+    /// @notice Thrown when trying to add a zero address as a signer.
+    error SignerCannotBeZero();
+    /// @notice Thrown when the threshold is greater than the number of signers.
+    error ThresholdTooHigh();
+    /// @notice Thrown when trying to add a signer with an empty URL.
+    error SignerURLCannotBeEmpty();
+    /// @notice Thrown when the indices for signer removal are not in descending order.
+    error IndicesNotInDescendingOrder();
 }
 
 /**

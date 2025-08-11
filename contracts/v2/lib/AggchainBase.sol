@@ -27,6 +27,30 @@ abstract contract AggchainBase is
     IAggLayerGateway public immutable aggLayerGateway;
 
     ////////////////////////////////////////////////////////////
+    //                       Structs                          //
+    ////////////////////////////////////////////////////////////
+
+    /**
+     * @notice Struct to hold signer information
+     * @param addr The address of the signer
+     * @param url The URL associated with the signer
+     */
+    struct SignerInfo {
+        address addr;
+        string url;
+    }
+
+    /**
+     * @notice Struct to hold information for removing a signer
+     * @param addr The address of the signer to remove
+     * @param index The index of the signer in the aggchainSigners array
+     */
+    struct RemoveSignerInfo {
+        address addr;
+        uint256 index;
+    }
+
+    ////////////////////////////////////////////////////////////
     //                       Variables                        //
     ////////////////////////////////////////////////////////////
     // Added legacy storage values to avoid storage collision with PolygonValidiumEtrog contract in case this consensus contract is upgraded to aggchain
@@ -55,12 +79,29 @@ abstract contract AggchainBase is
     mapping(bytes4 aggchainVKeySelector => bytes32 ownedAggchainVKey)
         public ownedAggchainVKeys;
 
+    ////////////////////////////////////////////////////////////
+    //                      Multisig                          //
+    ////////////////////////////////////////////////////////////
+
+    /// @notice Array of multisig aggchainSigners
+    address[] public aggchainSigners;
+
+    /// @notice Mapping that stores the URL of each signer
+    /// It's used as well to check if an address is a signer
+    mapping(address => string) public signerToURLs;
+
+    /// @notice Threshold required for multisig operations
+    uint32 public threshold;
+
+    /// @notice Hash of the current aggchainSigners array
+    bytes32 public aggchainSignersHash;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[50] private __gap;
+    uint256[46] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -149,6 +190,8 @@ abstract contract AggchainBase is
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
      * @param _vKeyManager Initial vKeyManager
+     * @param _initialAggchainSigners Initial array of aggchain signers
+     * @param _threshold Initial threshold for multisig operations
      */
     function _initializeAggchainBaseAndConsensusBase(
         address _admin,
@@ -159,7 +202,9 @@ abstract contract AggchainBase is
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
-        address _vKeyManager
+        address _vKeyManager,
+        address[] memory _initialAggchainSigners,
+        uint32 _threshold
     ) internal onlyInitializing {
         if (
             address(_admin) == address(0) ||
@@ -178,11 +223,14 @@ abstract contract AggchainBase is
             _networkName
         );
 
-        useDefaultGateway = _useDefaultGateway;
-
-        ownedAggchainVKeys[_initAggchainVKeySelector] = _initOwnedAggchainVKey;
-        // set initial vKeyManager
-        vKeyManager = _vKeyManager;
+        _initializeAggchainBase(
+            _useDefaultGateway,
+            _initOwnedAggchainVKey,
+            _initAggchainVKeySelector,
+            _vKeyManager,
+            _initialAggchainSigners,
+            _threshold
+        );
     }
 
     /**
@@ -191,18 +239,61 @@ abstract contract AggchainBase is
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
      * @param _vKeyManager Initial vKeyManager
+     * @param _initialAggchainSigners Initial array of aggchain signers
+     * @param _threshold Initial threshold for multisig operations
      */
     function _initializeAggchainBase(
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
-        address _vKeyManager
+        address _vKeyManager,
+        address[] memory _initialAggchainSigners,
+        uint32 _threshold
     ) internal onlyInitializing {
         useDefaultGateway = _useDefaultGateway;
         // set the initial aggchain keys
         ownedAggchainVKeys[_initAggchainVKeySelector] = _initOwnedAggchainVKey;
         // set initial vKeyManager
         vKeyManager = _vKeyManager;
+
+        // Initialize multisig if signers are provided
+        _initializeMultisig(_initialAggchainSigners, _threshold);
+    }
+
+    /**
+     * @notice Initialize multisig parameters
+     * @param _initialAggchainSigners Array of initial signer addresses
+     * @param _threshold Required threshold for multisig operations
+     */
+    function _initializeMultisig(
+        address[] memory _initialAggchainSigners,
+        uint32 _threshold
+    ) internal onlyInitializing {
+        // Only initialize multisig if signers are provided
+        if (_initialAggchainSigners.length > 0) {
+            if (
+                _threshold == 0 || _threshold > _initialAggchainSigners.length
+            ) {
+                revert InvalidThreshold();
+            }
+
+            // Set aggchainSigners array
+            for (uint256 i = 0; i < _initialAggchainSigners.length; i++) {
+                // Use internal function to add signer (duplicate check handled by _addSignerInternal)
+                // For initialization, we use empty URL for backward compatibility
+                _addSignerInternal(_initialAggchainSigners[i], "");
+            }
+
+            threshold = _threshold;
+        }
+        _updateAggchainSignersHash();
+
+        // Emit event
+        emit SignersAndThresholdUpdated(
+            aggchainSigners,
+            _threshold,
+            aggchainSignersHash
+        );
     }
 
     /**
@@ -222,8 +313,100 @@ abstract contract AggchainBase is
     }
 
     ///////////////////////////////////////////////
-    //        aggchainManager functions         //
+    //              Virtual functions            //
     ///////////////////////////////////////////////
+
+    /**
+     * @notice Abstract function to extract aggchain parameters and verification key from aggchain data
+     * @dev This function must be implemented by the inheriting contract
+     * @param aggchainData Custom bytes provided by the chain containing the aggchain data
+     * @return aggchainVKey The extracted aggchain verification key
+     * @return aggchainParams The extracted aggchain parameters
+     */
+    function getAggchainParamsAndVKeySelector(
+        bytes memory aggchainData
+    ) public view virtual returns (bytes32, bytes32);
+
+    ///////////////////////////////////////////////
+    //     Rollup manager callback functions     //
+    ///////////////////////////////////////////////
+
+    /// @notice Callback while pessimistic proof is being verified from the rollup manager
+    /// @notice Returns the aggchain hash for a given aggchain data
+    /// @return aggchainHash resulting aggchain hash
+    function getAggchainHash(
+        bytes memory aggchainData
+    ) external view returns (bytes32) {
+        (
+            bytes32 aggchainVKey,
+            bytes32 aggchainParams
+        ) = getAggchainParamsAndVKeySelector(aggchainData);
+
+        return
+            keccak256(
+                abi.encodePacked(
+                    CONSENSUS_TYPE,
+                    aggchainVKey,
+                    aggchainParams,
+                    aggchainSignersHash,
+                    threshold
+                )
+            );
+    }
+
+    ///////////////////////////////////////////////
+    //        aggchainManager functions          //
+    ///////////////////////////////////////////////
+
+    /**
+     * @notice Batch update signers and threshold in a single transaction
+     * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
+     * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
+     * @param _signersToAdd Array of new signers to add with their URLs
+     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     */
+    function updateSignersAndThreshold(
+        RemoveSignerInfo[] calldata _signersToRemove,
+        SignerInfo[] calldata _signersToAdd,
+        uint32 _newThreshold
+    ) external onlyAggchainManager {
+        // Validate descending order of indices for removal
+        if (_signersToRemove.length > 1) {
+            for (uint256 i = 0; i < _signersToRemove.length - 1; i++) {
+                if (_signersToRemove[i].index < _signersToRemove[i + 1].index) {
+                    revert IndicesNotInDescendingOrder();
+                }
+            }
+        }
+
+        // Remove signers (in descending index order to avoid index shifting issues)
+        for (uint256 i = 0; i < _signersToRemove.length; i++) {
+            _removeSignerInternal(
+                _signersToRemove[i].addr,
+                _signersToRemove[i].index
+            );
+        }
+
+        // Add new signers
+        for (uint256 i = 0; i < _signersToAdd.length; i++) {
+            _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
+        }
+
+        // Update threshold if provided
+        if (_newThreshold > aggchainSigners.length) {
+            revert InvalidThreshold();
+        }
+        threshold = _newThreshold;
+
+        // Update the signers hash once after all operations
+        _updateAggchainSignersHash();
+
+        emit SignersAndThresholdUpdated(
+            aggchainSigners,
+            _newThreshold,
+            aggchainSignersHash
+        );
+    }
 
     /// @notice Starts the aggchainManager role transfer
     ///         This is a two step process, the pending aggchainManager must accept to finalize the process
@@ -385,6 +568,15 @@ abstract contract AggchainBase is
     }
 
     /**
+     * @notice Check if an address is a signer
+     * @param _signer Address to check
+     * @return True if the address is a signer
+     */
+    function isSigner(address _signer) public view returns (bool) {
+        return bytes(signerToURLs[_signer]).length > 0;
+    }
+
+    /**
      * @notice Computes the selector for the aggchain verification key from the aggchain type and the aggchainVKeyVersion.
      * @dev It joins two bytes2 values into a bytes4 value.
      * @param aggchainVKeyVersion The aggchain verification key version, used to identify the aggchain verification key.
@@ -424,5 +616,89 @@ abstract contract AggchainBase is
         bytes4 aggchainVKeySelector
     ) public pure returns (bytes2) {
         return bytes2(aggchainVKeySelector);
+    }
+
+    /**
+     * @notice Get the number of aggchainSigners
+     * @return Number of aggchainSigners in the multisig
+     */
+    function getAggchainSignersCount() external view returns (uint256) {
+        return aggchainSigners.length;
+    }
+
+    /**
+     * @notice Get all aggchainSigners
+     * @return Array of signer addresses
+     */
+    function getAggchainSigners() external view returns (address[] memory) {
+        return aggchainSigners;
+    }
+
+    ////////////////////////////////////////////////////////////
+    //                   Internal Functions                   //
+    ////////////////////////////////////////////////////////////
+
+    /**
+     * @notice Internal function to add a signer with validation
+     * @param _signer Address of the signer to add
+     */
+    function _addSignerInternal(address _signer, string memory url) internal {
+        if (_signer == address(0)) {
+            revert SignerCannotBeZero();
+        }
+
+        if (bytes(url).length == 0) {
+            revert SignerURLCannotBeEmpty();
+        }
+
+        if (isSigner(_signer)) {
+            revert SignerAlreadyExists();
+        }
+
+        aggchainSigners.push(_signer);
+        signerToURLs[_signer] = url;
+    }
+
+    /**
+     * @notice Internal function to remove a signer with validation
+     * @param _signer Address of the signer to remove
+     * @param _signerIndex Index of the signer in the aggchainSigners array
+     */
+    function _removeSignerInternal(
+        address _signer,
+        uint256 _signerIndex
+    ) internal {
+        // Validate input parameters
+        if (_signerIndex >= aggchainSigners.length) {
+            revert SignerDoesNotExist();
+        }
+
+        if (aggchainSigners[_signerIndex] != _signer) {
+            revert SignerDoesNotExist();
+        }
+
+        // sanity check the signer is in the mapping
+        if (isSigner(_signer)) {
+            revert SignerDoesNotExist();
+        }
+
+        // Remove from mapping
+        delete signerToURLs[_signer];
+
+        // Move the last element to the deleted spot and remove the last element
+        aggchainSigners[_signerIndex] = aggchainSigners[
+            aggchainSigners.length - 1
+        ];
+        aggchainSigners.pop();
+    }
+
+    /**
+     * @notice Update the hash of the aggchainSigners array
+     */
+    function _updateAggchainSignersHash() internal {
+        aggchainSignersHash = keccak256(
+            abi.encodePacked(threshold, aggchainSigners)
+        );
+        emit AggchainSignersHashUpdated(aggchainSignersHash);
     }
 }

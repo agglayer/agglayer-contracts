@@ -26,76 +26,10 @@ contract AggchainECDSAMultisig is AggchainBase {
     string public constant AGGCHAIN_ECDSA_MULTISIG_VERSION = "v1.0.0";
 
     ////////////////////////////////////////////////////////////
-    //                       Storage                          //
-    ////////////////////////////////////////////////////////////
-    /// @notice Array of multisig signers
-    address[] public signers;
-
-    /// @notice Mapping to check if an address is a signer (gas optimization)
-    mapping(address => bool) public isSignerMapping;
-
-    /// @notice Threshold required for multisig operations
-    uint32 public threshold;
-
-    /// @notice Hash of the current signers array
-    bytes32 public signersHash;
-
-    ////////////////////////////////////////////////////////////
-    //                       Events                           //
-    ////////////////////////////////////////////////////////////
-    /**
-     * @notice Emitted when Pessimistic proof is verified.
-     */
-    event OnVerifyPessimisticECDSAMultisig();
-
-    /**
-     * @notice Emitted when a signer is added to the multisig.
-     * @param signer The address that was added as a signer.
-     */
-    event SignerAdded(address indexed signer);
-
-    /**
-     * @notice Emitted when a signer is removed from the multisig.
-     * @param signer The address that was removed as a signer.
-     */
-    event SignerRemoved(address indexed signer);
-
-    /**
-     * @notice Emitted when the threshold is updated.
-     * @param oldThreshold The previous threshold value.
-     * @param newThreshold The new threshold value.
-     */
-    event ThresholdUpdated(uint32 oldThreshold, uint32 newThreshold);
-
-    /**
-     * @notice Emitted when the signers hash is updated.
-     * @param newSignersHash The new hash of the signers array.
-     */
-    event SignersHashUpdated(bytes32 newSignersHash);
-
-    ////////////////////////////////////////////////////////////
     //                         Errors                         //
     ////////////////////////////////////////////////////////////
     /// @notice Thrown when trying to initialize the wrong initialize function.
     error InvalidInitializer();
-
-    /// @notice Thrown when threshold is zero or greater than the number of signers.
-    error InvalidThreshold();
-
-    /// @notice Thrown when trying to add a signer that already exists.
-    error SignerAlreadyExists();
-
-    /// @notice Thrown when trying to remove a signer that doesn't exist.
-    error SignerDoesNotExist();
-
-    /// @notice Thrown when the signers array is empty.
-    error EmptySignersArray();
-
-    /// @notice Thrown when threshold would be greater than signers count after removal.
-    error ThresholdTooHighAfterRemoval();
-
-    /// @notice Thrown when trying to add a zero address as a signer.
-    error SignerCannotBeZero();
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -152,7 +86,7 @@ contract AggchainECDSAMultisig is AggchainBase {
             // custom parsing of the initializeBytesAggchain
             (
                 // multisig specific params
-                address[] memory _initialSigners,
+                address[] memory _initialAggchainSigners,
                 uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
@@ -190,9 +124,6 @@ contract AggchainECDSAMultisig is AggchainBase {
                 revert InvalidAggchainType();
             }
 
-            // Initialize multisig parameters
-            _initializeMultisig(_initialSigners, _threshold);
-
             // Set aggchainBase variables
             _initializeAggchainBaseAndConsensusBase(
                 _admin,
@@ -203,13 +134,15 @@ contract AggchainECDSAMultisig is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager
+                _vKeyManager,
+                _initialAggchainSigners,
+                _threshold
             );
         } else if (_initializerVersion == 1) {
             // Only need to initialize values that are specific for ECDSA Multisig because we are performing an upgrade from a Pessimistic Consensus
             (
                 // multisig specific params
-                address[] memory _initialSigners,
+                address[] memory _initialAggchainSigners,
                 uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
@@ -229,15 +162,14 @@ contract AggchainECDSAMultisig is AggchainBase {
                 revert InvalidAggchainType();
             }
 
-            // Initialize multisig parameters
-            _initializeMultisig(_initialSigners, _threshold);
-
             // Set aggchainBase variables
             _initializeAggchainBase(
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager
+                _vKeyManager,
+                _initialAggchainSigners,
+                _threshold
             );
         } else {
             // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased
@@ -245,45 +177,17 @@ contract AggchainECDSAMultisig is AggchainBase {
         }
     }
 
-    /**
-     * @notice Initialize multisig parameters
-     * @param _initialSigners Array of initial signer addresses
-     * @param _threshold Required threshold for multisig operations
-     */
-    function _initializeMultisig(
-        address[] memory _initialSigners,
-        uint32 _threshold
-    ) internal {
-        if (_initialSigners.length == 0) {
-            revert EmptySignersArray();
-        }
-
-        if (_threshold == 0 || _threshold > _initialSigners.length) {
-            revert InvalidThreshold();
-        }
-
-        // Set signers array
-        for (uint256 i = 0; i < _initialSigners.length; i++) {
-            // Use internal function to add signer (duplicate check handled by _addSignerInternal)
-            _addSignerInternal(_initialSigners[i]);
-        }
-
-        threshold = _threshold;
-        _updateSignersHash();
-    }
-
     ////////////////////////////////////////////////////////////
     //                    Functions: views                    //
     ////////////////////////////////////////////////////////////
-    /// @notice Callback while pessimistic proof is being verified from the rollup manager
-    /// @notice Returns the aggchain hash for a given aggchain data
+    /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey selector
     ///
     ///     aggchain_hash:
     ///     Field:           | CONSENSUS_TYPE | aggchain_vkey  | aggchain_params  |
     ///     length (bits):   | 32             | 256            | 256              |
     ///
     ///     aggchain_params:
-    ///     Field:           | signersHash    | threshold      |
+    ///     Field:           | aggchainSignersHash    | threshold      |
     ///     length (bits):   | 256            | 32             |
     ///
     /// @param aggchainData custom bytes provided by the chain
@@ -293,9 +197,10 @@ contract AggchainECDSAMultisig is AggchainBase {
     ///
     /// aggchainData._aggchainVKeySelector 4 bytes aggchain vkey selector (ABI-encoded as 32 bytes)
     ///
-    /// @return aggchainHash resulting aggchain hash
-    /// @inheritdoc IAggchainBase
-    function getAggchainHash(
+    /// @return aggchainParams The computed aggchain parameters hash
+    /// @return aggchainVKeySelector The aggchain verification key selector decoded from the input data
+    /// @inheritdoc AggchainBase
+    function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
     ) external view returns (bytes32) {
         if (aggchainData.length != 32) {
@@ -303,47 +208,16 @@ contract AggchainECDSAMultisig is AggchainBase {
         }
 
         // Only aggchainVKeySelector is required (bytes4 ABI-encoded as 32 bytes)
-        bytes4 aggchainVKeySelector = abi.decode(aggchainData, (bytes4));
+        bytes4 _aggchainVKeySelector = abi.decode(aggchainData, (bytes4));
 
         if (
-            getAggchainTypeFromSelector(aggchainVKeySelector) != AGGCHAIN_TYPE
+            getAggchainTypeFromSelector(_aggchainVKeySelector) != AGGCHAIN_TYPE
         ) {
             revert InvalidAggchainType();
         }
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    CONSENSUS_TYPE,
-                    getAggchainVKey(aggchainVKeySelector),
-                    keccak256(abi.encodePacked(signersHash, threshold))
-                )
-            );
-    }
-
-    /**
-     * @notice Get the number of signers
-     * @return Number of signers in the multisig
-     */
-    function getSignersCount() external view returns (uint256) {
-        return signers.length;
-    }
-
-    /**
-     * @notice Get all signers
-     * @return Array of signer addresses
-     */
-    function getSigners() external view returns (address[] memory) {
-        return signers;
-    }
-
-    /**
-     * @notice Check if an address is a signer
-     * @param _signer Address to check
-     * @return True if the address is a signer
-     */
-    function isSigner(address _signer) external view returns (bool) {
-        return isSignerMapping[_signer];
+        // aggchainParams is unsued
+        return (bytes32(0), bytes32(0));
     }
 
     ////////////////////////////////////////////////////////////
@@ -363,140 +237,11 @@ contract AggchainECDSAMultisig is AggchainBase {
         emit OnVerifyPessimisticECDSAMultisig();
     }
 
-    ////////////////////////////////////////////////////////////
-    //              AggchainManager Functions                 //
-    ////////////////////////////////////////////////////////////
-
     /**
-     * @notice Add multiple new signers to the multisig
-     * @param _signers Array of addresses of the new signers
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
      */
-    function addMultiSigners(
-        address[] calldata _signers
-    ) external onlyAggchainManager {
-        if (_signers.length == 0) {
-            revert EmptySignersArray();
-        }
-
-        // Add all signers without updating hash each time
-        for (uint256 i = 0; i < _signers.length; i++) {
-            // Duplicate check handled by _addSignerInternal
-            _addSignerInternal(_signers[i]);
-        }
-
-        // Update hash once after all signers are added
-        _updateSignersHash();
-    }
-
-    /**
-     * @notice Add a single new signer to the multisig
-     * @param _signer Address of the new signer
-     */
-    function addSigner(address _signer) external onlyAggchainManager {
-        _addSignerInternal(_signer);
-        _updateSignersHash();
-    }
-
-    /**
-     * @notice Remove a signer from the multisig
-     * @param _signer Address of the signer to remove
-     * @param _signerIndex Index of the signer in the signers array
-     */
-    function removeSigner(
-        address _signer,
-        uint256 _signerIndex
-    ) external onlyAggchainManager {
-        // Check array is not empty
-        if (signers.length == 0) {
-            revert SignerDoesNotExist();
-        }
-
-        // Check that threshold won't be greater than remaining signers
-        if (threshold > signers.length - 1) {
-            revert ThresholdTooHighAfterRemoval();
-        }
-
-        _removeSignerInternal(_signer, _signerIndex);
-        _updateSignersHash();
-    }
-
-    /**
-     * @notice Update the threshold for multisig operations
-     * @param _newThreshold New threshold value
-     */
-    function updateThreshold(
-        uint32 _newThreshold
-    ) external onlyAggchainManager {
-        if (_newThreshold == 0 || _newThreshold > signers.length) {
-            revert InvalidThreshold();
-        }
-
-        uint32 oldThreshold = threshold;
-        threshold = _newThreshold;
-
-        emit ThresholdUpdated(oldThreshold, _newThreshold);
-    }
-
-    ////////////////////////////////////////////////////////////
-    //                   Internal Functions                   //
-    ////////////////////////////////////////////////////////////
-
-    /**
-     * @notice Internal function to add a signer with validation
-     * @param _signer Address of the signer to add
-     */
-    function _addSignerInternal(address _signer) internal {
-        if (_signer == address(0)) {
-            revert SignerCannotBeZero();
-        }
-
-        if (isSignerMapping[_signer]) {
-            revert SignerAlreadyExists();
-        }
-
-        signers.push(_signer);
-        isSignerMapping[_signer] = true;
-        emit SignerAdded(_signer);
-    }
-
-    /**
-     * @notice Internal function to remove a signer with validation
-     * @param _signer Address of the signer to remove
-     * @param _signerIndex Index of the signer in the signers array
-     */
-    function _removeSignerInternal(
-        address _signer,
-        uint256 _signerIndex
-    ) internal {
-        // Validate input parameters
-        if (_signerIndex >= signers.length) {
-            revert SignerDoesNotExist();
-        }
-
-        if (signers[_signerIndex] != _signer) {
-            revert SignerDoesNotExist();
-        }
-
-        // sanity check the signer is in the mapping
-        if (!isSignerMapping[_signer]) {
-            revert SignerDoesNotExist();
-        }
-
-        // Remove from mapping
-        isSignerMapping[_signer] = false;
-
-        // Move the last element to the deleted spot and remove the last element
-        signers[_signerIndex] = signers[signers.length - 1];
-        signers.pop();
-
-        emit SignerRemoved(_signer);
-    }
-
-    /**
-     * @notice Update the hash of the signers array
-     */
-    function _updateSignersHash() internal {
-        signersHash = keccak256(abi.encodePacked(signers));
-        emit SignersHashUpdated(signersHash);
+    function version() external pure returns (string memory) {
+        return AGGCHAIN_ECDSA_MULTISIG_VERSION;
     }
 }
