@@ -128,7 +128,6 @@ describe('Test vectors aggchain FEP', () => {
                 data.initOwnedAggchainVKey,
                 aggchainParams,
                 emptySignersHash,
-                0,
             );
 
             // Ensure signers hash initialized (empty)

@@ -340,14 +340,13 @@ describe('AggchainECDSAMultisig', () => {
 
         // Calculate expected hash in JS
         const signersHash = await aggchainECDSAMultisigContract.aggchainSignersHash();
-        const currentThreshold = await aggchainECDSAMultisigContract.threshold();
 
-        // The aggchain hash is calculated as: keccak256(consensusType, aggchainVKey, aggchainParams, signersHash, threshold)
+        // The aggchain hash is calculated as: keccak256(consensusType, aggchainVKey, aggchainParams, signersHash)
         // Since getAggchainParamsAndVKeySelector returns (0, 0), both aggchainVKey and aggchainParams are zero
         const consensusType = await aggchainECDSAMultisigContract.CONSENSUS_TYPE();
         const expectedAggchainHash = ethers.solidityPackedKeccak256(
-            ['uint32', 'bytes32', 'bytes32', 'bytes32', 'uint32'],
-            [consensusType, ethers.ZeroHash, ethers.ZeroHash, signersHash, currentThreshold],
+            ['uint32', 'bytes32', 'bytes32', 'bytes32'],
+            [consensusType, ethers.ZeroHash, ethers.ZeroHash, signersHash],
         );
 
         expect(aggchainHashSC).to.be.equal(expectedAggchainHash);

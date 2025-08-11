@@ -30,6 +30,11 @@ abstract contract AggchainBase is
     //                       Structs                          //
     ////////////////////////////////////////////////////////////
 
+    struct Config {
+        address addr;
+        string url;
+    }
+
     /**
      * @notice Struct to hold signer information
      * @param addr The address of the signer
@@ -105,7 +110,7 @@ abstract contract AggchainBase is
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -309,8 +314,7 @@ abstract contract AggchainBase is
                     CONSENSUS_TYPE,
                     aggchainVKey,
                     aggchainParams,
-                    aggchainSignersHash,
-                    threshold
+                    aggchainSignersHash
                 )
             );
     }

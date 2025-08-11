@@ -48,19 +48,18 @@ export const GENESIS_CONTRACT_NAMES = {
  * @param {String} aggchainVKey aggchain verification key
  * @param {String} hashAggchainParams hash aggchain params
  * @param {String} signersHash hash of the signers array (keccak256(abi.encodePacked(threshold, aggchainSigners)))
- * @param {Number} threshold threshold for multisig operations
  * @returns compute aggchain hash
  */
-export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainParams, signersHash, threshold) {
+export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainParams, signersHash) {
     // sanity check
     if (Number(aggchainType) !== CONSENSUS_TYPE.GENERIC) {
         throw new Error(`Invalid aggchain type for v0.3.0. Must be ${CONSENSUS_TYPE.GENERIC}`);
     }
 
-    // solidity keccak - now includes signersHash and threshold like the contract
+    // solidity keccak - now excludes threshold as requested
     return ethers.solidityPackedKeccak256(
-        ['uint32', 'bytes32', 'bytes32', 'bytes32', 'uint32'],
-        [aggchainType, aggchainVKey, hashAggchainParams, signersHash, threshold],
+        ['uint32', 'bytes32', 'bytes32', 'bytes32'],
+        [aggchainType, aggchainVKey, hashAggchainParams, signersHash],
     );
 }
 

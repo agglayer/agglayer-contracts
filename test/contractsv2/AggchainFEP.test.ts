@@ -478,14 +478,13 @@ describe('AggchainFEP', () => {
 
         const consensusTypeSC = await aggchainFEPContract.CONSENSUS_TYPE();
 
-        // Base now appends signersHash and threshold; we initialized empty signers with threshold 0
+        // Base now appends signersHash; we initialized empty signers
         const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
         const aggchainHashJS = utilsAggchain.computeAggchainHash(
             consensusTypeSC,
             finakVKey,
             aggchainParamsBytes,
             emptySignersHash,
-            0,
         );
 
         expect(aggchainHashSC).to.be.equal(aggchainHashJS);

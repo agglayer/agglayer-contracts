@@ -16,16 +16,14 @@ describe('Test vectors aggchain common utils', () => {
     for (let i = 0; i < aggchainHashTestVectors.length; i++) {
         it(`Check test-vectors compute aggchain hash ID=${i}`, async () => {
             const testVector = aggchainHashTestVectors[i].input;
-            // Use default signers hash and threshold from test vector or empty defaults
+            // Use default signers hash from test vector or empty defaults
             const signersHash =
                 testVector.signersHash || ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
-            const threshold = testVector.threshold || 0;
             const aggchainHash = utilsCommon.computeAggchainHash(
                 testVector.consensusType,
                 testVector.aggchainVKey,
                 testVector.hashAggchainParams,
                 signersHash,
-                threshold,
             );
             if (update) {
                 aggchainHashTestVectors[i].output = {};
