@@ -91,9 +91,6 @@ contract AggchainECDSAMultisig is AggchainBase {
         if (_initializerVersion == 0) {
             // custom parsing of the initializeBytesAggchain
             (
-                // multisig specific params
-                address[] memory _initialAggchainSigners,
-                uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
                 bytes32 _initOwnedAggchainVKey,
@@ -108,8 +105,6 @@ contract AggchainECDSAMultisig is AggchainBase {
             ) = abi.decode(
                     initializeBytesAggchain,
                     (
-                        address[],
-                        uint32,
                         bool,
                         bytes32,
                         bytes4,
@@ -140,16 +135,11 @@ contract AggchainECDSAMultisig is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager,
-                _initialAggchainSigners,
-                _threshold
+                _vKeyManager
             );
         } else if (_initializerVersion == 1) {
             // Only need to initialize values that are specific for ECDSA Multisig because we are performing an upgrade from a Pessimistic Consensus
             (
-                // multisig specific params
-                address[] memory _initialAggchainSigners,
-                uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
                 bytes32 _initOwnedAggchainVKey,
@@ -157,7 +147,7 @@ contract AggchainECDSAMultisig is AggchainBase {
                 address _vKeyManager
             ) = abi.decode(
                     initializeBytesAggchain,
-                    (address[], uint32, bool, bytes32, bytes4, address)
+                    (bool, bytes32, bytes4, address)
                 );
 
             // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
@@ -173,9 +163,7 @@ contract AggchainECDSAMultisig is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager,
-                _initialAggchainSigners,
-                _threshold
+                _vKeyManager
             );
         } else {
             // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased

@@ -315,9 +315,6 @@ contract AggchainFEP is AggchainBase {
             (
                 // chain custom params
                 InitParams memory _initParams,
-                // multisig specific params
-                address[] memory _initialAggchainSigners,
-                uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
                 bytes32 _initOwnedAggchainVKey,
@@ -333,8 +330,6 @@ contract AggchainFEP is AggchainBase {
                     initializeBytesAggchain,
                     (
                         InitParams,
-                        address[],
-                        uint32,
                         bool,
                         bytes32,
                         bytes4,
@@ -368,9 +363,7 @@ contract AggchainFEP is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager,
-                _initialAggchainSigners,
-                _threshold
+                _vKeyManager
             );
         } else if (_initializerVersion == 1) {
             // contract has been previously initialized with all parameters in the PolygonConsensusBase.sol
@@ -378,9 +371,6 @@ contract AggchainFEP is AggchainBase {
             (
                 // chain custom params
                 InitParams memory _initParams,
-                // multisig specific params
-                address[] memory _initialAggchainSigners,
-                uint32 _threshold,
                 // aggchainBase params
                 bool _useDefaultGateway,
                 bytes32 _initOwnedAggchainVKey,
@@ -388,15 +378,7 @@ contract AggchainFEP is AggchainBase {
                 address _vKeyManager
             ) = abi.decode(
                     initializeBytesAggchain,
-                    (
-                        InitParams,
-                        address[],
-                        uint32,
-                        bool,
-                        bytes32,
-                        bytes4,
-                        address
-                    )
+                    (InitParams, bool, bytes32, bytes4, address)
                 );
 
             // Check the aggchainType embedded in the _initAggchainVKeySelector is valid
@@ -415,9 +397,7 @@ contract AggchainFEP is AggchainBase {
                 _useDefaultGateway,
                 _initOwnedAggchainVKey,
                 _initAggchainVKeySelector,
-                _vKeyManager,
-                _initialAggchainSigners,
-                _threshold
+                _vKeyManager
             );
         } else {
             // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased

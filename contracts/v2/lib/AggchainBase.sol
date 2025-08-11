@@ -190,8 +190,6 @@ abstract contract AggchainBase is
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
      * @param _vKeyManager Initial vKeyManager
-     * @param _initialAggchainSigners Initial array of aggchain signers
-     * @param _threshold Initial threshold for multisig operations
      */
     function _initializeAggchainBaseAndConsensusBase(
         address _admin,
@@ -202,9 +200,7 @@ abstract contract AggchainBase is
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
-        address _vKeyManager,
-        address[] memory _initialAggchainSigners,
-        uint32 _threshold
+        address _vKeyManager
     ) internal onlyInitializing {
         if (
             address(_admin) == address(0) ||
@@ -227,9 +223,7 @@ abstract contract AggchainBase is
             _useDefaultGateway,
             _initOwnedAggchainVKey,
             _initAggchainVKeySelector,
-            _vKeyManager,
-            _initialAggchainSigners,
-            _threshold
+            _vKeyManager
         );
     }
 
@@ -239,61 +233,18 @@ abstract contract AggchainBase is
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
      * @param _vKeyManager Initial vKeyManager
-     * @param _initialAggchainSigners Initial array of aggchain signers
-     * @param _threshold Initial threshold for multisig operations
      */
     function _initializeAggchainBase(
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
-        address _vKeyManager,
-        address[] memory _initialAggchainSigners,
-        uint32 _threshold
+        address _vKeyManager
     ) internal onlyInitializing {
         useDefaultGateway = _useDefaultGateway;
         // set the initial aggchain keys
         ownedAggchainVKeys[_initAggchainVKeySelector] = _initOwnedAggchainVKey;
         // set initial vKeyManager
         vKeyManager = _vKeyManager;
-
-        // Initialize multisig if signers are provided
-        _initializeMultisig(_initialAggchainSigners, _threshold);
-    }
-
-    /**
-     * @notice Initialize multisig parameters
-     * @param _initialAggchainSigners Array of initial signer addresses
-     * @param _threshold Required threshold for multisig operations
-     */
-    function _initializeMultisig(
-        address[] memory _initialAggchainSigners,
-        uint32 _threshold
-    ) internal onlyInitializing {
-        // Only initialize multisig if signers are provided
-        if (_initialAggchainSigners.length > 0) {
-            if (
-                _threshold == 0 || _threshold > _initialAggchainSigners.length
-            ) {
-                revert InvalidThreshold();
-            }
-
-            // Set aggchainSigners array
-            for (uint256 i = 0; i < _initialAggchainSigners.length; i++) {
-                // Use internal function to add signer (duplicate check handled by _addSignerInternal)
-                // For initialization, we use empty URL for backward compatibility
-                _addSignerInternal(_initialAggchainSigners[i], "");
-            }
-
-            threshold = _threshold;
-        }
-        _updateAggchainSignersHash();
-
-        // Emit event
-        emit SignersAndThresholdUpdated(
-            aggchainSigners,
-            _threshold,
-            aggchainSignersHash
-        );
     }
 
     /**
