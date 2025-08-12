@@ -99,7 +99,13 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
      * @notice Propose a global exit root.
      * This function can only be called by an oracle member.
      * If the quorum is reached, the GER is consolidated.
-     * @param proposedGlobalExitRoot Global exit root proposed
+     * @notice In exceptional cases, GER could be removed using the removeGlobalExitRoots functionality.
+     * This contract does not allow easily voting for a GER that was removed. However, in those exceptional cases,
+     * the bridge will be paused and damages should be assessed. Once the bridge is unpaused,
+     * oracles should naturally converge on a new GER.
+     * Since new GERs contain previous GERs information, this behaviour is acceptable.
+     * Therefore, the complexity added by allowing voting for a removed GER is not worth it.
+     * @param proposedGlobalExitRoot Global exit root proposed.
      */
     function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external {
         // Check if the proposed GER it's not any of the reserved values
