@@ -204,7 +204,7 @@ abstract contract PolygonConsensusBase is
      */
     function setTrustedSequencer(
         address newTrustedSequencer
-    ) external onlyAdmin {
+    ) external virtual onlyAdmin {
         trustedSequencer = newTrustedSequencer;
 
         emit SetTrustedSequencer(newTrustedSequencer);

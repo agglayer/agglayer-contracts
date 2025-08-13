@@ -51,6 +51,16 @@ contract AggchainFEP is AggchainBase {
         bytes32 rollupConfigHash;
     }
 
+    /// @notice Struct to store configuration parameters for the AggchainFEP.
+    struct AggchainFEPConfig {
+        /// @notice Hash of the configuration name, used as an identifier for the config.
+        bytes32 opSuccinctConfigNameHash;
+        /// @notice Flag indicating whether optimistic mode is enabled.
+        bool optimisticMode;
+        /// @notice The interval (in L2 blocks or seconds) at which submissions must occur.
+        uint256 submissionInterval;
+    }
+
     ////////////////////////////////////////////////////////////
     //                  Transient Storage                     //
     ////////////////////////////////////////////////////////////
@@ -120,6 +130,13 @@ contract AggchainFEP is AggchainBase {
     /// @notice The genesis configuration name.
     bytes32 public constant GENESIS_CONFIG_NAME =
         keccak256("opsuccinct_genesis");
+
+    /// @notice Mapping that stores all the configurations
+    /// it virtually works as a array, but a mapping has a storage layour easier to ugprades
+    mapping(uint256 => AggchainFEPConfig) public configNumToAggchainFEPConfig;
+
+    /// @notice The number of configs stored in the contract
+    uint256 public aggchainFEPConfigCount;
 
     ////////////////////////////////////////////////////////////
     //                         Events                         //
@@ -476,6 +493,8 @@ contract AggchainFEP is AggchainBase {
         rollupConfigHash = _initParams.rollupConfigHash;
         aggregationVkey = _initParams.aggregationVkey;
         rangeVkeyCommitment = _initParams.rangeVkeyCommitment;
+
+        _pushAggchainFEPConfig(GENESIS_CONFIG_NAME);
     }
 
     ////////////////////////////////////////////////////////////
@@ -540,13 +559,19 @@ contract AggchainFEP is AggchainBase {
             revert L2OutputRootCannotBeZero();
         }
 
+        // get params from config
+        AggchainFEPConfig memory FEPconfig = getLastAggchainFEPConfig();
+        OpSuccinctConfig memory opSuccinctConfig = opSuccinctConfigs[
+            FEPconfig.opSuccinctConfigNameHash
+        ];
+
         bytes32 aggchainParams = keccak256(
             abi.encodePacked(
                 l2Outputs[latestOutputIndex()].outputRoot,
                 _outputRoot,
                 _l2BlockNumber,
-                rollupConfigHash,
-                optimisticMode,
+                opSuccinctConfig.rollupConfigHash,
+                FEPconfig.optimisticMode,
                 trustedSequencer,
                 rangeVkeyCommitment,
                 aggregationVkey
@@ -700,6 +725,7 @@ contract AggchainFEP is AggchainBase {
         );
 
         opSuccinctConfigs[_configName] = newConfig;
+        _pushAggchainFEPConfig(_configName);
 
         emit OpSuccinctConfigUpdated(
             _configName,
@@ -733,6 +759,11 @@ contract AggchainFEP is AggchainBase {
 
         emit SubmissionIntervalUpdated(submissionInterval, _submissionInterval);
         submissionInterval = _submissionInterval;
+
+        // Push new config to track this parameter change
+        _pushAggchainFEPConfig(
+            getLastAggchainFEPConfig().opSuccinctConfigNameHash
+        );
     }
 
     /// @notice Enables optimistic mode.
@@ -743,6 +774,11 @@ contract AggchainFEP is AggchainBase {
 
         optimisticMode = true;
         emit EnableOptimisticMode();
+
+        // Push new config to track this parameter change
+        _pushAggchainFEPConfig(
+            getLastAggchainFEPConfig().opSuccinctConfigNameHash
+        );
     }
 
     /// @notice Disables optimistic mode.
@@ -753,6 +789,11 @@ contract AggchainFEP is AggchainBase {
 
         optimisticMode = false;
         emit DisableOptimisticMode();
+
+        // Push new config to track this parameter change
+        _pushAggchainFEPConfig(
+            getLastAggchainFEPConfig().opSuccinctConfigNameHash
+        );
     }
 
     ////////////////////////////////////////////////////////////
@@ -798,5 +839,53 @@ contract AggchainFEP is AggchainBase {
      */
     function version() external pure returns (string memory) {
         return AGGCHAIN_FEP_VERSION;
+    }
+
+    /**
+     * @notice Get the last AggchainFEPConfig
+     * @return AggchainFEPConfig The last AggchainFEPConfig
+     */
+    function getLastAggchainFEPConfig()
+        public
+        view
+        returns (AggchainFEPConfig memory)
+    {
+        if (aggchainFEPConfigCount == 0) {
+            return
+                AggchainFEPConfig({
+                    opSuccinctConfigNameHash: GENESIS_CONFIG_NAME,
+                    optimisticMode: optimisticMode,
+                    submissionInterval: submissionInterval
+                });
+        } else {
+            return configNumToAggchainFEPConfig[aggchainFEPConfigCount];
+        }
+    }
+
+    /**
+     * @notice Get the current aggchain-specific configuration number
+     * @dev Implementation of the virtual function from AggchainBase
+     * @return aggchainConfigNum The current aggchain FEP configuration count as bytes32
+     */
+    function _getAggchainConfigNum() internal view override returns (uint256) {
+        return aggchainFEPConfigCount;
+    }
+
+    /**
+     * @notice Push a new config to the configNumToConfig mapping "array"
+     * @param _opSuccinctConfigNameHash The opSuccinctConfigNameHash to push
+     */
+    function _pushAggchainFEPConfig(
+        bytes32 _opSuccinctConfigNameHash
+    ) internal {
+        configNumToAggchainFEPConfig[
+            ++aggchainFEPConfigCount
+        ] = AggchainFEPConfig({
+            opSuccinctConfigNameHash: _opSuccinctConfigNameHash,
+            optimisticMode: optimisticMode,
+            submissionInterval: submissionInterval
+        });
+
+        _pushAggchainConfig();
     }
 }

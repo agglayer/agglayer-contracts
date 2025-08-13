@@ -31,8 +31,9 @@ abstract contract AggchainBase is
     ////////////////////////////////////////////////////////////
 
     struct Config {
-        address addr;
-        string url;
+        bytes32 aggchainSignersHash;
+        address trustedSequencer;
+        uint256 aggchainConfigNum;
     }
 
     /**
@@ -105,12 +106,19 @@ abstract contract AggchainBase is
     //                      Configs                           //
     ////////////////////////////////////////////////////////////
 
+    /// @notice Mapping that stores all the configurations
+    /// it virtually works as a array, but a mapping has a storage layour easier to ugprades
+    mapping(uint256 => Config) public configNumToConfig;
+
+    /// @notice The number of configs stored in the contract
+    uint256 public configCount;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -287,6 +295,13 @@ abstract contract AggchainBase is
         bytes memory aggchainData
     ) public view virtual returns (bytes32, bytes32);
 
+    /**
+     * @notice Abstract function to get the current aggchain-specific configuration number
+     * @dev This function must be implemented by the inheriting contract
+     * @return aggchainConfigNum The number/identifier of the current aggchain-specific configuration
+     */
+    function _getAggchainConfigNum() internal view virtual returns (uint256);
+
     ///////////////////////////////////////////////
     //     Rollup manager callback functions     //
     ///////////////////////////////////////////////
@@ -328,7 +343,7 @@ abstract contract AggchainBase is
      * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
      * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
      * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     * @param _newThreshold New threshold value
      */
     function updateSignersAndThreshold(
         RemoveSignerInfo[] calldata _signersToRemove,
@@ -508,6 +523,23 @@ abstract contract AggchainBase is
     }
 
     //////////////////////////
+    //      overrides       //
+    //////////////////////////
+
+    /**
+     * @notice Allow the admin to set a new trusted sequencer
+     * @param newTrustedSequencer Address of the new trusted sequencer
+     */
+    function setTrustedSequencer(
+        address newTrustedSequencer
+    ) external override onlyAdmin {
+        trustedSequencer = newTrustedSequencer;
+        _pushAggchainConfig();
+
+        emit SetTrustedSequencer(newTrustedSequencer);
+    }
+
+    //////////////////////////
     //    view functions    //
     //////////////////////////
 
@@ -621,6 +653,25 @@ abstract contract AggchainBase is
         return aggchainSignersInfos;
     }
 
+    /**
+     * @notice Get a config by its number
+     * @param configNum The config number to retrieve
+     * @return config The Config struct at the given index
+     */
+    function getConfig(
+        uint256 configNum
+    ) public view returns (Config memory config) {
+        return configNumToConfig[configNum];
+    }
+
+    /**
+     * @notice Get the last (most recent) config
+     * @return config The most recent Config struct
+     */
+    function getLastConfig() public view returns (Config memory config) {
+        return configNumToConfig[configCount];
+    }
+
     ////////////////////////////////////////////////////////////
     //                   Internal Functions                   //
     ////////////////////////////////////////////////////////////
@@ -681,6 +732,21 @@ abstract contract AggchainBase is
         aggchainSignersHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
+
+        // Update the configs
+        _pushAggchainConfig();
+
         emit AggchainSignersHashUpdated(aggchainSignersHash);
+    }
+
+    /**
+     * @notice Push a new config to the configNumToConfig mapping "array"
+     */
+    function _pushAggchainConfig() internal {
+        configNumToConfig[++configCount] = Config({
+            aggchainSignersHash: aggchainSignersHash,
+            trustedSequencer: trustedSequencer,
+            aggchainConfigNum: _getAggchainConfigNum()
+        });
     }
 }
