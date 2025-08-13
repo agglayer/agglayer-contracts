@@ -599,6 +599,28 @@ abstract contract AggchainBase is
         return aggchainSigners;
     }
 
+    /**
+     * @notice Get the signer infos
+     * @return Array of SignerInfo structs containing address and URL of each signer
+     */
+    function getAggchainSignerInfos()
+        external
+        view
+        returns (SignerInfo[] memory)
+    {
+        uint256 signerCount = aggchainSigners.length;
+        SignerInfo[] memory aggchainSignersInfos = new SignerInfo[](
+            signerCount
+        );
+        for (uint256 i = 0; i < signerCount; i++) {
+            aggchainSignersInfos[i] = SignerInfo({
+                addr: aggchainSigners[i],
+                url: signerToURLs[aggchainSigners[i]]
+            });
+        }
+        return aggchainSignersInfos;
+    }
+
     ////////////////////////////////////////////////////////////
     //                   Internal Functions                   //
     ////////////////////////////////////////////////////////////
