@@ -138,6 +138,9 @@ contract AggchainFEP is AggchainBase {
     /// @notice The number of configs stored in the contract
     uint256 public aggchainFEPConfigCount;
 
+    /// @notice The last config number used
+    uint256 public lastAggchainBaseConfigNumUsed;
+
     ////////////////////////////////////////////////////////////
     //                         Events                         //
     ////////////////////////////////////////////////////////////
@@ -278,6 +281,12 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Thrown when an OP Succinct configuration has invalid parameters.
     error InvalidOpSuccinctConfigParams();
+
+    /// @notice Thrown when an aggchain config number is invalid.
+    error InvalidAggchainConfigNum();
+
+    /// @notice Thrown when the last aggchain base config number used is not zero.
+    error LastAggchainBaseConfigNumUsedNotZero();
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -542,6 +551,10 @@ contract AggchainFEP is AggchainBase {
         uint256 configNum;
 
         if (aggchainData.length == 32 * 3) {
+            if (lastAggchainBaseConfigNumUsed != 0) {
+                revert LastAggchainBaseConfigNumUsedNotZero();
+            }
+
             // decode the aggchainData
             (_aggchainVKeySelector, _outputRoot, _l2BlockNumber) = abi.decode(
                 aggchainData,
@@ -569,6 +582,10 @@ contract AggchainFEP is AggchainBase {
         } else {
             if (aggchainData.length != 32 * 4) {
                 revert InvalidAggchainDataLength();
+            }
+
+            if (configNum < lastAggchainBaseConfigNumUsed) {
+                revert InvalidAggchainConfigNum();
             }
 
             // decode the aggchainData
@@ -712,15 +729,29 @@ contract AggchainFEP is AggchainBase {
     function onVerifyPessimistic(
         bytes memory aggchainData
     ) external onlyRollupManager {
-        if (aggchainData.length != 32 * 3) {
-            revert InvalidAggchainDataLength();
-        }
+        bytes32 _outputRoot;
+        uint256 _l2BlockNumber;
 
-        // decode the aggchainData
-        (, bytes32 _outputRoot, uint256 _l2BlockNumber) = abi.decode(
-            aggchainData,
-            (bytes4, bytes32, uint256)
-        );
+        if (aggchainData.length == 32 * 3) {
+            // decode the aggchainData
+            (, _outputRoot, _l2BlockNumber) = abi.decode(
+                aggchainData,
+                (bytes4, bytes32, uint256)
+            );
+        } else {
+            if (aggchainData.length != 32 * 4) {
+                revert InvalidAggchainDataLength();
+            }
+
+            uint256 configNum;
+
+            // decode the aggchainData
+            (, _outputRoot, _l2BlockNumber, configNum) = abi.decode(
+                aggchainData,
+                (bytes4, bytes32, uint256, uint256)
+            );
+            lastAggchainBaseConfigNumUsed = configNum;
+        }
 
         emit OutputProposed(
             _outputRoot,
