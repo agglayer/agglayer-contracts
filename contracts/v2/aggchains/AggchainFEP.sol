@@ -270,6 +270,15 @@ contract AggchainFEP is AggchainBase {
     /// @notice Thrown when trying to initialize the wrong initialize function.
     error InvalidInitializer();
 
+    /// @notice Thrown when an OP Succinct configuration name is empty.
+    error InvalidOpSuccinctConfigName();
+
+    /// @notice Thrown when an OP Succinct configuration already exists.
+    error OpSuccinctConfigAlreadyExists();
+
+    /// @notice Thrown when an OP Succinct configuration has invalid parameters.
+    error InvalidOpSuccinctConfigParams();
+
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
     ////////////////////////////////////////////////////////////
@@ -525,28 +534,91 @@ contract AggchainFEP is AggchainBase {
     /// @inheritdoc AggchainBase
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) public view override returns (bytes32, bytes32) {
-        if (aggchainData.length != 32 * 3) {
-            revert InvalidAggchainDataLength();
-        }
+    ) public view override returns (bytes32, bytes32, uint256) {
+        bytes4 _aggchainVKeySelector;
+        bytes32 _outputRoot;
+        uint256 _l2BlockNumber;
+        bytes32 aggchainParams;
+        uint256 configNum;
 
-        // decode the aggchainData
-        (
-            bytes4 _aggchainVKeySelector,
-            bytes32 _outputRoot,
-            uint256 _l2BlockNumber
-        ) = abi.decode(aggchainData, (bytes4, bytes32, uint256));
+        if (aggchainData.length == 32 * 3) {
+            // decode the aggchainData
+            (_aggchainVKeySelector, _outputRoot, _l2BlockNumber) = abi.decode(
+                aggchainData,
+                (bytes4, bytes32, uint256)
+            );
+
+            // check blockNumber
+            if (_l2BlockNumber < nextBlockNumber()) {
+                revert L2BlockNumberLessThanNextBlockNumber();
+            }
+
+            // Get params legacy
+            aggchainParams = keccak256(
+                abi.encodePacked(
+                    l2Outputs[latestOutputIndex()].outputRoot,
+                    _outputRoot,
+                    _l2BlockNumber,
+                    rollupConfigHash,
+                    optimisticMode,
+                    trustedSequencer,
+                    rangeVkeyCommitment,
+                    aggregationVkey
+                )
+            );
+        } else {
+            if (aggchainData.length != 32 * 4) {
+                revert InvalidAggchainDataLength();
+            }
+
+            // decode the aggchainData
+            (
+                _aggchainVKeySelector,
+                _outputRoot,
+                _l2BlockNumber,
+                configNum
+            ) = abi.decode(aggchainData, (bytes4, bytes32, uint256, uint256));
+
+            // Get params from config
+            AggchainBaseConfig memory aggchainConfig = getAggchainConfig(
+                configNum
+            );
+            AggchainFEPConfig memory FEPConfig = configNumToAggchainFEPConfig[
+                aggchainConfig.aggchainConfigNum
+            ];
+            OpSuccinctConfig memory opSuccinctConfig = opSuccinctConfigs[
+                FEPConfig.opSuccinctConfigNameHash
+            ];
+
+            // This ensure that Op succint config exists, and therefore FEP config exists as well
+            isValidOpSuccinctConfig(opSuccinctConfig);
+
+            if (
+                _l2BlockNumber <
+                latestBlockNumber() + FEPConfig.submissionInterval
+            ) {
+                revert L2BlockNumberLessThanNextBlockNumber();
+            }
+
+            aggchainParams = keccak256(
+                abi.encodePacked(
+                    l2Outputs[latestOutputIndex()].outputRoot,
+                    _outputRoot,
+                    _l2BlockNumber,
+                    opSuccinctConfig.rollupConfigHash,
+                    FEPConfig.optimisticMode,
+                    aggchainConfig.trustedSequencer,
+                    opSuccinctConfig.rangeVkeyCommitment,
+                    opSuccinctConfig.aggregationVkey
+                )
+            );
+        }
 
         // Check the aggchainType embedded in the _aggchainVKeySelector is valid
         if (
             getAggchainTypeFromSelector(_aggchainVKeySelector) != AGGCHAIN_TYPE
         ) {
             revert InvalidAggchainType();
-        }
-
-        // check blockNumber
-        if (_l2BlockNumber < nextBlockNumber()) {
-            revert L2BlockNumberLessThanNextBlockNumber();
         }
 
         // check timestamp
@@ -559,26 +631,11 @@ contract AggchainFEP is AggchainBase {
             revert L2OutputRootCannotBeZero();
         }
 
-        // get params from config
-        AggchainFEPConfig memory FEPconfig = getLastAggchainFEPConfig();
-        OpSuccinctConfig memory opSuccinctConfig = opSuccinctConfigs[
-            FEPconfig.opSuccinctConfigNameHash
-        ];
-
-        bytes32 aggchainParams = keccak256(
-            abi.encodePacked(
-                l2Outputs[latestOutputIndex()].outputRoot,
-                _outputRoot,
-                _l2BlockNumber,
-                opSuccinctConfig.rollupConfigHash,
-                FEPconfig.optimisticMode,
-                trustedSequencer,
-                rangeVkeyCommitment,
-                aggregationVkey
-            )
+        return (
+            getAggchainVKey(_aggchainVKeySelector),
+            aggchainParams,
+            configNum
         );
-
-        return (getAggchainVKey(_aggchainVKeySelector), aggchainParams);
     }
 
     /// @notice Getter for the submissionInterval.
@@ -704,14 +761,12 @@ contract AggchainFEP is AggchainBase {
         bytes32 _aggregationVkey,
         bytes32 _rangeVkeyCommitment
     ) external onlyAggchainManager {
-        require(
-            _configName != bytes32(0),
-            "L2OutputOracle: config name cannot be empty"
-        );
-        require(
-            !isValidOpSuccinctConfig(opSuccinctConfigs[_configName]),
-            "L2OutputOracle: config already exists"
-        );
+        if (_configName == bytes32(0)) {
+            revert InvalidOpSuccinctConfigName();
+        }
+        if (isValidOpSuccinctConfig(opSuccinctConfigs[_configName])) {
+            revert OpSuccinctConfigAlreadyExists();
+        }
 
         OpSuccinctConfig memory newConfig = OpSuccinctConfig({
             aggregationVkey: _aggregationVkey,
@@ -719,10 +774,9 @@ contract AggchainFEP is AggchainBase {
             rollupConfigHash: _rollupConfigHash
         });
 
-        require(
-            isValidOpSuccinctConfig(newConfig),
-            "L2OutputOracle: invalid OP Succinct configuration parameters"
-        );
+        if (!isValidOpSuccinctConfig(newConfig)) {
+            revert InvalidOpSuccinctConfigParams();
+        }
 
         opSuccinctConfigs[_configName] = newConfig;
         _pushAggchainFEPConfig(_configName);
@@ -733,6 +787,29 @@ contract AggchainFEP is AggchainBase {
             _rangeVkeyCommitment,
             _rollupConfigHash
         );
+    }
+
+    /**
+     * @notice Returns the effective Base, FEP and OP Succinct configs for a given base config number.
+     * @param baseConfigNum The base configuration number to resolve.
+     * @return baseCfg The resolved base configuration snapshot.
+     * @return fepCfg The resolved FEP configuration snapshot.
+     * @return succinctCfg The resolved OP Succinct configuration snapshot.
+     */
+    function getEffectiveConfigs(
+        uint256 baseConfigNum
+    )
+        external
+        view
+        returns (
+            AggchainBaseConfig memory baseCfg,
+            AggchainFEPConfig memory fepCfg,
+            OpSuccinctConfig memory succinctCfg
+        )
+    {
+        baseCfg = getAggchainConfig(baseConfigNum);
+        fepCfg = configNumToAggchainFEPConfig[baseCfg.aggchainConfigNum];
+        succinctCfg = opSuccinctConfigs[fepCfg.opSuccinctConfigNameHash];
     }
 
     /// @notice Deletes an OP Succinct configuration.
@@ -853,7 +930,7 @@ contract AggchainFEP is AggchainBase {
         if (aggchainFEPConfigCount == 0) {
             return
                 AggchainFEPConfig({
-                    opSuccinctConfigNameHash: GENESIS_CONFIG_NAME,
+                    opSuccinctConfigNameHash: bytes32(0),
                     optimisticMode: optimisticMode,
                     submissionInterval: submissionInterval
                 });

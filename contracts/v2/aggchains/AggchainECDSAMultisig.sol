@@ -214,7 +214,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     /// @inheritdoc AggchainBase
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) public pure override returns (bytes32, bytes32) {
+    ) public pure override returns (bytes32, bytes32, uint256) {
         if (aggchainData.length != 32) {
             revert InvalidAggchainDataLength();
         }
@@ -229,7 +229,7 @@ contract AggchainECDSAMultisig is AggchainBase {
         }
 
         // aggchainParams is not used in this implementation (signersHash and threshold are added directly in base)
-        return (bytes32(0), bytes32(0));
+        return (bytes32(0), bytes32(0), 0);
     }
 
     ////////////////////////////////////////////////////////////

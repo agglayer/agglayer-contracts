@@ -30,7 +30,7 @@ abstract contract AggchainBase is
     //                       Structs                          //
     ////////////////////////////////////////////////////////////
 
-    struct Config {
+    struct AggchainBaseConfig {
         bytes32 aggchainSignersHash;
         address trustedSequencer;
         uint256 aggchainConfigNum;
@@ -108,10 +108,10 @@ abstract contract AggchainBase is
 
     /// @notice Mapping that stores all the configurations
     /// it virtually works as a array, but a mapping has a storage layour easier to ugprades
-    mapping(uint256 => Config) public configNumToConfig;
+    mapping(uint256 => AggchainBaseConfig) public configNumToAggchainBaseConfig;
 
     /// @notice The number of configs stored in the contract
-    uint256 public configCount;
+    uint256 public aggchainBaseConfigCount;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -293,7 +293,7 @@ abstract contract AggchainBase is
      */
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) public view virtual returns (bytes32, bytes32);
+    ) public view virtual returns (bytes32, bytes32, uint256);
 
     /**
      * @notice Abstract function to get the current aggchain-specific configuration number
@@ -320,18 +320,35 @@ abstract contract AggchainBase is
 
         (
             bytes32 aggchainVKey,
-            bytes32 aggchainParams
+            bytes32 aggchainParams,
+            uint256 configNum
         ) = getAggchainParamsAndVKeySelector(aggchainData);
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    CONSENSUS_TYPE,
-                    aggchainVKey,
-                    aggchainParams,
-                    aggchainSignersHash
-                )
+        if (configNum == 0) {
+            return
+                keccak256(
+                    abi.encodePacked(
+                        CONSENSUS_TYPE,
+                        aggchainVKey,
+                        aggchainParams,
+                        aggchainSignersHash
+                    )
+                );
+        } else {
+            AggchainBaseConfig memory aggchainConfig = getAggchainConfig(
+                configNum
             );
+
+            return
+                keccak256(
+                    abi.encodePacked(
+                        CONSENSUS_TYPE,
+                        aggchainVKey,
+                        aggchainParams,
+                        aggchainConfig.aggchainSignersHash
+                    )
+                );
+        }
     }
 
     ///////////////////////////////////////////////
@@ -658,18 +675,26 @@ abstract contract AggchainBase is
      * @param configNum The config number to retrieve
      * @return config The Config struct at the given index
      */
-    function getConfig(
+    function getAggchainConfig(
         uint256 configNum
-    ) public view returns (Config memory config) {
-        return configNumToConfig[configNum];
+    ) public view returns (AggchainBaseConfig memory config) {
+        if (configNum > aggchainBaseConfigCount) {
+            revert AggchainConfigDoesNotExist();
+        }
+
+        return configNumToAggchainBaseConfig[configNum];
     }
 
     /**
      * @notice Get the last (most recent) config
      * @return config The most recent Config struct
      */
-    function getLastConfig() public view returns (Config memory config) {
-        return configNumToConfig[configCount];
+    function getLastAggchainConfig()
+        public
+        view
+        returns (AggchainBaseConfig memory config)
+    {
+        return configNumToAggchainBaseConfig[aggchainBaseConfigCount];
     }
 
     ////////////////////////////////////////////////////////////
@@ -740,10 +765,12 @@ abstract contract AggchainBase is
     }
 
     /**
-     * @notice Push a new config to the configNumToConfig mapping "array"
+     * @notice Push a new config to the configNumToAggchainConfig mapping "array"
      */
     function _pushAggchainConfig() internal {
-        configNumToConfig[++configCount] = Config({
+        configNumToAggchainBaseConfig[
+            ++aggchainBaseConfigCount
+        ] = AggchainBaseConfig({
             aggchainSignersHash: aggchainSignersHash,
             trustedSequencer: trustedSequencer,
             aggchainConfigNum: _getAggchainConfigNum()
