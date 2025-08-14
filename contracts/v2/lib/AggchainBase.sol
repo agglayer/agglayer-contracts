@@ -678,7 +678,7 @@ abstract contract AggchainBase is
     function getAggchainConfig(
         uint256 configNum
     ) public view returns (AggchainBaseConfig memory config) {
-        if (configNum > aggchainBaseConfigCount) {
+        if (configNum > aggchainBaseConfigCount || configNum == 0) {
             revert AggchainConfigDoesNotExist();
         }
 
@@ -694,7 +694,7 @@ abstract contract AggchainBase is
         view
         returns (AggchainBaseConfig memory config)
     {
-        return configNumToAggchainBaseConfig[aggchainBaseConfigCount];
+        return getAggchainConfig(aggchainBaseConfigCount);
     }
 
     ////////////////////////////////////////////////////////////

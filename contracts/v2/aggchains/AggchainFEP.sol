@@ -608,7 +608,9 @@ contract AggchainFEP is AggchainBase {
             ];
 
             // This ensure that Op succint config exists, and therefore FEP config exists as well
-            isValidOpSuccinctConfig(opSuccinctConfig);
+            if (!isValidOpSuccinctConfig(opSuccinctConfig)) {
+                revert InvalidOpSuccinctConfigParams();
+            }
 
             if (
                 _l2BlockNumber <
