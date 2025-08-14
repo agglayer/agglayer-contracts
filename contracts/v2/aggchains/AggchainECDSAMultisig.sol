@@ -214,7 +214,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     /// @inheritdoc AggchainBase
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) public pure override returns (bytes32, bytes32) {
+    ) public pure override returns (bytes32, bytes32, uint256) {
         if (aggchainData.length != 32) {
             revert InvalidAggchainDataLength();
         }
@@ -229,7 +229,7 @@ contract AggchainECDSAMultisig is AggchainBase {
         }
 
         // aggchainParams is not used in this implementation (signersHash and threshold are added directly in base)
-        return (bytes32(0), bytes32(0));
+        return (bytes32(0), bytes32(0), 0);
     }
 
     ////////////////////////////////////////////////////////////
@@ -238,15 +238,20 @@ contract AggchainECDSAMultisig is AggchainBase {
 
     /// @inheritdoc IAggchainBase
     function onVerifyPessimistic(
-        bytes calldata aggchainData
+        bytes calldata // aggchainData
     ) external onlyRollupManager {
-        if (aggchainData.length != 32) {
-            revert InvalidAggchainDataLength();
-        }
-
         // Only aggchainVKeySelector is provided (bytes4 ABI-encoded as 32 bytes), no need to decode anything
         // Just emit event to confirm verification
         emit OnVerifyPessimisticECDSAMultisig();
+    }
+
+    /**
+     * @notice Get the current aggchain-specific configuration number
+     * @dev Implementation of the virtual function from AggchainBase
+     * @return aggchainConfigNum For ECDSA Multisig, this returns zero since configs are only signer-based
+     */
+    function _getAggchainConfigNum() internal pure override returns (uint256) {
+        return 0;
     }
 
     /**

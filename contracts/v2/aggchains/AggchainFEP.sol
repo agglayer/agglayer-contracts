@@ -51,6 +51,16 @@ contract AggchainFEP is AggchainBase {
         bytes32 rollupConfigHash;
     }
 
+    /// @notice Struct to store configuration parameters for the AggchainFEP.
+    struct AggchainFEPConfig {
+        /// @notice Hash of the configuration name, used as an identifier for the config.
+        bytes32 opSuccinctConfigNameHash;
+        /// @notice Flag indicating whether optimistic mode is enabled.
+        bool optimisticMode;
+        /// @notice The interval (in L2 blocks or seconds) at which submissions must occur.
+        uint256 submissionInterval;
+    }
+
     ////////////////////////////////////////////////////////////
     //                  Transient Storage                     //
     ////////////////////////////////////////////////////////////
@@ -120,6 +130,16 @@ contract AggchainFEP is AggchainBase {
     /// @notice The genesis configuration name.
     bytes32 public constant GENESIS_CONFIG_NAME =
         keccak256("opsuccinct_genesis");
+
+    /// @notice Mapping that stores all the configurations
+    /// it virtually works as a array, but a mapping has a storage layour easier to ugprades
+    mapping(uint256 => AggchainFEPConfig) public configNumToAggchainFEPConfig;
+
+    /// @notice The number of configs stored in the contract
+    uint256 public aggchainFEPConfigCount;
+
+    /// @notice The last config number used
+    uint256 public lastAggchainBaseConfigNumUsed;
 
     ////////////////////////////////////////////////////////////
     //                         Events                         //
@@ -252,6 +272,21 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Thrown when trying to initialize the wrong initialize function.
     error InvalidInitializer();
+
+    /// @notice Thrown when an OP Succinct configuration name is empty.
+    error InvalidOpSuccinctConfigName();
+
+    /// @notice Thrown when an OP Succinct configuration already exists.
+    error OpSuccinctConfigAlreadyExists();
+
+    /// @notice Thrown when an OP Succinct configuration has invalid parameters.
+    error InvalidOpSuccinctConfigParams();
+
+    /// @notice Thrown when an aggchain config number is invalid.
+    error InvalidAggchainConfigNum();
+
+    /// @notice Thrown when the last aggchain base config number used is not zero.
+    error LastAggchainBaseConfigNumUsedNotZero();
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -476,6 +511,8 @@ contract AggchainFEP is AggchainBase {
         rollupConfigHash = _initParams.rollupConfigHash;
         aggregationVkey = _initParams.aggregationVkey;
         rangeVkeyCommitment = _initParams.rangeVkeyCommitment;
+
+        _pushAggchainFEPConfig(GENESIS_CONFIG_NAME);
     }
 
     ////////////////////////////////////////////////////////////
@@ -506,28 +543,101 @@ contract AggchainFEP is AggchainBase {
     /// @inheritdoc AggchainBase
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) public view override returns (bytes32, bytes32) {
-        if (aggchainData.length != 32 * 3) {
-            revert InvalidAggchainDataLength();
-        }
+    ) public view override returns (bytes32, bytes32, uint256) {
+        bytes4 _aggchainVKeySelector;
+        bytes32 _outputRoot;
+        uint256 _l2BlockNumber;
+        bytes32 aggchainParams;
+        uint256 configNum;
 
-        // decode the aggchainData
-        (
-            bytes4 _aggchainVKeySelector,
-            bytes32 _outputRoot,
-            uint256 _l2BlockNumber
-        ) = abi.decode(aggchainData, (bytes4, bytes32, uint256));
+        if (aggchainData.length == 32 * 3) {
+            if (lastAggchainBaseConfigNumUsed != 0) {
+                revert LastAggchainBaseConfigNumUsedNotZero();
+            }
+
+            // decode the aggchainData
+            (_aggchainVKeySelector, _outputRoot, _l2BlockNumber) = abi.decode(
+                aggchainData,
+                (bytes4, bytes32, uint256)
+            );
+
+            // check blockNumber
+            if (_l2BlockNumber < nextBlockNumber()) {
+                revert L2BlockNumberLessThanNextBlockNumber();
+            }
+
+            // Get params legacy
+            aggchainParams = keccak256(
+                abi.encodePacked(
+                    l2Outputs[latestOutputIndex()].outputRoot,
+                    _outputRoot,
+                    _l2BlockNumber,
+                    rollupConfigHash,
+                    optimisticMode,
+                    trustedSequencer,
+                    rangeVkeyCommitment,
+                    aggregationVkey
+                )
+            );
+        } else {
+            if (aggchainData.length != 32 * 4) {
+                revert InvalidAggchainDataLength();
+            }
+
+            if (configNum < lastAggchainBaseConfigNumUsed) {
+                revert InvalidAggchainConfigNum();
+            }
+
+            // decode the aggchainData
+            (
+                _aggchainVKeySelector,
+                _outputRoot,
+                _l2BlockNumber,
+                configNum
+            ) = abi.decode(aggchainData, (bytes4, bytes32, uint256, uint256));
+
+            // Get params from config
+            AggchainBaseConfig memory aggchainConfig = getAggchainConfig(
+                configNum
+            );
+            AggchainFEPConfig memory FEPConfig = configNumToAggchainFEPConfig[
+                aggchainConfig.aggchainConfigNum
+            ];
+            OpSuccinctConfig memory opSuccinctConfig = opSuccinctConfigs[
+                FEPConfig.opSuccinctConfigNameHash
+            ];
+
+            // This ensure that Op succint config exists, and therefore FEP config exists as well
+            if (!isValidOpSuccinctConfig(opSuccinctConfig)) {
+                revert InvalidOpSuccinctConfigParams();
+            }
+
+            if (
+                _l2BlockNumber <
+                latestBlockNumber() + FEPConfig.submissionInterval
+            ) {
+                revert L2BlockNumberLessThanNextBlockNumber();
+            }
+
+            aggchainParams = keccak256(
+                abi.encodePacked(
+                    l2Outputs[latestOutputIndex()].outputRoot,
+                    _outputRoot,
+                    _l2BlockNumber,
+                    opSuccinctConfig.rollupConfigHash,
+                    FEPConfig.optimisticMode,
+                    aggchainConfig.trustedSequencer,
+                    opSuccinctConfig.rangeVkeyCommitment,
+                    opSuccinctConfig.aggregationVkey
+                )
+            );
+        }
 
         // Check the aggchainType embedded in the _aggchainVKeySelector is valid
         if (
             getAggchainTypeFromSelector(_aggchainVKeySelector) != AGGCHAIN_TYPE
         ) {
             revert InvalidAggchainType();
-        }
-
-        // check blockNumber
-        if (_l2BlockNumber < nextBlockNumber()) {
-            revert L2BlockNumberLessThanNextBlockNumber();
         }
 
         // check timestamp
@@ -540,20 +650,11 @@ contract AggchainFEP is AggchainBase {
             revert L2OutputRootCannotBeZero();
         }
 
-        bytes32 aggchainParams = keccak256(
-            abi.encodePacked(
-                l2Outputs[latestOutputIndex()].outputRoot,
-                _outputRoot,
-                _l2BlockNumber,
-                rollupConfigHash,
-                optimisticMode,
-                trustedSequencer,
-                rangeVkeyCommitment,
-                aggregationVkey
-            )
+        return (
+            getAggchainVKey(_aggchainVKeySelector),
+            aggchainParams,
+            configNum
         );
-
-        return (getAggchainVKey(_aggchainVKeySelector), aggchainParams);
     }
 
     /// @notice Getter for the submissionInterval.
@@ -630,15 +731,29 @@ contract AggchainFEP is AggchainBase {
     function onVerifyPessimistic(
         bytes memory aggchainData
     ) external onlyRollupManager {
-        if (aggchainData.length != 32 * 3) {
-            revert InvalidAggchainDataLength();
-        }
+        bytes32 _outputRoot;
+        uint256 _l2BlockNumber;
 
-        // decode the aggchainData
-        (, bytes32 _outputRoot, uint256 _l2BlockNumber) = abi.decode(
-            aggchainData,
-            (bytes4, bytes32, uint256)
-        );
+        if (aggchainData.length == 32 * 3) {
+            // decode the aggchainData
+            (, _outputRoot, _l2BlockNumber) = abi.decode(
+                aggchainData,
+                (bytes4, bytes32, uint256)
+            );
+        } else {
+            if (aggchainData.length != 32 * 4) {
+                revert InvalidAggchainDataLength();
+            }
+
+            uint256 configNum;
+
+            // decode the aggchainData
+            (, _outputRoot, _l2BlockNumber, configNum) = abi.decode(
+                aggchainData,
+                (bytes4, bytes32, uint256, uint256)
+            );
+            lastAggchainBaseConfigNumUsed = configNum;
+        }
 
         emit OutputProposed(
             _outputRoot,
@@ -679,14 +794,12 @@ contract AggchainFEP is AggchainBase {
         bytes32 _aggregationVkey,
         bytes32 _rangeVkeyCommitment
     ) external onlyAggchainManager {
-        require(
-            _configName != bytes32(0),
-            "L2OutputOracle: config name cannot be empty"
-        );
-        require(
-            !isValidOpSuccinctConfig(opSuccinctConfigs[_configName]),
-            "L2OutputOracle: config already exists"
-        );
+        if (_configName == bytes32(0)) {
+            revert InvalidOpSuccinctConfigName();
+        }
+        if (isValidOpSuccinctConfig(opSuccinctConfigs[_configName])) {
+            revert OpSuccinctConfigAlreadyExists();
+        }
 
         OpSuccinctConfig memory newConfig = OpSuccinctConfig({
             aggregationVkey: _aggregationVkey,
@@ -694,12 +807,12 @@ contract AggchainFEP is AggchainBase {
             rollupConfigHash: _rollupConfigHash
         });
 
-        require(
-            isValidOpSuccinctConfig(newConfig),
-            "L2OutputOracle: invalid OP Succinct configuration parameters"
-        );
+        if (!isValidOpSuccinctConfig(newConfig)) {
+            revert InvalidOpSuccinctConfigParams();
+        }
 
         opSuccinctConfigs[_configName] = newConfig;
+        _pushAggchainFEPConfig(_configName);
 
         emit OpSuccinctConfigUpdated(
             _configName,
@@ -707,6 +820,29 @@ contract AggchainFEP is AggchainBase {
             _rangeVkeyCommitment,
             _rollupConfigHash
         );
+    }
+
+    /**
+     * @notice Returns the effective Base, FEP and OP Succinct configs for a given base config number.
+     * @param baseConfigNum The base configuration number to resolve.
+     * @return baseCfg The resolved base configuration snapshot.
+     * @return fepCfg The resolved FEP configuration snapshot.
+     * @return succinctCfg The resolved OP Succinct configuration snapshot.
+     */
+    function getEffectiveConfigs(
+        uint256 baseConfigNum
+    )
+        external
+        view
+        returns (
+            AggchainBaseConfig memory baseCfg,
+            AggchainFEPConfig memory fepCfg,
+            OpSuccinctConfig memory succinctCfg
+        )
+    {
+        baseCfg = getAggchainConfig(baseConfigNum);
+        fepCfg = configNumToAggchainFEPConfig[baseCfg.aggchainConfigNum];
+        succinctCfg = opSuccinctConfigs[fepCfg.opSuccinctConfigNameHash];
     }
 
     /// @notice Deletes an OP Succinct configuration.
@@ -733,6 +869,11 @@ contract AggchainFEP is AggchainBase {
 
         emit SubmissionIntervalUpdated(submissionInterval, _submissionInterval);
         submissionInterval = _submissionInterval;
+
+        // Push new config to track this parameter change
+        _pushAggchainFEPConfig(
+            getLastAggchainFEPConfig().opSuccinctConfigNameHash
+        );
     }
 
     /// @notice Enables optimistic mode.
@@ -743,6 +884,11 @@ contract AggchainFEP is AggchainBase {
 
         optimisticMode = true;
         emit EnableOptimisticMode();
+
+        // Push new config to track this parameter change
+        _pushAggchainFEPConfig(
+            getLastAggchainFEPConfig().opSuccinctConfigNameHash
+        );
     }
 
     /// @notice Disables optimistic mode.
@@ -753,6 +899,11 @@ contract AggchainFEP is AggchainBase {
 
         optimisticMode = false;
         emit DisableOptimisticMode();
+
+        // Push new config to track this parameter change
+        _pushAggchainFEPConfig(
+            getLastAggchainFEPConfig().opSuccinctConfigNameHash
+        );
     }
 
     ////////////////////////////////////////////////////////////
@@ -798,5 +949,53 @@ contract AggchainFEP is AggchainBase {
      */
     function version() external pure returns (string memory) {
         return AGGCHAIN_FEP_VERSION;
+    }
+
+    /**
+     * @notice Get the last AggchainFEPConfig
+     * @return AggchainFEPConfig The last AggchainFEPConfig
+     */
+    function getLastAggchainFEPConfig()
+        public
+        view
+        returns (AggchainFEPConfig memory)
+    {
+        if (aggchainFEPConfigCount == 0) {
+            return
+                AggchainFEPConfig({
+                    opSuccinctConfigNameHash: bytes32(0),
+                    optimisticMode: optimisticMode,
+                    submissionInterval: submissionInterval
+                });
+        } else {
+            return configNumToAggchainFEPConfig[aggchainFEPConfigCount];
+        }
+    }
+
+    /**
+     * @notice Get the current aggchain-specific configuration number
+     * @dev Implementation of the virtual function from AggchainBase
+     * @return aggchainConfigNum The current aggchain FEP configuration count as bytes32
+     */
+    function _getAggchainConfigNum() internal view override returns (uint256) {
+        return aggchainFEPConfigCount;
+    }
+
+    /**
+     * @notice Push a new config to the configNumToConfig mapping "array"
+     * @param _opSuccinctConfigNameHash The opSuccinctConfigNameHash to push
+     */
+    function _pushAggchainFEPConfig(
+        bytes32 _opSuccinctConfigNameHash
+    ) internal {
+        configNumToAggchainFEPConfig[
+            ++aggchainFEPConfigCount
+        ] = AggchainFEPConfig({
+            opSuccinctConfigNameHash: _opSuccinctConfigNameHash,
+            optimisticMode: optimisticMode,
+            submissionInterval: submissionInterval
+        });
+
+        _pushAggchainConfig();
     }
 }

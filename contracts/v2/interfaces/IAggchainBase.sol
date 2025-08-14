@@ -135,6 +135,8 @@ interface IAggchainBaseErrors {
     error IndicesNotInDescendingOrder();
     /// @notice Thrown when trying to compute the aggchain hash without initializing the signers hash.
     error AggchainSignersHashNotInitialized();
+    /// @notice Thrown when querying a configuration that does not exist.
+    error AggchainConfigDoesNotExist();
 }
 
 /**

@@ -444,11 +444,6 @@ describe('AggchainECDSAMultisig', () => {
             'OnlyRollupManager',
         );
 
-        // Test invalid aggchain data length
-        await expect(
-            aggchainECDSAMultisigContract.connect(rollupManagerSigner).onVerifyPessimistic('0x', { gasPrice: 0 }),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidAggchainDataLength');
-
         // Test successful onVerifyPessimistic
         await expect(
             aggchainECDSAMultisigContract

@@ -30,9 +30,10 @@ abstract contract AggchainBase is
     //                       Structs                          //
     ////////////////////////////////////////////////////////////
 
-    struct Config {
-        address addr;
-        string url;
+    struct AggchainBaseConfig {
+        bytes32 aggchainSignersHash;
+        address trustedSequencer;
+        uint256 aggchainConfigNum;
     }
 
     /**
@@ -105,12 +106,19 @@ abstract contract AggchainBase is
     //                      Configs                           //
     ////////////////////////////////////////////////////////////
 
+    /// @notice Mapping that stores all the configurations
+    /// it virtually works as a array, but a mapping has a storage layour easier to ugprades
+    mapping(uint256 => AggchainBaseConfig) public configNumToAggchainBaseConfig;
+
+    /// @notice The number of configs stored in the contract
+    uint256 public aggchainBaseConfigCount;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -285,7 +293,14 @@ abstract contract AggchainBase is
      */
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
-    ) public view virtual returns (bytes32, bytes32);
+    ) public view virtual returns (bytes32, bytes32, uint256);
+
+    /**
+     * @notice Abstract function to get the current aggchain-specific configuration number
+     * @dev This function must be implemented by the inheriting contract
+     * @return aggchainConfigNum The number/identifier of the current aggchain-specific configuration
+     */
+    function _getAggchainConfigNum() internal view virtual returns (uint256);
 
     ///////////////////////////////////////////////
     //     Rollup manager callback functions     //
@@ -305,18 +320,35 @@ abstract contract AggchainBase is
 
         (
             bytes32 aggchainVKey,
-            bytes32 aggchainParams
+            bytes32 aggchainParams,
+            uint256 configNum
         ) = getAggchainParamsAndVKeySelector(aggchainData);
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    CONSENSUS_TYPE,
-                    aggchainVKey,
-                    aggchainParams,
-                    aggchainSignersHash
-                )
+        if (configNum == 0) {
+            return
+                keccak256(
+                    abi.encodePacked(
+                        CONSENSUS_TYPE,
+                        aggchainVKey,
+                        aggchainParams,
+                        aggchainSignersHash
+                    )
+                );
+        } else {
+            AggchainBaseConfig memory aggchainConfig = getAggchainConfig(
+                configNum
             );
+
+            return
+                keccak256(
+                    abi.encodePacked(
+                        CONSENSUS_TYPE,
+                        aggchainVKey,
+                        aggchainParams,
+                        aggchainConfig.aggchainSignersHash
+                    )
+                );
+        }
     }
 
     ///////////////////////////////////////////////
@@ -328,7 +360,7 @@ abstract contract AggchainBase is
      * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
      * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
      * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     * @param _newThreshold New threshold value
      */
     function updateSignersAndThreshold(
         RemoveSignerInfo[] calldata _signersToRemove,
@@ -508,6 +540,23 @@ abstract contract AggchainBase is
     }
 
     //////////////////////////
+    //      overrides       //
+    //////////////////////////
+
+    /**
+     * @notice Allow the admin to set a new trusted sequencer
+     * @param newTrustedSequencer Address of the new trusted sequencer
+     */
+    function setTrustedSequencer(
+        address newTrustedSequencer
+    ) external override onlyAdmin {
+        trustedSequencer = newTrustedSequencer;
+        _pushAggchainConfig();
+
+        emit SetTrustedSequencer(newTrustedSequencer);
+    }
+
+    //////////////////////////
     //    view functions    //
     //////////////////////////
 
@@ -599,6 +648,55 @@ abstract contract AggchainBase is
         return aggchainSigners;
     }
 
+    /**
+     * @notice Get the signer infos
+     * @return Array of SignerInfo structs containing address and URL of each signer
+     */
+    function getAggchainSignerInfos()
+        external
+        view
+        returns (SignerInfo[] memory)
+    {
+        uint256 signerCount = aggchainSigners.length;
+        SignerInfo[] memory aggchainSignersInfos = new SignerInfo[](
+            signerCount
+        );
+        for (uint256 i = 0; i < signerCount; i++) {
+            aggchainSignersInfos[i] = SignerInfo({
+                addr: aggchainSigners[i],
+                url: signerToURLs[aggchainSigners[i]]
+            });
+        }
+        return aggchainSignersInfos;
+    }
+
+    /**
+     * @notice Get a config by its number
+     * @param configNum The config number to retrieve
+     * @return config The Config struct at the given index
+     */
+    function getAggchainConfig(
+        uint256 configNum
+    ) public view returns (AggchainBaseConfig memory config) {
+        if (configNum > aggchainBaseConfigCount || configNum == 0) {
+            revert AggchainConfigDoesNotExist();
+        }
+
+        return configNumToAggchainBaseConfig[configNum];
+    }
+
+    /**
+     * @notice Get the last (most recent) config
+     * @return config The most recent Config struct
+     */
+    function getLastAggchainConfig()
+        public
+        view
+        returns (AggchainBaseConfig memory config)
+    {
+        return getAggchainConfig(aggchainBaseConfigCount);
+    }
+
     ////////////////////////////////////////////////////////////
     //                   Internal Functions                   //
     ////////////////////////////////////////////////////////////
@@ -659,6 +757,23 @@ abstract contract AggchainBase is
         aggchainSignersHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
+
+        // Update the configs
+        _pushAggchainConfig();
+
         emit AggchainSignersHashUpdated(aggchainSignersHash);
+    }
+
+    /**
+     * @notice Push a new config to the configNumToAggchainConfig mapping "array"
+     */
+    function _pushAggchainConfig() internal {
+        configNumToAggchainBaseConfig[
+            ++aggchainBaseConfigCount
+        ] = AggchainBaseConfig({
+            aggchainSignersHash: aggchainSignersHash,
+            trustedSequencer: trustedSequencer,
+            aggchainConfigNum: _getAggchainConfigNum()
+        });
     }
 }
