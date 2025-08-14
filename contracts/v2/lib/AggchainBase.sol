@@ -258,7 +258,7 @@ abstract contract AggchainBase is
 
     /**
      * @notice Override the function to prevent the contract from being initialized with the initializer implemented at PolygonConsensusBase.
-     * @dev removing this function can cause critical security issues.
+     * @dev removing this fuFnction can cause critical security issues.
      */
     function initialize(
         address, // _admin
@@ -338,7 +338,9 @@ abstract contract AggchainBase is
         // Validate descending order of indices for removal
         if (_signersToRemove.length > 1) {
             for (uint256 i = 0; i < _signersToRemove.length - 1; i++) {
-                if (_signersToRemove[i].index < _signersToRemove[i + 1].index) {
+                if (
+                    _signersToRemove[i].index <= _signersToRemove[i + 1].index
+                ) {
                     revert IndicesNotInDescendingOrder();
                 }
             }
