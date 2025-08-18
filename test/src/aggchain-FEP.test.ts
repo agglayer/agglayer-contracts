@@ -120,7 +120,7 @@ describe('Test vectors aggchain FEP', () => {
             );
 
             // get aggchainHash using new base composition with empty signers
-            const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+            const emptySignersHash = utilsCommon.computeSignersHash(0, []);
 
             // Use the owned VKey (test vectors use useDefaultGateway: false)
             aggchainHash = utilsCommon.computeAggchainHash(

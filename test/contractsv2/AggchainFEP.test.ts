@@ -264,7 +264,7 @@ describe('AggchainFEP', () => {
             aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
-        expect(await aggchainFEPContract.version()).to.be.equal('v3.0.0-rc1');
+        expect(await aggchainFEPContract.version()).to.be.equal('v2.0.0');
     });
 
     it('should check the v1 initialized parameters', async () => {
@@ -407,7 +407,7 @@ describe('AggchainFEP', () => {
         // AggchainFEP extends AggchainBase but doesn't use signers
         // However, we need to initialize the signers hash to avoid AggchainSignersHashNotInitialized error
         // Initialize with empty signers
-        const expectedEmptyHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+        const expectedEmptyHash = utilsAggchain.computeSignersHash(0, []);
         await expect(aggchainFEPContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0))
             .to.emit(aggchainFEPContract, 'SignersAndThresholdUpdated')
             .withArgs([], 0, expectedEmptyHash);
@@ -479,7 +479,7 @@ describe('AggchainFEP', () => {
         const consensusTypeSC = await aggchainFEPContract.CONSENSUS_TYPE();
 
         // Base now appends signersHash; we initialized empty signers
-        const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+        const emptySignersHash = utilsAggchain.computeSignersHash(0, []);
         const aggchainHashJS = utilsAggchain.computeAggchainHash(
             consensusTypeSC,
             finakVKey,

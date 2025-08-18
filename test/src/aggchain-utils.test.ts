@@ -17,8 +17,7 @@ describe('Test vectors aggchain common utils', () => {
         it(`Check test-vectors compute aggchain hash ID=${i}`, async () => {
             const testVector = aggchainHashTestVectors[i].input;
             // Use default signers hash from test vector or empty defaults
-            const signersHash =
-                testVector.signersHash || ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+            const signersHash = testVector.signersHash || utilsCommon.computeSignersHash(0, []);
             const aggchainHash = utilsCommon.computeAggchainHash(
                 testVector.consensusType,
                 testVector.aggchainVKey,

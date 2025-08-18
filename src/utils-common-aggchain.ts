@@ -152,3 +152,13 @@ export function encodeInitializeBytesLegacy(admin, sequencer, gasTokenAddress, s
 export function encodeInitAggchainManager(aggchainManager) {
     return ethers.AbiCoder.defaultAbiCoder().encode(['address'], [aggchainManager]);
 }
+
+/**
+ * Compute the signers hash for aggchain contracts
+ * @param {Number|BigInt} threshold The threshold value for the multisig
+ * @param {String[]} signers Array of signer addresses
+ * @returns {String} Hash of the threshold and signers array
+ */
+export function computeSignersHash(threshold: number | bigint, signers: string[]): string {
+    return ethers.solidityPackedKeccak256(['uint256', 'address[]'], [threshold, signers]);
+}

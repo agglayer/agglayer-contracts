@@ -400,10 +400,7 @@ describe('AggchainECDSAMultisig', () => {
         expect(await aggchainECDSAMultisigContract.threshold()).to.be.equal(threshold);
 
         // Test signersHash
-        const expectedSignersHash = ethers.solidityPackedKeccak256(
-            ['uint32', 'address[]'],
-            [threshold, initialSigners],
-        );
+        const expectedSignersHash = utilsAggchain.computeSignersHash(threshold, initialSigners);
         expect(await aggchainECDSAMultisigContract.aggchainSignersHash()).to.be.equal(expectedSignersHash);
     });
 

@@ -19,6 +19,7 @@ import {
     encodeInitAggchainManager,
     encodeInitializeBytesLegacy,
     computeAggchainHash,
+    computeSignersHash,
 } from '../../src/utils-common-aggchain';
 import { NO_ADDRESS } from '../../src/constants';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
@@ -419,7 +420,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // because ECDSA Multisig uses only signersHash for consensus, not specific vKeys or params
         const actualAggchainVKey = ethers.ZeroHash; // Correctly zero for ECDSA Multisig
         const aggchainParams = ethers.ZeroHash; // Correctly zero for ECDSA Multisig
-        const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+        const emptySignersHash = computeSignersHash(0, []);
         const precomputedAggchainHash = computeAggchainHash(
             CONSENSUS_TYPE.GENERIC,
             actualAggchainVKey,

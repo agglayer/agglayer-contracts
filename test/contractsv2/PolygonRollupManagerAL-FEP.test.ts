@@ -20,6 +20,7 @@ import {
     encodeInitAggchainManager,
     encodeInitializeBytesLegacy,
     computeAggchainHash,
+    computeSignersHash,
 } from '../../src/utils-common-aggchain';
 
 import {
@@ -540,7 +541,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         // Since getAggchainParamsAndVKeySelector returns (0, 0) for AggchainFEP,
         // and we initialized empty signers, we need to compute the hash accordingly
         // The hash includes: consensusType, vKey, params, signersHash
-        const emptySignersHash = ethers.solidityPackedKeccak256(['uint32', 'address[]'], [0, []]);
+        const emptySignersHash = computeSignersHash(0, []);
         const aggchainHashJS = computeAggchainHash(
             CONSENSUS_TYPE.GENERIC,
             aggchainVKey,

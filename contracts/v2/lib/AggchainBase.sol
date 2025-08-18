@@ -96,7 +96,7 @@ abstract contract AggchainBase is
     mapping(address => string) public signerToURLs;
 
     /// @notice Threshold required for multisig operations
-    uint32 public threshold;
+    uint256 public threshold;
 
     /// @notice Hash of the current aggchainSigners array
     bytes32 public aggchainSignersHash;
@@ -333,7 +333,7 @@ abstract contract AggchainBase is
     function updateSignersAndThreshold(
         RemoveSignerInfo[] calldata _signersToRemove,
         SignerInfo[] calldata _signersToAdd,
-        uint32 _newThreshold
+        uint256 _newThreshold
     ) external onlyAggchainManager {
         // Validate descending order of indices for removal
         if (_signersToRemove.length > 1) {
@@ -363,6 +363,11 @@ abstract contract AggchainBase is
         if (_newThreshold > aggchainSigners.length) {
             revert InvalidThreshold();
         }
+
+        if (_newThreshold > 255) {
+            revert ThresholdTooHigh();
+        }
+
         threshold = _newThreshold;
 
         // Update the signers hash once after all operations

@@ -77,7 +77,7 @@ interface IAggchainBaseEvents {
      */
     event SignersAndThresholdUpdated(
         address[] aggchainSigners,
-        uint32 newThreshold,
+        uint256 newThreshold,
         bytes32 newAggchainSignersHash
     );
 }
@@ -127,7 +127,7 @@ interface IAggchainBaseErrors {
     error ThresholdTooHighAfterRemoval();
     /// @notice Thrown when trying to add a zero address as a signer.
     error SignerCannotBeZero();
-    /// @notice Thrown when the threshold is greater than the number of signers.
+    /// @notice Thrown when the threshold is greater than the number of signers or 255.
     error ThresholdTooHigh();
     /// @notice Thrown when trying to add a signer with an empty URL.
     error SignerURLCannotBeEmpty();

@@ -68,8 +68,8 @@ contract AggchainFEP is AggchainBase {
     bytes2 public constant AGGCHAIN_TYPE = 0x0001;
 
     /// @notice Op L2OO Semantic version.
-    /// @custom:semver v3.0.0-rc1
-    string public constant AGGCHAIN_FEP_VERSION = "v3.0.0-rc1";
+    /// @custom:semver v2.0.0
+    string public constant AGGCHAIN_FEP_VERSION = "v2.0.0";
 
     ////////////////////////////////////////////////////////////
     //                       Storage                          //
@@ -733,6 +733,48 @@ contract AggchainFEP is AggchainBase {
 
         emit SubmissionIntervalUpdated(submissionInterval, _submissionInterval);
         submissionInterval = _submissionInterval;
+    }
+
+    /// @notice Updates the aggregation verification key.
+    /// @param _aggregationVkey The new aggregation verification key.
+    function updateAggregationVkey(
+        bytes32 _aggregationVkey
+    ) external onlyAggchainManager {
+        if (_aggregationVkey == bytes32(0)) {
+            revert AggregationVkeyMustBeDifferentThanZero();
+        }
+
+        emit AggregationVkeyUpdated(aggregationVkey, _aggregationVkey);
+        aggregationVkey = _aggregationVkey;
+    }
+
+    /// @notice Updates the range verification key commitment.
+    /// @param _rangeVkeyCommitment The new range verification key commitment.
+    function updateRangeVkeyCommitment(
+        bytes32 _rangeVkeyCommitment
+    ) external onlyAggchainManager {
+        if (_rangeVkeyCommitment == bytes32(0)) {
+            revert RangeVkeyCommitmentMustBeDifferentThanZero();
+        }
+
+        emit RangeVkeyCommitmentUpdated(
+            rangeVkeyCommitment,
+            _rangeVkeyCommitment
+        );
+        rangeVkeyCommitment = _rangeVkeyCommitment;
+    }
+
+    /// @notice Updates the rollup config hash.
+    /// @param _rollupConfigHash The new rollup config hash.
+    function updateRollupConfigHash(
+        bytes32 _rollupConfigHash
+    ) external onlyAggchainManager {
+        if (_rollupConfigHash == bytes32(0)) {
+            revert RollupConfigHashMustBeDifferentThanZero();
+        }
+
+        emit RollupConfigHashUpdated(rollupConfigHash, _rollupConfigHash);
+        rollupConfigHash = _rollupConfigHash;
     }
 
     /// @notice Enables optimistic mode.
