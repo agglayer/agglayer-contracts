@@ -13,6 +13,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { getDeployerFromParameters, getProviderAdjustingMultiplierGas, checkParams } from '../../src/utils';
 import { logger } from '../../src/logger';
+import { verifyContractEtherscan } from '../../upgrade/utils';
 
 import deployParameters from './deploy_parameters.json';
 
@@ -240,9 +241,20 @@ async function deployProxyAdmin(timelockAddress: string, deployer: any): Promise
         deployer,
     );
     const proxyAdmin = await ProxyAdminFactory.deploy(timelockAddress);
-    await proxyAdmin.waitForDeployment();
+    const deployTx = proxyAdmin.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployTx?.wait(5);
 
     logger.info(`✅ ProxyAdmin deployed with Timelock as owner: ${proxyAdmin.target}`);
+
+    // Verify ProxyAdmin on Etherscan
+    await verifyContractEtherscan(
+        proxyAdmin.target as string,
+        [timelockAddress], // Constructor argument: initial owner
+        5, // 5 seconds wait time
+        '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin'
+    );
+
     return proxyAdmin;
 }
 
@@ -261,9 +273,24 @@ async function deployTimelock(deployer: any): Promise<any> {
         [deployParameters.timelock.timelockAdminAddress],
         deployParameters.timelock.timelockAdminAddress,
     );
-    await timelock.waitForDeployment();
+    const deployTx = timelock.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployTx?.wait(5);
 
     logger.info(`✅ TimelockController (OpenZeppelin) deployed: ${timelock.target}`);
+
+    // Verify TimelockController on Etherscan
+    await verifyContractEtherscan(
+        timelock.target as string,
+        [
+            deployParameters.timelock.timelockDelay.toString(),
+            [deployParameters.timelock.timelockAdminAddress],
+            [deployParameters.timelock.timelockAdminAddress],
+            deployParameters.timelock.timelockAdminAddress,
+        ],
+        5 // 5 seconds wait time
+    );
+
     return timelock;
 }
 
@@ -301,8 +328,17 @@ async function deployBridgeL2SovereignChain(
     // Step 1: Deploy implementation
     logger.info('📍 Step 1: Deploying Bridge implementation...');
     const bridgeImplementation = await BridgeFactory.deploy();
-    await bridgeImplementation.waitForDeployment();
+    const deployTx = bridgeImplementation.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployTx?.wait(5);
     logger.info(`✅ BridgeL2SovereignChain implementation deployed: ${bridgeImplementation.target}`);
+
+    // Verify Bridge implementation on Etherscan
+    await verifyContractEtherscan(
+        bridgeImplementation.target as string,
+        [], // No constructor arguments
+        5 // 5 seconds wait time
+    );
 
     // Step 2: Deploy TransparentUpgradeableProxy with centralized ProxyAdmin
     logger.info('📍 Step 2: Deploying Bridge proxy with centralized ProxyAdmin...');
@@ -344,8 +380,22 @@ async function deployBridgeL2SovereignChain(
         proxyAdmin.target, // Use centralized ProxyAdmin
         '0x', // Call data for initialization (empty for separated initialization)
     );
-    await bridgeProxy.waitForDeployment();
+    const deployProxyTx = bridgeProxy.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployProxyTx?.wait(5);
     logger.info(`✅ Bridge proxy deployed: ${bridgeProxy.target}`);
+
+    // Verify Bridge proxy on Etherscan
+    await verifyContractEtherscan(
+        bridgeProxy.target as string,
+        [
+            bridgeImplementation.target, // Implementation address
+            proxyAdmin.target, // Admin address
+            '0x' // Empty init data
+        ],
+        30, // 30 seconds wait time, enough to allow for 
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy'
+    );
 
     // Step 3: Initialize proxy with onlyDeployer protection (frontrunning-safe)
     logger.info('📍 Step 3: Initializing Bridge proxy (onlyDeployer protected)...');
@@ -358,7 +408,7 @@ async function deployBridgeL2SovereignChain(
     );
     const timelockAddress = await proxyAdminContract.owner();
 
-    await bridge.initialize(
+    const initializeTx = await bridge.initialize(
         deployParameters.network.rollupID, // Rollup ID (networkID)
         gasTokenAddress, // Derived from rollupID
         gasTokenNetwork, // Uses rollupID as gasTokenNetwork
@@ -372,6 +422,7 @@ async function deployBridgeL2SovereignChain(
         deployParameters.bridge.emergencyBridgeUnpauser,
         timelockAddress, // proxiedTokensManager set to timelock address (governance)
     );
+    await initializeTx?.wait(5);
     const wrappedTokenBytecodeStorer = await bridge.wrappedTokenBytecodeStorer();
     const wrappedTokenBridgeImplementation = await bridge.getWrappedTokenBridgeImplementation();
     const bridgeLib = await bridge.bridgeLib();
@@ -410,8 +461,17 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     // Step 1: Deploy implementation using prepareUpgrade approach
     logger.info('📍 Step 1: Deploying GER Manager implementation...');
     const gerImplementation = await GERManagerFactory.deploy(bridgeProxyAddress); // Constructor argument
-    await gerImplementation.waitForDeployment();
+    const deployTx = gerImplementation.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployTx?.wait(5);
     logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation deployed: ${gerImplementation.target}`);
+
+    // Verify GER Manager implementation on Etherscan
+    await verifyContractEtherscan(
+        gerImplementation.target as string,
+        [bridgeProxyAddress], // Constructor argument: bridge address
+        5 // 5 seconds wait time
+    );
 
     // Step 2: Prepare initialization data for atomic initialization
     logger.info('📍 Step 2: Preparing initialization data...');
@@ -432,16 +492,30 @@ async function deployGlobalExitRootManagerL2SovereignChain(
         proxyAdmin.target, // Use centralized ProxyAdmin
         initializeData, // Initialization data for atomic initialization
     );
-    await gerProxy.waitForDeployment();
+    const deployProxyTx = gerProxy.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployProxyTx?.wait(5);
     logger.info(`✅ GER Manager proxy deployed with atomic initialization: ${gerProxy.target}`);
+
+    // Verify GER Manager proxy on Etherscan
+    await verifyContractEtherscan(
+        gerProxy.target as string,
+        [
+            gerImplementation.target, // Implementation address
+            proxyAdmin.target, // Admin address
+            initializeData, // Initialization data
+        ],
+        5, // 5 seconds wait time
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy'
+    );
 
     logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation: ${gerImplementation.target}`);
     logger.info(`✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): ${gerProxy.target}`);
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
-     await upgrades.forceImport(gerProxy.target as string, GERManagerFactory, {
+    await upgrades.forceImport(gerProxy.target as string, GERManagerFactory, {
         kind: 'transparent',
-        constructorArgs: [bridgeProxyAddress]
+        constructorArgs: [bridgeProxyAddress],
     });
     logger.info('✅ GER Manager proxy imported to Hardhat Upgrades manifest');
 
@@ -467,8 +541,17 @@ async function deployAggOracleCommittee(
 
     logger.info('📍 Step 1: Deploying AggOracleCommittee implementation...');
     const aggOracleImplementation = await AggOracleCommitteeFactory.deploy(gerManagerAddress);
-    await aggOracleImplementation.waitForDeployment();
+    const deployTx = aggOracleImplementation.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployTx?.wait(5);
     logger.info(`✅ AggOracleCommittee implementation deployed: ${aggOracleImplementation.target}`);
+
+    // Verify AggOracleCommittee implementation on Etherscan
+    await verifyContractEtherscan(
+        aggOracleImplementation.target as string,
+        [gerManagerAddress], // Constructor argument: GER Manager address
+        5 // 5 seconds wait time
+    );
 
     logger.info('📍 Step 2: Deploying AggOracleCommittee proxy with centralized ProxyAdmin...');
     const transparentProxyFactory = await ethers.getContractFactory(
@@ -488,8 +571,22 @@ async function deployAggOracleCommittee(
         proxyAdmin.target, // Use centralized ProxyAdmin
         initializeData, // Initialization data for atomic initialization
     );
-    await aggOracleProxy.waitForDeployment();
+    const deployProxyTx = aggOracleProxy.deploymentTransaction();
+    // Wait for 5 confirmations for correct etherscan verification
+    await deployProxyTx?.wait(5);
     logger.info(`✅ AggOracleCommittee proxy deployed and initialized: ${aggOracleProxy.target}`);
+
+    // Verify AggOracleCommittee proxy on Etherscan
+    await verifyContractEtherscan(
+        aggOracleProxy.target as string,
+        [
+            aggOracleImplementation.target, // Implementation address
+            proxyAdmin.target, // Admin address
+            initializeData // Initialization data
+        ],
+        5, // 5 seconds wait time
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy'
+    );
 
     logger.info(`✅ AggOracleCommittee implementation: ${aggOracleImplementation.target}`);
 
