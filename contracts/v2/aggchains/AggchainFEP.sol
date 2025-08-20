@@ -68,8 +68,12 @@ contract AggchainFEP is AggchainBase {
     bytes2 public constant AGGCHAIN_TYPE = 0x0001;
 
     /// @notice Op L2OO Semantic version.
-    /// @custom:semver v2.0.0
-    string public constant AGGCHAIN_FEP_VERSION = "v2.0.0";
+    /// @custom:semver v3.0.0
+    string public constant AGGCHAIN_FEP_VERSION = "v3.0.0";
+
+    /// @notice The genesis configuration name.
+    bytes32 public constant GENESIS_CONFIG_NAME =
+        keccak256("opsuccinct_genesis");
 
     ////////////////////////////////////////////////////////////
     //                       Storage                          //
@@ -117,9 +121,8 @@ contract AggchainFEP is AggchainBase {
     /// @notice Mapping of configuration names to OpSuccinctConfig structs.
     mapping(bytes32 => OpSuccinctConfig) public opSuccinctConfigs;
 
-    /// @notice The genesis configuration name.
-    bytes32 public constant GENESIS_CONFIG_NAME =
-        keccak256("opsuccinct_genesis");
+    /// @notice The name of the current OP Succinct configuration to use for the next submission.
+    bytes32 public selectedOpSuccinctConfigName;
 
     ////////////////////////////////////////////////////////////
     //                         Events                         //
@@ -207,6 +210,10 @@ contract AggchainFEP is AggchainBase {
     /// @param configName The name of the configuration that was deleted.
     event OpSuccinctConfigDeleted(bytes32 indexed configName);
 
+    /// @notice Emitted when the current OP Succinct configuration is set for use.
+    /// @param configName The name of the configuration that was set for use.
+    event OpSuccinctConfigSelected(bytes32 indexed configName);
+
     ////////////////////////////////////////////////////////////
     //                         Errors                         //
     ////////////////////////////////////////////////////////////
@@ -252,6 +259,9 @@ contract AggchainFEP is AggchainBase {
 
     /// @notice Thrown when trying to initialize the wrong initialize function.
     error InvalidInitializer();
+
+    /// @notice Thrown when the config does not exist
+    error ConfigDoesNotExist();
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -668,6 +678,10 @@ contract AggchainFEP is AggchainBase {
             _config.rollupConfigHash != bytes32(0);
     }
 
+    ////////////////////////////////////////////////////////
+    //                aggchainManager functions           //
+    ////////////////////////////////////////////////////////
+
     /// @notice Updates or creates an OP Succinct configuration.
     /// @param _configName The name of the configuration.
     /// @param _rollupConfigHash The rollup config hash.
@@ -718,9 +732,17 @@ contract AggchainFEP is AggchainBase {
         emit OpSuccinctConfigDeleted(_configName);
     }
 
-    ////////////////////////////////////////////////////////
-    //                aggchainManager functions           //
-    ////////////////////////////////////////////////////////
+    /// @notice Sets the OP Succinct configuration to use for the next submission.
+    /// @param _configName The name of the configuration to use.
+    function selectOpSuccinctConfig(
+        bytes32 _configName
+    ) external onlyAggchainManager {
+        if (!isValidOpSuccinctConfig(opSuccinctConfigs[_configName])) {
+            revert ConfigDoesNotExist();
+        }
+        selectedOpSuccinctConfigName = _configName;
+        emit OpSuccinctConfigSelected(_configName);
+    }
 
     /// @notice Update the submission interval.
     /// @param _submissionInterval The new submission interval.
@@ -733,48 +755,6 @@ contract AggchainFEP is AggchainBase {
 
         emit SubmissionIntervalUpdated(submissionInterval, _submissionInterval);
         submissionInterval = _submissionInterval;
-    }
-
-    /// @notice Updates the aggregation verification key.
-    /// @param _aggregationVkey The new aggregation verification key.
-    function updateAggregationVkey(
-        bytes32 _aggregationVkey
-    ) external onlyAggchainManager {
-        if (_aggregationVkey == bytes32(0)) {
-            revert AggregationVkeyMustBeDifferentThanZero();
-        }
-
-        emit AggregationVkeyUpdated(aggregationVkey, _aggregationVkey);
-        aggregationVkey = _aggregationVkey;
-    }
-
-    /// @notice Updates the range verification key commitment.
-    /// @param _rangeVkeyCommitment The new range verification key commitment.
-    function updateRangeVkeyCommitment(
-        bytes32 _rangeVkeyCommitment
-    ) external onlyAggchainManager {
-        if (_rangeVkeyCommitment == bytes32(0)) {
-            revert RangeVkeyCommitmentMustBeDifferentThanZero();
-        }
-
-        emit RangeVkeyCommitmentUpdated(
-            rangeVkeyCommitment,
-            _rangeVkeyCommitment
-        );
-        rangeVkeyCommitment = _rangeVkeyCommitment;
-    }
-
-    /// @notice Updates the rollup config hash.
-    /// @param _rollupConfigHash The new rollup config hash.
-    function updateRollupConfigHash(
-        bytes32 _rollupConfigHash
-    ) external onlyAggchainManager {
-        if (_rollupConfigHash == bytes32(0)) {
-            revert RollupConfigHashMustBeDifferentThanZero();
-        }
-
-        emit RollupConfigHashUpdated(rollupConfigHash, _rollupConfigHash);
-        rollupConfigHash = _rollupConfigHash;
     }
 
     /// @notice Enables optimistic mode.

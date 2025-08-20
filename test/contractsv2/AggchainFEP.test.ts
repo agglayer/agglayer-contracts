@@ -264,7 +264,7 @@ describe('AggchainFEP', () => {
             aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
-        expect(await aggchainFEPContract.version()).to.be.equal('v2.0.0');
+        expect(await aggchainFEPContract.version()).to.be.equal('v3.0.0');
     });
 
     it('should check the v1 initialized parameters', async () => {
@@ -816,5 +816,140 @@ describe('AggchainFEP', () => {
 
         const finalOptimisticModeManager = await aggchainFEPContract.optimisticModeManager();
         expect(finalOptimisticModeManager).to.be.equal(deployer.address);
+    });
+
+    it('should check OpSuccinctConfig management functions', async () => {
+        const blockData = await ethers.provider.getBlock('latest');
+        const blockDataTimestamp = blockData?.timestamp;
+
+        // Define the struct values
+        const initParams = {
+            l2BlockTime: 1,
+            rollupConfigHash: ethers.id('rollupConfigHash'),
+            startingOutputRoot: ethers.id('startingOutputRoot'),
+            startingBlockNumber: 100,
+            startingTimestamp: blockDataTimestamp - 20,
+            submissionInterval: 5,
+            optimisticModeManager: optModeManager.address,
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
+        };
+
+        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
+            initParams,
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            vKeyManager.address,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+        );
+
+        // initialize using rollup manager
+        await aggchainFEPContract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+
+        // Test addOpSuccinctConfig
+        const configName = ethers.id('test_config');
+        const rollupConfigHash = ethers.id('new_rollup_config_hash');
+        const aggregationVkey = ethers.id('new_aggregation_vkey');
+        const rangeVkeyCommitment = ethers.id('new_range_vkey_commitment');
+
+        // Only aggchainManager can add configs
+        await expect(
+            aggchainFEPContract
+                .connect(deployer)
+                .addOpSuccinctConfig(configName, rollupConfigHash, aggregationVkey, rangeVkeyCommitment),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyAggchainManager');
+
+        // Add config successfully
+        await expect(
+            aggchainFEPContract
+                .connect(aggchainManager)
+                .addOpSuccinctConfig(configName, rollupConfigHash, aggregationVkey, rangeVkeyCommitment),
+        )
+            .to.emit(aggchainFEPContract, 'OpSuccinctConfigUpdated')
+            .withArgs(configName, aggregationVkey, rangeVkeyCommitment, rollupConfigHash);
+
+        // Test adding config with empty name
+        await expect(
+            aggchainFEPContract
+                .connect(aggchainManager)
+                .addOpSuccinctConfig(ethers.ZeroHash, rollupConfigHash, aggregationVkey, rangeVkeyCommitment),
+        ).to.be.revertedWith('L2OutputOracle: config name cannot be empty');
+
+        // Test adding config with invalid parameters (zero values)
+        await expect(
+            aggchainFEPContract
+                .connect(aggchainManager)
+                .addOpSuccinctConfig(
+                    ethers.id('invalid_config'),
+                    ethers.ZeroHash,
+                    aggregationVkey,
+                    rangeVkeyCommitment,
+                ),
+        ).to.be.revertedWith('L2OutputOracle: invalid OP Succinct configuration parameters');
+
+        // Test adding duplicate config
+        await expect(
+            aggchainFEPContract
+                .connect(aggchainManager)
+                .addOpSuccinctConfig(configName, rollupConfigHash, aggregationVkey, rangeVkeyCommitment),
+        ).to.be.revertedWith('L2OutputOracle: config already exists');
+
+        // Test selectOpSuccinctConfig
+        // Only aggchainManager can select configs
+        await expect(
+            aggchainFEPContract.connect(deployer).selectOpSuccinctConfig(configName),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyAggchainManager');
+
+        // Select config successfully
+        await expect(aggchainFEPContract.connect(aggchainManager).selectOpSuccinctConfig(configName))
+            .to.emit(aggchainFEPContract, 'OpSuccinctConfigSelected')
+            .withArgs(configName);
+
+        // Verify the selected config
+        const selectedConfig = await aggchainFEPContract.selectedOpSuccinctConfigName();
+        expect(selectedConfig).to.be.equal(configName);
+
+        // Test selecting non-existent config
+        await expect(
+            aggchainFEPContract.connect(aggchainManager).selectOpSuccinctConfig(ethers.id('non_existent')),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'ConfigDoesNotExist');
+
+        // Test deleteOpSuccinctConfig
+        // Only aggchainManager can delete configs
+        await expect(
+            aggchainFEPContract.connect(deployer).deleteOpSuccinctConfig(configName),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyAggchainManager');
+
+        // Delete config successfully
+        await expect(aggchainFEPContract.connect(aggchainManager).deleteOpSuccinctConfig(configName))
+            .to.emit(aggchainFEPContract, 'OpSuccinctConfigDeleted')
+            .withArgs(configName);
+
+        // Test deleting non-existent config
+        await expect(aggchainFEPContract.connect(aggchainManager).deleteOpSuccinctConfig(ethers.id('non_existent'))).to
+            .not.be.reverted; // Should not revert but also not emit event
+
+        // Test isValidOpSuccinctConfig
+        const validConfig = await aggchainFEPContract.isValidOpSuccinctConfig({
+            aggregationVkey: ethers.id('valid_agg_vkey'),
+            rangeVkeyCommitment: ethers.id('valid_range_vkey'),
+            rollupConfigHash: ethers.id('valid_rollup_hash'),
+        });
+        expect(validConfig).to.be.true;
+
+        const invalidConfig = await aggchainFEPContract.isValidOpSuccinctConfig({
+            aggregationVkey: ethers.ZeroHash,
+            rangeVkeyCommitment: ethers.id('valid_range_vkey'),
+            rollupConfigHash: ethers.id('valid_rollup_hash'),
+        });
+        expect(invalidConfig).to.be.false;
     });
 });
