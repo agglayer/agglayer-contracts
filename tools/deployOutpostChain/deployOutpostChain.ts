@@ -7,7 +7,7 @@
  * No CREATE3 is used, making the deployment process much simpler and straightforward.
  */
 
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -311,23 +311,33 @@ async function deployBridgeL2SovereignChain(
         deployer,
     );
     /*
+     * WHY SEPARATED DEPLOYMENT IS REQUIRED FOR BRIDGE:
+     *
+     * The Bridge CANNOT use atomic initialization (upgrades.deployProxy with initializer) because:
+     *
+     * 1. During initialize(), the Bridge calls _deployWrappedToken() to create the WETH token
+     * 2. _deployWrappedToken() uses CREATE2 to deploy a TokenWrappedTransparentProxy
+     * 3. The TokenWrappedTransparentProxy constructor calls back to the Bridge proxy:
+     *
+     *    constructor() ERC1967Proxy(
+     *        IPolygonZkEVMBridgeV2(msg.sender).getWrappedTokenBridgeImplementation(), // ← CALLBACK
+     *        new bytes(0)
+     *    ) {
+     *        _changeAdmin(IPolygonZkEVMBridgeV2(msg.sender).getProxiedTokensManager()); // ← CALLBACK
+     *    }
+     *
+     * 4. ❌ These callbacks FAIL during atomic deployment because:
+     *    - The Bridge proxy exists but is not yet fully initialized
+     *    - The proxy cannot handle function calls during its own initialization process
+     *    - This creates a circular dependency: proxy needs to be ready to handle calls
+     *      but the calls are needed to complete the initialization
+     *
+     * SOLUTION: Deploy implementation → Deploy proxy (empty initData) → Initialize separately
+     *
      * FRONTRUNNING PROTECTION: onlyDeployer modifier ensures secure initialization
-     *
-     * The BridgeL2SovereignChain contract includes an `onlyDeployer` modifier that restricts
-     * the initialize() function to only be callable by the deployer address (set immutably
-     * in the constructor). This completely eliminates the risk of frontrunning attacks.
-     *
-     * DEPLOYER VERIFICATION:
      * - deployer = msg.sender (set in implementation constructor)
      * - require(msg.sender == deployer, OnlyDeployer()) (in initialize function)
      * - This protection is immutable and cannot be bypassed
-     *
-     * SEPARATED DEPLOYMENT APPROACH:
-     * We still use separated deployment (proxy with empty initData + separate initialize call)
-     * to maintain compatibility with the complex initialization logic that includes calls
-     * to the proxy while it's not ready and the initialization will likely fail if done in a single atomic transaction.
-     *
-     * SECURITY: No frontrunning risk thanks to onlyDeployer protection
      */
     const bridgeProxy = await transparentProxyFactory.deploy(
         bridgeImplementation.target, // Implementation address
@@ -369,6 +379,12 @@ async function deployBridgeL2SovereignChain(
 
     logger.info(`✅ BridgeL2SovereignChain implementation: ${bridgeImplementation.target}`);
     logger.info(`✅ BridgeL2SovereignChain proxy (initialized): ${bridgeProxy.target}`);
+
+    // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
+    await upgrades.forceImport(bridgeProxy.target as string, BridgeFactory, {
+        kind: 'transparent'
+    });
+    logger.info('✅ Bridge proxy imported to Hardhat Upgrades manifest');
 
     return {
         proxy: bridgeProxy.target as string,
@@ -422,6 +438,14 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation: ${gerImplementation.target}`);
     logger.info(`✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): ${gerProxy.target}`);
 
+    // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
+     await upgrades.forceImport(gerProxy.target as string, GERManagerFactory, {
+        kind: 'transparent',
+        constructorArgs: [bridgeProxyAddress]
+    });
+    logger.info('✅ GER Manager proxy imported to Hardhat Upgrades manifest');
+
+
     return {
         proxy: gerProxy.target as string,
         implementation: gerImplementation.target as string,
@@ -468,6 +492,12 @@ async function deployAggOracleCommittee(
     logger.info(`✅ AggOracleCommittee proxy deployed and initialized: ${aggOracleProxy.target}`);
 
     logger.info(`✅ AggOracleCommittee implementation: ${aggOracleImplementation.target}`);
+
+    // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
+    await upgrades.forceImport(aggOracleProxy.target as string, AggOracleCommitteeFactory, {
+        kind: 'transparent'
+    });
+    logger.info('✅ AggOracleCommittee proxy imported to Hardhat Upgrades manifest');
 
     return {
         proxy: aggOracleProxy.target as string,
