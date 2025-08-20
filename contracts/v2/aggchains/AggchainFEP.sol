@@ -121,9 +121,6 @@ contract AggchainFEP is AggchainBase {
     /// @notice Mapping of configuration names to OpSuccinctConfig structs.
     mapping(bytes32 => OpSuccinctConfig) public opSuccinctConfigs;
 
-    /// @notice The name of the current OP Succinct configuration to use for the next submission.
-    bytes32 public selectedOpSuccinctConfigName;
-
     ////////////////////////////////////////////////////////////
     //                         Events                         //
     ////////////////////////////////////////////////////////////
@@ -517,7 +514,7 @@ contract AggchainFEP is AggchainBase {
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
     ) public view override returns (bytes32, bytes32) {
-        if (aggchainData.length != 32 * 3) {
+        if (aggchainData.length != 32 * 4) {
             revert InvalidAggchainDataLength();
         }
 
@@ -525,8 +522,9 @@ contract AggchainFEP is AggchainBase {
         (
             bytes4 _aggchainVKeySelector,
             bytes32 _outputRoot,
-            uint256 _l2BlockNumber
-        ) = abi.decode(aggchainData, (bytes4, bytes32, uint256));
+            uint256 _l2BlockNumber,
+            bytes32 _configName
+        ) = abi.decode(aggchainData, (bytes4, bytes32, uint256, bytes32));
 
         // Check the aggchainType embedded in the _aggchainVKeySelector is valid
         if (
@@ -550,16 +548,19 @@ contract AggchainFEP is AggchainBase {
             revert L2OutputRootCannotBeZero();
         }
 
+        // Fetch config name
+        OpSuccinctConfig memory config = opSuccinctConfigs[_configName];
+
         bytes32 aggchainParams = keccak256(
             abi.encodePacked(
                 l2Outputs[latestOutputIndex()].outputRoot,
                 _outputRoot,
                 _l2BlockNumber,
-                rollupConfigHash,
+                config.rollupConfigHash,
                 optimisticMode,
                 trustedSequencer,
-                rangeVkeyCommitment,
-                aggregationVkey
+                config.rangeVkeyCommitment,
+                config.aggregationVkey
             )
         );
 
@@ -640,14 +641,14 @@ contract AggchainFEP is AggchainBase {
     function onVerifyPessimistic(
         bytes memory aggchainData
     ) external onlyRollupManager {
-        if (aggchainData.length != 32 * 3) {
+        if (aggchainData.length != 32 * 4) {
             revert InvalidAggchainDataLength();
         }
 
         // decode the aggchainData
-        (, bytes32 _outputRoot, uint256 _l2BlockNumber) = abi.decode(
+        (, bytes32 _outputRoot, uint256 _l2BlockNumber, ) = abi.decode(
             aggchainData,
-            (bytes4, bytes32, uint256)
+            (bytes4, bytes32, uint256, bytes32)
         );
 
         emit OutputProposed(
@@ -730,18 +731,6 @@ contract AggchainFEP is AggchainBase {
     ) external onlyAggchainManager {
         delete opSuccinctConfigs[_configName];
         emit OpSuccinctConfigDeleted(_configName);
-    }
-
-    /// @notice Sets the OP Succinct configuration to use for the next submission.
-    /// @param _configName The name of the configuration to use.
-    function selectOpSuccinctConfig(
-        bytes32 _configName
-    ) external onlyAggchainManager {
-        if (!isValidOpSuccinctConfig(opSuccinctConfigs[_configName])) {
-            revert ConfigDoesNotExist();
-        }
-        selectedOpSuccinctConfigName = _configName;
-        emit OpSuccinctConfigSelected(_configName);
     }
 
     /// @notice Update the submission interval.
