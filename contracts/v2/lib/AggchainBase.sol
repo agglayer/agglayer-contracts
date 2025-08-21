@@ -101,10 +101,6 @@ abstract contract AggchainBase is
     /// @notice Hash of the current aggchainSigners array
     bytes32 public aggchainSignersHash;
 
-    ////////////////////////////////////////////////////////////
-    //                      Configs                           //
-    ////////////////////////////////////////////////////////////
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -359,13 +355,13 @@ abstract contract AggchainBase is
             _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
         }
 
+        if (aggchainSigners.length > 255) {
+            revert AggchainSignersTooHigh();
+        }
+
         // Update threshold if provided
         if (_newThreshold > aggchainSigners.length) {
             revert InvalidThreshold();
-        }
-
-        if (_newThreshold > 255) {
-            revert ThresholdTooHigh();
         }
 
         threshold = _newThreshold;

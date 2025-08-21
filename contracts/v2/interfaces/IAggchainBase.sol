@@ -115,7 +115,7 @@ interface IAggchainBaseErrors {
     error InvalidAggchainDataLength();
     /// @notice Thrown when the aggchainvKeySelectir contains an invalid aggchain type.
     error InvalidAggchainType();
-    /// @notice Thrown when threshold is zero or greater than the number of aggchainSigners.
+    /// @notice Thrown when threshold is zero, greater than the number of aggchainSigners.
     error InvalidThreshold();
     /// @notice Thrown when trying to add a signer that already exists.
     error SignerAlreadyExists();
@@ -127,8 +127,8 @@ interface IAggchainBaseErrors {
     error ThresholdTooHighAfterRemoval();
     /// @notice Thrown when trying to add a zero address as a signer.
     error SignerCannotBeZero();
-    /// @notice Thrown when the threshold is greater than the number of signers or 255.
-    error ThresholdTooHigh();
+    /// @notice Thrown when the aggchainSingers is greater than 255.
+    error AggchainSignersTooHigh();
     /// @notice Thrown when trying to add a signer with an empty URL.
     error SignerURLCannotBeEmpty();
     /// @notice Thrown when the indices for signer removal are not in descending order.

@@ -189,6 +189,7 @@ contract AggchainECDSAMultisig is AggchainBase {
         }
     }
 
+    
     ////////////////////////////////////////////////////////////
     //                    Functions: views                    //
     ////////////////////////////////////////////////////////////
@@ -215,17 +216,8 @@ contract AggchainECDSAMultisig is AggchainBase {
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
     ) public pure override returns (bytes32, bytes32) {
-        if (aggchainData.length != 32) {
+        if (aggchainData.length != 0) {
             revert InvalidAggchainDataLength();
-        }
-
-        // Only aggchainVKeySelector is required (bytes4 ABI-encoded as 32 bytes)
-        bytes4 _aggchainVKeySelector = abi.decode(aggchainData, (bytes4));
-
-        if (
-            getAggchainTypeFromSelector(_aggchainVKeySelector) != AGGCHAIN_TYPE
-        ) {
-            revert InvalidAggchainType();
         }
 
         // aggchainParams is not used in this implementation (signersHash and threshold are added directly in base)
@@ -240,7 +232,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     function onVerifyPessimistic(
         bytes calldata aggchainData
     ) external onlyRollupManager {
-        if (aggchainData.length != 32) {
+        if (aggchainData.length != 0) {
             revert InvalidAggchainDataLength();
         }
 

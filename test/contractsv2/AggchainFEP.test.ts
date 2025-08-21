@@ -935,7 +935,7 @@ describe('AggchainFEP', () => {
 
         // Test deleting non-existent config
         await expect(aggchainFEPContract.connect(aggchainManager).deleteOpSuccinctConfig(ethers.id('non_existent'))).to
-            .not.be.reverted; // Should not revert but also not emit event
+            .not.be.reverted; // Should not revert since no validation exists
 
         // Test isValidOpSuccinctConfig
         const validConfig = await aggchainFEPContract.isValidOpSuccinctConfig({
