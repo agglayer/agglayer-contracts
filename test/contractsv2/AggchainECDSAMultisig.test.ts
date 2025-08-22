@@ -3,7 +3,10 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { Address, AggchainECDSAMultisig } from '../../typechain-types';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
-import * as utilsECDSAMultisig from '../../src/utils-aggchain-ECDSA-multisig';
+// Helper function for encoding aggchain data for ECDSA Multisig
+function encodeAggchainDataECDSAMultisig(aggchainVKeySelector: string) {
+    return ethers.AbiCoder.defaultAbiCoder().encode(['bytes4'], [aggchainVKeySelector]);
+}
 
 describe('AggchainECDSAMultisig', () => {
     let trustedSequencer: any;
@@ -273,7 +276,7 @@ describe('AggchainECDSAMultisig', () => {
 
         // Test invalid aggchain data length
         // For ECDSA Multisig, empty data is VALID. Non-empty data should revert
-        const invalidAggchainData = utilsECDSAMultisig.encodeAggchainDataECDSAMultisig('0x12340001');
+        const invalidAggchainData = encodeAggchainDataECDSAMultisig('0x12340001');
         await expect(aggchainECDSAMultisigContract.getAggchainHash(invalidAggchainData)).to.be.revertedWithCustomError(
             aggchainECDSAMultisigContract,
             'InvalidAggchainDataLength',
@@ -378,7 +381,7 @@ describe('AggchainECDSAMultisig', () => {
         );
 
         // Test invalid aggchain data length - non-empty data should revert
-        const invalidData = utilsECDSAMultisig.encodeAggchainDataECDSAMultisig('0x12340001');
+        const invalidData = encodeAggchainDataECDSAMultisig('0x12340001');
         await expect(
             aggchainECDSAMultisigContract
                 .connect(rollupManagerSigner)

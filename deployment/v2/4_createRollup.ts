@@ -9,7 +9,6 @@ import { ethers, upgrades } from 'hardhat';
 import { processorUtils, Constants } from '@0xpolygonhermez/zkevm-commonjs';
 import '../helpers/utils';
 
-import * as utilsECDSA from '../../src/utils-aggchain-ECDSA';
 import * as utilsFEP from '../../src/utils-aggchain-FEP';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
 import * as utilsPP from '../../src/pessimistic-utils';
@@ -305,7 +304,6 @@ async function main() {
     let genesisFinal;
     let verifierAddress;
     let initializeBytesAggchainRollupManager;
-    let initializeBytesAggchain;
 
     if (arraySupportedAggchains.includes(consensusContract)) {
         // If Aggchain
@@ -321,31 +319,32 @@ async function main() {
             createRollupParameters.aggchainParams.aggchainManager,
         );
 
-        if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            initializeBytesAggchain = utilsECDSA.encodeInitializeBytesAggchainECDSAv0(
-                createRollupParameters.aggchainParams.useDefaultGateway,
-                createRollupParameters.aggchainParams.initOwnedAggchainVKey,
-                createRollupParameters.aggchainParams.initAggchainVKeySelector,
-                createRollupParameters.aggchainParams.vKeyManager,
-                adminZkEVM,
-                trustedSequencer,
-                gasTokenAddress,
-                trustedSequencerURL,
-                networkName,
-            );
-        } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP) {
-            initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-                createRollupParameters.aggchainParams.initParams,
-                createRollupParameters.aggchainParams.useDefaultGateway,
-                createRollupParameters.aggchainParams.initOwnedAggchainVKey,
-                createRollupParameters.aggchainParams.initAggchainVKeySelector,
-                createRollupParameters.aggchainParams.vKeyManager,
-                adminZkEVM,
-                trustedSequencer,
-                gasTokenAddress,
-                trustedSequencerURL,
-                networkName,
-            );
+        // NOTE: Aggchain contracts now accept parameters directly in their initialize() functions
+        // The initializeBytesAggchain will be empty and initialization will be done directly after deployment
+
+        // Store initialization parameters for later use
+        const aggchainInitParams = {
+            consensusContract,
+            useDefaultGateway: createRollupParameters.aggchainParams.useDefaultGateway,
+            initOwnedAggchainVKey: createRollupParameters.aggchainParams.initOwnedAggchainVKey,
+            initAggchainVKeySelector: createRollupParameters.aggchainParams.initAggchainVKeySelector,
+            aggchainManager: createRollupParameters.aggchainParams.aggchainManager,
+            adminZkEVM,
+            trustedSequencer,
+            gasTokenAddress,
+            trustedSequencerURL,
+            networkName,
+        };
+
+        if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP) {
+            // Add FEP-specific parameters
+            aggchainInitParams.initParams = createRollupParameters.aggchainParams.initParams;
+            aggchainInitParams.signers = []; // No signers initially
+            aggchainInitParams.threshold = 0; // No threshold initially
+        } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
+            // Add ECDSA-specific parameters
+            aggchainInitParams.signers = createRollupParameters.aggchainParams.signers || [];
+            aggchainInitParams.threshold = createRollupParameters.aggchainParams.threshold || 0;
         } else {
             throw new Error(`Aggchain ${consensusContract} not supported`);
         }
@@ -447,7 +446,8 @@ async function main() {
     if (arraySupportedAggchains.includes(consensusContract)) {
         let aggchainType = utilsFEP.AGGCHAIN_TYPE_FEP;
         if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            aggchainType = utilsECDSA.AGGCHAIN_TYPE_ECDSA;
+            // ECDSA Multisig uses type 0x0000
+            aggchainType = '0x0000';
         }
 
         // Load aggLayerGateway
@@ -486,9 +486,38 @@ async function main() {
 
         outputJson.defaultAggchainVKeyALGateway = defaultAggchainVKeyALGateway;
 
-        // initialize aggchain
+        // initialize aggchain with direct parameters
         const aggchainContract = await PolygonconsensusFactory.attach(newZKEVMAddress);
-        const txInitAggChain = await aggchainContract.initialize(initializeBytesAggchain);
+
+        let txInitAggChain;
+        if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP) {
+            // Initialize FEP contract with direct parameters
+            txInitAggChain = await aggchainContract.initialize(
+                aggchainInitParams.initParams,
+                aggchainInitParams.signers,
+                aggchainInitParams.threshold,
+                aggchainInitParams.useDefaultGateway,
+                aggchainInitParams.initOwnedAggchainVKey,
+                aggchainInitParams.initAggchainVKeySelector,
+                aggchainInitParams.adminZkEVM,
+                aggchainInitParams.trustedSequencer,
+                aggchainInitParams.gasTokenAddress,
+                aggchainInitParams.trustedSequencerURL,
+                aggchainInitParams.networkName,
+            );
+        } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
+            // Initialize ECDSA Multisig contract with direct parameters
+            txInitAggChain = await aggchainContract.initialize(
+                aggchainInitParams.adminZkEVM,
+                aggchainInitParams.trustedSequencer,
+                aggchainInitParams.gasTokenAddress,
+                aggchainInitParams.trustedSequencerURL,
+                aggchainInitParams.networkName,
+                aggchainInitParams.signers,
+                aggchainInitParams.threshold,
+            );
+        }
+
         await txInitAggChain.wait();
     }
 

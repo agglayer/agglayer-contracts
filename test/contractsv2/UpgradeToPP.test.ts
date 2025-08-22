@@ -16,7 +16,7 @@ import {
 } from '../../typechain-types';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
-import { encodeAggchainDataFEP, encodeInitializeBytesAggchainFEPv1 } from '../../src/utils-aggchain-FEP';
+import { encodeAggchainDataFEP } from '../../src/utils-aggchain-FEP';
 import { AggchainFEP } from '../../typechain-types/contracts/aggchains';
 
 const MerkleTreeBridge = MTBridge;

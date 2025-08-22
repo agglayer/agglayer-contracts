@@ -23,12 +23,7 @@ import {
     computeSignersHash,
 } from '../../src/utils-common-aggchain';
 
-import {
-    encodeAggchainDataFEP,
-    encodeInitializeBytesAggchainFEPv1,
-    encodeInitializeBytesAggchainFEPv0,
-    computeHashAggchainParamsFEP,
-} from '../../src/utils-aggchain-FEP';
+import { encodeAggchainDataFEP, computeHashAggchainParamsFEP } from '../../src/utils-aggchain-FEP';
 
 import { NO_ADDRESS } from '../../src/constants';
 

@@ -23,15 +23,30 @@ async function main() {
 
     const { initParams, useDefaultGateway, initOwnedAggchainVKey, initAggchainVKeyVersion, vKeyManager } = params;
 
-    const result = utilsFEP.encodeInitializeBytesAggchainFEPv1(
+    // Generate initialization parameters for FEP v1 (migration from pessimistic consensus)
+    const initializationParams = {
         initParams,
+        signers: [], // No signers initially
+        threshold: 0, // No threshold initially
         useDefaultGateway,
         initOwnedAggchainVKey,
         initAggchainVKeyVersion,
         vKeyManager,
-    );
-    logger.info('InitializeBytesAggchainFEPv1:');
-    logger.info(result);
+    };
+    
+    logger.info('FEP v1 Initialization Parameters (for migration from pessimistic consensus):');
+    logger.info(JSON.stringify(initializationParams, null, 2));
+    
+    logger.info('\nTo initialize the FEP contract from pessimistic consensus, call:');
+    logger.info('aggchainContract.initializeFromPessimisticConsensus(');
+    logger.info('  initParams,');
+    logger.info('  [], // signers');
+    logger.info('  0, // threshold');
+    logger.info('  useDefaultGateway,');
+    logger.info('  initOwnedAggchainVKey,');
+    logger.info('  initAggchainVKeyVersion,');
+    logger.info('  vKeyManager');
+    logger.info(');');
 }
 main().then(
     () => {

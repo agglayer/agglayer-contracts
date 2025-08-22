@@ -22,7 +22,6 @@ import {
     computeAggchainHash,
     computeSignersHash,
 } from '../../src/utils-common-aggchain';
-import { encodeAggchainDataECDSAMultisig } from '../../src/utils-aggchain-ECDSA-multisig';
 
 import { NO_ADDRESS } from '../../src/constants';
 

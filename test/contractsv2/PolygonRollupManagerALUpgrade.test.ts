@@ -23,7 +23,6 @@ import {
 } from '../../src/utils-common-aggchain';
 import { NO_ADDRESS } from '../../src/constants';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
-import { encodeAggchainDataECDSAMultisig } from '../../src/utils-aggchain-ECDSA-multisig';
 
 const randomPessimisticVKey = computeRandomBytes(32);
 
