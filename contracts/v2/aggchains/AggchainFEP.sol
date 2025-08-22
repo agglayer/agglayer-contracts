@@ -324,6 +324,8 @@ contract AggchainFEP is AggchainBase {
     /// @param _networkName The network name
     function initialize(
         InitParams memory _initParams,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold,
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
@@ -331,9 +333,7 @@ contract AggchainFEP is AggchainBase {
         address _trustedSequencer,
         address _gasTokenAddress,
         string memory _trustedSequencerURL,
-        string memory _networkName,
-        SignerInfo[] memory _signersToAdd,
-        uint256 _newThreshold
+        string memory _networkName
     ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
         if (_initializerVersion != 0) {
             revert InvalidInitializer();
@@ -356,9 +356,6 @@ contract AggchainFEP is AggchainBase {
             }
         }
 
-        // init FEP params
-        _initializeAggchain(_initParams);
-
         // Set aggchainBase variables
         _initializeAggchainBaseAndConsensusBase(
             _admin,
@@ -370,6 +367,9 @@ contract AggchainFEP is AggchainBase {
             _initOwnedAggchainVKey,
             _initAggchainVKeySelector
         );
+
+        // init FEP params
+        _initializeAggchain(_initParams);
 
         // update signers and threshold
         _updateSignersAndThreshold(

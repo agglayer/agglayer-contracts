@@ -9,7 +9,6 @@ describe('AggchainFEP', () => {
     let deployer: any;
     let trustedSequencer: any;
     let admin: any;
-    let vKeyManager: any;
     let rollupManagerSigner: any;
     let aggchainManager: any;
     let optModeManager: any;
@@ -38,7 +37,7 @@ describe('AggchainFEP', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedSequencer, admin, vKeyManager, aggchainManager, optModeManager] = await ethers.getSigners();
+        [deployer, trustedSequencer, admin, aggchainManager, optModeManager] = await ethers.getSigners();
 
         // deploy aggchain
         // create aggchainFEP implementation
@@ -79,18 +78,8 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No need to encode them anymore
 
         // should set the aggchainManager: error "OnlyRollupManager"
         await expect(aggchainFEPContract.initAggchainManager(aggchainManager.address)).to.be.revertedWithCustomError(
@@ -107,116 +96,134 @@ describe('AggchainFEP', () => {
         // initializeAggchain: submission interval = 0
         initParamsCp = { ...initParams };
         initParamsCp.submissionInterval = 0;
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParamsCp,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // Using modified initParamsCp
 
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParamsCp,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWithCustomError(aggchainFEPContract, 'SubmissionIntervalMustBeGreaterThanZero');
 
         // initializeAggchain: l2BlockTime = 0
         initParamsCp = { ...initParams };
         initParamsCp.l2BlockTime = 0;
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParamsCp,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // Using modified initParamsCp
 
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParamsCp,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWithCustomError(aggchainFEPContract, 'L2BlockTimeMustBeGreaterThanZero');
         // initializeAggchain: rollupConfigHash = 0
         initParamsCp = { ...initParams };
         initParamsCp.rollupConfigHash = ethers.ZeroHash;
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParamsCp,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // Using modified initParamsCp
 
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParamsCp,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWithCustomError(aggchainFEPContract, 'RollupConfigHashMustBeDifferentThanZero');
         // initializeAggchain: startingTimestamp > block.timestamp
         initParamsCp = { ...initParams };
         initParamsCp.startingTimestamp = Math.floor(Date.now() / 1000) + 1000;
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParamsCp,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // Using modified initParamsCp
 
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParamsCp,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWithCustomError(aggchainFEPContract, 'StartL2TimestampMustBeLessThanCurrentTime');
 
         initParamsCp = { ...initParams };
 
         initParamsCp = { ...initParams };
         initParamsCp.optimisticModeManager = ethers.ZeroAddress;
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParamsCp,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // Using modified initParamsCp
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParamsCp,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWithCustomError(aggchainFEPContract, 'InvalidZeroAddress');
 
         // correct initialization
-        initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
+        // Initialize parameters will be passed directly to the contract
+        // No need to encode them anymore
+
+        await aggchainFEPContract.connect(aggchainManager).initialize(
             initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
             useDefaultGateway,
             newAggchainVKey,
             aggchainVKeySelector,
-            vKeyManager.address,
             admin.address,
             trustedSequencer.address,
             gasTokenAddress,
             urlSequencer,
             networkName,
+            { gasPrice: 0 },
         );
-
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
 
         // Check initialized selector
         expect(
@@ -235,9 +242,14 @@ describe('AggchainFEP', () => {
 
         expect(await aggchainFEPContract.l2BlockTime()).to.be.equal(initParams.l2BlockTime);
         expect(await aggchainFEPContract.submissionInterval()).to.be.equal(initParams.submissionInterval);
-        expect(await aggchainFEPContract.rollupConfigHash()).to.be.equal(initParams.rollupConfigHash);
-        expect(await aggchainFEPContract.aggregationVkey()).to.be.equal(initParams.aggregationVkey);
-        expect(await aggchainFEPContract.rangeVkeyCommitment()).to.be.equal(initParams.rangeVkeyCommitment);
+
+        // These parameters are now stored in opSuccinctConfigs
+        const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
+        const genesisConfig = await aggchainFEPContract.opSuccinctConfigs(GENESIS_CONFIG_NAME);
+        expect(genesisConfig.rollupConfigHash).to.be.equal(initParams.rollupConfigHash);
+        expect(genesisConfig.aggregationVkey).to.be.equal(initParams.aggregationVkey);
+        expect(genesisConfig.rangeVkeyCommitment).to.be.equal(initParams.rangeVkeyCommitment);
+
         expect(await aggchainFEPContract.optimisticModeManager()).to.be.equal(initParams.optimisticModeManager);
         expect(await aggchainFEPContract.latestOutputIndex()).to.be.equal(0);
         expect(await aggchainFEPContract.nextOutputIndex()).to.be.equal(1);
@@ -261,7 +273,20 @@ describe('AggchainFEP', () => {
 
         // try to initialize again
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParams,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
         expect(await aggchainFEPContract.version()).to.be.equal('v3.0.0');
@@ -320,27 +345,37 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv1(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // initializeFromPessimisticConsensus function uses similar parameters
 
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+
+        // For v1, we use initializeFromPessimisticConsensus
+        await aggchainFEPContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+            initParams,
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            { gasPrice: 0 },
+        );
 
         // check all SC storage slots are correctly initialized
         // aggchain
         expect(await aggchainFEPContract.aggchainManager()).to.be.equal(aggchainManager.address);
         expect(await aggchainFEPContract.l2BlockTime()).to.be.equal(initParams.l2BlockTime);
         expect(await aggchainFEPContract.submissionInterval()).to.be.equal(initParams.submissionInterval);
-        expect(await aggchainFEPContract.rollupConfigHash()).to.be.equal(initParams.rollupConfigHash);
-        expect(await aggchainFEPContract.aggregationVkey()).to.be.equal(initParams.aggregationVkey);
-        expect(await aggchainFEPContract.rangeVkeyCommitment()).to.be.equal(initParams.rangeVkeyCommitment);
+
+        // These parameters are now stored in opSuccinctConfigs
+        const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
+        const genesisConfig = await aggchainFEPContract.opSuccinctConfigs(GENESIS_CONFIG_NAME);
+        expect(genesisConfig.rollupConfigHash).to.be.equal(initParams.rollupConfigHash);
+        expect(genesisConfig.aggregationVkey).to.be.equal(initParams.aggregationVkey);
+        expect(genesisConfig.rangeVkeyCommitment).to.be.equal(initParams.rangeVkeyCommitment);
+
         expect(await aggchainFEPContract.optimisticModeManager()).to.be.equal(initParams.optimisticModeManager);
         expect(await aggchainFEPContract.latestOutputIndex()).to.be.equal(0);
         expect(await aggchainFEPContract.nextOutputIndex()).to.be.equal(1);
@@ -364,7 +399,20 @@ describe('AggchainFEP', () => {
 
         // try to initialize again
         await expect(
-            aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 }),
+            aggchainFEPContract.connect(aggchainManager).initialize(
+                initParams,
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+                useDefaultGateway,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWith('Initializable: contract is already initialized');
     });
 
@@ -385,24 +433,27 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No encoding needed
 
         // initialize using rollup manager
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+            { gasPrice: 0 },
+        );
 
         // AggchainFEP extends AggchainBase but doesn't use signers
         // However, we need to initialize the signers hash to avoid AggchainSignersHashNotInitialized error
@@ -459,11 +510,16 @@ describe('AggchainFEP', () => {
         const finakVKey = await aggchainFEPContract.ownedAggchainVKeys(aggchainVKeySelector);
 
         const oldL2Output = await aggchainFEPContract.getL2Output(0);
-        const rollupConfigHash = await aggchainFEPContract.rollupConfigHash();
+
+        // Get config from opSuccinctConfigs
+        const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
+        const genesisConfig = await aggchainFEPContract.opSuccinctConfigs(GENESIS_CONFIG_NAME);
+        const rollupConfigHash = genesisConfig.rollupConfigHash;
+        const rangeVkeyCommitment = genesisConfig.rangeVkeyCommitment;
+        const aggregationVkey = genesisConfig.aggregationVkey;
+
         const optimisticMode = await aggchainFEPContract.optimisticMode();
         const trustedSequencerSC = await aggchainFEPContract.trustedSequencer();
-        const rangeVkeyCommitment = await aggchainFEPContract.rangeVkeyCommitment();
-        const aggregationVkey = await aggchainFEPContract.aggregationVkey();
 
         const aggchainParamsBytes = utilsFEP.computeHashAggchainParamsFEP(
             oldL2Output.outputRoot,
@@ -507,24 +563,27 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No encoding needed
 
         // initialize using rollup manager
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+            { gasPrice: 0 },
+        );
 
         // SUBMISSION_INTERVAL
         expect(await aggchainFEPContract.SUBMISSION_INTERVAL()).to.be.equal(initParams.submissionInterval);
@@ -577,24 +636,27 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No encoding needed
 
         // initialize using rollup manager
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+            { gasPrice: 0 },
+        );
 
         const newStateRoot = ethers.id('newStateRoot');
         const newl2BlockNumber = 104;
@@ -650,24 +712,27 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No encoding needed
 
         // initialize using rollup manager
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+            { gasPrice: 0 },
+        );
 
         // aggchainManager: functions
         // submission interval
@@ -739,24 +804,27 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No encoding needed
 
         // initialize using rollup manager
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+            { gasPrice: 0 },
+        );
 
         // optimisticModeManager: functions
         // enable optimistic mode
@@ -835,24 +903,27 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = utilsFEP.encodeInitializeBytesAggchainFEPv0(
-            initParams,
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // No encoding needed
 
         // initialize using rollup manager
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainFEPContract.connect(aggchainManager).initialize(initializeBytesAggchain, { gasPrice: 0 });
+        await aggchainFEPContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            useDefaultGateway,
+            newAggchainVKey,
+            aggchainVKeySelector,
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+            { gasPrice: 0 },
+        );
 
         // Test addOpSuccinctConfig
         const configName = ethers.id('test_config');

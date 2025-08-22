@@ -42,6 +42,7 @@ export function sortInitParamsAggchainFEP(initParams) {
 }
 
 /**
+ * @deprecated This function is no longer used as contracts now accept direct parameters
  * Function to encode the initialize bytes for the custom chain (version 0 --> initializerVersion = 0)
  * @param {Object} initParams initialization parameters
  * @param {Boolean} useDefaultGateway use owned gateway
@@ -98,6 +99,7 @@ export function encodeInitializeBytesAggchainFEPv0(
 }
 
 /**
+ * @deprecated This function is no longer used as contracts now accept direct parameters
  * Function to encode the initialize bytes for the custom chain (version 1 --> initializerVersion = 1)
  * @param {Object} initParams initialization parameters
  * @param {Boolean} useDefaultGateway use owned gateway

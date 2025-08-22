@@ -42,7 +42,6 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
     let emergencyCouncil: any;
     let aggLayerAdmin: any;
     let tester: any;
-    let vKeyManager: any;
     let aggchainManager: any;
     let optModeManager: any;
 
@@ -76,18 +75,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
     upgrades.silenceWarnings();
 
     async function createFEPRollup(rollupTypeIdFEP: number) {
-        const initializeBytesAggchain = encodeInitializeBytesAggchainFEPv0(
-            initParams, // init params
-            true, // useDefaultGateway
-            ethers.ZeroHash, // ownedAggchainVKeys
-            '0x00000000', // aggchainVKeysSelectors
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            ethers.ZeroAddress, // gas token address
-            '', // trusted sequencer url
-            '', // network name
-        );
+        // Initialize parameters will be passed directly to the contract
 
         // initialize bytes aggchainManager
         const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
@@ -117,7 +105,19 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainFEP');
         const aggchainECDSAContract = aggchainECDSAFactory.attach(precomputedAggchainFEPAddress as string);
 
-        await aggchainECDSAContract.connect(aggchainManager).initialize(initializeBytesAggchain);
+        await aggchainECDSAContract.connect(aggchainManager).initialize(
+            initParams,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+            true, // useDefaultGateway
+            ethers.ZeroHash, // ownedAggchainVKeys
+            '0x00000000', // aggchainVKeysSelectors
+            admin.address,
+            trustedSequencer.address,
+            ethers.ZeroAddress, // gas token address
+            '', // trusted sequencer url
+            '', // network name
+        );
 
         // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
         await aggchainECDSAContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
@@ -193,7 +193,6 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             emergencyCouncil,
             aggLayerAdmin,
             tester,
-            vKeyManager,
             aggchainManager,
             optModeManager,
         ] = await ethers.getSigners();
@@ -472,24 +471,23 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         const [, rollupAddress] = await createFEPRollup(rollupTypeIdFEP);
         const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
         const aggchainFEPContract = aggchainFEPFactory.attach(rollupAddress as string);
-        // Transfer vKeyManager role
-        expect(await aggchainFEPContract.vKeyManager()).to.equal(vKeyManager.address);
-        // Trigger onlyVKeyManager
+        // Transfer aggchainManager role
+        expect(await aggchainFEPContract.aggchainManager()).to.equal(aggchainManager.address);
+        // Trigger onlyAggchainManager
         await expect(
-            aggchainFEPContract.connect(admin).transferVKeyManagerRole(admin.address),
-        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyVKeyManager');
-        await expect(aggchainFEPContract.connect(vKeyManager).transferVKeyManagerRole(admin.address))
-            .to.emit(aggchainFEPContract, 'TransferVKeyManagerRole')
-            .withArgs(vKeyManager, admin.address);
-        // Accept vKeyManager role
-        // Trigger onlyPendingVKeyManager
-        await expect(aggchainFEPContract.connect(vKeyManager).acceptVKeyManagerRole()).to.be.revertedWithCustomError(
-            aggchainFEPContract,
-            'OnlyPendingVKeyManager',
-        );
-        await expect(aggchainFEPContract.connect(admin).acceptVKeyManagerRole())
-            .to.emit(aggchainFEPContract, 'AcceptVKeyManagerRole')
-            .withArgs(vKeyManager.address, admin.address);
+            aggchainFEPContract.connect(admin).transferAggchainManagerRole(admin.address),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyAggchainManager');
+        await expect(aggchainFEPContract.connect(aggchainManager).transferAggchainManagerRole(admin.address))
+            .to.emit(aggchainFEPContract, 'TransferAggchainManagerRole')
+            .withArgs(aggchainManager.address, admin.address);
+        // Accept aggchainManager role
+        // Trigger onlyPendingAggchainManager
+        await expect(
+            aggchainFEPContract.connect(aggchainManager).acceptAggchainManagerRole(),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'OnlyPendingAggchainManager');
+        await expect(aggchainFEPContract.connect(admin).acceptAggchainManagerRole())
+            .to.emit(aggchainFEPContract, 'AcceptAggchainManagerRole')
+            .withArgs(aggchainManager.address, admin.address);
     });
 
     it('should getAggchainHash using default gateway', async () => {
@@ -725,21 +723,8 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchainWronAggchainType = encodeInitializeBytesAggchainFEPv1(
-            initParams, // init params
-            false, // useDefaultGateway (set to false to test aggchain type validation)
-            ethers.ZeroHash, // ownedAggchainVKey
-            '0x00010002', // aggchainVkeySelector (wrong type - should be 0x0001 for FEP)
-            vKeyManager.address,
-        );
-
-        const initializeBytesAggchain = encodeInitializeBytesAggchainFEPv1(
-            initParams, // init params
-            true, // useDefaultGateway
-            ethers.ZeroHash, // ownedAggchainVKey
-            '0x00000000', // aggchainVkeySelector
-            vKeyManager.address,
-        );
+        // Initialize parameters will be passed directly to the contract
+        // Note: Wrong aggchain type will be tested with '0x00010002' selector
 
         const upgradeData = aggchainFEPFactory.interface.encodeFunctionData('initAggchainManager(address)', [
             aggchainManager.address,
@@ -757,12 +742,26 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         const aggchainManagerSC = await FEPRollupContract.aggchainManager();
         expect(aggchainManagerSC).to.be.equal(aggchainManager.address);
 
-        // initialize the FEP aggchain
+        // initialize the FEP aggchain - test wrong aggchain type
         await expect(
-            FEPRollupContract.connect(aggchainManager).initialize(initializeBytesAggchainWronAggchainType),
+            FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+                initParams,
+                false, // useDefaultGateway (set to false to test aggchain type validation)
+                ethers.ZeroHash, // ownedAggchainVKey
+                '0x00010002', // aggchainVkeySelector (wrong type - should be 0x0001 for FEP)
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+            ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidAggchainType');
 
-        await FEPRollupContract.connect(aggchainManager).initialize(initializeBytesAggchain);
+        await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+            initParams,
+            false, // useDefaultGateway (set to false to avoid needing gateway vkey)
+            ethers.id('ownedAggchainVKey'), // ownedAggchainVKey
+            '0x00010001', // aggchainVkeySelector (valid FEP selector)
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
+        );
 
         // Try update rollup by rollupAdmin but trigger UpdateToOldRollupTypeID
         // Create a new pessimistic rollup type
@@ -812,7 +811,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         const randomProof = computeRandomBytes(128);
         // append first 4 bytes to the proof to select the pessimistic vkey
         const proofWithSelector = `${PESSIMISTIC_SELECTOR}${randomProof.slice(2)}`;
-        // Should revert due to unset signers hash
+        // Should revert due to aggchain vkey not found (0x12340001 doesn't match the initialized 0x00010001)
         await expect(
             rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
                 pessimisticRollupID, // rollupID
@@ -822,17 +821,15 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
                 proofWithSelector,
                 CUSTOM_DATA_FEP,
             ),
-        ).to.be.revertedWithCustomError(FEPRollupContract, 'AggchainSignersHashNotInitialized');
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'AggchainVKeyNotFound');
 
         // Initialize signers hash with empty signers to move past the signers hash check
         await FEPRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
-        // Add default AggchainVKey
-        const aggchainVKey = computeRandomBytes(32);
-        await expect(
-            aggLayerGatewayContract.connect(aggLayerAdmin).addDefaultAggchainVKey(aggchainVKeySelector, aggchainVKey),
-        )
-            .to.emit(aggLayerGatewayContract, 'AddDefaultAggchainVKey')
-            .withArgs(aggchainVKeySelector, aggchainVKey);
+
+        // Create CUSTOM_DATA_FEP with the correct selector that was used during initialization
+        const correctSelector = '0x00010001'; // This matches what was used in initializeFromPessimisticConsensus
+        const CUSTOM_DATA_FEP_CORRECT = encodeAggchainDataFEP(correctSelector, newStateRoot, newl2BlockNumber);
+
         // verify pessimist proof with the new FEP rollup
         const onVerifyPessimisticTx = await rollupManagerContract
             .connect(trustedAggregator)
@@ -842,7 +839,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
                 randomNewLocalExitRoot,
                 randomNewPessimisticRoot,
                 proofWithSelector,
-                CUSTOM_DATA_FEP,
+                CUSTOM_DATA_FEP_CORRECT,
             );
 
         const lastBlock = await ethers.provider.getBlock('latest');

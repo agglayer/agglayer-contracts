@@ -11,11 +11,11 @@ export const CONSENSUS_TYPE = {
 };
 
 export const AGGCHAIN_CONTRACT_NAMES = {
-    ECDSA: 'AggchainECDSA',
+    ECDSA: 'AggchainECDSAMultisig',
     FEP: 'AggchainFEP',
 };
 
-export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSA', 'AggchainFEP'];
+export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSAMultisig', 'AggchainFEP'];
 
 export const GENESIS_CONTRACT_NAMES = {
     WETH: 'WETH',
@@ -96,7 +96,7 @@ export function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {
  * @returns AggchainType
  */
 export function getAggchainTypeFromSelector(_aggchainVKeySelector) {
-    // remove "0x" if ot exist on aggchainVKeySelector with startWith method
+    // remove "0x" if it exist on aggchainVKeySelector with startWith method
     const aggchainVKeySelector = _aggchainVKeySelector.startsWith('0x')
         ? _aggchainVKeySelector.slice(2)
         : _aggchainVKeySelector;

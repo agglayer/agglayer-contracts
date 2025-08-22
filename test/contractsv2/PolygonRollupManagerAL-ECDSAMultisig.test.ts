@@ -37,7 +37,6 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
     let emergencyCouncil: any;
     let aggLayerAdmin: any;
     let tester: any;
-    let vKeyManager: any;
     let aggchainVKey: any;
     let addPPRoute: any;
     let freezePPRoute: any;
@@ -65,7 +64,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
     // bytes2(version)=0x0001 | bytes2(type)=0x0002 => selector 0x00010002
     const AGGCHAIN_VKEY_SELECTOR = '0x00010002';
     const randomNewStateRoot = computeRandomBytes(32);
-    const CUSTOM_DATA_ECDSA = encodeAggchainDataECDSAMultisig(AGGCHAIN_VKEY_SELECTOR);
+    const CUSTOM_DATA_ECDSA = '0x'; // ECDSA Multisig expects empty aggchainData
     const randomPessimisticVKey = computeRandomBytes(32);
 
     upgrades.silenceWarnings();
@@ -129,20 +128,8 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
     }
 
     async function createECDSAMultisigRollup(rollupTypeIdECDSAMultisig: number) {
-        // For RollupManager tests, we still need to encode the parameters
-        // The RollupManager will call initialize with the encoded bytes
-        // Note: This is different from direct initialization which now uses explicit parameters
-        const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(
-            ['address', 'address', 'address', 'string', 'string', 'address'],
-            [
-                admin.address,
-                trustedSequencer.address,
-                ethers.ZeroAddress, // gas token address
-                '', // trusted sequencer url
-                '', // network name
-                vKeyManager.address,
-            ],
-        );
+        // For RollupManager tests, we initialize directly with parameters
+        // Note: The contract now uses direct parameters instead of encoded bytes
 
         // initialize bytes aggchainManager
         const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
@@ -175,7 +162,18 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             precomputedAggchainECDSAMultisigAddress as string,
         );
 
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytesAggchain);
+        // Use explicit function selector to avoid ambiguity
+        const initializeTx = await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            ['initialize(address,address,address,string,string,(address,string)[],uint256)'](
+                admin.address,
+                trustedSequencer.address,
+                ethers.ZeroAddress, // gas token address
+                '', // trusted sequencer url
+                '', // network name
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+            );
 
         // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
@@ -195,7 +193,6 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             emergencyCouncil,
             aggLayerAdmin,
             tester,
-            vKeyManager,
             aggchainVKey,
             addPPRoute,
             freezePPRoute,
@@ -463,29 +460,30 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidInitializeFunction');
     });
 
-    it('should perform a transfer of the vKeyManager role', async () => {
+    it('should perform a transfer of the aggchainManager role', async () => {
         // Create ecdsa rollup type and rollup
         const rollupTypeIdECDSAMultisig = await createECDSAMultisigRollupType();
         const [, rollupAddress] = await createECDSAMultisigRollup(rollupTypeIdECDSAMultisig);
         const aggchainECDSAMultisigFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
         const aggchainECDSAMultisigContract = aggchainECDSAMultisigFactory.attach(rollupAddress as string);
-        // Transfer vKeyManager role
-        expect(await aggchainECDSAMultisigContract.vKeyManager()).to.equal(vKeyManager.address);
-        // Trigger onlyVKeyManager
+        // Transfer aggchainManager role
+        expect(await aggchainECDSAMultisigContract.aggchainManager()).to.equal(aggchainManager.address);
+        // Trigger onlyAggchainManager
         await expect(
-            aggchainECDSAMultisigContract.connect(admin).transferVKeyManagerRole(admin.address),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'OnlyVKeyManager');
-        await expect(aggchainECDSAMultisigContract.connect(vKeyManager).transferVKeyManagerRole(admin.address))
-            .to.emit(aggchainECDSAMultisigContract, 'TransferVKeyManagerRole')
-            .withArgs(vKeyManager, admin.address);
-        // Accept vKeyManager role
-        // Trigger onlyPendingVKeyManager
+            aggchainECDSAMultisigContract.connect(admin).transferAggchainManagerRole(admin.address),
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'OnlyAggchainManager');
+        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).transferAggchainManagerRole(admin.address))
+            .to.emit(aggchainECDSAMultisigContract, 'TransferAggchainManagerRole')
+            .withArgs(aggchainManager.address, admin.address);
+        // Accept aggchainManager role
+        // Trigger onlyPendingAggchainManager
         await expect(
-            aggchainECDSAMultisigContract.connect(vKeyManager).acceptVKeyManagerRole(),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'OnlyPendingVKeyManager');
-        await expect(aggchainECDSAMultisigContract.connect(admin).acceptVKeyManagerRole())
-            .to.emit(aggchainECDSAMultisigContract, 'AcceptVKeyManagerRole')
-            .withArgs(vKeyManager.address, admin.address);
+            aggchainECDSAMultisigContract.connect(aggchainManager).acceptAggchainManagerRole(),
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'OnlyPendingAggchainManager');
+        await expect(aggchainECDSAMultisigContract.connect(admin).acceptAggchainManagerRole())
+            .to.emit(aggchainECDSAMultisigContract, 'AcceptAggchainManagerRole')
+            .withArgs(aggchainManager.address, admin.address);
+        expect(await aggchainECDSAMultisigContract.aggchainManager()).to.equal(admin.address);
     });
 
     it('should getAggchainHash using default gateway', async () => {
@@ -699,9 +697,15 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         const aggchainManagerSC = await ECDSAMultisigRollupContract.aggchainManager();
         expect(aggchainManagerSC).to.be.equal(aggchainManager.address);
 
-        // initialize the ECDSA aggchain
-        await ECDSAMultisigRollupContract.connect(aggchainManager).initialize(initializeBytesAggchain);
-
+        // migrate from PessimisticConsensus
+        // Impersonate rollup manager to call migrateFromPessimisticConsensus
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
+        const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
+        await ECDSAMultisigRollupContract.connect(rollupManagerSigner).migrateFromPessimisticConsensus({ gasPrice: 0 });
+        // assert that the rollup is migrated, check the signershash is coorect, threshold 1 and trusted sequencer
+        expect(await ECDSAMultisigRollupContract.aggchainSignersHash()).to.be.equal(
+            computeSignersHash(1, [trustedSequencer.address]),
+        );
         // Try update rollup by rollupAdmin but trigger UpdateToOldRollupTypeID
         // Create a new pessimistic rollup type
         await createPessimisticRollupType();
@@ -750,19 +754,14 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         const randomProof = computeRandomBytes(128);
         // append first 4 bytes to the proof to select the pessimistic vkey
         const proofWithSelector = `${PESSIMISTIC_SELECTOR}${randomProof.slice(2)}`;
-        // Should revert with AggchainVKeyNotFound
-        await expect(
-            rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
-                pessimisticRollupID, // rollupID
-                lastL1InfoTreeLeafCount, // l1InfoTreeCount
-                randomNewLocalExitRoot,
-                randomNewPessimisticRoot,
-                proofWithSelector,
-                CUSTOM_DATA_ECDSA,
-            ),
-        ).to.be.revertedWithCustomError(ECDSAMultisigRollupContract, 'AggchainSignersHashNotInitialized');
 
-        await ECDSAMultisigRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
+        // Add default AggchainVKey (needed for verification)
+        const aggchainVKey = computeRandomBytes(32);
+        await expect(
+            aggLayerGatewayContract.connect(aggLayerAdmin).addDefaultAggchainVKey(AGGCHAIN_VKEY_SELECTOR, aggchainVKey),
+        )
+            .to.emit(aggLayerGatewayContract, 'AddDefaultAggchainVKey')
+            .withArgs(AGGCHAIN_VKEY_SELECTOR, aggchainVKey);
 
         // verify pessimist proof with the new ECDSA Multisig rollup
         await expect(

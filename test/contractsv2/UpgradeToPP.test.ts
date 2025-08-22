@@ -1352,15 +1352,16 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const initializeBytesAggchain = encodeInitializeBytesAggchainFEPv1(
-            initParams, // init params
+        const FEPRollupContract = aggchainFEPFactory.attach(rollupAddress);
+        // Initialize FEP contract directly with parameters
+        await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+            initParams,
             true, // useDefaultGateway
             ethers.ZeroHash, // ownedAggchainVKey
             '0x00000000', // aggchainVkeySelector (should be zero when useDefaultGateway is true)
-            admin.address,
+            [], // No signers to add initially
+            0, // Threshold of 0 initially
         );
-        const FEPRollupContract = aggchainFEPFactory.attach(rollupAddress);
-        await FEPRollupContract.connect(aggchainManager).initialize(initializeBytesAggchain);
 
         await expect(
             rollupManagerContract

@@ -83,7 +83,8 @@ contract AggchainECDSAMultisig is AggchainBase {
      * @param _gasTokenAddress Gas token address
      * @param _trustedSequencerURL Trusted sequencer URL
      * @param _networkName Network name
-     * @param _vKeyManager VKey manager address
+     * @param _signersToAdd Array of signers to add
+     * @param _newThreshold New threshold for multisig operations
      * @custom:security First initialization takes into account this contracts and all the inheritance contracts
      *                  This function can only be called when the contract is first deployed (version 0)
      * @dev The reinitializer(2) is set to support the upgrade from PolygonPessimisticConsensus to AggchainECDSAMultisig, where PolygonPessimisticConsensus is already initialized
