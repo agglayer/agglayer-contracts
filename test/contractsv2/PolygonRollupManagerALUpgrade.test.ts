@@ -23,11 +23,7 @@ import {
 } from '../../src/utils-common-aggchain';
 import { NO_ADDRESS } from '../../src/constants';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
-import {
-    encodeAggchainDataECDSAMultisig,
-    encodeInitializeBytesAggchainECDSAMultisigv1,
-    encodeInitializeBytesAggchainECDSAMultisigv0,
-} from '../../src/utils-aggchain-ECDSA-multisig';
+import { encodeAggchainDataECDSAMultisig } from '../../src/utils-aggchain-ECDSA-multisig';
 
 const randomPessimisticVKey = computeRandomBytes(32);
 
@@ -129,16 +125,17 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
     }
 
     async function createECDSARollup(rollupTypeIdECDSA: number) {
-        const initializeBytesAggchain = encodeInitializeBytesAggchainECDSAMultisigv0(
-            true, // useDefaultGateway
-            ethers.ZeroHash, // ownedAggchainVKeys
-            '0x00000000', // aggchainVKeysSelectors (should be zero when useDefaultGateway is true)
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            ethers.ZeroAddress, // gas token address
-            '', // trusted sequencer url
-            '', // network name
+        // For RollupManager tests, encode parameters for initialize function
+        const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(
+            ['address', 'address', 'address', 'string', 'string', 'address'],
+            [
+                admin.address,
+                trustedSequencer.address,
+                ethers.ZeroAddress, // gas token address
+                '', // trusted sequencer url
+                '', // network name
+                vKeyManager.address,
+            ],
         );
         // initialize bytes aggchainManager
         const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
@@ -570,12 +567,10 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // Compute initialize upgrade data
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
 
-        const initializeBytesAggchain = encodeInitializeBytesAggchainECDSAMultisigv1(
-            true, // useDefaultGateway
-            ethers.ZeroHash, // ownedAggchainVKeys
-            '0x00000000', // aggchainVkeySelector
-            vKeyManager.address,
-        );
+        // For migration from PessimisticConsensus, the migrateFromPessimisticConsensus function
+        // will be called automatically by the RollupManager
+        // No initialization bytes needed for migration
+        const initializeBytesAggchain = '0x';
 
         const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('initAggchainManager(address)', [
             aggchainManager.address,

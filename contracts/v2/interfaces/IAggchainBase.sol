@@ -64,12 +64,6 @@ interface IAggchainBaseEvents {
     );
 
     /**
-     * @notice Emitted when the aggchainSigners hash is updated.
-     * @param newAggchainSignersHash The new hash of the aggchainSigners array.
-     */
-    event AggchainSignersHashUpdated(bytes32 newAggchainSignersHash);
-
-    /**
      * @notice Emitted when signers and threshold are updated in a batch operation.
      * @param aggchainSigners The updated array of signer addresses.
      * @param newThreshold The new threshold value.

@@ -62,11 +62,9 @@ abstract contract AggchainBase is
     address private _legacyDataAvailabilityProtocol;
     bool private _legacyIsSequenceWithDataAvailabilityAllowed;
 
-    // Address that will be able to manage the aggchain verification keys and swap the useDefaultGateway flag.
-    address public vKeyManager;
-
-    // This account will be able to accept the vKeyManager role
-    address public pendingVKeyManager;
+    // Added legacy storage values from previous aggchainBase
+    address public _legacyvKeyManager;
+    address public _legacypendingVKeyManager;
 
     // Flag to enable/disable the use of the custom chain gateway to handle the aggchain keys. In case  of true, the keys are managed by the aggregation layer gateway
     bool public useDefaultGateway;
@@ -111,14 +109,6 @@ abstract contract AggchainBase is
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
     ////////////////////////////////////////////////////////////
-
-    // Modifier to check if the caller is the vKeyManager
-    modifier onlyVKeyManager() {
-        if (vKeyManager != msg.sender) {
-            revert OnlyVKeyManager();
-        }
-        _;
-    }
 
     /// @dev Only allows a function to be callable if the message sender is the aggchain manager
     modifier onlyAggchainManager() {
@@ -194,7 +184,6 @@ abstract contract AggchainBase is
      * @param _useDefaultGateway Flag to setup initial values for the default gateway
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
-     * @param _vKeyManager Initial vKeyManager
      */
     function _initializeAggchainBaseAndConsensusBase(
         address _admin,
@@ -204,14 +193,9 @@ abstract contract AggchainBase is
         string memory _networkName,
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
-        bytes4 _initAggchainVKeySelector,
-        address _vKeyManager
+        bytes4 _initAggchainVKeySelector
     ) internal onlyInitializing {
-        if (
-            address(_admin) == address(0) ||
-            address(sequencer) == address(0) ||
-            address(_vKeyManager) == address(0)
-        ) {
+        if (address(_admin) == address(0) || address(sequencer) == address(0)) {
             revert InvalidZeroAddress();
         }
 
@@ -227,8 +211,7 @@ abstract contract AggchainBase is
         _initializeAggchainBase(
             _useDefaultGateway,
             _initOwnedAggchainVKey,
-            _initAggchainVKeySelector,
-            _vKeyManager
+            _initAggchainVKeySelector
         );
     }
 
@@ -237,24 +220,20 @@ abstract contract AggchainBase is
      * @param _useDefaultGateway Flag to setup initial values for the default gateway
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
-     * @param _vKeyManager Initial vKeyManager
      */
     function _initializeAggchainBase(
         bool _useDefaultGateway,
         bytes32 _initOwnedAggchainVKey,
-        bytes4 _initAggchainVKeySelector,
-        address _vKeyManager
+        bytes4 _initAggchainVKeySelector
     ) internal onlyInitializing {
         useDefaultGateway = _useDefaultGateway;
         // set the initial aggchain keys
         ownedAggchainVKeys[_initAggchainVKeySelector] = _initOwnedAggchainVKey;
-        // set initial vKeyManager
-        vKeyManager = _vKeyManager;
     }
 
     /**
      * @notice Override the function to prevent the contract from being initialized with the initializer implemented at PolygonConsensusBase.
-     * @dev removing this fuFnction can cause critical security issues.
+     * @dev removing this function can cause critical security issues.
      */
     function initialize(
         address, // _admin
@@ -293,9 +272,12 @@ abstract contract AggchainBase is
     function getAggchainHash(
         bytes memory aggchainData
     ) external view returns (bytes32) {
+        // Cache storage variable
+        bytes32 cachedSignersHash = aggchainSignersHash;
+
         // Check if the aggchain signers hash been set
         // Empty signers is supported, but must be done explicitly
-        if (aggchainSignersHash == bytes32(0)) {
+        if (cachedSignersHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();
         }
 
@@ -310,7 +292,7 @@ abstract contract AggchainBase is
                     CONSENSUS_TYPE,
                     aggchainVKey,
                     aggchainParams,
-                    aggchainSignersHash
+                    cachedSignersHash
                 )
             );
     }
@@ -319,6 +301,18 @@ abstract contract AggchainBase is
     //        aggchainManager functions          //
     ///////////////////////////////////////////////
 
+    function updateSignersAndThreshold(
+        RemoveSignerInfo[] memory _signersToRemove,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
+    ) external onlyAggchainManager {
+        _updateSignersAndThreshold(
+            _signersToRemove,
+            _signersToAdd,
+            _newThreshold
+        );
+    }
+
     /**
      * @notice Batch update signers and threshold in a single transaction
      * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
@@ -326,12 +320,13 @@ abstract contract AggchainBase is
      * @param _signersToAdd Array of new signers to add with their URLs
      * @param _newThreshold New threshold value (set to 0 to keep current threshold)
      */
-    function updateSignersAndThreshold(
-        RemoveSignerInfo[] calldata _signersToRemove,
-        SignerInfo[] calldata _signersToAdd,
+    function _updateSignersAndThreshold(
+        RemoveSignerInfo[] memory _signersToRemove,
+        SignerInfo[] memory _signersToAdd,
         uint256 _newThreshold
-    ) external onlyAggchainManager {
-        // Validate descending order of indices for removal
+    ) internal {
+        // Validate descending order of indices for removal to avoid index shifting issues
+        // When removing multiple signers, we must process them from highest index to lowest
         if (_signersToRemove.length > 1) {
             for (uint256 i = 0; i < _signersToRemove.length - 1; i++) {
                 if (
@@ -368,12 +363,6 @@ abstract contract AggchainBase is
 
         // Update the signers hash once after all operations
         _updateAggchainSignersHash();
-
-        emit SignersAndThresholdUpdated(
-            aggchainSigners,
-            _newThreshold,
-            aggchainSignersHash
-        );
     }
 
     /// @notice Starts the aggchainManager role transfer
@@ -404,42 +393,10 @@ abstract contract AggchainBase is
         emit AcceptAggchainManagerRole(oldAggchainManager, aggchainManager);
     }
 
-    ///////////////////////////////
-    //   VKeyManager functions   //
-    //////////////////////////////
-
-    /**
-     * @notice Starts the vKeyManager role transfer
-     * This is a two step process, the pending vKeyManager must accepted to finalize the process
-     * @param newVKeyManager Address of the new pending admin
-     */
-    function transferVKeyManagerRole(
-        address newVKeyManager
-    ) external onlyVKeyManager {
-        pendingVKeyManager = newVKeyManager;
-
-        emit TransferVKeyManagerRole(vKeyManager, newVKeyManager);
-    }
-
-    /**
-     * @notice Allow the current pending vKeyManager to accept the vKeyManager role
-     */
-    function acceptVKeyManagerRole() external {
-        if (pendingVKeyManager != msg.sender) {
-            revert OnlyPendingVKeyManager();
-        }
-
-        address oldVKeyManager = vKeyManager;
-        vKeyManager = pendingVKeyManager;
-        delete pendingVKeyManager;
-
-        emit AcceptVKeyManagerRole(oldVKeyManager, vKeyManager);
-    }
-
     /**
      * @notice Enable the use of the default gateway to manage the aggchain keys.
      */
-    function enableUseDefaultGatewayFlag() external onlyVKeyManager {
+    function enableUseDefaultGatewayFlag() external onlyAggchainManager {
         if (useDefaultGateway) {
             revert UseDefaultGatewayAlreadyEnabled();
         }
@@ -453,7 +410,7 @@ abstract contract AggchainBase is
     /**
      * @notice Disable the use of the default gateway to manage the aggchain keys. After disable, the keys are handled by the aggchain contract.
      */
-    function disableUseDefaultGatewayFlag() external onlyVKeyManager {
+    function disableUseDefaultGatewayFlag() external onlyAggchainManager {
         if (!useDefaultGateway) {
             revert UseDefaultGatewayAlreadyDisabled();
         }
@@ -472,7 +429,7 @@ abstract contract AggchainBase is
     function addOwnedAggchainVKey(
         bytes4 aggchainVKeySelector,
         bytes32 newAggchainVKey
-    ) external onlyVKeyManager {
+    ) external onlyAggchainManager {
         if (newAggchainVKey == bytes32(0)) {
             revert ZeroValueAggchainVKey();
         }
@@ -494,7 +451,7 @@ abstract contract AggchainBase is
     function updateOwnedAggchainVKey(
         bytes4 aggchainVKeySelector,
         bytes32 updatedAggchainVKey
-    ) external onlyVKeyManager {
+    ) external onlyAggchainManager {
         // Check already added
         if (ownedAggchainVKeys[aggchainVKeySelector] == bytes32(0)) {
             revert OwnedAggchainVKeyNotFound();
@@ -636,8 +593,11 @@ abstract contract AggchainBase is
         address _signer,
         uint256 _signerIndex
     ) internal {
+        // Cache array length
+        uint256 signersLength = aggchainSigners.length;
+
         // Validate input parameters
-        if (_signerIndex >= aggchainSigners.length) {
+        if (_signerIndex >= signersLength) {
             revert SignerDoesNotExist();
         }
 
@@ -649,9 +609,8 @@ abstract contract AggchainBase is
         delete signerToURLs[_signer];
 
         // Move the last element to the deleted spot and remove the last element
-        aggchainSigners[_signerIndex] = aggchainSigners[
-            aggchainSigners.length - 1
-        ];
+        aggchainSigners[_signerIndex] = aggchainSigners[signersLength - 1];
+
         aggchainSigners.pop();
     }
 
@@ -662,6 +621,11 @@ abstract contract AggchainBase is
         aggchainSignersHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
-        emit AggchainSignersHashUpdated(aggchainSignersHash);
+
+        emit SignersAndThresholdUpdated(
+            aggchainSigners,
+            threshold,
+            aggchainSignersHash
+        );
     }
 }

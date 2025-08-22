@@ -70,76 +70,40 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address, signer2.address, signer3.address];
         const threshold = 2;
 
-        // Test invalid initializations first
-        // Empty signers array
-        let invalidInitializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
-        // ECDSA multisig no longer initializes signers/threshold in v0; it only sets base/consensus. So no revert here.
+        // Initialize with new signature (explicit parameters)
         await aggchainECDSAMultisigContract
             .connect(aggchainManager)
-            .initialize(invalidInitializeBytes, { gasPrice: 0 });
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
-        // Zero threshold
         // Re-initialize should revert because already initialized
         await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).initialize(invalidInitializeBytes, { gasPrice: 0 }),
+            aggchainECDSAMultisigContract
+                .connect(aggchainManager)
+                .initialize(
+                    admin.address,
+                    trustedSequencer.address,
+                    gasTokenAddress,
+                    urlSequencer,
+                    networkName,
+                    vKeyManager.address,
+                    { gasPrice: 0 },
+                ),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
-        // Threshold greater than signers count
-        // No longer applicable; removal of threshold/signers from initializer
-
-        // Signer with zero address
-        // No longer applicable in initializer
-
-        // Duplicate signers
-        // No longer applicable in initializer
-
-        // Invalid aggchain type - test with a new contract
-        const aggchainECDSAMultisigFactory2 = await ethers.getContractFactory('AggchainECDSAMultisig');
-        const freshContract = await upgrades.deployProxy(aggchainECDSAMultisigFactory2, [], {
-            initializer: false,
-            constructorArgs: [
-                gerManagerAddress,
-                polTokenAddress,
-                bridgeAddress,
-                rollupManagerAddress,
-                agglayerGatewayAddress,
-            ],
-            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
-        });
-        await freshContract.waitForDeployment();
-        await freshContract.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-
-        const invalidSelector = '0x12340001'; // Wrong type
-        invalidInitializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            invalidSelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
-        await expect(
-            freshContract.connect(aggchainManager).initialize(invalidInitializeBytes, { gasPrice: 0 }),
-        ).to.be.revertedWithCustomError(freshContract, 'InvalidAggchainType');
+        // Note: Signers and threshold are no longer set during initialization
+        // They must be configured via updateSignersAndThreshold after initialization
 
         // After base init, signer set/threshold must be configured via batch update
         // We already initialized aggchainECDSAMultisigContract above
@@ -163,9 +127,11 @@ describe('AggchainECDSAMultisig', () => {
         }
 
         // Check aggchainBase parameters
-        expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
+        // Note: useDefaultGateway is set to false by default in initialize
+        expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(false);
+        // Note: ownedAggchainVKeys is not set in the new initialize function
         expect(await aggchainECDSAMultisigContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(
-            newAggchainVKey,
+            ethers.ZeroHash,
         );
 
         // Check PolygonConsensusBase parameters
@@ -177,14 +143,22 @@ describe('AggchainECDSAMultisig', () => {
 
         // Try to initialize again
         await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).initialize(invalidInitializeBytes, { gasPrice: 0 }),
+            aggchainECDSAMultisigContract
+                .connect(aggchainManager)
+                .initialize(
+                    admin.address,
+                    trustedSequencer.address,
+                    gasTokenAddress,
+                    urlSequencer,
+                    networkName,
+                    vKeyManager.address,
+                    { gasPrice: 0 },
+                ),
         ).to.be.revertedWith('Initializable: contract is already initialized');
     });
 
-    it('should check the v1 initialized parameters', async () => {
+    it('should check migration from PessimisticConsensus', async () => {
         const networkID = 1;
-        const initialSigners = [signer1.address, signer2.address];
-        const threshold = 1;
 
         // Deploy previous ECDSA pessimistic contract
         const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
@@ -225,33 +199,22 @@ describe('AggchainECDSAMultisig', () => {
             PolygonPPConsensusContract.target,
         ) as unknown as AggchainECDSAMultisig;
 
-        const initializeBytesAggchain = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv1(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-        );
-
+        // Migrate from PessimisticConsensus using the new migration function
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
-            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract
-            .connect(aggchainManager)
-            .initialize(initializeBytesAggchain, { gasPrice: 0 });
+            .migrateFromPessimisticConsensus({ gasPrice: 0 });
 
-        await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold(
-            [],
-            [
-                { addr: signer1.address, url: 'http://signer1' },
-                { addr: signer2.address, url: 'http://signer2' },
-            ],
-            threshold,
-        );
+        // After migration:
+        // - vKeyManager is set to admin
+        // - aggchainManager is set to admin
+        // - trustedSequencer is added as a signer with threshold 1
 
-        // Check storage
-        expect(await aggchainECDSAMultisigContract.aggchainManager()).to.be.equal(aggchainManager.address);
-        expect(await aggchainECDSAMultisigContract.threshold()).to.be.equal(threshold);
-        expect(await aggchainECDSAMultisigContract.getAggchainSignersCount()).to.be.equal(initialSigners.length);
+        // Check storage after migration
+        expect(await aggchainECDSAMultisigContract.aggchainManager()).to.be.equal(admin.address);
+        expect(await aggchainECDSAMultisigContract.vKeyManager()).to.be.equal(admin.address);
+        expect(await aggchainECDSAMultisigContract.threshold()).to.be.equal(1);
+        expect(await aggchainECDSAMultisigContract.getAggchainSignersCount()).to.be.equal(1);
+        expect(await aggchainECDSAMultisigContract.isSigner(trustedSequencer.address)).to.be.equal(true);
 
         // Check that PolygonConsensusBase parameters are preserved from v0
         expect(await aggchainECDSAMultisigContract.admin()).to.be.equal(admin.address);
@@ -262,25 +225,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check getAggchainHash without signers initialized', async () => {
-        const initialSigners = [signer1.address, signer2.address, signer3.address];
-        const threshold = 2;
-
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Try to get aggchain hash without initializing signers
         const aggchainData = utilsECDSAMultisig.encodeAggchainDataECDSAMultisig(aggchainVKeySelector);
@@ -294,22 +253,21 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address, signer2.address, signer3.address];
         const threshold = 2;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold(
             [],
             [
@@ -356,17 +314,22 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address, signer2.address, signer3.address];
         const threshold = 2;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
+        await aggchainECDSAMultisigContract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                newAggchainVKey,
+                aggchainVKeySelector,
+                vKeyManager.address,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+            );
 
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
@@ -408,22 +371,21 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address, signer2.address];
         const threshold = 1;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold(
             [],
             [
@@ -458,22 +420,21 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address, signer2.address];
         const threshold = 2;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Initialize signers
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold(
@@ -520,9 +481,7 @@ describe('AggchainECDSAMultisig', () => {
             aggchainECDSAMultisigContract
                 .connect(aggchainManager)
                 .updateSignersAndThreshold([], [{ addr: signer3.address, url: 'http://signer3' }], threshold),
-        )
-            .to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated')
-            .and.to.emit(aggchainECDSAMultisigContract, 'AggchainSignersHashUpdated');
+        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
 
         expect(await aggchainECDSAMultisigContract.getAggchainSignersCount()).to.be.equal(3);
         expect(await aggchainECDSAMultisigContract.isSigner(signer3.address)).to.be.equal(true);
@@ -544,9 +503,7 @@ describe('AggchainECDSAMultisig', () => {
             aggchainECDSAMultisigContract
                 .connect(aggchainManager)
                 .updateSignersAndThreshold([], [{ addr: signer4.address, url: 'http://signer4' }], threshold),
-        )
-            .to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated')
-            .and.to.emit(aggchainECDSAMultisigContract, 'AggchainSignersHashUpdated');
+        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
 
         expect(await aggchainECDSAMultisigContract.getAggchainSignersCount()).to.be.equal(4);
 
@@ -570,9 +527,7 @@ describe('AggchainECDSAMultisig', () => {
             aggchainECDSAMultisigContract
                 .connect(aggchainManager)
                 .updateSignersAndThreshold([{ addr: signer4.address, index: signer4Index }], [], threshold),
-        )
-            .to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated')
-            .and.to.emit(aggchainECDSAMultisigContract, 'AggchainSignersHashUpdated');
+        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
 
         expect(await aggchainECDSAMultisigContract.getAggchainSignersCount()).to.be.equal(3);
         expect(await aggchainECDSAMultisigContract.isSigner(signer4.address)).to.be.equal(false);
@@ -603,9 +558,7 @@ describe('AggchainECDSAMultisig', () => {
                     [{ addr: signer4.address, url: 'http://signer4' }],
                     3,
                 ),
-        )
-            .to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated')
-            .and.to.emit(aggchainECDSAMultisigContract, 'AggchainSignersHashUpdated');
+        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
 
         expect(await aggchainECDSAMultisigContract.getAggchainSignersCount()).to.be.equal(3);
         expect(await aggchainECDSAMultisigContract.threshold()).to.be.equal(3);
@@ -617,22 +570,21 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address, signer2.address, signer3.address];
         const threshold = 2;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold(
             [],
             [
@@ -651,9 +603,9 @@ describe('AggchainECDSAMultisig', () => {
 
         // Test updateThreshold - zero threshold is valid since we have signers
         // Zero threshold is actually allowed, so this should succeed
-        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0))
-            .to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated')
-            .and.to.emit(aggchainECDSAMultisigContract, 'AggchainSignersHashUpdated');
+        await expect(
+            aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0),
+        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
 
         // Restore threshold
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], threshold);
@@ -669,9 +621,7 @@ describe('AggchainECDSAMultisig', () => {
 
         await expect(
             aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], newThreshold),
-        )
-            .to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated')
-            .and.to.emit(aggchainECDSAMultisigContract, 'AggchainSignersHashUpdated');
+        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
 
         expect(await aggchainECDSAMultisigContract.threshold()).to.be.equal(newThreshold);
     });
@@ -728,22 +678,21 @@ describe('AggchainECDSAMultisig', () => {
         const initialSigners = [signer1.address];
         const threshold = 1;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Initialize with single signer
         await aggchainECDSAMultisigContract
@@ -775,22 +724,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check vKeyManager functions', async () => {
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Check initial vKeyManager
         expect(await aggchainECDSAMultisigContract.vKeyManager()).to.be.equal(vKeyManager.address);
@@ -864,22 +812,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check gateway flag functions', async () => {
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Check initial useDefaultGateway
         expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
@@ -929,22 +876,21 @@ describe('AggchainECDSAMultisig', () => {
         // Test with maximum possible threshold in initialization validation
         const maxUint32 = 2 ** 32 - 1;
 
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Initialize signers first
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold(
@@ -963,22 +909,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should test getAggchainVKey functions', async () => {
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Test getAggchainVKey with useDefaultGateway false
         const vKey = await aggchainECDSAMultisigContract.getAggchainVKey(aggchainVKeySelector);
@@ -1004,22 +949,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should test signerToURLs and empty signers edge case', async () => {
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Initialize with empty signers (should set aggchainSignersHash)
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
@@ -1049,22 +993,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should test aggchainManager role functions', async () => {
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Check initial aggchainManager
         expect(await aggchainECDSAMultisigContract.aggchainManager()).to.be.equal(aggchainManager.address);
@@ -1104,22 +1047,21 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should test getAggchainParamsAndVKeySelector', async () => {
-        const initializeBytes = utilsECDSAMultisig.encodeInitializeBytesAggchainECDSAMultisigv0(
-            useDefaultGateway,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            vKeyManager.address,
-            admin.address,
-            trustedSequencer.address,
-            gasTokenAddress,
-            urlSequencer,
-            networkName,
-        );
-
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-        await aggchainECDSAMultisigContract.connect(aggchainManager).initialize(initializeBytes, { gasPrice: 0 });
+
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                vKeyManager.address,
+                { gasPrice: 0 },
+            );
 
         // Test invalid data length
         await expect(

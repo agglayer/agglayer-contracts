@@ -20,7 +20,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     //                  Constants & Immutables                //
     ////////////////////////////////////////////////////////////
     // Aggchain type selector, hardcoded value used to force the last 2 bytes of aggchain selector to retrieve the aggchain verification key
-    bytes2 public constant AGGCHAIN_TYPE = 0x0002;
+    bytes2 public constant AGGCHAIN_TYPE = 0x0000;
 
     /// @notice Aggchain version
     string public constant AGGCHAIN_ECDSA_MULTISIG_VERSION = "v1.0.0";
@@ -77,119 +77,77 @@ contract AggchainECDSAMultisig is AggchainBase {
     //              Functions: initialization                 //
     ////////////////////////////////////////////////////////////
     /**
-     * @param initializeBytesAggchain Encoded bytes to initialize the chain.
-     * Each aggchain has its decoded params.
+     * @notice Initialize the AggchainECDSAMultisig contract
+     * @param _admin Admin address
+     * @param _trustedSequencer Trusted sequencer address
+     * @param _gasTokenAddress Gas token address
+     * @param _trustedSequencerURL Trusted sequencer URL
+     * @param _networkName Network name
+     * @param _vKeyManager VKey manager address
      * @custom:security First initialization takes into account this contracts and all the inheritance contracts
-     *                  Second initialization does not initialize PolygonConsensusBase parameters
-     *                  Second initialization can happen if a chain is upgraded from a PolygonPessimisticConsensus
+     *                  This function can only be called when the contract is first deployed (version 0)
      * @dev The reinitializer(2) is set to support the upgrade from PolygonPessimisticConsensus to AggchainECDSAMultisig, where PolygonPessimisticConsensus is already initialized
      */
     function initialize(
-        bytes memory initializeBytesAggchain
+        address _admin,
+        address _trustedSequencer,
+        address _gasTokenAddress,
+        string memory _trustedSequencerURL,
+        string memory _networkName,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
     ) external onlyAggchainManager getInitializedVersion reinitializer(2) {
-        // If initializer version is 0, it means that the chain is being initialized for the first time, so the contract has just been deployed, is not an upgrade
-        if (_initializerVersion == 0) {
-            // custom parsing of the initializeBytesAggchain
-            (
-                // aggchainBase params
-                bool _useDefaultGateway,
-                bytes32 _initOwnedAggchainVKey,
-                bytes4 _initAggchainVKeySelector,
-                address _vKeyManager,
-                // PolygonConsensusBase params
-                address _admin,
-                address _trustedSequencer,
-                address _gasTokenAddress,
-                string memory _trustedSequencerURL,
-                string memory _networkName
-            ) = abi.decode(
-                    initializeBytesAggchain,
-                    (
-                        bool,
-                        bytes32,
-                        bytes4,
-                        address,
-                        address,
-                        address,
-                        address,
-                        string,
-                        string
-                    )
-                );
-
-            // Check the use default gateway is consistent
-            if (_useDefaultGateway) {
-                if (
-                    _initAggchainVKeySelector != bytes4(0) ||
-                    _initOwnedAggchainVKey != bytes32(0)
-                ) {
-                    revert InvalidInitializer();
-                }
-            } else {
-                if (
-                    getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                    AGGCHAIN_TYPE
-                ) {
-                    revert InvalidAggchainType();
-                }
-            }
-
-            // Set aggchainBase variables
-            _initializeAggchainBaseAndConsensusBase(
-                _admin,
-                _trustedSequencer,
-                _gasTokenAddress,
-                _trustedSequencerURL,
-                _networkName,
-                _useDefaultGateway,
-                _initOwnedAggchainVKey,
-                _initAggchainVKeySelector,
-                _vKeyManager
-            );
-        } else if (_initializerVersion == 1) {
-            // Only need to initialize values that are specific for ECDSA Multisig because we are performing an upgrade from a Pessimistic Consensus
-            (
-                // aggchainBase params
-                bool _useDefaultGateway,
-                bytes32 _initOwnedAggchainVKey,
-                bytes4 _initAggchainVKeySelector,
-                address _vKeyManager
-            ) = abi.decode(
-                    initializeBytesAggchain,
-                    (bool, bytes32, bytes4, address)
-                );
-
-            // Check the use default gateway is consistent
-            if (_useDefaultGateway) {
-                if (
-                    _initAggchainVKeySelector != bytes4(0) ||
-                    _initOwnedAggchainVKey != bytes32(0)
-                ) {
-                    revert InvalidInitializer();
-                }
-            } else {
-                if (
-                    getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                    AGGCHAIN_TYPE
-                ) {
-                    revert InvalidAggchainType();
-                }
-            }
-
-            // Set aggchainBase variables
-            _initializeAggchainBase(
-                _useDefaultGateway,
-                _initOwnedAggchainVKey,
-                _initAggchainVKeySelector,
-                _vKeyManager
-            );
-        } else {
-            // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased
+        if (_initializerVersion != 0) {
             revert InvalidInitializer();
         }
+
+        // useDefaultGateway, initOwnedAggchainVKey, and initAggchainVKeySelector are not used in this aggchain.
+        _initializeAggchainBaseAndConsensusBase(
+            _admin,
+            _trustedSequencer,
+            _gasTokenAddress,
+            _trustedSequencerURL,
+            _networkName,
+            false, // useDefaultGateway
+            bytes32(0), // initOwnedAggchainVKey
+            bytes4(0) // initAggchainVKeySelector
+        );
+
+        // update signers and threshold
+        _updateSignersAndThreshold(
+            new RemoveSignerInfo[](0), // No signers to remove
+            _signersToAdd,
+            _newThreshold
+        );
     }
 
-    
+    /**
+     * @notice Migrates from PolygonPessimisticConsensus to AggchainECDSAMultisig
+     * @dev This function is called when upgrading from a PolygonPessimisticConsensus contract
+     *      It sets up the initial multisig configuration using the existing admin and trustedSequencer
+     *      Sets the threshold to 1 and adds the trustedSequencer as the initial signer
+     */
+    function migrateFromPessimisticConsensus()
+        external
+        onlyRollupManager
+        getInitializedVersion
+        reinitializer(2)
+    {
+        if (_initializerVersion != 1) {
+            revert InvalidInitializer();
+        }
+
+        // aggchainManager
+        aggchainManager = admin;
+
+        // set signer to trustedSequencer and threshold to 1
+        _addSignerInternal(trustedSequencer, trustedSequencerURL);
+        threshold = 1;
+
+        // update aggchainSignersHash
+        _updateAggchainSignersHash();
+    }
+
     ////////////////////////////////////////////////////////////
     //                    Functions: views                    //
     ////////////////////////////////////////////////////////////

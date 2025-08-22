@@ -311,126 +311,167 @@ contract AggchainFEP is AggchainBase {
     //              Functions: initialization                 //
     ////////////////////////////////////////////////////////////
 
-    /// @notice Initialize function for the contract.
-    /// @custom:security First initialization takes into account this contracts and all the inheritance contracts
-    ///                  Second initialization does not initialize PolygonConsensusBase parameters
-    ///                  Second initialization can happen if a chain is upgraded from a PolygonPessimisticConsensus
-    /// @param initializeBytesAggchain Encoded bytes to initialize the aggchain
+    /// @notice Initialize function for fresh deployment
+    /// @custom:security Initializes all contracts including PolygonConsensusBase
+    /// @param _initParams The initialization parameters for FEP
+    /// @param _useDefaultGateway Whether to use the default gateway
+    /// @param _initOwnedAggchainVKey The owned aggchain verification key
+    /// @param _initAggchainVKeySelector The aggchain verification key selector
+    /// @param _admin The admin address
+    /// @param _trustedSequencer The trusted sequencer address
+    /// @param _gasTokenAddress The gas token address
+    /// @param _trustedSequencerURL The trusted sequencer URL
+    /// @param _networkName The network name
     function initialize(
-        bytes memory initializeBytesAggchain
-    ) external onlyAggchainManager getInitializedVersion reinitializer(2) {
-        // initialize all parameters
-        if (_initializerVersion == 0) {
-            // Decode the struct
-            (
-                // chain custom params
-                InitParams memory _initParams,
-                // aggchainBase params
-                bool _useDefaultGateway,
-                bytes32 _initOwnedAggchainVKey,
-                bytes4 _initAggchainVKeySelector,
-                address _vKeyManager,
-                // PolygonConsensusBase params
-                address _admin,
-                address _trustedSequencer,
-                address _gasTokenAddress,
-                string memory _trustedSequencerURL,
-                string memory _networkName
-            ) = abi.decode(
-                    initializeBytesAggchain,
-                    (
-                        InitParams,
-                        bool,
-                        bytes32,
-                        bytes4,
-                        address,
-                        address,
-                        address,
-                        address,
-                        string,
-                        string
-                    )
-                );
-
-            // Check the use default gateway is consistent
-            if (_useDefaultGateway) {
-                if (
-                    _initAggchainVKeySelector != bytes4(0) ||
-                    _initOwnedAggchainVKey != bytes32(0)
-                ) {
-                    revert InvalidInitializer();
-                }
-            } else {
-                if (
-                    getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                    AGGCHAIN_TYPE
-                ) {
-                    revert InvalidAggchainType();
-                }
-            }
-
-            // init FEP params
-            _initializeAggchain(_initParams);
-
-            // Set aggchainBase variables
-            _initializeAggchainBaseAndConsensusBase(
-                _admin,
-                _trustedSequencer,
-                _gasTokenAddress,
-                _trustedSequencerURL,
-                _networkName,
-                _useDefaultGateway,
-                _initOwnedAggchainVKey,
-                _initAggchainVKeySelector,
-                _vKeyManager
-            );
-        } else if (_initializerVersion == 1) {
-            // contract has been previously initialized with all parameters in the PolygonConsensusBase.sol
-            // Only initialize the FEP and AggchainBase params
-            (
-                // chain custom params
-                InitParams memory _initParams,
-                // aggchainBase params
-                bool _useDefaultGateway,
-                bytes32 _initOwnedAggchainVKey,
-                bytes4 _initAggchainVKeySelector,
-                address _vKeyManager
-            ) = abi.decode(
-                    initializeBytesAggchain,
-                    (InitParams, bool, bytes32, bytes4, address)
-                );
-
-            // Check the use default gateway is consistent
-            if (_useDefaultGateway) {
-                if (
-                    _initAggchainVKeySelector != bytes4(0) ||
-                    _initOwnedAggchainVKey != bytes32(0)
-                ) {
-                    revert InvalidInitializer();
-                }
-            } else {
-                if (
-                    getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                    AGGCHAIN_TYPE
-                ) {
-                    revert InvalidAggchainType();
-                }
-            }
-
-            // init FEP params
-            _initializeAggchain(_initParams);
-
-            // Set aggchainBase variables
-            _initializeAggchainBase(
-                _useDefaultGateway,
-                _initOwnedAggchainVKey,
-                _initAggchainVKeySelector,
-                _vKeyManager
-            );
-        } else {
-            // This case should never happen because reinitializer is 2 so initializer version is 0 or 1, but it's here to avoid any possible future issue if the reinitializer version is increased
+        InitParams memory _initParams,
+        bool _useDefaultGateway,
+        bytes32 _initOwnedAggchainVKey,
+        bytes4 _initAggchainVKeySelector,
+        address _admin,
+        address _trustedSequencer,
+        address _gasTokenAddress,
+        string memory _trustedSequencerURL,
+        string memory _networkName,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
+    ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
+        if (_initializerVersion != 0) {
             revert InvalidInitializer();
         }
+
+        // Check the use default gateway is consistent
+        if (_useDefaultGateway) {
+            if (
+                _initAggchainVKeySelector != bytes4(0) ||
+                _initOwnedAggchainVKey != bytes32(0)
+            ) {
+                revert InvalidInitializer();
+            }
+        } else {
+            if (
+                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                AGGCHAIN_TYPE
+            ) {
+                revert InvalidAggchainType();
+            }
+        }
+
+        // init FEP params
+        _initializeAggchain(_initParams);
+
+        // Set aggchainBase variables
+        _initializeAggchainBaseAndConsensusBase(
+            _admin,
+            _trustedSequencer,
+            _gasTokenAddress,
+            _trustedSequencerURL,
+            _networkName,
+            _useDefaultGateway,
+            _initOwnedAggchainVKey,
+            _initAggchainVKeySelector
+        );
+
+        // update signers and threshold
+        _updateSignersAndThreshold(
+            new RemoveSignerInfo[](0), // No signers to remove
+            _signersToAdd,
+            _newThreshold
+        );
+    }
+
+    /// @notice Initialize function for upgrade from PolygonPessimisticConsensus
+    /// @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
+    /// @param _initParams The initialization parameters for FEP
+    /// @param _useDefaultGateway Whether to use the default gateway
+    /// @param _initOwnedAggchainVKey The owned aggchain verification key
+    /// @param _initAggchainVKeySelector The aggchain verification key selector
+    function initializeFromPessimisticConsensus(
+        InitParams memory _initParams,
+        bool _useDefaultGateway,
+        bytes32 _initOwnedAggchainVKey,
+        bytes4 _initAggchainVKeySelector,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
+    ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
+        if (_initializerVersion != 1) {
+            revert InvalidInitializer();
+        }
+
+        // Check the use default gateway is consistent
+        if (_useDefaultGateway) {
+            if (
+                _initAggchainVKeySelector != bytes4(0) ||
+                _initOwnedAggchainVKey != bytes32(0)
+            ) {
+                revert InvalidInitializer();
+            }
+        } else {
+            if (
+                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                AGGCHAIN_TYPE
+            ) {
+                revert InvalidAggchainType();
+            }
+        }
+
+        // init FEP params
+        _initializeAggchain(_initParams);
+
+        // Set aggchainBase variables
+        _initializeAggchainBase(
+            _useDefaultGateway,
+            _initOwnedAggchainVKey,
+            _initAggchainVKeySelector
+        );
+
+        // update signers and threshold
+        _updateSignersAndThreshold(
+            new RemoveSignerInfo[](0), // No signers to remove
+            _signersToAdd,
+            _newThreshold
+        );
+    }
+
+    function initalizeFromECDSAMultisig(
+        InitParams memory _initParams
+    ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
+        if (_initializerVersion != 2) {
+            revert InvalidInitializer();
+        }
+
+        // Check that the l2Outputs array is empty
+        if (l2Outputs.length != 0) {
+            revert InvalidInitializer();
+        }
+
+        // init FEP params
+        _initializeAggchain(_initParams);
+    }
+
+    function upgradeFromPreviousFEP()
+        external
+        onlyRollupManager
+        reinitializer(3)
+    {
+        // Check that the aggchainSignersHash is not set
+        if (aggchainSignersHash != bytes32(0)) {
+            revert InvalidInitializer();
+        }
+
+        // Add config to genesis TODO review
+        opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
+            aggregationVkey: aggregationVkey,
+            rangeVkeyCommitment: rangeVkeyCommitment,
+            rollupConfigHash: rollupConfigHash
+        });
+        selectedOpSuccinctConfigName = GENESIS_CONFIG_NAME;
+
+        // set signer to trustedSequencer and threshold to 1
+        _addSignerInternal(trustedSequencer, trustedSequencerURL);
+        threshold = 1;
+
+        // update aggchainSignersHash
+        _updateAggchainSignersHash();
     }
 
     /// @notice Initializer AggchainFEP storage
@@ -476,16 +517,14 @@ contract AggchainFEP is AggchainBase {
 
         optimisticModeManager = _initParams.optimisticModeManager;
 
-        // Initialize genesis configuration
+        // Initialize genesis configuration TODO, genesis config name should be param?
         opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
             aggregationVkey: _initParams.aggregationVkey,
             rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
             rollupConfigHash: _initParams.rollupConfigHash
         });
 
-        rollupConfigHash = _initParams.rollupConfigHash;
-        aggregationVkey = _initParams.aggregationVkey;
-        rangeVkeyCommitment = _initParams.rangeVkeyCommitment;
+        selectedOpSuccinctConfigName = GENESIS_CONFIG_NAME;
     }
 
     ////////////////////////////////////////////////////////////
@@ -554,6 +593,10 @@ contract AggchainFEP is AggchainBase {
         OpSuccinctConfig memory config = opSuccinctConfigs[
             selectedOpSuccinctConfigName
         ];
+
+        if (!isValidOpSuccinctConfig(config)) {
+            revert ConfigDoesNotExist();
+        }
 
         bytes32 aggchainParams = keccak256(
             abi.encodePacked(
@@ -745,6 +788,7 @@ contract AggchainFEP is AggchainBase {
         if (!isValidOpSuccinctConfig(opSuccinctConfigs[_configName])) {
             revert ConfigDoesNotExist();
         }
+
         selectedOpSuccinctConfigName = _configName;
         emit OpSuccinctConfigSelected(_configName);
     }
