@@ -64,7 +64,6 @@ describe('AggchainFEP', () => {
 
     it('should check the v0 initialized parameters', async () => {
         let initParamsCp;
-        let initializeBytesAggchain;
 
         // Define the struct values
         const initParams = {
@@ -525,9 +524,9 @@ describe('AggchainFEP', () => {
         // Get config from opSuccinctConfigs
         const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
         const genesisConfig = await aggchainFEPContract.opSuccinctConfigs(GENESIS_CONFIG_NAME);
-        const rollupConfigHash = genesisConfig.rollupConfigHash;
-        const rangeVkeyCommitment = genesisConfig.rangeVkeyCommitment;
-        const aggregationVkey = genesisConfig.aggregationVkey;
+        const { rollupConfigHash } = genesisConfig;
+        const { rangeVkeyCommitment } = genesisConfig;
+        const { aggregationVkey } = genesisConfig;
 
         const optimisticMode = await aggchainFEPContract.optimisticMode();
         const trustedSequencerSC = await aggchainFEPContract.trustedSequencer();
@@ -1030,13 +1029,13 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('valid_range_vkey'),
             rollupConfigHash: ethers.id('valid_rollup_hash'),
         });
-        expect(validConfig).to.be.true;
+        expect(validConfig).to.be.equal(true);
 
         const invalidConfig = await aggchainFEPContract.isValidOpSuccinctConfig({
             aggregationVkey: ethers.ZeroHash,
             rangeVkeyCommitment: ethers.id('valid_range_vkey'),
             rollupConfigHash: ethers.id('valid_rollup_hash'),
         });
-        expect(invalidConfig).to.be.false;
+        expect(invalidConfig).to.be.equal(false);
     });
 });

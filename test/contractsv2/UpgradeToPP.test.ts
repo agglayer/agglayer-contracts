@@ -466,7 +466,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.true;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
 
         // Verify PP with mock "bootstrapBatch"
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
@@ -514,7 +514,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 trustedAggregator.address,
             );
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.false;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 
     it('should create rollup type validium & migrate to PP all checks', async () => {
@@ -751,7 +751,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.true;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
 
         // Verify PP with mock "bootstrapBatch"
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
@@ -799,7 +799,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 trustedAggregator.address,
             );
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.false;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 
     it('should create rollup type zkevm etrog & migrate to PP', async () => {
@@ -1089,7 +1089,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDPessimistic, newVerifiedBatch);
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.true;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
 
         // Verify PP with mock "bootstrapBatch"
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
@@ -1137,7 +1137,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 trustedAggregator.address,
             );
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.false;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 
     it('should create rollup type validium & migrate to ALGateway', async () => {
@@ -1340,7 +1340,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(newCreatedRollupID, rollupTypeIDAlGateway, newVerifiedBatch);
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.true;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
 
         // Verify PP with mock "bootstrapBatch"
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
@@ -1420,7 +1420,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 trustedAggregator.address,
             );
 
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.false;
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 
     /**

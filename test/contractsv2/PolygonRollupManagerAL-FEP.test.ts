@@ -256,9 +256,11 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
         // check roles
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.equal(true);
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address)).to.be.equal(
+            true,
+        );
         // The rollupManager address need to be precalculated because it's used in the globalExitRoot constructor
         const currentDeployerNonce = await ethers.provider.getTransactionCount(deployer.address);
         const precalculateRollupManagerAddress = ethers.getCreateAddress({

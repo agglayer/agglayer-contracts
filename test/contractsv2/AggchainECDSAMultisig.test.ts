@@ -251,7 +251,6 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check getAggchainHash', async () => {
-        const initialSigners = [signer1.address, signer2.address, signer3.address];
         const threshold = 2;
 
         await aggchainECDSAMultisigContract
@@ -352,7 +351,6 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check onVerifyPessimistic', async () => {
-        const initialSigners = [signer1.address, signer2.address];
         const threshold = 1;
 
         await aggchainECDSAMultisigContract
@@ -402,7 +400,6 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check signer management functions', async () => {
-        const initialSigners = [signer1.address, signer2.address];
         const threshold = 2;
 
         await aggchainECDSAMultisigContract
@@ -552,7 +549,6 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should check threshold management', async () => {
-        const initialSigners = [signer1.address, signer2.address, signer3.address];
         const threshold = 2;
 
         await aggchainECDSAMultisigContract
@@ -601,7 +597,6 @@ describe('AggchainECDSAMultisig', () => {
         ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidThreshold');
 
         // Test successful updateThreshold
-        const oldThreshold = await aggchainECDSAMultisigContract.threshold();
         const newThreshold = 3;
 
         await expect(
@@ -660,7 +655,6 @@ describe('AggchainECDSAMultisig', () => {
 
     it('should test edge cases for signers array manipulation', async () => {
         // Test with single signer and threshold 1
-        const initialSigners = [signer1.address];
         const threshold = 1;
 
         await aggchainECDSAMultisigContract
@@ -825,8 +819,6 @@ describe('AggchainECDSAMultisig', () => {
     });
 
     it('should test the maximum uint32 threshold edge case', async () => {
-        const initialSigners = [signer1.address, signer2.address];
-
         // Test with maximum possible threshold in initialization validation
         const maxUint32 = 2 ** 32 - 1;
 

@@ -189,7 +189,7 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.equal(true);
 
         // check PPSelectorCannotBeZero
         await expect(
@@ -242,7 +242,7 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.equal(true);
 
         // add pessimistic vkey route
         await expect(
@@ -267,7 +267,7 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.equal(true);
 
         // check RouteNotFound
         await expect(aggLayerGatewayContract.connect(aggLayerAdmin).freezePessimisticVKeyRoute(testSelector))
@@ -301,7 +301,9 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggLayerAdmin.address)).to.be.equal(
+            true,
+        );
         // check VKeyCannotBeZero
         await expect(
             aggLayerGatewayContract.connect(aggLayerAdmin).addDefaultAggchainVKey(selector, ethers.ZeroHash),
@@ -419,7 +421,7 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.equal(true);
 
         await expect(
             aggLayerGatewayContract
@@ -440,7 +442,7 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect(await aggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.equal(true);
 
         // frozen route
         await expect(aggLayerGatewayContract.connect(aggLayerAdmin).freezePessimisticVKeyRoute(selector))
@@ -625,7 +627,7 @@ describe('AggLayerGateway tests', () => {
         const currentSigners = await aggLayerGatewayContract.getAggchainSigners();
         const removeAll = currentSigners.map((addr, index) => ({
             addr,
-            index: index, // Remove the subtraction since we're using the index directly
+            index, // Remove the subtraction since we're using the index directly
         }));
         removeAll.reverse();
         await aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(removeAll, [], 0);
@@ -677,14 +679,14 @@ describe('AggLayerGateway tests', () => {
 
         // Grant role
         await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);
-        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.true;
+        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.equal(true);
 
         // Revoke role
         await expect(aggLayerGatewayContract.connect(defaultAdmin).revokeRole(AL_MULTISIG_ROLE, aggLayerAdmin.address))
             .to.emit(aggLayerGatewayContract, 'RoleRevoked')
             .withArgs(AL_MULTISIG_ROLE, aggLayerAdmin.address, defaultAdmin.address);
 
-        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.false;
+        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.equal(false);
 
         // Test that revoked account cannot call protected functions
         await expect(
@@ -699,6 +701,6 @@ describe('AggLayerGateway tests', () => {
             .to.emit(aggLayerGatewayContract, 'RoleRevoked')
             .withArgs(AL_MULTISIG_ROLE, aggLayerAdmin.address, aggLayerAdmin.address);
 
-        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.false;
+        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.equal(false);
     });
 });
