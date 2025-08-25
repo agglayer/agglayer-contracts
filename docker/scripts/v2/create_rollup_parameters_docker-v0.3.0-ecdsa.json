@@ -26,7 +26,7 @@
     },
     "aggchainParams": {
         "aggchainManager": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        "useDefaultVkeys": true,
+        "useDefaultVkeys": false,
         "useDefaultSigners": false,
         "initOwnedAggchainVKey": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
         "initAggchainVKeySelector": "0x56780000",

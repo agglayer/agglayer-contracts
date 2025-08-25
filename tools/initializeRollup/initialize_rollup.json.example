@@ -26,7 +26,7 @@
             "aggregationVkey": "0x1111111111111111111111111111111111111111111111111111111111111111",
             "rangeVkeyCommitment": "0x1111111111111111111111111111111111111111111111111111111111111111"
         },
-        "useDefaultVkeys": true,
+        "useDefaultVkeys": false,
         "useDefaultSigners": false,
         "initOwnedAggchainVKey": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         "initAggchainVKeySelector": "0x12340001",
