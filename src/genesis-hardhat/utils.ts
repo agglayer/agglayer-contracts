@@ -112,60 +112,87 @@ export async function analyzeDeploymentTransactions(proxyAddress: string, deploy
 }
 
 /**
- * Deploy proxy and capture all deployment transaction hashes
- *
- * @example
- * ```typescript
- * const factory = await ethers.getContractFactory("MyContract", deployer);
- * const result = await deployProxyWithTxCapture(factory, [], {
- *     initializer: false,
- *     unsafeAllow: ['constructor'],
- * });
- *
- * console.log('Proxy address:', result.contract.target);
- * console.log('Proxy tx hash:', result.txHashes.proxy);
- * console.log('Implementation tx hash:', result.txHashes.implementation);
- * console.log('ProxyAdmin tx hash:', result.txHashes.proxyAdmin);
- * ```
+ * Deploy proxy and return all information from deployment
+ * @param {Object} implementation - transaction factory.deploy()
+ * @param {String} proxyAdmin - proxy admin, for proxy deployment
+ * @param {Array} deployer - deployer for deploy transactions
+ * @returns {Object} - proxy address, implementation address, txHashes: { proxy txHash, impl txHash }
  */
-export async function deployProxyWithTxCapture(factory: any, initializerArgs: any[] = [], options: any = {}) {
-    // Get current block number before deployment
-    const blockBefore = await ethers.provider.getBlockNumber();
+export async function deployProxyWithTxCapture(implementation: any, proxyAdmin: any, deployer: any) {
+    const deployImplTx = await implementation.deploymentTransaction();
+    await deployImplTx.wait();
 
-    // Deploy the proxy
-    const contract = await upgrades.deployProxy(factory, initializerArgs, options);
-    await contract.waitForDeployment();
+    // Deploy proxy
+    const transparentProxyFactory = await ethers.getContractFactory(
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
+        deployer,
+    );
 
-    // Get current block number after deployment
-    const blockAfter = await ethers.provider.getBlockNumber();
-    // Collect all transactions from blocks during deployment
-    const deploymentTxs: string[] = [];
-    for (let blockNum = blockBefore + 1; blockNum <= blockAfter; blockNum++) {
-        // eslint-disable-next-line no-await-in-loop
-        const block = await ethers.provider.getBlock(blockNum, false);
-        if (block && block.transactions) {
-            // eslint-disable-next-line no-restricted-syntax
-            for (const txHash of block.transactions) {
-                deploymentTxs.push(txHash);
-            }
-        }
-    }
+    const proxy = await transparentProxyFactory.deploy(
+        implementation.target, // Implementation address
+        proxyAdmin, // Use centralized ProxyAdmin
+        '0x', // Call data for initialization (empty for separated initialization)
+    );
 
-    // Get proxy transaction hash
-    const proxyTx = await contract.deploymentTransaction();
-    const proxyTxHash = proxyTx?.hash;
-
-    // Get implementation and proxyAdmin transaction hashes
-    const deploymentInfo = await analyzeDeploymentTransactions(contract.target as string, deploymentTxs);
+    const deployProxyTx = proxy.deploymentTransaction();
+    await deployProxyTx?.wait();
 
     return {
-        contract,
+        proxy: proxy.target.toString().toLowerCase(),
+        implementation: implementation.target.toString().toLowerCase(),
         txHashes: {
-            proxy: proxyTxHash,
-            implementation: deploymentInfo.implementationTxHash,
-            proxyAdmin: deploymentInfo.proxyAdminTxHash,
+            proxy: deployProxyTx?.hash,
+            implementation: deployImplTx?.hash,
         },
     };
+}
+
+/**
+ * Deploy implmentation and proxy for BridgeL2SovereignChain
+ * @param {String} proxyAdmin - proxy admin, for proxy deployment
+ * @param {Array} deployer - deployer for deploy transactions
+ * @returns {Object} - proxy address, implementation address, txHashes: { proxy txHash, impl txHash }
+ */
+export async function deployBridgeL2SovereignChain(proxyAdmin: any, deployer: any) {
+    // Deploy implementation
+    const BridgeFactory = await ethers.getContractFactory(GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE, deployer);
+    const implementation = await BridgeFactory.deploy();
+    const result = await deployProxyWithTxCapture(implementation, proxyAdmin, deployer);
+    return result;
+}
+
+/**
+ * Deploy implmentation and proxy for GlobalExitRootManagerL2SovereignChain
+ * @param {String} proxyAdmin - proxy admin, for proxy deployment
+ * @param {Array} deployer - deployer for deploy transactions
+ * @param {String} bridgeProxyAddress - bridge address (ger constructor)
+ * @returns {Object} - proxy address, implementation address, txHashes: { proxy txHash, impl txHash }
+ */
+export async function deployGlobalExitRootManagerL2SovereignChain(
+    proxyAdmin: any,
+    deployer: any,
+    bridgeProxyAddress: any,
+) {
+    // Deploy implementation
+    const GERManagerFactory = await ethers.getContractFactory(GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN, deployer);
+    const implementation = await GERManagerFactory.deploy(bridgeProxyAddress);
+    const result = await deployProxyWithTxCapture(implementation, proxyAdmin, deployer);
+    return result;
+}
+
+/**
+ * Deploy implmentation and proxy for AggOracleCommittee
+ * @param {String} proxyAdmin - proxy admin, for proxy deployment
+ * @param {Array} deployer - deployer for deploy transactions
+ * @param {String} gerManagerAddress - ger address (aggoracle committee constructor)
+ * @returns {Object} - proxy address, implementation address, txHashes: { proxy txHash, impl txHash }
+ */
+export async function deployAggOracleCommittee(proxyAdmin: any, deployer: any, gerManagerAddress: any) {
+    // Deploy implementation
+    const GERManagerFactory = await ethers.getContractFactory(GENESIS_CONTRACT_NAMES.AGGORACLE_COMMITTEE, deployer);
+    const implementation = await GERManagerFactory.deploy(gerManagerAddress);
+    const result = await deployProxyWithTxCapture(implementation, proxyAdmin, deployer);
+    return result;
 }
 
 /**
