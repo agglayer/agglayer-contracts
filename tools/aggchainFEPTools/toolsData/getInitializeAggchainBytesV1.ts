@@ -12,7 +12,8 @@ async function main() {
 
     const mandatoryParameters = [
         'initParams',
-        'useDefaultGateway',
+        'useDefaultVkeys',
+        'useDefaultSigners',
         'initOwnedAggchainVKey',
         'initAggchainVKeyVersion',
         'vKeyManager',
@@ -20,14 +21,22 @@ async function main() {
 
     checkParams(params, mandatoryParameters);
 
-    const { initParams, useDefaultGateway, initOwnedAggchainVKey, initAggchainVKeyVersion, vKeyManager } = params;
+    const {
+        initParams,
+        useDefaultVkeys,
+        useDefaultSigners,
+        initOwnedAggchainVKey,
+        initAggchainVKeyVersion,
+        vKeyManager,
+    } = params;
 
     // Generate initialization parameters for FEP v1 (migration from pessimistic consensus)
     const initializationParams = {
         initParams,
         signers: [], // No signers initially
         threshold: 0, // No threshold initially
-        useDefaultGateway,
+        useDefaultVkeys,
+        useDefaultSigners,
         initOwnedAggchainVKey,
         initAggchainVKeyVersion,
         vKeyManager,
@@ -41,7 +50,8 @@ async function main() {
     logger.info('  initParams,');
     logger.info('  [], // signers');
     logger.info('  0, // threshold');
-    logger.info('  useDefaultGateway,');
+    logger.info('  useDefaultVkeys,');
+    logger.info('  useDefaultSigners,');
     logger.info('  initOwnedAggchainVKey,');
     logger.info('  initAggchainVKeyVersion,');
     logger.info('  vKeyManager');

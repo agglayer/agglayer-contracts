@@ -325,7 +325,8 @@ async function main() {
         // Store initialization parameters for later use
         const aggchainInitParams = {
             consensusContract,
-            useDefaultGateway: createRollupParameters.aggchainParams.useDefaultGateway,
+            useDefaultVkeys: createRollupParameters.aggchainParams.useDefaultVkeys,
+            useDefaultSigners: createRollupParameters.aggchainParams.useDefaultSigners || false,
             initOwnedAggchainVKey: createRollupParameters.aggchainParams.initOwnedAggchainVKey,
             initAggchainVKeySelector: createRollupParameters.aggchainParams.initAggchainVKeySelector,
             aggchainManager: createRollupParameters.aggchainParams.aggchainManager,
@@ -496,7 +497,8 @@ async function main() {
                 aggchainInitParams.initParams,
                 aggchainInitParams.signers,
                 aggchainInitParams.threshold,
-                aggchainInitParams.useDefaultGateway,
+                aggchainInitParams.useDefaultVkeys,
+                aggchainInitParams.useDefaultSigners,
                 aggchainInitParams.initOwnedAggchainVKey,
                 aggchainInitParams.initAggchainVKeySelector,
                 aggchainInitParams.adminZkEVM,
@@ -513,6 +515,7 @@ async function main() {
                 aggchainInitParams.gasTokenAddress,
                 aggchainInitParams.trustedSequencerURL,
                 aggchainInitParams.networkName,
+                aggchainInitParams.useDefaultSigners,
                 aggchainInitParams.signers,
                 aggchainInitParams.threshold,
             );

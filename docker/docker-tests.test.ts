@@ -92,9 +92,11 @@ describe('Docker build tests Contract', () => {
         const AGGCHAIN_DEFAULT_VKEY_ROLE = ethers.id('AGGCHAIN_DEFAULT_VKEY_ROLE');
         const AL_ADD_PP_ROUTE_ROLE = ethers.id('AL_ADD_PP_ROUTE_ROLE');
         const AL_FREEZE_PP_ROUTE_ROLE = ethers.id('AL_FREEZE_PP_ROUTE_ROLE');
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
         expect(await AggLayerGatewayContract.hasRole(DEFAULT_ADMIN_ROLE, admin)).to.be.equal(true);
         expect(await AggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, admin)).to.be.equal(true);
         expect(await AggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, admin)).to.be.equal(true);
         expect(await AggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, admin)).to.be.equal(true);
+        expect(await AggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, admin)).to.be.equal(true);
     });
 });

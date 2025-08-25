@@ -12,7 +12,8 @@ async function main() {
 
     const mandatoryParameters = [
         'initParams',
-        'useDefaultGateway',
+        'useDefaultVkeys',
+        'useDefaultSigners',
         'initOwnedAggchainVKey',
         'initAggchainVKeyVersion',
         'vKeyManager',
@@ -27,7 +28,8 @@ async function main() {
 
     const {
         initParams,
-        useDefaultGateway,
+        useDefaultVkeys,
+        useDefaultSigners,
         initOwnedAggchainVKey,
         initAggchainVKeyVersion,
         vKeyManager,
@@ -43,7 +45,8 @@ async function main() {
         initParams,
         signers: [], // No signers initially
         threshold: 0, // No threshold initially
-        useDefaultGateway,
+        useDefaultVkeys,
+        useDefaultSigners,
         initOwnedAggchainVKey,
         initAggchainVKeyVersion,
         vKeyManager,
@@ -62,7 +65,8 @@ async function main() {
     logger.info('  initParams,');
     logger.info('  [], // signers');
     logger.info('  0, // threshold');
-    logger.info('  useDefaultGateway,');
+    logger.info('  useDefaultVkeys,');
+    logger.info('  useDefaultSigners,');
     logger.info('  initOwnedAggchainVKey,');
     logger.info('  initAggchainVKeyVersion,');
     logger.info('  admin,');
