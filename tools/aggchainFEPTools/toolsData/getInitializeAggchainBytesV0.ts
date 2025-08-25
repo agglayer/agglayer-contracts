@@ -54,10 +54,10 @@ async function main() {
         trustedSequencerURL,
         networkName,
     };
-    
+
     logger.info('FEP v0 Initialization Parameters:');
     logger.info(JSON.stringify(initializationParams, null, 2));
-    
+
     logger.info('\nTo initialize the FEP contract, call:');
     logger.info('aggchainContract.initialize(');
     logger.info('  initParams,');

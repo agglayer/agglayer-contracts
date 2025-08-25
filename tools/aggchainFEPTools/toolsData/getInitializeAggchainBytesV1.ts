@@ -33,10 +33,10 @@ async function main() {
         initAggchainVKeyVersion,
         vKeyManager,
     };
-    
+
     logger.info('FEP v1 Initialization Parameters (for migration from pessimistic consensus):');
     logger.info(JSON.stringify(initializationParams, null, 2));
-    
+
     logger.info('\nTo initialize the FEP contract from pessimistic consensus, call:');
     logger.info('aggchainContract.initializeFromPessimisticConsensus(');
     logger.info('  initParams,');
