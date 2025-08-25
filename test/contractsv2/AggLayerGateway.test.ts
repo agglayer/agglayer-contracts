@@ -22,6 +22,7 @@ describe('AggLayerGateway tests', () => {
     const AGGCHAIN_DEFAULT_VKEY_ROLE = ethers.id('AGGCHAIN_DEFAULT_VKEY_ROLE');
     const AL_ADD_PP_ROUTE_ROLE = ethers.id('AL_ADD_PP_ROUTE_ROLE');
     const AL_FREEZE_PP_ROUTE_ROLE = ethers.id('AL_FREEZE_PP_ROUTE_ROLE');
+    const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
 
     const initPPVKeySelector = '0x00000001';
     const initPPVkey = '0xbbbbbb85702e0582d900f3a19521270c92a58e2588230c4a5cf3b45103f4a512';
@@ -55,6 +56,9 @@ describe('AggLayerGateway tests', () => {
                 initPPVKeySelector,
                 verifierContract.target,
                 initPPVkey,
+                defaultAdmin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         ).to.revertedWithCustomError(aggLayerGatewayContract, 'InvalidZeroAddress');
         await expect(
@@ -66,6 +70,9 @@ describe('AggLayerGateway tests', () => {
                 initPPVKeySelector,
                 verifierContract.target,
                 initPPVkey,
+                defaultAdmin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         ).to.revertedWithCustomError(aggLayerGatewayContract, 'InvalidZeroAddress');
         await expect(
@@ -77,6 +84,9 @@ describe('AggLayerGateway tests', () => {
                 initPPVKeySelector,
                 verifierContract.target,
                 initPPVkey,
+                defaultAdmin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         ).to.revertedWithCustomError(aggLayerGatewayContract, 'InvalidZeroAddress');
         await expect(
@@ -88,8 +98,28 @@ describe('AggLayerGateway tests', () => {
                 initPPVKeySelector,
                 verifierContract.target,
                 initPPVkey,
+                defaultAdmin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         ).to.revertedWithCustomError(aggLayerGatewayContract, 'InvalidZeroAddress');
+
+        // Check multisigRole cannot be zero address
+        await expect(
+            aggLayerGatewayContract.initialize(
+                defaultAdmin.address,
+                aggchainVKey.address,
+                addPPRoute.address,
+                freezePPRoute.address,
+                initPPVKeySelector,
+                verifierContract.target,
+                initPPVkey,
+                ethers.ZeroAddress, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
+            ),
+        ).to.revertedWithCustomError(aggLayerGatewayContract, 'InvalidZeroAddress');
+
         // initialize AggLayerGateway
         await expect(
             aggLayerGatewayContract.initialize(
@@ -100,6 +130,9 @@ describe('AggLayerGateway tests', () => {
                 initPPVKeySelector,
                 verifierContract.target,
                 initPPVkey,
+                defaultAdmin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         )
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
@@ -110,6 +143,8 @@ describe('AggLayerGateway tests', () => {
             .withArgs(AL_ADD_PP_ROUTE_ROLE, addPPRoute.address, deployer.address)
             .to.emit(aggLayerGatewayContract, 'RoleGranted')
             .withArgs(AL_FREEZE_PP_ROUTE_ROLE, freezePPRoute.address, deployer.address)
+            .to.emit(aggLayerGatewayContract, 'RoleGranted')
+            .withArgs(AL_MULTISIG_ROLE, defaultAdmin.address, deployer.address)
             .to.emit(aggLayerGatewayContract, 'RouteAdded')
             .withArgs(initPPVKeySelector, verifierContract.target, initPPVkey);
     });
@@ -120,7 +155,7 @@ describe('AggLayerGateway tests', () => {
     });
 
     it("should check error 'contract is already initialized'", async () => {
-        // initialize AggLayerGateway
+        // initialize AggLayerGateway again should fail
         await expect(
             aggLayerGatewayContract.initialize(
                 defaultAdmin.address,
@@ -130,6 +165,9 @@ describe('AggLayerGateway tests', () => {
                 initPPVKeySelector,
                 verifierContract.target,
                 initPPVkey,
+                defaultAdmin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'InvalidInitialization');
     });
@@ -422,18 +460,11 @@ describe('AggLayerGateway tests', () => {
 
     it('should test multisig functions', async () => {
         // Grant AL_MULTISIG_ROLE to defaultAdmin
-        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
         await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, defaultAdmin.address);
 
         // Test initial state - empty signers
         expect(await aggLayerGatewayContract.getAggchainSignersCount()).to.equal(0);
         expect(await aggLayerGatewayContract.getAggchainSigners()).to.deep.equal([]);
-
-        // Test getAggchainSignersHash with uninitialized hash
-        await expect(aggLayerGatewayContract.getAggchainSignersHash()).to.be.revertedWithCustomError(
-            aggLayerGatewayContract,
-            'AggchainSignersHashNotInitialized',
-        );
 
         // Initialize with empty signers to set the hash
         await expect(aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold([], [], 0)).to.emit(
@@ -623,7 +654,6 @@ describe('AggLayerGateway tests', () => {
 
     it('should test aggchainSigners array access', async () => {
         // Grant AL_MULTISIG_ROLE to defaultAdmin
-        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
         await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, defaultAdmin.address);
 
         // Add some signers
@@ -644,7 +674,6 @@ describe('AggLayerGateway tests', () => {
 
     it('should test role management edge cases', async () => {
         // Test revoking roles
-        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
 
         // Grant role
         await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);

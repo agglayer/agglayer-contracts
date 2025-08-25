@@ -216,12 +216,15 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             PESSIMISTIC_SELECTOR,
             verifierContract.target,
             programVKey,
+            admin.address, // multisigRole
+            [], // signersToAdd
+            0, // newThreshold
         );
 
         // Grant AL_MULTISIG_ROLE to initialize signers
         const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
         await aggLayerGatewayContract.connect(admin).grantRole(AL_MULTISIG_ROLE, admin.address);
-        
+
         // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
         await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
 

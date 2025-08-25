@@ -46,6 +46,13 @@ contract AggLayerGateway is
     string public constant AGGLAYER_GATEWAY_VERSION = "v1.0.0";
 
     ////////////////////////////////////////////////////////////
+    //                  Transient Storage                     //
+    ////////////////////////////////////////////////////////////
+
+    /// @notice Value to detect if the contract has been initialized previously.
+    uint64 private transient _initializerVersion;
+
+    ////////////////////////////////////////////////////////////
     //                       Mappings                         //
     ////////////////////////////////////////////////////////////
     // Mapping with the default aggchain verification keys
@@ -92,10 +99,20 @@ contract AggLayerGateway is
     }
 
     ////////////////////////////////////////////////////////////
+    //                        Modifiers                       //
+    ////////////////////////////////////////////////////////////
+
+    /// @dev Modifier to retrieve initializer version value previous on using the reinitializer modifier, its used in the initialize function.
+    modifier getInitializedVersion() {
+        _initializerVersion = _getInitializedVersion();
+        _;
+    }
+
+    ////////////////////////////////////////////////////////////
     //                  Initialization                        //
     ////////////////////////////////////////////////////////////
     /**
-     * @notice  Initializer function to set new rollup manager version.
+     * @notice  Initializer function to set up the AggLayerGateway contract.
      * @param defaultAdmin The address of the default admin. Can grant role to addresses.
      * @dev This address is the highest privileged address so it's recommended to use a timelock
      * @param aggchainDefaultVKeyRole The address that can manage the aggchain verification keys.
@@ -104,6 +121,9 @@ contract AggLayerGateway is
      * @param pessimisticVKeySelector The 4 bytes selector to add to the pessimistic verification keys.
      * @param verifier The address of the verifier contract.
      * @param pessimisticVKey New pessimistic program verification key.
+     * @param multisigRole The address that can manage multisig signers and threshold.
+     * @param signersToAdd Array of signers to add with their URLs
+     * @param newThreshold New threshold value
      */
     function initialize(
         address defaultAdmin,
@@ -112,9 +132,17 @@ contract AggLayerGateway is
         address freezeRouteRole,
         bytes4 pessimisticVKeySelector,
         address verifier,
-        bytes32 pessimisticVKey
-    ) external initializer {
+        bytes32 pessimisticVKey,
+        address multisigRole,
+        SignerInfo[] memory signersToAdd,
+        uint256 newThreshold
+    ) external getInitializedVersion reinitializer(2) {
+        if (_initializerVersion != 0) {
+            revert InvalidInitializer();
+        }
+
         if (
+            multisigRole == address(0) ||
             defaultAdmin == address(0) ||
             aggchainDefaultVKeyRole == address(0) ||
             addRouteRole == address(0) ||
@@ -127,11 +155,48 @@ contract AggLayerGateway is
         _grantRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggchainDefaultVKeyRole);
         _grantRole(AL_ADD_PP_ROUTE_ROLE, addRouteRole);
         _grantRole(AL_FREEZE_PP_ROUTE_ROLE, freezeRouteRole);
+        _grantRole(AL_MULTISIG_ROLE, multisigRole);
 
         _addPessimisticVKeyRoute(
             pessimisticVKeySelector,
             verifier,
             pessimisticVKey
+        );
+
+        // Add the signers to the contract
+        _updateSignersAndThreshold(
+            new RemoveSignerInfo[](0), // No signers to remove
+            signersToAdd,
+            newThreshold
+        );
+    }
+
+    /**
+     * @notice  Upgrade initializer to add multisig functionality to existing deployment.
+     * @param multisigRole The address of the multisig role. Can manage multisig signers and threshold.
+     * @param signersToAdd Array of signers to add with their URLs
+     * @param newThreshold New threshold value
+     */
+    function initialize(
+        address multisigRole,
+        SignerInfo[] memory signersToAdd,
+        uint256 newThreshold
+    ) external getInitializedVersion reinitializer(2) {
+        if (_initializerVersion != 1) {
+            revert InvalidInitializer();
+        }
+
+        if (multisigRole == address(0)) {
+            revert InvalidZeroAddress();
+        }
+
+        _grantRole(AL_MULTISIG_ROLE, multisigRole);
+
+        // Add the signers to the contract
+        _updateSignersAndThreshold(
+            new RemoveSignerInfo[](0), // No signers to remove
+            signersToAdd,
+            newThreshold
         );
     }
 
@@ -330,7 +395,7 @@ contract AggLayerGateway is
     /**
      * @notice function to retrieve the default aggchain verification key.
      * @param defaultAggchainSelector The default aggchain selector for the verification key.
-     * @dev First 2 bytes are the aggchain type, the last 2 bytes are the 'verification key identifier'.
+     * @dev First 2 bytes of the selector  are the 'verification key identifier', the last 2 bytes are the aggchain type (ex: FEP, ECDSA)
      */
     function getDefaultAggchainVKey(
         bytes4 defaultAggchainSelector

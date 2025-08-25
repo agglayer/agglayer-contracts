@@ -236,12 +236,15 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             PESSIMISTIC_SELECTOR,
             verifierContract.target,
             randomPessimisticVKey,
+            admin.address, // multisigRole
+            [], // signersToAdd
+            0, // newThreshold
         );
 
         // Grant AL_MULTISIG_ROLE to initialize signers
         const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
         await aggLayerGatewayContract.connect(admin).grantRole(AL_MULTISIG_ROLE, admin.address);
-        
+
         // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
         await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
         // Grant role to agglayer admin
@@ -355,6 +358,9 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
                 PESSIMISTIC_SELECTOR,
                 verifierContract.target,
                 randomPessimisticVKey,
+                admin.address, // multisigRole
+                [], // signersToAdd
+                0, // newThreshold
             ),
         ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'InvalidInitialization');
     });
