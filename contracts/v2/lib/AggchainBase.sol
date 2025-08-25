@@ -104,7 +104,7 @@ abstract contract AggchainBase is
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[45] private __gap;
+    uint256[46] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -159,8 +159,11 @@ abstract contract AggchainBase is
     //                  Initialization                        //
     ////////////////////////////////////////////////////////////
 
-    /// @notice Sets the aggchain manager.
-    /// @param newAggchainManager The address of the new aggchain manager.
+    /**
+     * @notice Sets the aggchain manager
+     * @dev Can only be called by the rollup manager during initialization
+     * @param newAggchainManager The address of the new aggchain manager
+     */
     function initAggchainManager(
         address newAggchainManager
     ) external onlyRollupManager {
@@ -266,9 +269,12 @@ abstract contract AggchainBase is
     //     Rollup manager callback functions     //
     ///////////////////////////////////////////////
 
-    /// @notice Callback while pessimistic proof is being verified from the rollup manager
-    /// @notice Returns the aggchain hash for a given aggchain data
-    /// @return aggchainHash resulting aggchain hash
+    /**
+     * @notice Callback while pessimistic proof is being verified from the rollup manager
+     * @dev Returns the aggchain hash for a given aggchain data
+     * @param aggchainData Custom bytes provided by the chain containing the aggchain data
+     * @return aggchainHash resulting aggchain hash
+     */
     function getAggchainHash(
         bytes memory aggchainData
     ) external view returns (bytes32) {
@@ -301,6 +307,13 @@ abstract contract AggchainBase is
     //        aggchainManager functions          //
     ///////////////////////////////////////////////
 
+    /**
+     * @notice Updates signers and threshold for multisig operations
+     * @dev External wrapper for _updateSignersAndThreshold, restricted to aggchainManager
+     * @param _signersToRemove Array of signers to remove with their indices
+     * @param _signersToAdd Array of new signers to add with their URLs
+     * @param _newThreshold New threshold value for multisig operations
+     */
     function updateSignersAndThreshold(
         RemoveSignerInfo[] memory _signersToRemove,
         SignerInfo[] memory _signersToAdd,
@@ -365,9 +378,11 @@ abstract contract AggchainBase is
         _updateAggchainSignersHash();
     }
 
-    /// @notice Starts the aggchainManager role transfer
-    ///         This is a two step process, the pending aggchainManager must accept to finalize the process
-    /// @param newAggchainManager Address of the new aggchainManager
+    /**
+     * @notice Starts the aggchainManager role transfer
+     * @dev This is a two step process, the pending aggchainManager must accept to finalize the process
+     * @param newAggchainManager Address of the new aggchainManager
+     */
     function transferAggchainManagerRole(
         address newAggchainManager
     ) external onlyAggchainManager {
@@ -380,7 +395,10 @@ abstract contract AggchainBase is
         emit TransferAggchainManagerRole(aggchainManager, newAggchainManager);
     }
 
-    /// @notice Allow the current pending aggchainManager to accept the aggchainManager role
+    /**
+     * @notice Allow the current pending aggchainManager to accept the aggchainManager role
+     * @dev Can only be called by the pending aggchainManager
+     */
     function acceptAggchainManagerRole() external {
         if (pendingAggchainManager != msg.sender) {
             revert OnlyPendingAggchainManager();
@@ -566,6 +584,7 @@ abstract contract AggchainBase is
     /**
      * @notice Internal function to add a signer with validation
      * @param _signer Address of the signer to add
+     * @param url URL associated with the signer
      */
     function _addSignerInternal(address _signer, string memory url) internal {
         if (_signer == address(0)) {
@@ -616,6 +635,7 @@ abstract contract AggchainBase is
 
     /**
      * @notice Update the hash of the aggchainSigners array
+     * @dev Combines threshold and signers array into a single hash for efficient verification
      */
     function _updateAggchainSignersHash() internal {
         aggchainSignersHash = keccak256(

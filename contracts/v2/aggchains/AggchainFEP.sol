@@ -379,12 +379,16 @@ contract AggchainFEP is AggchainBase {
         );
     }
 
-    /// @notice Initialize function for upgrade from PolygonPessimisticConsensus
-    /// @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
-    /// @param _initParams The initialization parameters for FEP
-    /// @param _useDefaultGateway Whether to use the default gateway
-    /// @param _initOwnedAggchainVKey The owned aggchain verification key
-    /// @param _initAggchainVKeySelector The aggchain verification key selector
+    /**
+     * @notice Initialize function for upgrade from PolygonPessimisticConsensus
+     * @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
+     * @param _initParams The initialization parameters for FEP
+     * @param _useDefaultGateway Whether to use the default gateway
+     * @param _initOwnedAggchainVKey The owned aggchain verification key
+     * @param _initAggchainVKeySelector The aggchain verification key selector
+     * @param _signersToAdd Array of signers to add to the multisig
+     * @param _newThreshold New threshold for multisig operations
+     */
     function initializeFromPessimisticConsensus(
         InitParams memory _initParams,
         bool _useDefaultGateway,
@@ -432,7 +436,12 @@ contract AggchainFEP is AggchainBase {
         );
     }
 
-    function initalizeFromECDSAMultisig(
+    /**
+     * @notice Initialize function for upgrade from AggchainECDSAMultisig to AggchainFEP
+     * @dev Only initializes FEP specific parameters, assumes base and consensus are already initialized
+     * @param _initParams The initialization parameters for FEP
+     */
+    function initializeFromECDSAMultisig(
         InitParams memory _initParams
     ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
         if (_initializerVersion != 2) {
@@ -448,6 +457,10 @@ contract AggchainFEP is AggchainBase {
         _initializeAggchain(_initParams);
     }
 
+    /**
+     * @notice Upgrade function from a previous FEP version
+     * @dev Migrates existing FEP configuration to new format with genesis config and multisig
+     */
     function upgradeFromPreviousFEP()
         external
         onlyRollupManager
@@ -458,7 +471,8 @@ contract AggchainFEP is AggchainBase {
             revert InvalidInitializer();
         }
 
-        // Add config to genesis TODO review
+        // Add config to genesis
+        // TODO: review - ensure this is the correct approach for upgrade path
         opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
             aggregationVkey: aggregationVkey,
             rangeVkeyCommitment: rangeVkeyCommitment,
@@ -474,8 +488,11 @@ contract AggchainFEP is AggchainBase {
         _updateAggchainSignersHash();
     }
 
-    /// @notice Initializer AggchainFEP storage
-    /// @param _initParams The initialization parameters for the contract.
+    /**
+     * @notice Initializer AggchainFEP storage
+     * @dev Internal function to set up FEP-specific parameters
+     * @param _initParams The initialization parameters for the contract
+     */
     function _initializeAggchain(InitParams memory _initParams) internal {
         if (_initParams.optimisticModeManager == address(0)) {
             revert InvalidZeroAddress();
@@ -517,7 +534,8 @@ contract AggchainFEP is AggchainBase {
 
         optimisticModeManager = _initParams.optimisticModeManager;
 
-        // Initialize genesis configuration TODO, genesis config name should be param?
+        // Initialize genesis configuration
+        // TODO: genesis config name should be param?
         opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
             aggregationVkey: _initParams.aggregationVkey,
             rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
@@ -682,9 +700,11 @@ contract AggchainFEP is AggchainBase {
     //                       Functions                        //
     ////////////////////////////////////////////////////////////
 
-    /// @notice Callback when pessimistic proof is verified, can only be called by the rollup manager
-    ///         Stores the necessary chain data when the pessimistic proof is verified
-    /// @param aggchainData Custom data provided by the chain
+    /**
+     * @notice Callback when pessimistic proof is verified, can only be called by the rollup manager
+     * @dev Stores the necessary chain data when the pessimistic proof is verified
+     * @param aggchainData Custom data provided by the chain containing outputRoot and l2BlockNumber
+     */
     function onVerifyPessimistic(
         bytes memory aggchainData
     ) external onlyRollupManager {
@@ -730,11 +750,14 @@ contract AggchainFEP is AggchainBase {
     //                aggchainManager functions           //
     ////////////////////////////////////////////////////////
 
-    /// @notice Updates or creates an OP Succinct configuration.
-    /// @param _configName The name of the configuration.
-    /// @param _rollupConfigHash The rollup config hash.
-    /// @param _aggregationVkey The aggregation verification key.
-    /// @param _rangeVkeyCommitment The range verification key commitment.
+    /**
+     * @notice Updates or creates an OP Succinct configuration
+     * @dev Validates all parameters are non-zero before adding
+     * @param _configName The name of the configuration
+     * @param _rollupConfigHash The rollup config hash
+     * @param _aggregationVkey The aggregation verification key
+     * @param _rangeVkeyCommitment The range verification key commitment
+     */
     function addOpSuccinctConfig(
         bytes32 _configName,
         bytes32 _rollupConfigHash,
@@ -771,8 +794,10 @@ contract AggchainFEP is AggchainBase {
         );
     }
 
-    /// @notice Deletes an OP Succinct configuration.
-    /// @param _configName The name of the configuration to delete.
+    /**
+     * @notice Deletes an OP Succinct configuration
+     * @param _configName The name of the configuration to delete
+     */
     function deleteOpSuccinctConfig(
         bytes32 _configName
     ) external onlyAggchainManager {
@@ -780,8 +805,11 @@ contract AggchainFEP is AggchainBase {
         emit OpSuccinctConfigDeleted(_configName);
     }
 
-    /// @notice Sets the OP Succinct configuration to use for the next submission.
-    /// @param _configName The name of the configuration to use.
+    /**
+     * @notice Sets the OP Succinct configuration to use for the next submission
+     * @dev Validates the configuration exists before setting it as selected
+     * @param _configName The name of the configuration to use
+     */
     function selectOpSuccinctConfig(
         bytes32 _configName
     ) external onlyAggchainManager {
@@ -793,8 +821,11 @@ contract AggchainFEP is AggchainBase {
         emit OpSuccinctConfigSelected(_configName);
     }
 
-    /// @notice Update the submission interval.
-    /// @param _submissionInterval The new submission interval.
+    /**
+     * @notice Update the submission interval
+     * @dev Must be greater than zero
+     * @param _submissionInterval The new submission interval in L2 blocks
+     */
     function updateSubmissionInterval(
         uint256 _submissionInterval
     ) external onlyAggchainManager {
@@ -806,7 +837,10 @@ contract AggchainFEP is AggchainBase {
         submissionInterval = _submissionInterval;
     }
 
-    /// @notice Enables optimistic mode.
+    /**
+     * @notice Enables optimistic mode
+     * @dev When enabled, the chain can bypass state transition verification
+     */
     function enableOptimisticMode() external onlyOptimisticModeManager {
         if (optimisticMode) {
             revert OptimisticModeEnabled();
@@ -816,7 +850,10 @@ contract AggchainFEP is AggchainBase {
         emit EnableOptimisticMode();
     }
 
-    /// @notice Disables optimistic mode.
+    /**
+     * @notice Disables optimistic mode
+     * @dev Returns to normal verification mode
+     */
     function disableOptimisticMode() external onlyOptimisticModeManager {
         if (!optimisticMode) {
             revert OptimisticModeNotEnabled();
@@ -829,9 +866,11 @@ contract AggchainFEP is AggchainBase {
     ////////////////////////////////////////////////////////////
     //         optimisticModeManager functions                //
     ////////////////////////////////////////////////////////////
-    /// @notice Starts the optimisticModeManager role transfer
-    /// This is a two step process, the pending optimisticModeManager must accept to finalize the process
-    /// @param newOptimisticModeManager Address of the new optimisticModeManager
+    /**
+     * @notice Starts the optimisticModeManager role transfer
+     * @dev This is a two step process, the pending optimisticModeManager must accept to finalize the process
+     * @param newOptimisticModeManager Address of the new optimisticModeManager
+     */
     function transferOptimisticModeManagerRole(
         address newOptimisticModeManager
     ) external onlyOptimisticModeManager {
@@ -847,7 +886,10 @@ contract AggchainFEP is AggchainBase {
         );
     }
 
-    /// @notice Allow the current pending optimisticModeManager to accept the optimisticModeManager role
+    /**
+     * @notice Allow the current pending optimisticModeManager to accept the optimisticModeManager role
+     * @dev Can only be called by the pending optimisticModeManager
+     */
     function acceptOptimisticModeManagerRole() external {
         if (pendingOptimisticModeManager != msg.sender) {
             revert OnlyPendingOptimisticModeManager();

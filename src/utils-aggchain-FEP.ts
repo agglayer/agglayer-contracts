@@ -28,7 +28,7 @@ export function encodeAggchainDataFEP(aggchainVKeySelector, outputRoot, l2BlockN
 }
 
 /**
- * Compute the aggchain Parameteres hash for FEP
+ * Compute the aggchain Parameters hash for FEP
  * @param {String} oldOutputRoot old output root
  * @param {String} newOutputRoot new output root
  * @param {BigInt} l2BlockNumber L2 block number
@@ -49,7 +49,7 @@ export function computeHashAggchainParamsFEP(
     rangeVkeyCommitment,
     aggregationVkey,
 ) {
-    // solidity lkeccak
+    // solidity keccak
     return ethers.solidityPackedKeccak256(
         ['bytes32', 'bytes32', 'uint256', 'uint256', 'bool', 'address', 'bytes32', 'bytes32'],
         [
