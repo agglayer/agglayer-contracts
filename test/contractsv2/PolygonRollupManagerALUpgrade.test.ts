@@ -37,7 +37,6 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
     let emergencyCouncil: any;
     let aggLayerAdmin: any;
     let tester: any;
-    let vKeyManager: any;
     let aggchainVKey: any;
     let addPPRoute: any;
     let freezePPRoute: any;
@@ -124,18 +123,8 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
     }
 
     async function createECDSARollup(rollupTypeIdECDSA: number) {
-        // For RollupManager tests, encode parameters for initialize function
-        const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(
-            ['address', 'address', 'address', 'string', 'string', 'address'],
-            [
-                admin.address,
-                trustedSequencer.address,
-                ethers.ZeroAddress, // gas token address
-                '', // trusted sequencer url
-                '', // network name
-                vKeyManager.address,
-            ],
-        );
+        // For RollupManager tests, we don't need initializeBytesAggchain
+        // as it's handled by the contract itself
         // initialize bytes aggchainManager
         const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
         const rollupManagerNonce = await ethers.provider.getTransactionCount(rollupManagerContract.target);
@@ -594,7 +583,6 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // For migration from PessimisticConsensus, the migrateFromPessimisticConsensus function
         // will be called automatically by the RollupManager
         // No initialization bytes needed for migration
-        const initializeBytesAggchain = '0x';
 
         const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('initAggchainManager(address)', [
             aggchainManager.address,

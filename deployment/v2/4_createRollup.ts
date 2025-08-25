@@ -304,6 +304,7 @@ async function main() {
     let genesisFinal;
     let verifierAddress;
     let initializeBytesAggchainRollupManager;
+    let aggchainInitParams;
 
     if (arraySupportedAggchains.includes(consensusContract)) {
         // If Aggchain
@@ -323,7 +324,7 @@ async function main() {
         // The initializeBytesAggchain will be empty and initialization will be done directly after deployment
 
         // Store initialization parameters for later use
-        const aggchainInitParams = {
+        aggchainInitParams = {
             consensusContract,
             useDefaultVkeys: createRollupParameters.aggchainParams.useDefaultVkeys,
             useDefaultSigners: createRollupParameters.aggchainParams.useDefaultSigners || false,

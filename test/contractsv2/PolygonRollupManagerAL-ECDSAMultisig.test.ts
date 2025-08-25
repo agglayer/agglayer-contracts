@@ -62,7 +62,6 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
     // AGGCHAIN CONSTANTS
     // bytes2(version)=0x0001 | bytes2(type)=0x0002 => selector 0x00010002
     const AGGCHAIN_VKEY_SELECTOR = '0x00010002';
-    const randomNewStateRoot = computeRandomBytes(32);
     const CUSTOM_DATA_ECDSA = '0x'; // ECDSA Multisig expects empty aggchainData
     const randomPessimisticVKey = computeRandomBytes(32);
 
@@ -162,7 +161,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         );
 
         // Use explicit function selector to avoid ambiguity
-        const initializeTx = await aggchainECDSAMultisigContract
+        await aggchainECDSAMultisigContract
             .connect(aggchainManager)
             ['initialize(address,address,address,string,string,bool,(address,string)[],uint256)'](
                 admin.address,
@@ -692,7 +691,6 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         // For migration from PessimisticConsensus, the migrateFromPessimisticConsensus function
         // will be called automatically by the RollupManager
         // No initialization bytes needed for migration
-        const initializeBytesAggchain = '0x';
 
         const upgradeData = aggchainECDSAMultisigFactory.interface.encodeFunctionData('initAggchainManager(address)', [
             aggchainManager.address,
