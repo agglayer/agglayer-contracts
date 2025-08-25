@@ -66,8 +66,12 @@ abstract contract AggchainBase is
     address public _legacyvKeyManager;
     address public _legacypendingVKeyManager;
 
-    // Flag to enable/disable the use of the custom chain gateway to handle the aggchain keys. In case  of true, the keys are managed by the aggregation layer gateway
-    bool public useDefaultGateway;
+    // Flag to enable/disable the use of the default verification keys from the gateway
+    bool public useDefaultVkeys;
+
+    // Flag to enable/disable the use of the default signers from the gateway
+    // review should be upgrade safe since it's completing an storage slot and does not shift other ones
+    bool public useDefaultSigners;
 
     /// @notice Address that manages all the functionalities related to the aggchain
     address public aggchainManager;
@@ -184,7 +188,8 @@ abstract contract AggchainBase is
      * Note if a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
      * @param sequencerURL Trusted sequencer URL
      * @param _networkName L2 network name
-     * @param _useDefaultGateway Flag to setup initial values for the default gateway
+     * @param _useDefaultVkeys Flag to use default verification keys from gateway
+     * @param _useDefaultSigners Flag to use default signers from gateway
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
      */
@@ -194,7 +199,8 @@ abstract contract AggchainBase is
         address _gasTokenAddress,
         string memory sequencerURL,
         string memory _networkName,
-        bool _useDefaultGateway,
+        bool _useDefaultVkeys,
+        bool _useDefaultSigners,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector
     ) internal onlyInitializing {
@@ -212,7 +218,8 @@ abstract contract AggchainBase is
         );
 
         _initializeAggchainBase(
-            _useDefaultGateway,
+            _useDefaultVkeys,
+            _useDefaultSigners,
             _initOwnedAggchainVKey,
             _initAggchainVKeySelector
         );
@@ -220,16 +227,19 @@ abstract contract AggchainBase is
 
     /**
      * @notice Initializer AggchainBase storage
-     * @param _useDefaultGateway Flag to setup initial values for the default gateway
+     * @param _useDefaultVkeys Flag to use default verification keys from gateway
+     * @param _useDefaultSigners Flag to use default signers from gateway
      * @param _initOwnedAggchainVKey Initial owned aggchain verification key
      * @param _initAggchainVKeySelector Initial aggchain selector
      */
     function _initializeAggchainBase(
-        bool _useDefaultGateway,
+        bool _useDefaultVkeys,
+        bool _useDefaultSigners,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector
     ) internal onlyInitializing {
-        useDefaultGateway = _useDefaultGateway;
+        useDefaultVkeys = _useDefaultVkeys;
+        useDefaultSigners = _useDefaultSigners;
         // set the initial aggchain keys
         ownedAggchainVKeys[_initAggchainVKeySelector] = _initOwnedAggchainVKey;
     }
@@ -278,13 +288,21 @@ abstract contract AggchainBase is
     function getAggchainHash(
         bytes memory aggchainData
     ) external view returns (bytes32) {
-        // Cache storage variable
-        bytes32 cachedSignersHash = aggchainSignersHash;
+        // Get signers hash from gateway if using default signers, otherwise use local storage
+        bytes32 cachedSignersHash;
 
-        // Check if the aggchain signers hash been set
-        // Empty signers is supported, but must be done explicitly
-        if (cachedSignersHash == bytes32(0)) {
-            revert AggchainSignersHashNotInitialized();
+        if (useDefaultSigners) {
+            // Get signers hash from AggLayerGateway, in case there are no signers, the
+            cachedSignersHash = aggLayerGateway.getAggchainSignersHash();
+        } else {
+            // Use local storage variable
+            cachedSignersHash = aggchainSignersHash;
+
+            // Check if the aggchain signers hash been set
+            // Empty signers is supported, but must be done explicitly
+            if (cachedSignersHash == bytes32(0)) {
+                revert AggchainSignersHashNotInitialized();
+            }
         }
 
         (
@@ -412,31 +430,59 @@ abstract contract AggchainBase is
     }
 
     /**
-     * @notice Enable the use of the default gateway to manage the aggchain keys.
+     * @notice Enable the use of default verification keys from gateway
      */
-    function enableUseDefaultGatewayFlag() external onlyAggchainManager {
-        if (useDefaultGateway) {
-            revert UseDefaultGatewayAlreadyEnabled();
+    function enableUseDefaultVkeysFlag() external onlyAggchainManager {
+        if (useDefaultVkeys) {
+            revert UseDefaultVkeysAlreadyEnabled();
         }
 
-        useDefaultGateway = true;
+        useDefaultVkeys = true;
 
         // Emit event
-        emit EnableUseDefaultGatewayFlag();
+        emit EnableUseDefaultVkeysFlag();
     }
 
     /**
-     * @notice Disable the use of the default gateway to manage the aggchain keys. After disable, the keys are handled by the aggchain contract.
+     * @notice Disable the use of default verification keys from gateway
      */
-    function disableUseDefaultGatewayFlag() external onlyAggchainManager {
-        if (!useDefaultGateway) {
-            revert UseDefaultGatewayAlreadyDisabled();
+    function disableUseDefaultVkeysFlag() external onlyAggchainManager {
+        if (!useDefaultVkeys) {
+            revert UseDefaultVkeysAlreadyDisabled();
         }
 
-        useDefaultGateway = false;
+        useDefaultVkeys = false;
 
         // Emit event
-        emit DisableUseDefaultGatewayFlag();
+        emit DisableUseDefaultVkeysFlag();
+    }
+
+    /**
+     * @notice Enable the use of default signers from gateway
+     */
+    function enableUseDefaultSignersFlag() external onlyAggchainManager {
+        if (useDefaultSigners) {
+            revert UseDefaultSignersAlreadyEnabled();
+        }
+
+        useDefaultSigners = true;
+
+        // Emit event
+        emit EnableUseDefaultSignersFlag();
+    }
+
+    /**
+     * @notice Disable the use of default signers from gateway
+     */
+    function disableUseDefaultSignersFlag() external onlyAggchainManager {
+        if (!useDefaultSigners) {
+            revert UseDefaultSignersAlreadyDisabled();
+        }
+
+        useDefaultSigners = false;
+
+        // Emit event
+        emit DisableUseDefaultSignersFlag();
     }
 
     /**
@@ -490,13 +536,13 @@ abstract contract AggchainBase is
     //////////////////////////
 
     /**
-     * @notice returns the current aggchain verification key. If the flag `useDefaultGateway` is set to true, the gateway verification key is returned, else, the custom chain verification key is returned.
+     * @notice returns the current aggchain verification key. If the flag `useDefaultVkeys` is set to true, the gateway verification key is returned, else, the custom chain verification key is returned.
      * @param aggchainVKeySelector The selector for the verification key query. This selector identifies the aggchain type + sp1 verifier version
      */
     function getAggchainVKey(
         bytes4 aggchainVKeySelector
     ) public view returns (bytes32 aggchainVKey) {
-        if (useDefaultGateway == false) {
+        if (useDefaultVkeys == false) {
             aggchainVKey = ownedAggchainVKeys[aggchainVKeySelector];
 
             if (aggchainVKey == bytes32(0)) {
@@ -516,6 +562,9 @@ abstract contract AggchainBase is
      * @return True if the address is a signer
      */
     function isSigner(address _signer) public view returns (bool) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.isSigner(_signer);
+        }
         return bytes(signerToURLs[_signer]).length > 0;
     }
 
@@ -566,6 +615,9 @@ abstract contract AggchainBase is
      * @return Number of aggchainSigners in the multisig
      */
     function getAggchainSignersCount() external view returns (uint256) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.getAggchainSignersCount();
+        }
         return aggchainSigners.length;
     }
 
@@ -574,6 +626,9 @@ abstract contract AggchainBase is
      * @return Array of signer addresses
      */
     function getAggchainSigners() external view returns (address[] memory) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.getAggchainSigners();
+        }
         return aggchainSigners;
     }
 

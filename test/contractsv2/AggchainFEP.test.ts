@@ -29,7 +29,8 @@ describe('AggchainFEP', () => {
     const gasTokenAddress = ethers.ZeroAddress;
 
     // aggchain variables
-    const useDefaultGateway = false;
+    const useDefaultVkeys = false;
+    const useDefaultSigners = false;
     const aggchainVKeySelector = '0x12340001';
     const newAggchainVKey = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
@@ -104,7 +105,8 @@ describe('AggchainFEP', () => {
                 initParamsCp,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -127,7 +129,8 @@ describe('AggchainFEP', () => {
                 initParamsCp,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -149,7 +152,8 @@ describe('AggchainFEP', () => {
                 initParamsCp,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -171,7 +175,8 @@ describe('AggchainFEP', () => {
                 initParamsCp,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -194,7 +199,8 @@ describe('AggchainFEP', () => {
                 initParamsCp,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -214,7 +220,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,
@@ -260,8 +267,8 @@ describe('AggchainFEP', () => {
         expect(l2Output.l2BlockNumber).to.be.equal(initParams.startingBlockNumber);
 
         // aggchainBase
-        expect(await aggchainFEPContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
-        expect(await aggchainFEPContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
+        expect(await aggchainFEPContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
+        expect(await aggchainFEPContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
         expect(await aggchainFEPContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(newAggchainVKey);
 
         // PolygonConsensusBase
@@ -277,7 +284,8 @@ describe('AggchainFEP', () => {
                 initParams,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -355,7 +363,8 @@ describe('AggchainFEP', () => {
         // For v1, we use initializeFromPessimisticConsensus
         await aggchainFEPContract.connect(aggchainManager).initializeFromPessimisticConsensus(
             initParams,
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             [], // No signers to add initially
@@ -386,8 +395,8 @@ describe('AggchainFEP', () => {
         expect(l2Output.l2BlockNumber).to.be.equal(initParams.startingBlockNumber);
 
         // aggchainBase
-        expect(await aggchainFEPContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
-        expect(await aggchainFEPContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
+        expect(await aggchainFEPContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
+        expect(await aggchainFEPContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
         expect(await aggchainFEPContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(newAggchainVKey);
 
         // PolygonConsensusBase
@@ -403,7 +412,8 @@ describe('AggchainFEP', () => {
                 initParams,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                useDefaultGateway,
+                useDefaultVkeys,
+                useDefaultSigners,
                 newAggchainVKey,
                 aggchainVKeySelector,
                 admin.address,
@@ -444,7 +454,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,
@@ -574,7 +585,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,
@@ -647,7 +659,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,
@@ -723,7 +736,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,
@@ -815,7 +829,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,
@@ -914,7 +929,8 @@ describe('AggchainFEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            useDefaultGateway,
+            useDefaultVkeys,
+            useDefaultSigners,
             newAggchainVKey,
             aggchainVKeySelector,
             admin.address,

@@ -104,7 +104,8 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             initParams,
             [], // No signers to add initially
             0, // Threshold of 0 initially
-            true, // useDefaultGateway
+            true, // useDefaultVkeys
+            true, // useDefaultSigners
             ethers.ZeroHash, // ownedAggchainVKeys
             '0x00000000', // aggchainVKeysSelectors
             admin.address,
@@ -243,6 +244,13 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             verifierContract.target,
             randomPessimisticVKey,
         );
+
+        // Grant AL_MULTISIG_ROLE to initialize signers
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
+        await aggLayerGatewayContract.connect(admin).grantRole(AL_MULTISIG_ROLE, admin.address);
+        
+        // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
+        await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
         // check roles
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect(await aggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address)).to.be.true;
@@ -741,7 +749,8 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         await expect(
             FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
                 initParams,
-                false, // useDefaultGateway (set to false to test aggchain type validation)
+                false, // useDefaultVkeys (set to false to test aggchain type validation)
+                false, // useDefaultSigners
                 ethers.ZeroHash, // ownedAggchainVKey
                 '0x00010002', // aggchainVkeySelector (wrong type - should be 0x0001 for FEP)
                 [], // No signers to add initially
@@ -751,7 +760,8 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
 
         await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
             initParams,
-            false, // useDefaultGateway (set to false to avoid needing gateway vkey)
+            false, // useDefaultVkeys (set to false to avoid needing gateway vkey)
+            false, // useDefaultSigners
             ethers.id('ownedAggchainVKey'), // ownedAggchainVKey
             '0x00010001', // aggchainVkeySelector (valid FEP selector)
             [], // No signers to add initially

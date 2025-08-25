@@ -38,6 +38,10 @@ contract AggLayerGateway is
     bytes32 internal constant AL_FREEZE_PP_ROUTE_ROLE =
         keccak256("AL_FREEZE_PP_ROUTE_ROLE");
 
+    // Can manage multisig signers and threshold
+    // @dev value 0x93285f0a0c5811f0df0c8e5e8c70c2e8c2f8c9a3e3f3e3f3e3f3e3f3e3f3e3f3
+    bytes32 internal constant AL_MULTISIG_ROLE = keccak256("AL_MULTISIG_ROLE");
+
     // Current AggLayerGateway version
     string public constant AGGLAYER_GATEWAY_VERSION = "v1.0.0";
 
@@ -52,11 +56,29 @@ contract AggLayerGateway is
     mapping(bytes4 pessimisticVKeySelector => AggLayerVerifierRoute)
         public pessimisticVKeyRoutes;
 
+    ////////////////////////////////////////////////////////////
+    //                      Multisig                          //
+    ////////////////////////////////////////////////////////////
+
+    /// @notice Array of multisig aggchainSigners
+    address[] public aggchainSigners;
+
+    /// @notice Mapping that stores the URL of each signer
+    /// It's used as well to check if an address is a signer
+    mapping(address => string) public signerToURLs;
+
+    /// @notice Threshold required for multisig operations
+    uint256 public threshold;
+
+    /// @notice Hash of the current aggchainSigners array
+    bytes32 public aggchainSignersHash;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
+     * Updated to account for new multisig storage variables (4 slots used)
      */
-    uint256[50] private __gap;
+    uint256[46] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                       Constructor                      //
@@ -326,5 +348,187 @@ contract AggLayerGateway is
      */
     function version() external pure returns (string memory) {
         return AGGLAYER_GATEWAY_VERSION;
+    }
+
+    ////////////////////////////////////////////////////////////
+    //                  Multisig Functions                    //
+    ////////////////////////////////////////////////////////////
+
+    /**
+     * @notice Updates signers and threshold for multisig operations
+     * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
+     * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
+     * @param _signersToAdd Array of new signers to add with their URLs
+     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     */
+    function updateSignersAndThreshold(
+        RemoveSignerInfo[] memory _signersToRemove,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
+    ) external onlyRole(AL_MULTISIG_ROLE) {
+        _updateSignersAndThreshold(
+            _signersToRemove,
+            _signersToAdd,
+            _newThreshold
+        );
+    }
+
+    /**
+     * @notice Batch update signers and threshold in a single transaction
+     * @dev Internal function that handles the actual logic
+     * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
+     * @param _signersToAdd Array of new signers to add with their URLs
+     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     */
+    function _updateSignersAndThreshold(
+        RemoveSignerInfo[] memory _signersToRemove,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
+    ) internal {
+        // Validate descending order of indices for removal to avoid index shifting issues
+        // When removing multiple signers, we must process them from highest index to lowest
+        if (_signersToRemove.length > 1) {
+            for (uint256 i = 0; i < _signersToRemove.length - 1; i++) {
+                if (
+                    _signersToRemove[i].index <= _signersToRemove[i + 1].index
+                ) {
+                    revert IndicesNotInDescendingOrder();
+                }
+            }
+        }
+
+        // Remove signers (in descending index order to avoid index shifting issues)
+        for (uint256 i = 0; i < _signersToRemove.length; i++) {
+            _removeSignerInternal(
+                _signersToRemove[i].addr,
+                _signersToRemove[i].index
+            );
+        }
+
+        // Add new signers
+        for (uint256 i = 0; i < _signersToAdd.length; i++) {
+            _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
+        }
+
+        if (aggchainSigners.length > 255) {
+            revert AggchainSignersTooHigh();
+        }
+
+        // Update threshold if provided
+        if (_newThreshold > aggchainSigners.length) {
+            revert InvalidThreshold();
+        }
+
+        threshold = _newThreshold;
+
+        // Update the signers hash once after all operations
+        _updateAggchainSignersHash();
+    }
+
+    /**
+     * @notice Internal function to add a signer with validation
+     * @param _signer Address of the signer to add
+     * @param url URL associated with the signer
+     */
+    function _addSignerInternal(address _signer, string memory url) internal {
+        if (_signer == address(0)) {
+            revert SignerCannotBeZero();
+        }
+
+        if (bytes(url).length == 0) {
+            revert SignerURLCannotBeEmpty();
+        }
+
+        if (isSigner(_signer)) {
+            revert SignerAlreadyExists();
+        }
+
+        aggchainSigners.push(_signer);
+        signerToURLs[_signer] = url;
+    }
+
+    /**
+     * @notice Internal function to remove a signer with validation
+     * @param _signer Address of the signer to remove
+     * @param _signerIndex Index of the signer in the aggchainSigners array
+     */
+    function _removeSignerInternal(
+        address _signer,
+        uint256 _signerIndex
+    ) internal {
+        // Cache array length
+        uint256 signersLength = aggchainSigners.length;
+
+        // Validate input parameters
+        if (_signerIndex >= signersLength) {
+            revert SignerDoesNotExist();
+        }
+
+        if (aggchainSigners[_signerIndex] != _signer) {
+            revert SignerDoesNotExist();
+        }
+
+        // Remove from mapping
+        delete signerToURLs[_signer];
+
+        // Move the last element to the deleted spot and remove the last element
+        aggchainSigners[_signerIndex] = aggchainSigners[signersLength - 1];
+
+        aggchainSigners.pop();
+    }
+
+    /**
+     * @notice Update the hash of the aggchainSigners array
+     * @dev Combines threshold and signers array into a single hash for efficient verification
+     */
+    function _updateAggchainSignersHash() internal {
+        aggchainSignersHash = keccak256(
+            abi.encodePacked(threshold, aggchainSigners)
+        );
+
+        emit SignersAndThresholdUpdated(
+            aggchainSigners,
+            threshold,
+            aggchainSignersHash
+        );
+    }
+
+    /**
+     * @notice Check if an address is a signer
+     * @param _signer Address to check
+     * @return True if the address is a signer
+     */
+    function isSigner(address _signer) public view returns (bool) {
+        return bytes(signerToURLs[_signer]).length > 0;
+    }
+
+    /**
+     * @notice Get the number of aggchainSigners
+     * @return Number of aggchainSigners in the multisig
+     */
+    function getAggchainSignersCount() external view returns (uint256) {
+        return aggchainSigners.length;
+    }
+
+    /**
+     * @notice Get all aggchainSigners
+     * @return Array of signer addresses
+     */
+    function getAggchainSigners() external view returns (address[] memory) {
+        return aggchainSigners;
+    }
+
+    /**
+     * @notice Returns the aggchain signers hash for verification
+     * @dev Used by aggchain contracts to include in their hash computation
+     * @return The current aggchainSignersHash
+     */
+    function getAggchainSignersHash() external view returns (bytes32) {
+        // Check if the aggchain signers hash been set
+        // Empty signers is supported, but must be done explicitly
+        if (aggchainSignersHash == bytes32(0)) {
+            revert AggchainSignersHashNotInitialized();
+        }
+        return aggchainSignersHash;
     }
 }

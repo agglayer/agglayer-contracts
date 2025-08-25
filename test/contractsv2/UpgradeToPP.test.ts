@@ -218,6 +218,13 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             programVKey,
         );
 
+        // Grant AL_MULTISIG_ROLE to initialize signers
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
+        await aggLayerGatewayContract.connect(admin).grantRole(AL_MULTISIG_ROLE, admin.address);
+        
+        // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
+        await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
+
         // create aggchainFEP implementation
         const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
         aggchainFEPContract = await aggchainFEPFactory.deploy(
@@ -1356,9 +1363,10 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         // Initialize FEP contract directly with parameters
         await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
             initParams,
-            true, // useDefaultGateway
+            true, // useDefaultVkeys
+            true, // useDefaultSigners
             ethers.ZeroHash, // ownedAggchainVKey
-            '0x00000000', // aggchainVkeySelector (should be zero when useDefaultGateway is true)
+            '0x00000000', // aggchainVkeySelector (should be zero when useDefaultVkeys is true)
             [], // No signers to add initially
             0, // Threshold of 0 initially
         );

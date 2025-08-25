@@ -95,6 +95,7 @@ contract AggchainECDSAMultisig is AggchainBase {
         address _gasTokenAddress,
         string memory _trustedSequencerURL,
         string memory _networkName,
+        bool _useDefaultSigners,
         SignerInfo[] memory _signersToAdd,
         uint256 _newThreshold
     ) external onlyAggchainManager getInitializedVersion reinitializer(2) {
@@ -102,14 +103,15 @@ contract AggchainECDSAMultisig is AggchainBase {
             revert InvalidInitializer();
         }
 
-        // useDefaultGateway, initOwnedAggchainVKey, and initAggchainVKeySelector are not used in this aggchain.
+        // initOwnedAggchainVKey, initAggchainVKeySelector, and useDefaultVkeys are not used in this aggchain.
         _initializeAggchainBaseAndConsensusBase(
             _admin,
             _trustedSequencer,
             _gasTokenAddress,
             _trustedSequencerURL,
             _networkName,
-            false, // useDefaultGateway
+            false, // useDefaultVkeys
+            _useDefaultSigners,
             bytes32(0), // initOwnedAggchainVKey
             bytes4(0) // initAggchainVKeySelector
         );

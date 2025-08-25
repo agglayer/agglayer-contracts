@@ -35,7 +35,7 @@ describe('AggchainECDSAMultisig', () => {
     const gasTokenAddress = ethers.ZeroAddress;
 
     // aggchain variables
-    const useDefaultGateway = false;
+    const useDefaultVkeys = false;
     const aggchainVKeySelector = '0x12340002';
     const newAggchainVKey = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
@@ -83,6 +83,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -96,6 +97,7 @@ describe('AggchainECDSAMultisig', () => {
                 gasTokenAddress,
                 urlSequencer,
                 networkName,
+                false, // useDefaultSigners
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
                 { gasPrice: 0 },
@@ -127,8 +129,8 @@ describe('AggchainECDSAMultisig', () => {
         }
 
         // Check aggchainBase parameters
-        // Note: useDefaultGateway is set to false by default in initialize
-        expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(false);
+        // Note: useDefaultVkeys is set to false by default in initialize
+        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(false);
         // Note: ownedAggchainVKeys is not set in the new initialize function
         expect(await aggchainECDSAMultisigContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(
             ethers.ZeroHash,
@@ -149,6 +151,7 @@ describe('AggchainECDSAMultisig', () => {
                 gasTokenAddress,
                 urlSequencer,
                 networkName,
+                false, // useDefaultSigners
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
                 { gasPrice: 0 },
@@ -232,6 +235,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -260,6 +264,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -314,6 +319,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [
                 { addr: signer1.address, url: 'http://signer1' },
                 { addr: signer2.address, url: 'http://signer2' },
@@ -359,6 +365,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -408,6 +415,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -557,6 +565,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -664,6 +673,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -709,6 +719,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -754,7 +765,7 @@ describe('AggchainECDSAMultisig', () => {
         expect(await aggchainECDSAMultisigContract.ownedAggchainVKeys(newSelector)).to.be.equal(updatedVKey);
     });
 
-    it('should check gateway flag functions', async () => {
+    it('should check vkeys flag functions', async () => {
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
@@ -765,51 +776,52 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
         );
 
-        // Check initial useDefaultGateway
-        expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(useDefaultGateway);
+        // Check initial useDefaultVkeys
+        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
 
-        // Test enable gateway - not aggchainManager
-        await expect(aggchainECDSAMultisigContract.enableUseDefaultGatewayFlag()).to.be.revertedWithCustomError(
+        // Test enable vkeys - not aggchainManager
+        await expect(aggchainECDSAMultisigContract.enableUseDefaultVkeysFlag()).to.be.revertedWithCustomError(
             aggchainECDSAMultisigContract,
             'OnlyAggchainManager',
         );
 
-        // Since useDefaultGateway is false initially, we can enable it
-        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultGatewayFlag()).to.emit(
+        // Since useDefaultVkeys is false initially, we can enable it
+        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultVkeysFlag()).to.emit(
             aggchainECDSAMultisigContract,
-            'EnableUseDefaultGatewayFlag',
+            'EnableUseDefaultVkeysFlag',
         );
 
-        expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(true);
+        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(true);
 
         // Test enable again - already enabled
         await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultGatewayFlag(),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'UseDefaultGatewayAlreadyEnabled');
+            aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultVkeysFlag(),
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'UseDefaultVkeysAlreadyEnabled');
 
-        // Test disable gateway - not aggchainManager
-        await expect(aggchainECDSAMultisigContract.disableUseDefaultGatewayFlag()).to.be.revertedWithCustomError(
+        // Test disable vkeys - not aggchainManager
+        await expect(aggchainECDSAMultisigContract.disableUseDefaultVkeysFlag()).to.be.revertedWithCustomError(
             aggchainECDSAMultisigContract,
             'OnlyAggchainManager',
         );
 
         // Test successful disable
-        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).disableUseDefaultGatewayFlag()).to.emit(
+        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).disableUseDefaultVkeysFlag()).to.emit(
             aggchainECDSAMultisigContract,
-            'DisableUseDefaultGatewayFlag',
+            'DisableUseDefaultVkeysFlag',
         );
 
-        expect(await aggchainECDSAMultisigContract.useDefaultGateway()).to.be.equal(false);
+        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(false);
 
         // Test disable again - already disabled
         await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).disableUseDefaultGatewayFlag(),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'UseDefaultGatewayAlreadyDisabled');
+            aggchainECDSAMultisigContract.connect(aggchainManager).disableUseDefaultVkeysFlag(),
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'UseDefaultVkeysAlreadyDisabled');
     });
 
     it('should test the maximum uint32 threshold edge case', async () => {
@@ -828,6 +840,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -860,6 +873,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -870,7 +884,7 @@ describe('AggchainECDSAMultisig', () => {
             .connect(aggchainManager)
             .addOwnedAggchainVKey(aggchainVKeySelector, newAggchainVKey);
 
-        // Test getAggchainVKey with useDefaultGateway false
+        // Test getAggchainVKey with useDefaultVkeys false
         const vKey = await aggchainECDSAMultisigContract.getAggchainVKey(aggchainVKeySelector);
         expect(vKey).to.be.equal(newAggchainVKey);
 
@@ -904,6 +918,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -947,6 +962,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },
@@ -1000,6 +1016,7 @@ describe('AggchainECDSAMultisig', () => {
             gasTokenAddress,
             urlSequencer,
             networkName,
+            false, // useDefaultSigners
             [], // No signers to add initially
             0, // Threshold of 0 initially
             { gasPrice: 0 },

@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { AggLayerGateway, SP1VerifierPlonk } from '../../typechain-types';
 import input from './real-prover-sp1/test-inputs/input.json';
+import { computeSignersHash } from '../../src/utils-common-aggchain';
 
 describe('AggLayerGateway tests', () => {
     upgrades.silenceWarnings();
@@ -417,5 +418,258 @@ describe('AggLayerGateway tests', () => {
         )
             .to.be.revertedWithCustomError(aggLayerGatewayContract, 'RouteIsFrozen')
             .withArgs(selector);
+    });
+
+    it('should test multisig functions', async () => {
+        // Grant AL_MULTISIG_ROLE to defaultAdmin
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
+        await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, defaultAdmin.address);
+
+        // Test initial state - empty signers
+        expect(await aggLayerGatewayContract.getAggchainSignersCount()).to.equal(0);
+        expect(await aggLayerGatewayContract.getAggchainSigners()).to.deep.equal([]);
+
+        // Test getAggchainSignersHash with uninitialized hash
+        await expect(aggLayerGatewayContract.getAggchainSignersHash()).to.be.revertedWithCustomError(
+            aggLayerGatewayContract,
+            'AggchainSignersHashNotInitialized',
+        );
+
+        // Initialize with empty signers to set the hash
+        await expect(aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold([], [], 0)).to.emit(
+            aggLayerGatewayContract,
+            'SignersAndThresholdUpdated',
+        );
+
+        // Now getAggchainSignersHash should work
+        // Use computeSignersHash from utils-common-aggchain to check the hash matches the contract's value
+        // (Assume computeSignersHash is imported or available in scope)
+        let expectedSignersHash = computeSignersHash(0, []);
+        const emptySignersHash = await aggLayerGatewayContract.getAggchainSignersHash();
+        expect(emptySignersHash).to.be.equal(expectedSignersHash);
+
+        // Test isSigner with no signers
+        expect(await aggLayerGatewayContract.isSigner(deployer.address)).to.equal(false);
+
+        // Add signers
+        const signer1 = deployer;
+        const signer2 = aggLayerAdmin;
+        const signer3 = aggchainVKey;
+
+        const signersToAdd = [
+            { addr: signer1.address, url: 'https://signer1.com' },
+            { addr: signer2.address, url: 'https://signer2.com' },
+            { addr: signer3.address, url: 'https://signer3.com' },
+        ];
+
+        expectedSignersHash = computeSignersHash(
+            2,
+            signersToAdd.map((s) => s.addr),
+        );
+        await expect(aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold([], signersToAdd, 2))
+            .to.emit(aggLayerGatewayContract, 'SignersAndThresholdUpdated')
+            .withArgs([signer1.address, signer2.address, signer3.address], 2, expectedSignersHash);
+
+        // Test getters after adding signers
+        expect(await aggLayerGatewayContract.getAggchainSignersCount()).to.equal(3);
+        expect(await aggLayerGatewayContract.getAggchainSigners()).to.deep.equal([
+            signer1.address,
+            signer2.address,
+            signer3.address,
+        ]);
+        expect(await aggLayerGatewayContract.threshold()).to.equal(2);
+
+        // Test isSigner
+        expect(await aggLayerGatewayContract.isSigner(signer1.address)).to.equal(true);
+        expect(await aggLayerGatewayContract.isSigner(signer2.address)).to.equal(true);
+        expect(await aggLayerGatewayContract.isSigner(signer3.address)).to.equal(true);
+        expect(await aggLayerGatewayContract.isSigner(addPPRoute.address)).to.equal(false);
+
+        // Test signerToURLs mapping
+        expect(await aggLayerGatewayContract.signerToURLs(signer1.address)).to.equal('https://signer1.com');
+        expect(await aggLayerGatewayContract.signerToURLs(signer2.address)).to.equal('https://signer2.com');
+        expect(await aggLayerGatewayContract.signerToURLs(signer3.address)).to.equal('https://signer3.com');
+
+        // Test removing a signer
+        const signersToRemove = [{ addr: signer2.address, index: 1 }];
+        await expect(
+            aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(signersToRemove, [], 1),
+        ).to.emit(aggLayerGatewayContract, 'SignersAndThresholdUpdated');
+
+        // Check after removal
+        expect(await aggLayerGatewayContract.getAggchainSignersCount()).to.equal(2);
+        const signersAfterRemoval = await aggLayerGatewayContract.getAggchainSigners();
+        expect(signersAfterRemoval).to.include(signer1.address);
+        expect(signersAfterRemoval).to.include(signer3.address);
+        expect(signersAfterRemoval).to.not.include(signer2.address);
+        expect(await aggLayerGatewayContract.isSigner(signer2.address)).to.equal(false);
+        expect(await aggLayerGatewayContract.threshold()).to.equal(1);
+
+        // Test access control - non-admin cannot update signers
+        await expect(
+            aggLayerGatewayContract.connect(deployer).updateSignersAndThreshold([], [], 0),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'AccessControlUnauthorizedAccount');
+
+        // Test error cases
+        // Invalid threshold (greater than signers count)
+        await expect(
+            aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold([], [], 5),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'InvalidThreshold');
+
+        // Try to add zero address as signer
+        await expect(
+            aggLayerGatewayContract
+                .connect(defaultAdmin)
+                .updateSignersAndThreshold([], [{ addr: ethers.ZeroAddress, url: 'https://zero.com' }], 1),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'SignerCannotBeZero');
+
+        // Try to add signer with empty URL
+        await expect(
+            aggLayerGatewayContract
+                .connect(defaultAdmin)
+                .updateSignersAndThreshold([], [{ addr: addPPRoute.address, url: '' }], 1),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'SignerURLCannotBeEmpty');
+
+        // Try to add existing signer
+        await expect(
+            aggLayerGatewayContract
+                .connect(defaultAdmin)
+                .updateSignersAndThreshold([], [{ addr: signer1.address, url: 'https://duplicate.com' }], 1),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'SignerAlreadyExists');
+
+        // Try to remove signer with wrong index
+        await expect(
+            aggLayerGatewayContract
+                .connect(defaultAdmin)
+                .updateSignersAndThreshold([{ addr: signer1.address, index: 5 }], [], 1),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'SignerDoesNotExist');
+
+        // Try to remove signer with mismatched address and index
+        await expect(
+            aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(
+                [{ addr: signer1.address, index: 1 }], // signer1 is at index 0
+                [],
+                1,
+            ),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'SignerDoesNotExist');
+
+        // Test indices not in descending order
+        const newSigner4 = addPPRoute;
+        const newSigner5 = freezePPRoute;
+        await aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(
+            [],
+            [
+                { addr: newSigner4.address, url: 'https://signer4.com' },
+                { addr: newSigner5.address, url: 'https://signer5.com' },
+            ],
+            2,
+        );
+
+        // Now we have 4 signers, try to remove multiple with wrong order
+        await expect(
+            aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(
+                [
+                    { addr: signer1.address, index: 0 },
+                    { addr: signer3.address, index: 1 }, // Wrong: should be descending
+                ],
+                [],
+                1,
+            ),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'IndicesNotInDescendingOrder');
+
+        // Test with correct descending order
+        await expect(
+            aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(
+                [
+                    { addr: newSigner5.address, index: 3 },
+                    { addr: newSigner4.address, index: 2 },
+                ],
+                [],
+                1,
+            ),
+        ).to.emit(aggLayerGatewayContract, 'SignersAndThresholdUpdated');
+
+        // Test reaching maximum signers (255 limit)
+        // First clear all signers
+        const currentSigners = await aggLayerGatewayContract.getAggchainSigners();
+        const removeAll = currentSigners.map((addr, index) => ({
+            addr,
+            index: index, // Remove the subtraction since we're using the index directly
+        }));
+        removeAll.reverse();
+        await aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold(removeAll, [], 0);
+
+        // Add 255 signers (maximum allowed)
+        const maxSigners = [];
+        for (let i = 0; i < 255; i++) {
+            const wallet = ethers.Wallet.createRandom();
+            maxSigners.push({ addr: wallet.address, url: `https://signer${i}.com` });
+        }
+        await aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold([], maxSigners, 128);
+        expect(await aggLayerGatewayContract.getAggchainSignersCount()).to.equal(255);
+
+        // Try to add one more (should fail)
+        const extraWallet = ethers.Wallet.createRandom();
+        await expect(
+            aggLayerGatewayContract
+                .connect(defaultAdmin)
+                .updateSignersAndThreshold([], [{ addr: extraWallet.address, url: 'https://extra.com' }], 128),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'AggchainSignersTooHigh');
+    });
+
+    it('should test version function', async () => {
+        expect(await aggLayerGatewayContract.version()).to.equal('v1.0.0');
+    });
+
+    it('should test aggchainSigners array access', async () => {
+        // Grant AL_MULTISIG_ROLE to defaultAdmin
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
+        await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, defaultAdmin.address);
+
+        // Add some signers
+        const signersToAdd = [
+            { addr: deployer.address, url: 'https://signer1.com' },
+            { addr: aggLayerAdmin.address, url: 'https://signer2.com' },
+        ];
+
+        await aggLayerGatewayContract.connect(defaultAdmin).updateSignersAndThreshold([], signersToAdd, 1);
+
+        // Test direct array access
+        expect(await aggLayerGatewayContract.aggchainSigners(0)).to.equal(deployer.address);
+        expect(await aggLayerGatewayContract.aggchainSigners(1)).to.equal(aggLayerAdmin.address);
+
+        // Test out of bounds access (should revert)
+        await expect(aggLayerGatewayContract.aggchainSigners(2)).to.be.reverted;
+    });
+
+    it('should test role management edge cases', async () => {
+        // Test revoking roles
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
+
+        // Grant role
+        await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);
+        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.true;
+
+        // Revoke role
+        await expect(aggLayerGatewayContract.connect(defaultAdmin).revokeRole(AL_MULTISIG_ROLE, aggLayerAdmin.address))
+            .to.emit(aggLayerGatewayContract, 'RoleRevoked')
+            .withArgs(AL_MULTISIG_ROLE, aggLayerAdmin.address, defaultAdmin.address);
+
+        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.false;
+
+        // Test that revoked account cannot call protected functions
+        await expect(
+            aggLayerGatewayContract.connect(aggLayerAdmin).updateSignersAndThreshold([], [], 0),
+        ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'AccessControlUnauthorizedAccount');
+
+        // Test renouncing role
+        await aggLayerGatewayContract.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);
+        await expect(
+            aggLayerGatewayContract.connect(aggLayerAdmin).renounceRole(AL_MULTISIG_ROLE, aggLayerAdmin.address),
+        )
+            .to.emit(aggLayerGatewayContract, 'RoleRevoked')
+            .withArgs(AL_MULTISIG_ROLE, aggLayerAdmin.address, aggLayerAdmin.address);
+
+        expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.false;
     });
 });

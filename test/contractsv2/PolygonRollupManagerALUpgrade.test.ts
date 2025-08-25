@@ -164,12 +164,13 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // Use explicit function selector to avoid ambiguity
         await aggchainECDSAContract
             .connect(aggchainManager)
-            ['initialize(address,address,address,string,string,(address,string)[],uint256)'](
+            ['initialize(address,address,address,string,string,bool,(address,string)[],uint256)'](
                 admin.address,
                 trustedSequencer.address,
                 ethers.ZeroAddress, // gas token address
                 '', // trusted sequencer url
                 '', // network name
+                false, // useDefaultSigners
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
             );
@@ -236,6 +237,13 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             verifierContract.target,
             randomPessimisticVKey,
         );
+
+        // Grant AL_MULTISIG_ROLE to initialize signers
+        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
+        await aggLayerGatewayContract.connect(admin).grantRole(AL_MULTISIG_ROLE, admin.address);
+        
+        // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
+        await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
         // Grant role to agglayer admin
         await aggLayerGatewayContract.connect(admin).grantRole(AL_ADD_PP_ROUTE_ROLE, aggLayerAdmin.address);
         // Add permission to add default aggchain verification key

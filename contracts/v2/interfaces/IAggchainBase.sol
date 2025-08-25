@@ -21,14 +21,24 @@ interface IAggchainBaseEvents {
         bytes32 newAggchainVKey
     );
     /**
-     * @notice Emitted when the admin set the flag useDefaultGateway to true.
+     * @notice Emitted when the admin set the flag useDefaultVkeys to true.
      */
-    event EnableUseDefaultGatewayFlag();
+    event EnableUseDefaultVkeysFlag();
 
     /**
-     * @notice Emitted when the admin set the flag useDefaultGateway to false.
+     * @notice Emitted when the admin set the flag useDefaultVkeys to false.
      */
-    event DisableUseDefaultGatewayFlag();
+    event DisableUseDefaultVkeysFlag();
+
+    /**
+     * @notice Emitted when the admin set the flag useDefaultSigners to true.
+     */
+    event EnableUseDefaultSignersFlag();
+
+    /**
+     * @notice Emitted when the admin set the flag useDefaultSigners to false.
+     */
+    event DisableUseDefaultSignersFlag();
 
     /**
      * @notice Emitted when the vKeyManager starts the two-step transfer role setting a new pending vKeyManager.
@@ -85,10 +95,14 @@ interface IAggchainBaseErrors {
     error OwnedAggchainVKeyNotFound();
     /// @notice Thrown when trying to initialize the incorrect initialize function.
     error InvalidInitializeFunction();
-    /// @notice Thrown when trying to enable the default gateway when it is already enabled.
-    error UseDefaultGatewayAlreadyEnabled();
-    /// @notice Thrown when trying to disable the default gateway when it is already disabled.
-    error UseDefaultGatewayAlreadyDisabled();
+    /// @notice Thrown when trying to enable the default vkeys when it is already enabled.
+    error UseDefaultVkeysAlreadyEnabled();
+    /// @notice Thrown when trying to disable the default vkeys when it is already disabled.
+    error UseDefaultVkeysAlreadyDisabled();
+    /// @notice Thrown when trying to enable the default signers when it is already enabled.
+    error UseDefaultSignersAlreadyEnabled();
+    /// @notice Thrown when trying to disable the default signers when it is already disabled.
+    error UseDefaultSignersAlreadyDisabled();
     /// @notice Thrown when trying to call a function that only the VKeyManager can call.
     error OnlyVKeyManager();
     /// @notice Thrown when trying to call a function that only the pending VKeyManager can call.

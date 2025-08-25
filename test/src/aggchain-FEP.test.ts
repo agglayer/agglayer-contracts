@@ -73,7 +73,8 @@ describe('Test vectors aggchain FEP', () => {
                 data.initParams,
                 [], // No signers to add initially
                 0, // Threshold of 0 initially
-                data.useDefaultGateway,
+                data.useDefaultVkeys,
+                data.useDefaultSigners,
                 data.initOwnedAggchainVKey,
                 data.initAggchainVKeySelector,
                 admin.address,
@@ -111,7 +112,7 @@ describe('Test vectors aggchain FEP', () => {
                 genesisConfig.aggregationVkey,
             );
 
-            // Test vectors now use useDefaultGateway: false for simplicity
+            // Test vectors now use useDefaultVkeys: false for simplicity
 
             // encode aggchainData
             // Use separate aggchainVKeySelector if available, otherwise use initAggchainVKeySelector
@@ -125,7 +126,7 @@ describe('Test vectors aggchain FEP', () => {
             // get aggchainHash using new base composition with empty signers
             const emptySignersHash = utilsCommon.computeSignersHash(0, []);
 
-            // Use the owned VKey (test vectors use useDefaultGateway: false)
+            // Use the owned VKey (test vectors use useDefaultVkeys: false)
             aggchainHash = utilsCommon.computeAggchainHash(
                 utilsCommon.CONSENSUS_TYPE.GENERIC,
                 data.initOwnedAggchainVKey,
@@ -204,7 +205,8 @@ describe('Test vectors aggchain FEP', () => {
             const ppConsensusAsFEP = ppConsensusContract as unknown as AggchainFEP;
             await ppConsensusAsFEP.connect(aggchainManager).initializeFromPessimisticConsensus(
                 data.initParams,
-                data.useDefaultGateway,
+                data.useDefaultVkeys,
+                data.useDefaultSigners,
                 data.initOwnedAggchainVKey,
                 data.initAggchainVKeySelector,
                 [], // No signers to add initially

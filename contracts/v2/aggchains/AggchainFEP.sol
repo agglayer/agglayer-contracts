@@ -314,7 +314,7 @@ contract AggchainFEP is AggchainBase {
     /// @notice Initialize function for fresh deployment
     /// @custom:security Initializes all contracts including PolygonConsensusBase
     /// @param _initParams The initialization parameters for FEP
-    /// @param _useDefaultGateway Whether to use the default gateway
+    /// @param _useDefaultVkeys Whether to use default verification keys from gateway
     /// @param _initOwnedAggchainVKey The owned aggchain verification key
     /// @param _initAggchainVKeySelector The aggchain verification key selector
     /// @param _admin The admin address
@@ -326,7 +326,8 @@ contract AggchainFEP is AggchainBase {
         InitParams memory _initParams,
         SignerInfo[] memory _signersToAdd,
         uint256 _newThreshold,
-        bool _useDefaultGateway,
+        bool _useDefaultVkeys,
+        bool _useDefaultSigners,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
         address _admin,
@@ -339,8 +340,8 @@ contract AggchainFEP is AggchainBase {
             revert InvalidInitializer();
         }
 
-        // Check the use default gateway is consistent
-        if (_useDefaultGateway) {
+        // Check the use default vkeys is consistent
+        if (_useDefaultVkeys) {
             if (
                 _initAggchainVKeySelector != bytes4(0) ||
                 _initOwnedAggchainVKey != bytes32(0)
@@ -363,7 +364,8 @@ contract AggchainFEP is AggchainBase {
             _gasTokenAddress,
             _trustedSequencerURL,
             _networkName,
-            _useDefaultGateway,
+            _useDefaultVkeys,
+            _useDefaultSigners,
             _initOwnedAggchainVKey,
             _initAggchainVKeySelector
         );
@@ -383,7 +385,7 @@ contract AggchainFEP is AggchainBase {
      * @notice Initialize function for upgrade from PolygonPessimisticConsensus
      * @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
      * @param _initParams The initialization parameters for FEP
-     * @param _useDefaultGateway Whether to use the default gateway
+     * @param _useDefaultVkeys Whether to use default verification keys from gateway
      * @param _initOwnedAggchainVKey The owned aggchain verification key
      * @param _initAggchainVKeySelector The aggchain verification key selector
      * @param _signersToAdd Array of signers to add to the multisig
@@ -391,7 +393,8 @@ contract AggchainFEP is AggchainBase {
      */
     function initializeFromPessimisticConsensus(
         InitParams memory _initParams,
-        bool _useDefaultGateway,
+        bool _useDefaultVkeys,
+        bool _useDefaultSigners,
         bytes32 _initOwnedAggchainVKey,
         bytes4 _initAggchainVKeySelector,
         SignerInfo[] memory _signersToAdd,
@@ -401,8 +404,8 @@ contract AggchainFEP is AggchainBase {
             revert InvalidInitializer();
         }
 
-        // Check the use default gateway is consistent
-        if (_useDefaultGateway) {
+        // Check the use default vkeys is consistent
+        if (_useDefaultVkeys) {
             if (
                 _initAggchainVKeySelector != bytes4(0) ||
                 _initOwnedAggchainVKey != bytes32(0)
@@ -423,7 +426,8 @@ contract AggchainFEP is AggchainBase {
 
         // Set aggchainBase variables
         _initializeAggchainBase(
-            _useDefaultGateway,
+            _useDefaultVkeys,
+            _useDefaultSigners,
             _initOwnedAggchainVKey,
             _initAggchainVKeySelector
         );

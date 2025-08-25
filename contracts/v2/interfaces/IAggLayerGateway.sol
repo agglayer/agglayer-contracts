@@ -47,6 +47,18 @@ interface IAggLayerGatewayEvents {
      * @param selector The 4 bytes selector of the updated default aggchain verification key.
      */
     event UnsetDefaultAggchainVKey(bytes4 selector);
+
+    /**
+     * @notice Emitted when signers and threshold are updated
+     * @param signers The new array of signer addresses
+     * @param threshold The new threshold for multisig operations
+     * @param signersHash The hash of the new signers and threshold
+     */
+    event SignersAndThresholdUpdated(
+        address[] signers,
+        uint256 threshold,
+        bytes32 signersHash
+    );
 }
 
 /// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
@@ -92,12 +104,56 @@ interface IAggLayerGatewayErrors {
 
     /// @notice Thrown when the input proof bytes are invalid.
     error InvalidProofBytesLength();
+
+    /// @notice Thrown when the aggchain signers hash has not been initialized
+    error AggchainSignersHashNotInitialized();
+
+    /// @notice Thrown when indices for signer removal are not in descending order
+    error IndicesNotInDescendingOrder();
+
+    /// @notice Thrown when trying to set more than 255 signers
+    error AggchainSignersTooHigh();
+
+    /// @notice Thrown when the threshold exceeds the number of signers
+    error InvalidThreshold();
+
+    /// @notice Thrown when trying to add a zero address as signer
+    error SignerCannotBeZero();
+
+    /// @notice Thrown when trying to add a signer with empty URL
+    error SignerURLCannotBeEmpty();
+
+    /// @notice Thrown when trying to add a signer that already exists
+    error SignerAlreadyExists();
+
+    /// @notice Thrown when trying to remove a signer that doesn't exist
+    error SignerDoesNotExist();
 }
 
 /// @title IAggLayerGateway
 /// @notice This contract is the interface for the AggLayerGateway.
 /// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors {
+    /**
+     * @notice Struct to hold signer information
+     * @param addr The address of the signer
+     * @param url The URL associated with the signer
+     */
+    struct SignerInfo {
+        address addr;
+        string url;
+    }
+
+    /**
+     * @notice Struct to hold information for removing a signer
+     * @param addr The address of the signer to remove
+     * @param index The index of the signer in the aggchainSigners array
+     */
+    struct RemoveSignerInfo {
+        address addr;
+        uint256 index;
+    }
+
     /**
      * Struct that defines a verifier route
      * @param verifier The address of the verifier contract.
@@ -150,4 +206,47 @@ interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors {
     function freezePessimisticVKeyRoute(
         bytes4 pessimisticVKeySelector
     ) external;
+
+    ////////////////////////////////////////////////////////////
+    //                  Multisig Functions                    //
+    ////////////////////////////////////////////////////////////
+
+    /**
+     * @notice Updates signers and threshold for multisig operations
+     * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
+     * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
+     * @param _signersToAdd Array of new signers to add with their URLs
+     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     */
+    function updateSignersAndThreshold(
+        RemoveSignerInfo[] memory _signersToRemove,
+        SignerInfo[] memory _signersToAdd,
+        uint256 _newThreshold
+    ) external;
+
+    /**
+     * @notice Check if an address is a signer
+     * @param _signer Address to check
+     * @return True if the address is a signer
+     */
+    function isSigner(address _signer) external view returns (bool);
+
+    /**
+     * @notice Get the number of aggchainSigners
+     * @return Number of aggchainSigners in the multisig
+     */
+    function getAggchainSignersCount() external view returns (uint256);
+
+    /**
+     * @notice Get all aggchainSigners
+     * @return Array of signer addresses
+     */
+    function getAggchainSigners() external view returns (address[] memory);
+
+    /**
+     * @notice Returns the aggchain signers hash for verification
+     * @dev Used by aggchain contracts to include in their hash computation
+     * @return The current aggchainSignersHash
+     */
+    function getAggchainSignersHash() external view returns (bytes32);
 }
