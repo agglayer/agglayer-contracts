@@ -152,8 +152,6 @@ async function main() {
     const initializedSlot = await ethers.provider.getStorage(aggchainContract.target, 0);
     const initializedValue = Number(BigInt(initializedSlot) & BigInt(0xff)); // Extract only the first byte
 
-    let initializeBytesAggchain;
-
     // Build the initialization transaction based on the consensus contract type and initialization state
     let initializeTx;
 

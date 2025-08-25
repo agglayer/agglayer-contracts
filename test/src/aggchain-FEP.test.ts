@@ -13,7 +13,6 @@ const pathTestVector = path.join(__dirname, '../test-vectors/aggchainFEP/aggchai
 // SIGNERS
 let admin: any;
 let aggchainManager: any;
-let vKeyManager: any;
 let aggchainFEPContract: AggchainFEP;
 
 const gerManagerAddress = '0xA00000000000000000000000000000000000000A' as unknown as Address;
@@ -38,7 +37,7 @@ describe('Test vectors aggchain FEP', () => {
         // eslint-disable-next-line @typescript-eslint/no-loop-func
         it(`generate id: ${i}`, async function () {
             // load signers
-            [vKeyManager, admin, aggchainManager] = await ethers.getSigners();
+            [admin, aggchainManager] = await ethers.getSigners();
 
             aggchainVKeySelector = data.initAggchainVKeySelector;
 

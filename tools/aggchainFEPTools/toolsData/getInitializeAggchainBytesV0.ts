@@ -1,7 +1,6 @@
 import params from './parameters.json';
 import { logger } from '../../../src/logger';
 import { checkParams } from '../../../src/utils';
-import * as utilsFEP from '../../../src/utils-aggchain-FEP';
 
 async function main() {
     logger.info('Starting tool to create inititizeAggchainBytesV0');
