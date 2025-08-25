@@ -182,7 +182,6 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             emergencyCouncil,
             aggLayerAdmin,
             tester,
-            vKeyManager,
             aggchainVKey,
             addPPRoute,
             freezePPRoute,
