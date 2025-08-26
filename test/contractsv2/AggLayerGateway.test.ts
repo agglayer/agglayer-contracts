@@ -703,4 +703,111 @@ describe('AggLayerGateway tests', () => {
 
         expect(await aggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, aggLayerAdmin.address)).to.be.equal(false);
     });
+
+    it('should test the second initialize function', async () => {
+        // Deploy a fresh contract for testing the second initialize function
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const freshGateway = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
+            initializer: false,
+            unsafeAllow: ['constructor'],
+        });
+        await freshGateway.waitForDeployment();
+
+        // Test the second initialize function (lines 185-196)
+        // This initialize function accepts aggchainSigners and threshold parameters
+        const signersList = await ethers.getSigners();
+        const signer1 = signersList[6];
+        const signer2 = signersList[7];
+        const signer3 = signersList[8];
+        const signers = [signer1.address, signer2.address, signer3.address];
+        const threshold = 2;
+
+        // Initialize with the full initialize function
+        await freshGateway.initialize(
+            defaultAdmin.address,
+            aggchainVKey.address,
+            addPPRoute.address,
+            freezePPRoute.address,
+            initPPVKeySelector,
+            verifierContract.target,
+            initPPVkey,
+            defaultAdmin.address, // multisigRole
+            signers.map((addr, index) => ({ addr, url: `http://signer${index + 1}` })), // Convert to SignerInfo array with URL
+            threshold,
+        );
+
+        // Verify initialization
+        expect(await freshGateway.getAggchainSignersCount()).to.equal(signers.length);
+        expect(await freshGateway.threshold()).to.equal(threshold);
+
+        const actualSigners = await freshGateway.getAggchainSigners();
+        expect(actualSigners).to.deep.equal(signers);
+
+        // Test that it cannot be initialized again
+        await expect(
+            freshGateway.initialize(
+                defaultAdmin.address,
+                aggchainVKey.address,
+                addPPRoute.address,
+                freezePPRoute.address,
+                initPPVKeySelector,
+                verifierContract.target,
+                initPPVkey,
+                defaultAdmin.address,
+                signers.map((addr, index) => ({ addr, url: `http://signer${index + 1}` })),
+                threshold,
+            ),
+        ).to.be.revertedWithCustomError(freshGateway, 'InvalidInitialization');
+    });
+
+    it('should test getAggchainSignersHash edge case', async () => {
+        // Test the edge case when aggchainSignersHash is not set (line 595)
+        // Deploy a fresh contract
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const edgeCaseGateway = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
+            initializer: false,
+            unsafeAllow: ['constructor'],
+        });
+        await edgeCaseGateway.waitForDeployment();
+
+        // Need to get signers for the test
+        const signersList = await ethers.getSigners();
+        const signer1 = signersList[6];
+        const signer2 = signersList[7];
+        const admin = defaultAdmin;
+        const aggLayerAdmin = signersList[9];
+
+        // Initialize with empty signers to test edge case
+        await edgeCaseGateway.initialize(
+            defaultAdmin.address,
+            aggchainVKey.address,
+            addPPRoute.address,
+            freezePPRoute.address,
+            initPPVKeySelector,
+            verifierContract.target,
+            initPPVkey,
+            defaultAdmin.address,
+            [], // empty signers
+            0, // threshold
+        );
+
+        // Test getAggchainSignersHash when no signers are set
+        const signersHash = await edgeCaseGateway.getAggchainSignersHash();
+        expect(signersHash).to.not.equal(ethers.ZeroHash);
+
+        // Add signers and verify hash changes
+        await edgeCaseGateway.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);
+        await edgeCaseGateway.connect(aggLayerAdmin).updateSignersAndThreshold(
+            [],
+            [
+                { addr: signer1.address, url: 'http://signer1' },
+                { addr: signer2.address, url: 'http://signer2' },
+            ],
+            1,
+        );
+
+        const newSignersHash = await edgeCaseGateway.getAggchainSignersHash();
+        expect(newSignersHash).to.not.equal(signersHash);
+        expect(newSignersHash).to.not.equal(ethers.ZeroHash);
+    });
 });
