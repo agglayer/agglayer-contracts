@@ -252,7 +252,7 @@ async function deployProxyAdmin(timelockAddress: string, deployer: any): Promise
         proxyAdmin.target as string,
         [timelockAddress], // Constructor argument: initial owner
         5, // 5 seconds wait time
-        '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin'
+        '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin',
     );
 
     return proxyAdmin;
@@ -288,7 +288,7 @@ async function deployTimelock(deployer: any): Promise<any> {
             [deployParameters.timelock.timelockAdminAddress],
             deployParameters.timelock.timelockAdminAddress,
         ],
-        5 // 5 seconds wait time
+        5, // 5 seconds wait time
     );
 
     return timelock;
@@ -337,7 +337,7 @@ async function deployBridgeL2SovereignChain(
     await verifyContractEtherscan(
         bridgeImplementation.target as string,
         [], // No constructor arguments
-        5 // 5 seconds wait time
+        5, // 5 seconds wait time
     );
 
     // Step 2: Deploy TransparentUpgradeableProxy with centralized ProxyAdmin
@@ -391,10 +391,10 @@ async function deployBridgeL2SovereignChain(
         [
             bridgeImplementation.target, // Implementation address
             proxyAdmin.target, // Admin address
-            '0x' // Empty init data
+            '0x', // Empty init data
         ],
-        30, // 30 seconds wait time, enough to allow for 
-        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy'
+        30, // 30 seconds wait time, enough to allow for
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
     );
 
     // Step 3: Initialize proxy with onlyDeployer protection (frontrunning-safe)
@@ -433,7 +433,7 @@ async function deployBridgeL2SovereignChain(
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
     await upgrades.forceImport(bridgeProxy.target as string, BridgeFactory, {
-        kind: 'transparent'
+        kind: 'transparent',
     });
     logger.info('✅ Bridge proxy imported to Hardhat Upgrades manifest');
 
@@ -470,7 +470,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     await verifyContractEtherscan(
         gerImplementation.target as string,
         [bridgeProxyAddress], // Constructor argument: bridge address
-        5 // 5 seconds wait time
+        5, // 5 seconds wait time
     );
 
     // Step 2: Prepare initialization data for atomic initialization
@@ -506,7 +506,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
             initializeData, // Initialization data
         ],
         5, // 5 seconds wait time
-        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy'
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
     );
 
     logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation: ${gerImplementation.target}`);
@@ -518,7 +518,6 @@ async function deployGlobalExitRootManagerL2SovereignChain(
         constructorArgs: [bridgeProxyAddress],
     });
     logger.info('✅ GER Manager proxy imported to Hardhat Upgrades manifest');
-
 
     return {
         proxy: gerProxy.target as string,
@@ -550,7 +549,7 @@ async function deployAggOracleCommittee(
     await verifyContractEtherscan(
         aggOracleImplementation.target as string,
         [gerManagerAddress], // Constructor argument: GER Manager address
-        5 // 5 seconds wait time
+        5, // 5 seconds wait time
     );
 
     logger.info('📍 Step 2: Deploying AggOracleCommittee proxy with centralized ProxyAdmin...');
@@ -582,17 +581,17 @@ async function deployAggOracleCommittee(
         [
             aggOracleImplementation.target, // Implementation address
             proxyAdmin.target, // Admin address
-            initializeData // Initialization data
+            initializeData, // Initialization data
         ],
         5, // 5 seconds wait time
-        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy'
+        '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
     );
 
     logger.info(`✅ AggOracleCommittee implementation: ${aggOracleImplementation.target}`);
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
     await upgrades.forceImport(aggOracleProxy.target as string, AggOracleCommitteeFactory, {
-        kind: 'transparent'
+        kind: 'transparent',
     });
     logger.info('✅ AggOracleCommittee proxy imported to Hardhat Upgrades manifest');
 
