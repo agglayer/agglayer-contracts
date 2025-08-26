@@ -39,7 +39,7 @@ async function verifyContractEtherscan(
     implementationAddress: string,
     constructorArguments: Array<any>,
     waitTimeSeconds: number = 20,
-    contractPath: any = undefined
+    contractPath: any = undefined,
 ) {
     try {
         logger.info(
@@ -55,11 +55,11 @@ async function verifyContractEtherscan(
         await run('verify:verify', {
             address: implementationAddress,
             constructorArguments,
-            contract: contractPath
+            contract: contractPath,
         });
         logger.info(`✅ Contract ${implementationAddress} verified successfully on Etherscan`);
     } catch (error) {
-        if (error.name === "ContractAlreadyVerifiedError") {
+        if (error.name === 'ContractAlreadyVerifiedError') {
             logger.info(`✅ Contract ${implementationAddress} is already verified on Etherscan`);
             return;
         }
@@ -68,7 +68,10 @@ async function verifyContractEtherscan(
         logger.info(
             `npx hardhat verify --constructor-args upgrade/arguments.js ${implementationAddress} --network ${process.env.HARDHAT_NETWORK}\n`,
         );
-        logger.info('Copy the following constructor arguments on: upgrade/arguments.js \n', JSON.stringify(constructorArguments));
+        logger.info(
+            'Copy the following constructor arguments on: upgrade/arguments.js \n',
+            JSON.stringify(constructorArguments),
+        );
     }
 }
 
