@@ -43,7 +43,7 @@ contract AggLayerGateway is
     bytes32 internal constant AL_MULTISIG_ROLE = keccak256("AL_MULTISIG_ROLE");
 
     // Current AggLayerGateway version
-    string public constant AGGLAYER_GATEWAY_VERSION = "v1.0.0";
+    string public constant AGGLAYER_GATEWAY_VERSION = "v1.1.0";
 
     ////////////////////////////////////////////////////////////
     //                  Transient Storage                     //
