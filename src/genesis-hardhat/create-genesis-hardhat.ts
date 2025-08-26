@@ -8,7 +8,12 @@ import {
     GlobalExitRootManagerL2SovereignChain,
     ProxyAdmin,
 } from '../../typechain-types';
-import { GENESIS_CONTRACT_NAMES } from './constants';
+import {
+    GENESIS_CONTRACT_NAMES,
+    SUPPORTED_GER_MANAGERS,
+    SUPPORTED_BRIDGE_CONTRACTS,
+    SUPPORTED_BRIDGE_CONTRACTS_PROXY,
+} from './constants';
 import {
     getAddressesGenesisBase,
     getMinDelayTimelock,
@@ -30,10 +35,6 @@ import {
 import { checkParams, getTraceStorageWrites } from '../utils';
 import { logger } from '../logger';
 import { STORAGE_GENESIS } from './storage';
-
-const supportedGERManagers = ['PolygonZkEVMGlobalExitRootL2 implementation'];
-const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'PolygonZkEVMBridgeV2 implementation'];
-const supportedBridgeContractsProxy = ['PolygonZkEVMBridgeV2 proxy', 'PolygonZkEVMBridge proxy'];
 
 /**
  * Create a genesis file for hardhat
@@ -369,7 +370,9 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
             if (initTx) {
                 const initStorageWrites = await getTraceStorageWrites(txInitializeBridge.hash);
                 storageModifications.BridgeL2SovereignChain_Initialization = initStorageWrites[bridgeProxyAddress];
-                storageModifications.TokenWrappedBridgeUpgradeable = initStorageWrites[WETHTokenAddress];
+                if (gasTokenAddress !== ethers.ZeroAddress && ethers.isAddress(gasTokenAddress)) {
+                    storageModifications.TokenWrappedBridgeUpgradeable = initStorageWrites[WETHTokenAddress];
+                }
             }
         } catch (error) {
             logger.error('Could not get Bridge initialization storage writes:', error);
@@ -482,16 +485,21 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
         txRevokeTimelockAdminRole.hash,
         timelockContractAddress,
     );
-    expect(timelockStorageAdmin[getStorageTimelockAdminRoleMember(genesisBaseAddresses.timelockAddress)]).to.equal(
-        '0x0000000000000000000000000000000000000000000000000000000000000001',
-    );
-    expect(timelockStorageRevokeAdmin[getStorageTimelockAdminRoleMember(timelockContractAddress)]).to.equal(
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
-    );
-    storageModifications.PolygonZkEVMTimelock[getStorageTimelockAdminRoleMember(timelockContractAddress)] =
-        '0x0000000000000000000000000000000000000000000000000000000000000000';
-    storageModifications.PolygonZkEVMTimelock[getStorageTimelockAdminRoleMember(genesisBaseAddresses.timelockAddress)] =
-        '0x0000000000000000000000000000000000000000000000000000000000000001';
+    expect(
+        timelockStorageAdmin[
+            getStorageTimelockAdminRoleMember('TIMELOCK_ADMIN_ROLE', genesisBaseAddresses.timelockAddress)
+        ],
+    ).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(
+        timelockStorageRevokeAdmin[getStorageTimelockAdminRoleMember('TIMELOCK_ADMIN_ROLE', timelockContractAddress)],
+    ).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000');
+
+    storageModifications.PolygonZkEVMTimelock[
+        getStorageTimelockAdminRoleMember('TIMELOCK_ADMIN_ROLE', timelockContractAddress)
+    ] = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    storageModifications.PolygonZkEVMTimelock[
+        getStorageTimelockAdminRoleMember('TIMELOCK_ADMIN_ROLE', genesisBaseAddresses.timelockAddress)
+    ] = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
     /// /////////////////////////////////////////////////
     ///   BUILD EXPECTED STORAGE MODIFICATIONS JSON   ///
@@ -561,6 +569,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
         timelockMinDelay,
         genesisBaseAddresses.timelockAddress,
         timelockContractAddress,
+        deployer.address,
     );
 
     /// //////////////////////////////
@@ -693,7 +702,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     logger.info('Updating BridgeL2SovereignChain implementation in genesis file...');
     // Get genesis info for bridge implementation
     const bridgeL2SovereignChainImplementation = _genesisBase.genesis.find(function (obj) {
-        return supportedBridgeContracts.includes(obj.contractName);
+        return SUPPORTED_BRIDGE_CONTRACTS.includes(obj.contractName);
     });
     genesisInfo.push({
         contractName: GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_IMPLEMENTATION,
@@ -709,7 +718,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
 
     // Replace old bridge with new bridge proxy
     const bridgeL2SovereignChain = _genesisBase.genesis.find(function (obj) {
-        return supportedBridgeContractsProxy.includes(obj.contractName);
+        return SUPPORTED_BRIDGE_CONTRACTS_PROXY.includes(obj.contractName);
     });
     genesisInfo.push({
         contractName: GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_PROXY,
@@ -727,7 +736,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     logger.info('Updating GlobalExitRootManagerL2SovereignChain implementation in genesis file...');
     // Get genesis info for ger implementation
     const gerManagerL2SovereignChainImplementation = _genesisBase.genesis.find(function (obj) {
-        return supportedGERManagers.includes(obj.contractName);
+        return SUPPORTED_GER_MANAGERS.includes(obj.contractName);
     });
     genesisInfo.push({
         contractName: GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN_IMPLEMENTATION,

@@ -333,15 +333,13 @@ export function getExpectedStorageGERManagerL2SovereignChain(initParams) {
 
 /**
  * Get the storage position of the timelock admin role member
- * @param {String} timelockAddress - address of the timelock contract
+ * @param {String} role - constant role
+ * @param {String} address - address of the timelock role
  * @returns {String} - storage position of the timelock admin role member
  */
-export function getStorageTimelockAdminRoleMember(timelockAddress) {
-    const storagePosition = ethers.solidityPackedKeccak256(
-        ['uint256', 'uint256'],
-        [ethers.id('TIMELOCK_ADMIN_ROLE'), 0],
-    );
-    return ethers.solidityPackedKeccak256(['uint256', 'uint256'], [timelockAddress, storagePosition]);
+export function getStorageTimelockAdminRoleMember(role, address) {
+    const storagePosition = ethers.solidityPackedKeccak256(['uint256', 'uint256'], [ethers.id(role), 0]);
+    return ethers.solidityPackedKeccak256(['uint256', 'uint256'], [address, storagePosition]);
 }
 
 /**
@@ -354,21 +352,32 @@ export function getExpectedStoragePolygonZkEVMTimelock(
     minDelay,
     timelockContractAddressGenesis,
     timelockContractAddress,
+    deployer,
 ) {
     const timelockAdminRole = ethers.keccak256(ethers.toUtf8Bytes('TIMELOCK_ADMIN_ROLE'));
-    const storageTimelockAdminRoleMemberGenesis = getStorageTimelockAdminRoleMember(timelockContractAddressGenesis);
-    const storageTimelockAdminRoleMember = getStorageTimelockAdminRoleMember(timelockContractAddress);
+    const storageTimelockAdminRoleSelfGenesis = getStorageTimelockAdminRoleMember(
+        'TIMELOCK_ADMIN_ROLE',
+        timelockContractAddressGenesis,
+    );
+    const storageTimelockAdminRoleSelf = getStorageTimelockAdminRoleMember(
+        'TIMELOCK_ADMIN_ROLE',
+        timelockContractAddress,
+    );
+    const storageTimelockAdminRole = getStorageTimelockAdminRoleMember('TIMELOCK_ADMIN_ROLE', deployer);
+    const storageProposerRole = getStorageTimelockAdminRoleMember('PROPOSER_ROLE', deployer);
+    const storageCancellerRole = getStorageTimelockAdminRoleMember('EXECUTOR_ROLE', deployer);
+    const storageExecutorRole = getStorageTimelockAdminRoleMember('CANCELLER_ROLE', deployer);
     return {
         [STORAGE_GENESIS.TIMELOCK.TIMELOCK_ADMIN_ROLE]: timelockAdminRole,
         [STORAGE_GENESIS.TIMELOCK.PROPOSER_ROLE]: timelockAdminRole,
         [STORAGE_GENESIS.TIMELOCK.CANCELLER_ROLE]: timelockAdminRole,
         [STORAGE_GENESIS.TIMELOCK.EXECUTOR_ROLE]: timelockAdminRole,
-        [storageTimelockAdminRoleMemberGenesis]: ethers.zeroPadValue('0x01', 32),
-        [storageTimelockAdminRoleMember]: ethers.zeroPadValue('0x00', 32),
-        [STORAGE_GENESIS.TIMELOCK.TIMELOCK_ADMIN_ROLE_MEMBER]: ethers.zeroPadValue('0x01', 32),
-        [STORAGE_GENESIS.TIMELOCK.PROPOSER_ROLE_MEMBER]: ethers.zeroPadValue('0x01', 32),
-        [STORAGE_GENESIS.TIMELOCK.CANCELLER_ROLE_MEMBER]: ethers.zeroPadValue('0x01', 32),
-        [STORAGE_GENESIS.TIMELOCK.EXECUTOR_ROLE_MEMBER]: ethers.zeroPadValue('0x01', 32),
+        [storageTimelockAdminRoleSelfGenesis]: ethers.zeroPadValue('0x01', 32),
+        [storageTimelockAdminRoleSelf]: ethers.zeroPadValue('0x00', 32),
+        [storageTimelockAdminRole]: ethers.zeroPadValue('0x01', 32),
+        [storageProposerRole]: ethers.zeroPadValue('0x01', 32),
+        [storageCancellerRole]: ethers.zeroPadValue('0x01', 32),
+        [storageExecutorRole]: ethers.zeroPadValue('0x01', 32),
         [STORAGE_GENESIS.TIMELOCK.MINDELAY]: ethers.zeroPadValue(ethers.toBeHex(minDelay), 32),
     };
 }
@@ -517,6 +526,7 @@ export function deepEqual(a, b) {
     if (keysA.length !== keysB.length) {
         logger.error(`Length mismatch: a: ${keysA.length}, b: ${keysB.length}`);
         logger.error(`Keys: ${keysA}`);
+        logger.error(`Keys: ${keysB}`);
         return false;
     }
     // eslint-disable-next-line no-restricted-syntax
