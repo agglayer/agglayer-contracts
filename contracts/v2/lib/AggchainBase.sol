@@ -63,10 +63,13 @@ abstract contract AggchainBase is
     bool private _legacyIsSequenceWithDataAvailabilityAllowed;
 
     // Added legacy storage values from previous aggchainBase
+    /// @custom:oz-renamed-from vKeyManager
     address public _legacyvKeyManager;
+    /// @custom:oz-renamed-from pendingVKeyManager
     address public _legacypendingVKeyManager;
 
     // Flag to enable/disable the use of the default verification keys from the gateway
+    /// @custom:oz-renamed-from useDefaultGateway
     bool public useDefaultVkeys;
 
     // Flag to enable/disable the use of the default signers from the gateway

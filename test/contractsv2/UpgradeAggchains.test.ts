@@ -332,7 +332,6 @@ describe('UpgradeAggchains', () => {
                 aggLayerGatewayAddress,
             ],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
-            unsafeSkipStorageCheck: true, // Skip storage check as the upgrade handles storage migration correctly
         })) as unknown as AggchainFEP;
 
         // Now call upgradeFromPreviousFEP from rollup manager
@@ -558,7 +557,6 @@ describe('UpgradeAggchains', () => {
                 aggLayerGatewayAddress,
             ],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
-            unsafeSkipStorageCheck: true, // Skip storage check as the upgrade handles storage migration correctly
         })) as unknown as AggchainFEP;
 
         // Now call upgradeFromPreviousFEP from rollup manager
