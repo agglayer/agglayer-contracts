@@ -273,7 +273,6 @@ async function main() {
                     accountName: `preMintAccount_${i}`,
                     balance: BigInt(preMintAccount.balance).toString(),
                     address: preMintAccount.address,
-                    nonce: '',
                 });
             }
 

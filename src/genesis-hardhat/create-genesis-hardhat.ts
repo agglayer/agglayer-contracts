@@ -243,7 +243,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
         rollupID,
         gasTokenAddress,
         gasTokenNetwork,
-        gerProxyAddress, // Global exit root manager address from base genesis
+        genesisBaseAddresses.gerManagerProxyAddress, // Global exit root manager address from base genesis
         ethers.ZeroAddress, // Polygon rollup manager address always zero for sovereign chains
         gasTokenMetadata,
         bridgeManager,
@@ -306,7 +306,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
 
     // Check initialize params bridge
     expect(rollupID).to.equal(await sovereignChainBridgeContract.networkID());
-    expect(gerProxyAddress.toLowerCase()).to.equal(
+    expect(genesisBaseAddresses.gerManagerProxyAddress.toLowerCase()).to.equal(
         (await sovereignChainBridgeContract.globalExitRootManager()).toLowerCase(),
     );
 
@@ -511,7 +511,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     // Bridge initialization
     expectedStorageModifications.BridgeL2SovereignChain_Initialization = getExpectedStorageBridge(
         initializeParams,
-        gerProxyAddress,
+        genesisBaseAddresses.gerManagerProxyAddress,
     );
     // BridgeL2SovereignChain Implementation --> TokenWrappedBridgeUpgradeable
     expectedStorageModifications.TokenWrappedBridgeUpgradeable_Implementation = {};
@@ -720,12 +720,19 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     const bridgeL2SovereignChain = _genesisBase.genesis.find(function (obj) {
         return SUPPORTED_BRIDGE_CONTRACTS_PROXY.includes(obj.contractName);
     });
+    const oldStorageBridge: { [key: string]: any } = {};
+
+    const oldStorageImplementation = bridgeL2SovereignChain.storage[STORAGE_GENESIS.STORAGE_PROXY.IMPLEMENTATION];
+    const oldStorageAdmin = bridgeL2SovereignChain.storage[STORAGE_GENESIS.STORAGE_PROXY.ADMIN];
+    oldStorageBridge[STORAGE_GENESIS.STORAGE_PROXY.IMPLEMENTATION] = oldStorageImplementation;
+    oldStorageBridge[STORAGE_GENESIS.STORAGE_PROXY.ADMIN] = oldStorageAdmin;
+
     genesisInfo.push({
         contractName: GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_PROXY,
         genesisObject: bridgeL2SovereignChain,
         address: bridgeProxyAddress,
         storage: {
-            ...storageModifications.BridgeL2SovereignChain,
+            ...oldStorageBridge,
             ...storageModifications.BridgeL2SovereignChain_Initialization,
         },
     });
@@ -753,12 +760,21 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     const gerManagerL2SovereignChain = _genesisBase.genesis.find(function (obj) {
         return obj.contractName === GENESIS_CONTRACT_NAMES.GER_L2_PROXY;
     });
+
+    const oldStorageGer: { [key: string]: any } = {};
+
+    const oldStorageImplementationGer =
+        gerManagerL2SovereignChain.storage[STORAGE_GENESIS.STORAGE_PROXY.IMPLEMENTATION];
+    const oldStorageAdminGer = gerManagerL2SovereignChain.storage[STORAGE_GENESIS.STORAGE_PROXY.ADMIN];
+    oldStorageGer[STORAGE_GENESIS.STORAGE_PROXY.IMPLEMENTATION] = oldStorageImplementationGer;
+    oldStorageGer[STORAGE_GENESIS.STORAGE_PROXY.ADMIN] = oldStorageAdminGer;
+
     genesisInfo.push({
         contractName: GENESIS_CONTRACT_NAMES.GER_L2_SOVEREIGN_PROXY,
         genesisObject: gerManagerL2SovereignChain,
         address: gerProxyAddress,
         storage: {
-            ...storageModifications.GlobalExitRootManagerL2SovereignChain,
+            ...oldStorageGer,
             ...storageModifications.GlobalExitRootManagerL2SovereignChain_Initialization,
         },
     });
@@ -817,6 +833,18 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
         wethAddress = `0x${storageModifications.BridgeL2SovereignChain_Initialization[
             '0x000000000000000000000000000000000000000000000000000000000000006f'
         ].slice(26)}`;
+
+        let storageBridgeProxy =
+            storageModifications.TokenWrappedBridgeUpgradeable[
+                STORAGE_GENESIS.TOKEN_WRAPPED_BRIDGE_UPGRADEABLE_STORAGE.WETH_DECIMALS_BRIDGE_ADDRESS
+            ];
+        storageBridgeProxy = storageBridgeProxy.replace(
+            bridgeProxyAddress.slice(2),
+            genesisBaseAddresses.bridgeProxyAddress.toLowerCase().slice(2),
+        );
+        storageModifications.TokenWrappedBridgeUpgradeable[
+            STORAGE_GENESIS.TOKEN_WRAPPED_BRIDGE_UPGRADEABLE_STORAGE.WETH_DECIMALS_BRIDGE_ADDRESS
+        ] = storageBridgeProxy;
 
         // Add WETH
         genesisInfo.push({

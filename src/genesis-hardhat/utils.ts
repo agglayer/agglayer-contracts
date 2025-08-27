@@ -1,6 +1,11 @@
 /* eslint-disable no-await-in-loop */
 import { ethers, upgrades } from 'hardhat';
-import { SUPPORTED_BRIDGE_CONTRACTS, SUPPORTED_BRIDGE_CONTRACTS_PROXY, GENESIS_CONTRACT_NAMES } from './constants';
+import {
+    SUPPORTED_BRIDGE_CONTRACTS,
+    SUPPORTED_BRIDGE_CONTRACTS_PROXY,
+    GENESIS_CONTRACT_NAMES,
+    SUPPORTED_GER_MANAGERS,
+} from './constants';
 import { STORAGE_GENESIS } from './storage';
 import { logger } from '../logger';
 
@@ -17,22 +22,22 @@ export async function getAddressesGenesisBase(genesisBase: any) {
 
     // get the bridge proxy address
     const bridgeProxyAddress = genesisBase.find((account: any) =>
-        SUPPORTED_BRIDGE_CONTRACTS.includes(account.contractName),
+        SUPPORTED_BRIDGE_CONTRACTS_PROXY.includes(account.contractName),
     ).address;
 
     // get the bridge proxy implementation address
     const bridgeImplementationAddress = genesisBase.find((account: any) =>
-        SUPPORTED_BRIDGE_CONTRACTS_PROXY.includes(account.contractName),
+        SUPPORTED_BRIDGE_CONTRACTS.includes(account.contractName),
     ).address;
 
     // get the bridge proxy address
-    const gerManagerProxyAddress = genesisBase.find((account: any) =>
-        SUPPORTED_BRIDGE_CONTRACTS.includes(account.contractName),
+    const gerManagerProxyAddress = genesisBase.find(
+        (account: any) => account.contractName === GENESIS_CONTRACT_NAMES.GER_L2_PROXY,
     ).address;
 
     // get the bridge proxy implementation address
     const gerManagerImplementationAddress = genesisBase.find((account: any) =>
-        SUPPORTED_BRIDGE_CONTRACTS_PROXY.includes(account.contractName),
+        SUPPORTED_GER_MANAGERS.includes(account.contractName),
     ).address;
 
     // get the bridge proxy implementation address
@@ -442,18 +447,26 @@ export async function getExpectedStorageAggOracleCommittee(initParams, aggOracle
         initParams.aggOracleOwner,
         32,
     );
-    expectedStorageAggOracleCommittee[STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.ADDRESS_TO_LAST_PROPOSED_GER_1] =
-        await aggOracleCommitteeContract.INITIAL_PROPOSED_GER();
-    expectedStorageAggOracleCommittee[STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.ADDRESS_TO_LAST_PROPOSED_GER_2] =
-        await aggOracleCommitteeContract.INITIAL_PROPOSED_GER();
     expectedStorageAggOracleCommittee[STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.AGG_ORACLE_MEMBERS] =
         `0x${initParams.aggOracleCommittee.length.toString(16).padStart(64, '0')}`;
-    // Add addresses of the AggOracleCommittee members
-    initParams.aggOracleCommittee.forEach((address, index) => {
+    const keccakSlot0 = ethers.keccak256(STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.AGG_ORACLE_MEMBERS);
+
+    initParams.aggOracleCommittee.forEach(async (address, index) => {
+        const memberAddress = ethers.zeroPadValue(address, 32);
+
+        const paddedSlot = STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.ADDRESS_TO_LAST_PROPOSED_GER;
+        const mappingSlot = ethers.keccak256(ethers.concat([memberAddress, paddedSlot]));
+        expectedStorageAggOracleCommittee[mappingSlot] = await aggOracleCommitteeContract.INITIAL_PROPOSED_GER();
+
+        // The dynamic array is stored at slot 0 (aggOracleMembers)
+        // Length is at slot 0, elements start at keccak256(0)
+        const slot = ethers.toBeHex(BigInt(keccakSlot0) + BigInt(index), 32);
+        expectedStorageAggOracleCommittee[slot] = memberAddress;
+
         const memberKey = BigInt(STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.AGG_ORACLE_FIRST_MEMBER);
         const newMemberKey = memberKey + BigInt(index);
         const storageKey = `0x${newMemberKey.toString(16).padStart(64, '0')}`;
-        expectedStorageAggOracleCommittee[storageKey] = ethers.zeroPadValue(address, 32);
+        expectedStorageAggOracleCommittee[storageKey] = memberAddress;
     });
     return expectedStorageAggOracleCommittee;
 }
