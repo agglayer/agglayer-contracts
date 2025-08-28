@@ -144,7 +144,12 @@ contract AggchainECDSAMultisig is AggchainBase {
         aggchainManager = admin;
 
         // set signer to trustedSequencer and threshold to 1
-        _addSignerInternal(trustedSequencer, trustedSequencerURL);
+        // handle trustedSequencerURL as empty string
+        if (bytes(trustedSequencerURL).length == 0) {
+            _addSignerInternal(trustedSequencer, "NO_URL"); // cannot be empty string
+        } else {
+            _addSignerInternal(trustedSequencer, trustedSequencerURL);
+        }
         threshold = 1;
 
         // update aggchainSignersHash

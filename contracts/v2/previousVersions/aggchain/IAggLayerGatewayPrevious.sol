@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "./IAggchainSigners.sol";
-
 // based on: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 
-interface IAggLayerGatewayEvents {
+interface IAggLayerGatewayEventsPrevious {
     /// @notice Emitted when a verifier route is added.
     /// @param selector The verifier selector that was added.
     /// @param verifier The address of the verifier contract.
@@ -49,22 +47,10 @@ interface IAggLayerGatewayEvents {
      * @param selector The 4 bytes selector of the updated default aggchain verification key.
      */
     event UnsetDefaultAggchainVKey(bytes4 selector);
-
-    /**
-     * @notice Emitted when signers and threshold are updated
-     * @param signers The new array of signer addresses
-     * @param threshold The new threshold for multisig operations
-     * @param signersHash The hash of the new signers and threshold
-     */
-    event SignersAndThresholdUpdated(
-        address[] signers,
-        uint256 threshold,
-        bytes32 signersHash
-    );
 }
 
 /// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface IAggLayerGatewayErrors {
+interface IAggLayerGatewayErrorsPrevious {
     /// @notice Thrown when the verifier route is not found.
     /// @param selector The verifier selector that was specified.
     error RouteNotFound(bytes4 selector);
@@ -104,44 +90,16 @@ interface IAggLayerGatewayErrors {
     /// @notice Thrown when trying to call a function with an input zero address
     error InvalidZeroAddress();
 
-    /// @notice Thrown when trying to call a function with an invalid initializer version
-    error InvalidInitializer();
-
     /// @notice Thrown when the input proof bytes are invalid.
     error InvalidProofBytesLength();
-
-    /// @notice Thrown when the aggchain signers hash has not been initialized
-    error AggchainSignersHashNotInitialized();
-
-    /// @notice Thrown when indices for signer removal are not in descending order
-    error IndicesNotInDescendingOrder();
-
-    /// @notice Thrown when trying to set more than 255 signers
-    error AggchainSignersTooHigh();
-
-    /// @notice Thrown when the threshold exceeds the number of signers
-    error InvalidThreshold();
-
-    /// @notice Thrown when trying to add a zero address as signer
-    error SignerCannotBeZero();
-
-    /// @notice Thrown when trying to add a signer with empty URL
-    error SignerURLCannotBeEmpty();
-
-    /// @notice Thrown when trying to add a signer that already exists
-    error SignerAlreadyExists();
-
-    /// @notice Thrown when trying to remove a signer that doesn't exist
-    error SignerDoesNotExist();
 }
 
 /// @title IAggLayerGateway
 /// @notice This contract is the interface for the AggLayerGateway.
 /// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface IAggLayerGateway is
-    IAggLayerGatewayEvents,
-    IAggLayerGatewayErrors,
-    IAggchainSigners
+interface IAggLayerGatewayPrevious is
+    IAggLayerGatewayEventsPrevious,
+    IAggLayerGatewayErrorsPrevious
 {
     /**
      * Struct that defines a verifier route
@@ -194,22 +152,5 @@ interface IAggLayerGateway is
     /// @param pessimisticVKeySelector The verifier selector to freeze.
     function freezePessimisticVKeyRoute(
         bytes4 pessimisticVKeySelector
-    ) external;
-
-    ////////////////////////////////////////////////////////////
-    //                  Multisig Functions                    //
-    ////////////////////////////////////////////////////////////
-
-    /**
-     * @notice Updates signers and threshold for multisig operations
-     * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
-     * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
-     * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
-     */
-    function updateSignersAndThreshold(
-        RemoveSignerInfo[] memory _signersToRemove,
-        SignerInfo[] memory _signersToAdd,
-        uint256 _newThreshold
     ) external;
 }

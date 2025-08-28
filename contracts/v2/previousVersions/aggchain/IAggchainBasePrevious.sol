@@ -2,9 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import "./IAggchainSigners.sol";
-
-interface IAggchainBaseEvents {
+interface IAggchainBaseEventsPrevious {
     /**
      * @notice Emitted when the admin adds an aggchain verification key.
      * @param selector The selector of the verification key to add.
@@ -23,24 +21,14 @@ interface IAggchainBaseEvents {
         bytes32 newAggchainVKey
     );
     /**
-     * @notice Emitted when the admin set the flag useDefaultVkeys to true.
+     * @notice Emitted when the admin set the flag useDefaultGateway to true.
      */
-    event EnableUseDefaultVkeysFlag();
+    event EnableUseDefaultGatewayFlag();
 
     /**
-     * @notice Emitted when the admin set the flag useDefaultVkeys to false.
+     * @notice Emitted when the admin set the flag useDefaultGateway to false.
      */
-    event DisableUseDefaultVkeysFlag();
-
-    /**
-     * @notice Emitted when the admin set the flag useDefaultSigners to true.
-     */
-    event EnableUseDefaultSignersFlag();
-
-    /**
-     * @notice Emitted when the admin set the flag useDefaultSigners to false.
-     */
-    event DisableUseDefaultSignersFlag();
+    event DisableUseDefaultGatewayFlag();
 
     /**
      * @notice Emitted when the vKeyManager starts the two-step transfer role setting a new pending vKeyManager.
@@ -74,21 +62,9 @@ interface IAggchainBaseEvents {
         address oldAggchainManager,
         address newAggchainManager
     );
-
-    /**
-     * @notice Emitted when signers and threshold are updated in a batch operation.
-     * @param aggchainSigners The updated array of signer addresses.
-     * @param newThreshold The new threshold value.
-     * @param newAggchainSignersHash The new hash of the aggchainSigners array.
-     */
-    event SignersAndThresholdUpdated(
-        address[] aggchainSigners,
-        uint256 newThreshold,
-        bytes32 newAggchainSignersHash
-    );
 }
 
-interface IAggchainBaseErrors {
+interface IAggchainBaseErrorsPrevious {
     /// @notice Thrown when trying to add zero value verification key.
     error ZeroValueAggchainVKey();
     /// @notice Thrown when trying to add an aggchain verification key that already exists.
@@ -97,14 +73,10 @@ interface IAggchainBaseErrors {
     error OwnedAggchainVKeyNotFound();
     /// @notice Thrown when trying to initialize the incorrect initialize function.
     error InvalidInitializeFunction();
-    /// @notice Thrown when trying to enable the default vkeys when it is already enabled.
-    error UseDefaultVkeysAlreadyEnabled();
-    /// @notice Thrown when trying to disable the default vkeys when it is already disabled.
-    error UseDefaultVkeysAlreadyDisabled();
-    /// @notice Thrown when trying to enable the default signers when it is already enabled.
-    error UseDefaultSignersAlreadyEnabled();
-    /// @notice Thrown when trying to disable the default signers when it is already disabled.
-    error UseDefaultSignersAlreadyDisabled();
+    /// @notice Thrown when trying to enable the default gateway when it is already enabled.
+    error UseDefaultGatewayAlreadyEnabled();
+    /// @notice Thrown when trying to disable the default gateway when it is already disabled.
+    error UseDefaultGatewayAlreadyDisabled();
     /// @notice Thrown when trying to call a function that only the VKeyManager can call.
     error OnlyVKeyManager();
     /// @notice Thrown when trying to call a function that only the pending VKeyManager can call.
@@ -125,40 +97,16 @@ interface IAggchainBaseErrors {
     error InvalidAggchainDataLength();
     /// @notice Thrown when the aggchainvKeySelectir contains an invalid aggchain type.
     error InvalidAggchainType();
-    /// @notice Thrown when threshold is zero, greater than the number of aggchainSigners.
-    error InvalidThreshold();
-    /// @notice Thrown when trying to add a signer that already exists.
-    error SignerAlreadyExists();
-    /// @notice Thrown when trying to remove a signer that doesn't exist.
-    error SignerDoesNotExist();
-    /// @notice Thrown when the aggchainSigners array is empty.
-    error EmptyAggchainSignersArray();
-    /// @notice Thrown when threshold would be greater than aggchainSigners count after removal.
-    error ThresholdTooHighAfterRemoval();
-    /// @notice Thrown when trying to add a zero address as a signer.
-    error SignerCannotBeZero();
-    /// @notice Thrown when the aggchainSingers is greater than 255.
-    error AggchainSignersTooHigh();
-    /// @notice Thrown when trying to add a signer with an empty URL.
-    error SignerURLCannotBeEmpty();
-    /// @notice Thrown when the indices for signer removal are not in descending order.
-    error IndicesNotInDescendingOrder();
-    /// @notice Thrown when trying to compute the aggchain hash without initializing the signers hash.
-    error AggchainSignersHashNotInitialized();
 }
 
 /**
  * @title IAggchainBase
  * @notice Shared interface for native aggchain implementations.
  */
-interface IAggchainBase is
-    IAggchainBaseErrors,
-    IAggchainBaseEvents,
-    IAggchainSigners
+interface IAggchainBasePrevious is
+    IAggchainBaseErrorsPrevious,
+    IAggchainBaseEventsPrevious
 {
-    ////////////////////////////////////////////////////////////
-    //                       Structs                          //
-    ////////////////////////////////////////////////////////////
     /**
      * @notice Gets aggchain hash.
      * @dev Each chain should properly manage its own aggchain hash.

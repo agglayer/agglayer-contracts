@@ -1032,4 +1032,79 @@ describe('AggchainECDSAMultisig', () => {
         expect(vKey).to.equal(ethers.ZeroHash);
         expect(params).to.equal(ethers.ZeroHash);
     });
+
+    it('should test invalid initializer version scenarios', async () => {
+        // Test case for line 103: Trying to call initialize with wrong version
+        // We need to test when _initializerVersion != 0
+
+        // First, set up the contract in a state where it's already been initialized once
+        await aggchainECDSAMultisigContract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+
+        // Initialize once successfully
+        await aggchainECDSAMultisigContract
+            .connect(aggchainManager)
+            .initialize(
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                false,
+                [],
+                0,
+                { gasPrice: 0 },
+            );
+
+        // Deploy a second fresh contract for testing migrateFromPessimisticConsensus
+        const aggchainECDSAMultisigFactory2 = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const aggchainContract2 = await upgrades.deployProxy(aggchainECDSAMultisigFactory2, [], {
+            initializer: false,
+            constructorArgs: [
+                gerManagerAddress,
+                polTokenAddress,
+                bridgeAddress,
+                rollupManagerAddress,
+                agglayerGatewayAddress,
+            ],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
+        });
+        await aggchainContract2.waitForDeployment();
+
+        // Properly initialize contract with version 1
+        // We can't use initConsensusBase directly as it doesn't exist
+        // Instead we'll test the InvalidInitializer case directly
+
+        // Try to call migrateFromPessimisticConsensus on fresh contract (version 0)
+        // This should fail because the contract is at version 0, not version 1
+        const aggchainFactory3 = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const aggchainContract3 = await upgrades.deployProxy(aggchainFactory3, [], {
+            initializer: false,
+            constructorArgs: [
+                gerManagerAddress,
+                polTokenAddress,
+                bridgeAddress,
+                rollupManagerAddress,
+                agglayerGatewayAddress,
+            ],
+            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
+        });
+
+        // Try to call migrateFromPessimisticConsensus on fresh contract (version 0)
+        await expect(
+            aggchainContract3.connect(rollupManagerSigner).migrateFromPessimisticConsensus({ gasPrice: 0 }),
+        ).to.be.revertedWithCustomError(aggchainContract3, 'InvalidInitializer');
+    });
+
+    it('should test version getter function', async () => {
+        await aggchainECDSAMultisigContract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+
+        // Test the version() function (covers line 210)
+        const version = await aggchainECDSAMultisigContract.version();
+        expect(version).to.equal('v1.0.0');
+        expect(version).to.equal(await aggchainECDSAMultisigContract.AGGCHAIN_ECDSA_MULTISIG_VERSION());
+    });
 });
