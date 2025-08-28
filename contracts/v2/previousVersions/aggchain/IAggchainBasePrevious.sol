@@ -103,7 +103,10 @@ interface IAggchainBaseErrorsPrevious {
  * @title IAggchainBase
  * @notice Shared interface for native aggchain implementations.
  */
-interface IAggchainBasePrevious is IAggchainBaseErrorsPrevious, IAggchainBaseEventsPrevious {
+interface IAggchainBasePrevious is
+    IAggchainBaseErrorsPrevious,
+    IAggchainBaseEventsPrevious
+{
     /**
      * @notice Gets aggchain hash.
      * @dev Each chain should properly manage its own aggchain hash.

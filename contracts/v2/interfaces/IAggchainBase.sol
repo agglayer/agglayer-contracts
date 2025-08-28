@@ -151,16 +151,14 @@ interface IAggchainBaseErrors {
  * @title IAggchainBase
  * @notice Shared interface for native aggchain implementations.
  */
-interface IAggchainBase is IAggchainBaseErrors, IAggchainBaseEvents, IAggchainSigners {
+interface IAggchainBase is
+    IAggchainBaseErrors,
+    IAggchainBaseEvents,
+    IAggchainSigners
+{
     ////////////////////////////////////////////////////////////
     //                       Structs                          //
     ////////////////////////////////////////////////////////////
-
-    struct Config {
-        address addr;
-        string url;
-    }
-
     /**
      * @notice Gets aggchain hash.
      * @dev Each chain should properly manage its own aggchain hash.

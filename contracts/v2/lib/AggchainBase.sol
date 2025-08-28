@@ -26,7 +26,6 @@ abstract contract AggchainBase is
     // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
     IAggLayerGateway public immutable aggLayerGateway;
 
-  
     ////////////////////////////////////////////////////////////
     //                       Variables                        //
     ////////////////////////////////////////////////////////////
@@ -601,7 +600,7 @@ abstract contract AggchainBase is
         if (useDefaultSigners) {
             return aggLayerGateway.getAggchainSignersHash();
         }
-        
+
         // Check if the aggchain signers hash been set
         // Empty signers is supported, but must be done explicitly
         if (aggchainSignersHash == bytes32(0)) {
@@ -610,30 +609,32 @@ abstract contract AggchainBase is
 
         return aggchainSignersHash;
     }
-      /**
-    * @notice Get all aggchainSigners with their URLs
-    * @return Array of SignerInfo structs containing signer addresses and URLs
-    */
-   function getAggchainSignerInfos()
-       external
-       view
-       returns (SignerInfo[] memory)
-   {
-       if (useDefaultSigners) {
-           // Get signers with URLs directly from gateway
-           return aggLayerGateway.getAggchainSignerInfos();
-       } else {
-           // Use local aggchainSigners
-           SignerInfo[] memory signerInfos = new SignerInfo[](aggchainSigners.length);
-           for (uint256 i = 0; i < aggchainSigners.length; i++) {
-               signerInfos[i] = SignerInfo({
-                   addr: aggchainSigners[i],
-                   url: signerToURLs[aggchainSigners[i]]
-               });
-           }
-           return signerInfos;
-       }
-   }
+    /**
+     * @notice Get all aggchainSigners with their URLs
+     * @return Array of SignerInfo structs containing signer addresses and URLs
+     */
+    function getAggchainSignerInfos()
+        external
+        view
+        returns (SignerInfo[] memory)
+    {
+        if (useDefaultSigners) {
+            // Get signers with URLs directly from gateway
+            return aggLayerGateway.getAggchainSignerInfos();
+        } else {
+            // Use local aggchainSigners
+            SignerInfo[] memory signerInfos = new SignerInfo[](
+                aggchainSigners.length
+            );
+            for (uint256 i = 0; i < aggchainSigners.length; i++) {
+                signerInfos[i] = SignerInfo({
+                    addr: aggchainSigners[i],
+                    url: signerToURLs[aggchainSigners[i]]
+                });
+            }
+            return signerInfos;
+        }
+    }
 
     ////////////////////////////////////////////////////////////
     //                   Internal Functions                   //

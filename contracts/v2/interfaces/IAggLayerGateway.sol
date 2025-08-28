@@ -138,8 +138,11 @@ interface IAggLayerGatewayErrors {
 /// @title IAggLayerGateway
 /// @notice This contract is the interface for the AggLayerGateway.
 /// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors, IAggchainSigners {
-
+interface IAggLayerGateway is
+    IAggLayerGatewayEvents,
+    IAggLayerGatewayErrors,
+    IAggchainSigners
+{
     /**
      * Struct that defines a verifier route
      * @param verifier The address of the verifier contract.
