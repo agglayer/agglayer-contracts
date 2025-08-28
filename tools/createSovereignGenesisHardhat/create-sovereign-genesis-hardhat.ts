@@ -240,7 +240,7 @@ async function main() {
             !ethers.isAddress(createGenesisSovereignParams.sovereignWETHAddress))
     ) {
         console.log('Rollup with custom gas token, adding WETH address to deployment output...');
-        const wethObject = genesisBase.genesis.find(function (obj: { contractName: string }) {
+        const wethObject = finalGenesis.genesis.find(function (obj: { contractName: string }) {
             return obj.contractName === GENESIS_CONTRACT_NAMES.WETH_PROXY;
         });
         outWETHAddress = wethObject.address;

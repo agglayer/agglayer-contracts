@@ -8,6 +8,7 @@ import {
 } from './constants';
 import { STORAGE_GENESIS } from './storage';
 import { logger } from '../logger';
+import { getTraceStorageWrites } from '../utils';
 
 /**
  * Get the addresses of the genesis base contracts
@@ -353,17 +354,8 @@ export function getStorageTimelockAdminRoleMember(role, address) {
  * @param {String} timelockContractAddress - address of the timelock contract
  * @returns {Object} - expected storage of the timelock contract
  */
-export function getExpectedStoragePolygonZkEVMTimelock(
-    minDelay,
-    timelockContractAddressGenesis,
-    timelockContractAddress,
-    deployer,
-) {
+export function getExpectedStoragePolygonZkEVMTimelock(minDelay, timelockContractAddress, deployer) {
     const timelockAdminRole = ethers.keccak256(ethers.toUtf8Bytes('TIMELOCK_ADMIN_ROLE'));
-    const storageTimelockAdminRoleSelfGenesis = getStorageTimelockAdminRoleMember(
-        'TIMELOCK_ADMIN_ROLE',
-        timelockContractAddressGenesis,
-    );
     const storageTimelockAdminRoleSelf = getStorageTimelockAdminRoleMember(
         'TIMELOCK_ADMIN_ROLE',
         timelockContractAddress,
@@ -377,8 +369,7 @@ export function getExpectedStoragePolygonZkEVMTimelock(
         [STORAGE_GENESIS.TIMELOCK.PROPOSER_ROLE]: timelockAdminRole,
         [STORAGE_GENESIS.TIMELOCK.CANCELLER_ROLE]: timelockAdminRole,
         [STORAGE_GENESIS.TIMELOCK.EXECUTOR_ROLE]: timelockAdminRole,
-        [storageTimelockAdminRoleSelfGenesis]: ethers.zeroPadValue('0x01', 32),
-        [storageTimelockAdminRoleSelf]: ethers.zeroPadValue('0x00', 32),
+        [storageTimelockAdminRoleSelf]: ethers.zeroPadValue('0x01', 32),
         [storageTimelockAdminRole]: ethers.zeroPadValue('0x01', 32),
         [storageProposerRole]: ethers.zeroPadValue('0x01', 32),
         [storageCancellerRole]: ethers.zeroPadValue('0x01', 32),
@@ -492,34 +483,21 @@ export async function getActualStorage(modificationsStorage, address) {
  * @param genesisInfo Object containing all the information required to update newGenesis
  *                    { contractName, address, storage, genesisObject, deployedInside }
  */
-export async function buildGenesis(newGenesis, genesisInfo) {
+export async function buildGenesis(genesisInfo: any[]) {
+    const newGenesis = [];
     for (let i = 0; i < genesisInfo.length; i++) {
-        const info = genesisInfo[i];
-        if (info.genesisObject && !info.deployedInside) {
-            // Update the contract name, bytecode, storage and nonce
-            // Address is not modified because it must match the L1 address
-            info.genesisObject.contractName = info.contractName;
-            info.genesisObject.storage = info.storage;
-            info.genesisObject.bytecode = await ethers.provider.getCode(info.address);
-            info.genesisObject.nonce = await ethers.provider.getTransactionCount(info.address);
-        } else if (!info.genesisObject && info.deployedInside) {
-            // Add a new contract that has been deployed and did not exist in the genesis
-            const contractGenesis = {
-                contractName: info.contractName,
-                balance: '0',
-                nonce: '1',
-                address: info.address,
-                bytecode: await ethers.provider.getCode(info.address),
-            };
-            if (info.storage) {
-                contractGenesis.storage = info.storage;
-            }
-            newGenesis.push(contractGenesis);
-        } else if (info.genesisObject && info.deployedInside) {
-            // Update contract that has been deployed and exists in the genesis
-            info.genesisObject.address = info.address;
+        const contract = genesisInfo[i];
+        contract.bytecode = await ethers.provider.getCode(contract.address);
+        contract.nonce = await ethers.provider.getTransactionCount(contract.address);
+        if (contract.isProxy) {
+            contract.address = contract.genesisContract.address;
+            contract.balance = contract.genesisContract.balance;
+        } else {
+            contract.balance = await ethers.provider.getBalance(contract.address);
         }
+        newGenesis.push(contract);
     }
+    return newGenesis;
 }
 
 /**
@@ -551,4 +529,16 @@ export function deepEqual(a, b) {
     }
 
     return true;
+}
+
+/**
+ * Check if txhash have the expected storage writes length
+ * @param {Object} txHash - transaction hash
+ * @param {Object} expectedLength - expected storage writes length
+ */
+export async function checkExpectedStorageLength(txHash, expectedLength) {
+    const lengthStorage = Object.keys(await getTraceStorageWrites(txHash)).length;
+    if (lengthStorage !== expectedLength) {
+        throw new Error('Storage not expected');
+    }
 }

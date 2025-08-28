@@ -215,6 +215,7 @@ export async function getStorageWrites(trace, addressInfo) {
 /**
  * Function to get the storage modifications of a tx from the txHash
  * @param {string} txHash - transaction hash
+ * @param {string} address - (optional) storage address
  * @returns {Object} - storage writes: { depth: {"key": "value"} }
  */
 export async function getTraceStorageWrites(txHash: any, address = undefined) {

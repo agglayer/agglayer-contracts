@@ -102,6 +102,14 @@ export const STORAGE_AGG_ORACLE_COMMITTEE = {
 };
 
 /// ///////////////////////////
+///   PROXY ADMIN   /////////
+/// ///////////////////////////
+
+export const STORAGE_PROXY_ADMIN = {
+    OWNER: '0x0000000000000000000000000000000000000000000000000000000000000000',
+};
+
+/// ///////////////////////////
 ///   PROXY STORAGE   /////////
 /// ///////////////////////////
 
@@ -114,6 +122,7 @@ export const STORAGE_GENESIS = {
     TIMELOCK,
     STORAGE_BRIDGE_SOVEREIGN_IMPLEMENTATION,
     TOKEN_WRAPPED_BRIDGE_UPGRADEABLE_STORAGE,
+    STORAGE_PROXY_ADMIN,
     STORAGE_PROXY,
     STORAGE_BRIDGE_SOVEREIGN,
     STORAGE_GER_SOVEREIGN_IMPLEMENTATION,
