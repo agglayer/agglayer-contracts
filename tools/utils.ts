@@ -80,9 +80,10 @@ export function checkBridgeAddress(genesis, expectedBridgeAddress) {
 /**
  * Function to add extra info output (TODO: add more info)
  * @param {Object} output - output json object
+ * @param {Boolean} criticalTooling - (optional) if true, throws an error if no tag
  * @returns {Object} output - output json object with git info added
  */
-export function addInfoOutput(output) {
-    output.gitInfo = getGitInfo();
+export function addInfoOutput(output, criticalTooling = false) {
+    output.gitInfo = getGitInfo(criticalTooling);
     return output;
 }
