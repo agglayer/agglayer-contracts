@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import "./IAggchainSigners.sol";
+
 // based on: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 
 interface IAggLayerGatewayEvents {
@@ -136,26 +138,7 @@ interface IAggLayerGatewayErrors {
 /// @title IAggLayerGateway
 /// @notice This contract is the interface for the AggLayerGateway.
 /// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors {
-    /**
-     * @notice Struct to hold signer information
-     * @param addr The address of the signer
-     * @param url The URL associated with the signer
-     */
-    struct SignerInfo {
-        address addr;
-        string url;
-    }
-
-    /**
-     * @notice Struct to hold information for removing a signer
-     * @param addr The address of the signer to remove
-     * @param index The index of the signer in the aggchainSigners array
-     */
-    struct RemoveSignerInfo {
-        address addr;
-        uint256 index;
-    }
+interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors, IAggchainSigners {
 
     /**
      * Struct that defines a verifier route
@@ -226,30 +209,4 @@ interface IAggLayerGateway is IAggLayerGatewayEvents, IAggLayerGatewayErrors {
         SignerInfo[] memory _signersToAdd,
         uint256 _newThreshold
     ) external;
-
-    /**
-     * @notice Check if an address is a signer
-     * @param _signer Address to check
-     * @return True if the address is a signer
-     */
-    function isSigner(address _signer) external view returns (bool);
-
-    /**
-     * @notice Get the number of aggchainSigners
-     * @return Number of aggchainSigners in the multisig
-     */
-    function getAggchainSignersCount() external view returns (uint256);
-
-    /**
-     * @notice Get all aggchainSigners
-     * @return Array of signer addresses
-     */
-    function getAggchainSigners() external view returns (address[] memory);
-
-    /**
-     * @notice Returns the aggchain signers hash for verification
-     * @dev Used by aggchain contracts to include in their hash computation
-     * @return The current aggchainSignersHash
-     */
-    function getAggchainSignersHash() external view returns (bytes32);
 }
