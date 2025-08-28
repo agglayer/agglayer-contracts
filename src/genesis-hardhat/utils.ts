@@ -390,7 +390,7 @@ export async function getExpectedStorageTokenWrappedBridgeUpgradeable(
 ) {
     // Add proxy WETH
     const wethAddressProxy = await sovereignChainBridgeContract.WETHToken();
-    const tokenWrappedBridgeUpgradeableInit = {};
+    const tokenWrappedBridgeUpgradeableInit: { [key: string]: any } = {};
     tokenWrappedBridgeUpgradeableInit[STORAGE_GENESIS.STORAGE_PROXY.IMPLEMENTATION] = ethers.zeroPadValue(
         tokenWrappedAddress,
         32,
@@ -424,8 +424,14 @@ export async function getExpectedStorageTokenWrappedBridgeUpgradeable(
     return tokenWrappedBridgeUpgradeableInit;
 }
 
+/**
+ * Get the expected storage of the AggOracleCommittee contract
+ * @param {Object} initParams - initial parameters
+ * @param {String} aggOracleCommitteeContract - address of the aggOracleCommittee
+ * @returns {Object} - expected storage of the AggOracleCommittee contract
+ */
 export async function getExpectedStorageAggOracleCommittee(initParams, aggOracleCommitteeContract) {
-    const expectedStorageAggOracleCommittee = {};
+    const expectedStorageAggOracleCommittee: { [key: string]: any } = {};
     expectedStorageAggOracleCommittee[STORAGE_GENESIS.STORAGE_AGG_ORACLE_COMMITTEE.INITIALIZER] = ethers.zeroPadValue(
         '0x01',
         32,
@@ -468,7 +474,7 @@ export async function getExpectedStorageAggOracleCommittee(initParams, aggOracle
  * @returns {Object} - actual storage
  */
 export async function getActualStorage(modificationsStorage, address) {
-    const actualStorage = {};
+    const actualStorage: { [key: string]: any } = {};
     // eslint-disable-next-line no-restricted-syntax, guard-for-in
     for (const key in modificationsStorage) {
         // eslint-disable-next-line no-await-in-loop
