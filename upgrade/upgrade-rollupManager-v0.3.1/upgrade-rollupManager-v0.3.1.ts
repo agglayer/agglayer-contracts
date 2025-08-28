@@ -17,7 +17,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const pathOutputJson = path.join(__dirname, './upgrade_output.json');
 
 // CRITICAL TOOL
-const criticalTool = true;
+const CRITICAL_TOOL = true;
 
 async function main() {
     /*
@@ -121,7 +121,7 @@ async function main() {
     const blockNumber = await ethers.provider.getBlockNumber();
     const outputJson = {
         tagSCPreviousVersion,
-        gitInfo: getGitInfo(criticalTool),
+        gitInfo: getGitInfo(CRITICAL_TOOL),
         scheduleData,
         executeData,
         timelockContractAddress: timelockAddress,
