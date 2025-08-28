@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.28;
 
+import "./IAggchainSigners.sol";
+
 interface IAggchainBaseEvents {
     /**
      * @notice Emitted when the admin adds an aggchain verification key.
@@ -149,7 +151,16 @@ interface IAggchainBaseErrors {
  * @title IAggchainBase
  * @notice Shared interface for native aggchain implementations.
  */
-interface IAggchainBase is IAggchainBaseErrors, IAggchainBaseEvents {
+interface IAggchainBase is IAggchainBaseErrors, IAggchainBaseEvents, IAggchainSigners {
+    ////////////////////////////////////////////////////////////
+    //                       Structs                          //
+    ////////////////////////////////////////////////////////////
+
+    struct Config {
+        address addr;
+        string url;
+    }
+
     /**
      * @notice Gets aggchain hash.
      * @dev Each chain should properly manage its own aggchain hash.

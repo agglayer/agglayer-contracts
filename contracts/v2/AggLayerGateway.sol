@@ -596,4 +596,25 @@ contract AggLayerGateway is
         }
         return aggchainSignersHash;
     }
+
+    /**
+     * @notice Get all aggchainSigners with their URLs
+     * @return Array of SignerInfo structs containing signer addresses and URLs
+     */
+    function getAggchainSignerInfos()
+        external
+        view
+        returns (SignerInfo[] memory)
+    {
+        SignerInfo[] memory signerInfos = new SignerInfo[](
+            aggchainSigners.length
+        );
+        for (uint256 i = 0; i < aggchainSigners.length; i++) {
+            signerInfos[i] = SignerInfo({
+                addr: aggchainSigners[i],
+                url: signerToURLs[aggchainSigners[i]]
+            });
+        }
+        return signerInfos;
+    }
 }

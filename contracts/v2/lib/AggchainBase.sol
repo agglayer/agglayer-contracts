@@ -26,35 +26,7 @@ abstract contract AggchainBase is
     // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
     IAggLayerGateway public immutable aggLayerGateway;
 
-    ////////////////////////////////////////////////////////////
-    //                       Structs                          //
-    ////////////////////////////////////////////////////////////
-
-    struct Config {
-        address addr;
-        string url;
-    }
-
-    /**
-     * @notice Struct to hold signer information
-     * @param addr The address of the signer
-     * @param url The URL associated with the signer
-     */
-    struct SignerInfo {
-        address addr;
-        string url;
-    }
-
-    /**
-     * @notice Struct to hold information for removing a signer
-     * @param addr The address of the signer to remove
-     * @param index The index of the signer in the aggchainSigners array
-     */
-    struct RemoveSignerInfo {
-        address addr;
-        uint256 index;
-    }
-
+  
     ////////////////////////////////////////////////////////////
     //                       Variables                        //
     ////////////////////////////////////////////////////////////
@@ -292,21 +264,7 @@ abstract contract AggchainBase is
         bytes memory aggchainData
     ) external view returns (bytes32) {
         // Get signers hash from gateway if using default signers, otherwise use local storage
-        bytes32 cachedSignersHash;
-
-        if (useDefaultSigners) {
-            // Get signers hash from AggLayerGateway, in case there are no signers, the
-            cachedSignersHash = aggLayerGateway.getAggchainSignersHash();
-        } else {
-            // Use local storage variable
-            cachedSignersHash = aggchainSignersHash;
-
-            // Check if the aggchain signers hash been set
-            // Empty signers is supported, but must be done explicitly
-            if (cachedSignersHash == bytes32(0)) {
-                revert AggchainSignersHashNotInitialized();
-            }
-        }
+        bytes32 cachedSignersHash = getAggchainSignersHash();
 
         (
             bytes32 aggchainVKey,
@@ -634,6 +592,48 @@ abstract contract AggchainBase is
         }
         return aggchainSigners;
     }
+
+    /**
+     * @notice Get the aggchain signers hash
+     * @return The aggchain signers hash
+     */
+    function getAggchainSignersHash() public view returns (bytes32) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.getAggchainSignersHash();
+        }
+        
+        // Check if the aggchain signers hash been set
+        // Empty signers is supported, but must be done explicitly
+        if (aggchainSignersHash == bytes32(0)) {
+            revert AggchainSignersHashNotInitialized();
+        }
+
+        return aggchainSignersHash;
+    }
+      /**
+    * @notice Get all aggchainSigners with their URLs
+    * @return Array of SignerInfo structs containing signer addresses and URLs
+    */
+   function getAggchainSignerInfos()
+       external
+       view
+       returns (SignerInfo[] memory)
+   {
+       if (useDefaultSigners) {
+           // Get signers with URLs directly from gateway
+           return aggLayerGateway.getAggchainSignerInfos();
+       } else {
+           // Use local aggchainSigners
+           SignerInfo[] memory signerInfos = new SignerInfo[](aggchainSigners.length);
+           for (uint256 i = 0; i < aggchainSigners.length; i++) {
+               signerInfos[i] = SignerInfo({
+                   addr: aggchainSigners[i],
+                   url: signerToURLs[aggchainSigners[i]]
+               });
+           }
+           return signerInfos;
+       }
+   }
 
     ////////////////////////////////////////////////////////////
     //                   Internal Functions                   //
