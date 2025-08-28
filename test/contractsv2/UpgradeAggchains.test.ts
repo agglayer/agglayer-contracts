@@ -6,18 +6,13 @@ import {
     AggchainFEPPrevious,
     AggchainFEP,
     AggchainECDSAMultisig,
-    PolygonZkEVMGlobalExitRootV2,
-    PolygonZkEVMBridgeV2,
-    PolygonRollupManager,
-    AggLayerGateway,
+    Address,
 } from '../../typechain-types';
-import { Address } from '../../typechain-types';
 
 describe('UpgradeAggchains', () => {
     let pessimisticConsensus: PolygonPessimisticConsensus;
     let aggchainFEPPrevious: AggchainFEPPrevious;
 
-    let deployer: any;
     let admin: any;
     let trustedSequencer: any;
     let aggchainManager: any;
@@ -42,7 +37,6 @@ describe('UpgradeAggchains', () => {
 
         // Load signers
         [
-            deployer,
             admin,
             trustedSequencer,
             aggchainManager,
@@ -239,7 +233,7 @@ describe('UpgradeAggchains', () => {
         // Check that trustedSequencer was added as initial signer
         const signers = await upgradedECDSA.getAggchainSigners();
         expect(signers[0]).to.equal(trustedSequencer.address);
-        expect(await upgradedECDSA.isSigner(trustedSequencer.address)).to.be.true;
+        expect(await upgradedECDSA.isSigner(trustedSequencer.address)).to.be.equal(true);
 
         // Test that we can update signers
         await upgradedECDSA.connect(admin).updateSignersAndThreshold(
@@ -453,11 +447,11 @@ describe('UpgradeAggchains', () => {
 
         // Test optimistic mode manager functionality
         expect(await upgradedFEP.optimisticModeManager()).to.equal(optimisticModeManager.address);
-        expect(await upgradedFEP.optimisticMode()).to.be.false;
+        expect(await upgradedFEP.optimisticMode()).to.be.equal(false);
 
         // Enable optimistic mode
         await upgradedFEP.connect(optimisticModeManager).enableOptimisticMode({ gasPrice: 0 });
-        expect(await upgradedFEP.optimisticMode()).to.be.true;
+        expect(await upgradedFEP.optimisticMode()).to.be.equal(true);
 
         // Transfer optimistic mode manager role
         const newOptimisticManager = signer3;
@@ -476,7 +470,7 @@ describe('UpgradeAggchains', () => {
 
         // Test that new manager can control optimistic mode
         await upgradedFEP.connect(newOptimisticManager).disableOptimisticMode({ gasPrice: 0 });
-        expect(await upgradedFEP.optimisticMode()).to.be.false;
+        expect(await upgradedFEP.optimisticMode()).to.be.equal(false);
     });
 
     it('should preserve legacy vkey manager during upgrade from previous AggchainFEP', async () => {

@@ -174,68 +174,6 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         return [Number(rollupsCount) + 1, precomputedAggchainECDSAAddress];
     }
 
-    async function createFEPRollup(rollupTypeFEPId: number, chainID: number = 2001) {
-        const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
-        const rollupManagerNonce = await ethers.provider.getTransactionCount(rollupManagerContract.target);
-        const rollupsCount = await rollupManagerContract.rollupCount();
-        const precomputedAggchainFEPAddress = ethers.getCreateAddress({
-            from: rollupManagerContract.target as string,
-            nonce: rollupManagerNonce,
-        });
-        await expect(
-            rollupManagerContract.connect(admin).attachAggchainToAL(
-                rollupTypeFEPId, // rollupTypeID
-                chainID,
-                initBytesInitAggchainManager,
-            ),
-        )
-            .to.emit(rollupManagerContract, 'CreateNewRollup')
-            .withArgs(
-                Number(rollupsCount) + 1, // rollupID
-                rollupTypeFEPId, // rollupType ID
-                precomputedAggchainFEPAddress,
-                chainID,
-                NO_ADDRESS, // gasTokenAddress
-            );
-        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
-        const aggchainFEPContract = aggchainFEPFactory.attach(precomputedAggchainFEPAddress as string) as any;
-
-        // Initialize FEP contract with proper InitParams
-        const initParams = {
-            l2BlockTime: 2, // 2 seconds per block
-            rollupConfigHash: computeRandomBytes(32),
-            startingOutputRoot: computeRandomBytes(32),
-            startingBlockNumber: 0,
-            startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
-            submissionInterval: 10, // Every 100 blocks
-            optimisticModeManager: admin.address,
-            aggregationVkey: computeRandomBytes(32),
-            rangeVkeyCommitment: computeRandomBytes(32),
-        };
-
-        // Using the full initialize function signature for AggchainFEP
-        await aggchainFEPContract
-            .connect(aggchainManager)
-            [
-                'initialize((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),(address,string)[],uint256,bool,bool,bytes32,bytes4,address,address,address,string,string)'
-            ](
-                initParams,
-                [], // signersToAdd
-                0, // newThreshold
-                false, // useDefaultVkeys
-                false, // useDefaultSigners
-                ethers.ZeroHash, // initOwnedAggchainVKey
-                '0x00000001', // initAggchainVKeySelector
-                admin.address,
-                trustedSequencer.address,
-                ethers.ZeroAddress, // gas token address
-                '', // trusted sequencer url
-                '', // network name
-            );
-
-        return [Number(rollupsCount) + 1, precomputedAggchainFEPAddress];
-    }
-
     async function createLegacyFEPRollup(rollupTypeLegacyFEPId: number, chainID: number = 3001) {
         const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
         const rollupManagerNonce = await ethers.provider.getTransactionCount(rollupManagerContract.target);
