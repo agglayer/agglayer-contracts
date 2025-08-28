@@ -103,7 +103,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         const lastRollupTypeID = await rollupManagerContract.rollupTypeCount();
         await expect(
             rollupManagerContract.connect(timelock).addNewRollupType(
-                implementationContract.address,
+                implementationContract.target,
                 ethers.ZeroAddress, // verifier
                 0, // fork id
                 VerifierType.ALGateway,
@@ -115,7 +115,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             .to.emit(rollupManagerContract, 'AddNewRollupType')
             .withArgs(
                 Number(lastRollupTypeID) + 1 /* rollupTypeID */,
-                implementationContract.address,
+                implementationContract.target,
                 ethers.ZeroAddress, // verifier
                 0, // fork id
                 VerifierType.ALGateway,
@@ -153,7 +153,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
                 NO_ADDRESS, // gasTokenAddress
             );
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
-        const aggchainECDSAContract = aggchainECDSAFactory.attach(precomputedAggchainECDSAAddress as string);
+        const aggchainECDSAContract = aggchainECDSAFactory.attach(precomputedAggchainECDSAAddress as string) as any;
         // Use explicit function selector to avoid ambiguity
         await aggchainECDSAContract
             .connect(aggchainManager)
@@ -172,6 +172,157 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         await aggchainECDSAContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
 
         return [Number(rollupsCount) + 1, precomputedAggchainECDSAAddress];
+    }
+
+    async function createFEPRollup(rollupTypeFEPId: number, chainID: number = 2001) {
+        const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
+        const rollupManagerNonce = await ethers.provider.getTransactionCount(rollupManagerContract.target);
+        const rollupsCount = await rollupManagerContract.rollupCount();
+        const precomputedAggchainFEPAddress = ethers.getCreateAddress({
+            from: rollupManagerContract.target as string,
+            nonce: rollupManagerNonce,
+        });
+        await expect(
+            rollupManagerContract.connect(admin).attachAggchainToAL(
+                rollupTypeFEPId, // rollupTypeID
+                chainID,
+                initBytesInitAggchainManager,
+            ),
+        )
+            .to.emit(rollupManagerContract, 'CreateNewRollup')
+            .withArgs(
+                Number(rollupsCount) + 1, // rollupID
+                rollupTypeFEPId, // rollupType ID
+                precomputedAggchainFEPAddress,
+                chainID,
+                NO_ADDRESS, // gasTokenAddress
+            );
+        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+        const aggchainFEPContract = aggchainFEPFactory.attach(precomputedAggchainFEPAddress as string) as any;
+
+        // Initialize FEP contract with proper InitParams
+        const initParams = {
+            l2BlockTime: 2, // 2 seconds per block
+            rollupConfigHash: computeRandomBytes(32),
+            startingOutputRoot: computeRandomBytes(32),
+            startingBlockNumber: 0,
+            startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
+            submissionInterval: 10, // Every 100 blocks
+            optimisticModeManager: admin.address,
+            aggregationVkey: computeRandomBytes(32),
+            rangeVkeyCommitment: computeRandomBytes(32),
+        };
+
+        // Using the full initialize function signature for AggchainFEP
+        await aggchainFEPContract
+            .connect(aggchainManager)
+            [
+                'initialize((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),(address,string)[],uint256,bool,bool,bytes32,bytes4,address,address,address,string,string)'
+            ](
+                initParams,
+                [], // signersToAdd
+                0, // newThreshold
+                false, // useDefaultVkeys
+                false, // useDefaultSigners
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00000001', // initAggchainVKeySelector
+                admin.address,
+                trustedSequencer.address,
+                ethers.ZeroAddress, // gas token address
+                '', // trusted sequencer url
+                '', // network name
+            );
+
+        return [Number(rollupsCount) + 1, precomputedAggchainFEPAddress];
+    }
+
+    async function createLegacyFEPRollup(rollupTypeLegacyFEPId: number, chainID: number = 3001) {
+        const initBytesInitAggchainManager = encodeInitAggchainManager(aggchainManager.address);
+        const rollupManagerNonce = await ethers.provider.getTransactionCount(rollupManagerContract.target);
+        const rollupsCount = await rollupManagerContract.rollupCount();
+        const precomputedAggchainLegacyFEPAddress = ethers.getCreateAddress({
+            from: rollupManagerContract.target as string,
+            nonce: rollupManagerNonce,
+        });
+        await expect(
+            rollupManagerContract.connect(admin).attachAggchainToAL(
+                rollupTypeLegacyFEPId, // rollupTypeID
+                chainID,
+                initBytesInitAggchainManager,
+            ),
+        )
+            .to.emit(rollupManagerContract, 'CreateNewRollup')
+            .withArgs(
+                Number(rollupsCount) + 1, // rollupID
+                rollupTypeLegacyFEPId, // rollupType ID
+                precomputedAggchainLegacyFEPAddress,
+                chainID,
+                NO_ADDRESS, // gasTokenAddress
+            );
+        const aggchainFEPPreviousFactory = await ethers.getContractFactory('AggchainFEPPrevious');
+        const aggchainFEPPreviousContract = aggchainFEPPreviousFactory.attach(
+            precomputedAggchainLegacyFEPAddress as string,
+        ) as any;
+
+        // Initialize Legacy FEP contract with encoded bytes
+        // The AggchainFEPPrevious expects encoded initialization bytes
+        const initParams = {
+            l2BlockTime: 2, // 2 seconds per block
+            rollupConfigHash: computeRandomBytes(32),
+            startingOutputRoot: computeRandomBytes(32),
+            startingBlockNumber: 0,
+            startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
+            submissionInterval: 10, // Every 100 blocks
+            optimisticModeManager: admin.address,
+            aggregationVkey: computeRandomBytes(32),
+            rangeVkeyCommitment: computeRandomBytes(32),
+        };
+
+        // convert init params into array with same order, all params
+        const initParamsArray = [
+            initParams.l2BlockTime,
+            initParams.rollupConfigHash,
+            initParams.startingOutputRoot,
+            initParams.startingBlockNumber,
+            initParams.startingTimestamp,
+            initParams.submissionInterval,
+            initParams.optimisticModeManager,
+            initParams.aggregationVkey,
+            initParams.rangeVkeyCommitment,
+        ];
+
+        // Encode initialization bytes for AggchainFEPPrevious
+        const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(
+            [
+                'tuple(uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32)',
+                'bool',
+                'bytes32',
+                'bytes4',
+                'address',
+                'address',
+                'address',
+                'address',
+                'string',
+                'string',
+            ],
+            [
+                initParamsArray,
+                false, // useDefaultGateway
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00000001', // initAggchainVKeySelector
+                aggchainManager.address,
+                admin.address,
+                trustedSequencer.address,
+                ethers.ZeroAddress, // gas token address
+                '', // trusted sequencer url
+                '', // network name
+            ],
+        );
+
+        // Initialize with encoded bytes
+        await aggchainFEPPreviousContract.connect(aggchainManager).initialize(initializeBytesAggchain);
+
+        return [Number(rollupsCount) + 1, precomputedAggchainLegacyFEPAddress];
     }
 
     beforeEach('Deploy contract', async () => {
@@ -203,17 +354,17 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // deploy PolygonZkEVMBridgeV2, it's no initialized yet because rollupManager and globalExitRootManager addresses are not set yet (not deployed)
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
+        polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        });
+        })) as any;
 
         // Deploy aggLayerGateway and initialize it
         const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        aggLayerGatewayContract = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
+        aggLayerGatewayContract = (await upgrades.deployProxy(aggLayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer'],
-        });
+        })) as any;
 
         // deploy mock verifier
         const VerifierRollupHelperFactory = await ethers.getContractFactory('VerifierRollupHelperMock');
@@ -255,10 +406,10 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         });
         // deploy globalExitRootV2
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
-        polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
+        polygonZkEVMGlobalExitRoot = (await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
-        });
+        })) as any;
 
         // deploy PolygonRollupManager previous (pessimistic)
         const PolygonRollupManagerPreviousFactory = await ethers.getContractFactory('PolygonRollupManagerPessimistic');
@@ -279,22 +430,26 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             .withArgs('pessimistic');
         // Upgrade rollup manager to v3
         const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
-        rollupManagerContract = await upgrades.upgradeProxy(rollupManagerContract.target, PolygonRollupManagerFactory, {
-            unsafeAllow: [
-                'constructor',
-                'state-variable-immutable',
-                'enum-definition',
-                'struct-definition',
-                'missing-initializer',
-                'missing-initializer-call',
-            ],
-            constructorArgs: [
-                polygonZkEVMGlobalExitRoot.target,
-                polTokenContract.target,
-                polygonZkEVMBridgeContract.target,
-                aggLayerGatewayContract.target,
-            ],
-        });
+        rollupManagerContract = (await upgrades.upgradeProxy(
+            rollupManagerContract.target,
+            PolygonRollupManagerFactory,
+            {
+                unsafeAllow: [
+                    'constructor',
+                    'state-variable-immutable',
+                    'enum-definition',
+                    'struct-definition',
+                    'missing-initializer',
+                    'missing-initializer-call',
+                ],
+                constructorArgs: [
+                    polygonZkEVMGlobalExitRoot.target,
+                    polTokenContract.target,
+                    polygonZkEVMBridgeContract.target,
+                    aggLayerGatewayContract.target,
+                ],
+            },
+        )) as any;
         // Initialize rollup manager Mock v3
         await expect(
             rollupManagerContract.initializeMock(
@@ -353,13 +508,13 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // Deploy FEP previous consensus contract
         const aggchainFEPPreviousFactory = await ethers.getContractFactory('AggchainFEPPrevious');
-        aggchainFEPPreviousImplementationContract = await aggchainFEPPreviousFactory.deploy(
+        aggchainFEPPreviousImplementationContract = (await aggchainFEPPreviousFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
             polygonZkEVMBridgeContract.target,
             rollupManagerContract.target,
             aggLayerGatewayContract.target,
-        );
+        )) as any;
     });
 
     it('should check initializers and deploy parameters', async () => {
@@ -417,7 +572,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // Check created rollup
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
-        const aggchainECDSAContract = aggchainECDSAFactory.attach(rollupAddress as string);
+        const aggchainECDSAContract = aggchainECDSAFactory.attach(rollupAddress as string) as any;
         expect(await aggchainECDSAContract.aggLayerGateway()).to.be.equal(aggLayerGatewayContract.target);
     });
 
@@ -463,7 +618,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             emptySignersHash,
         );
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
-        const aggchainECDSAContract = aggchainECDSAFactory.attach(aggchainECDSAAddress as string);
+        const aggchainECDSAContract = aggchainECDSAFactory.attach(aggchainECDSAAddress as string) as any;
         expect(await aggchainECDSAContract.getAggchainHash(CUSTOM_DATA_ECDSA)).to.be.equal(precomputedAggchainHash);
     });
 
@@ -620,7 +775,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         )
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(pessimisticRollupID, rollupTypeECDSAId, 0 /* lastVerifiedBatch */);
-        const ECDSARollupContract = aggchainECDSAFactory.attach(pessimisticRollupContract.target);
+        const ECDSARollupContract = aggchainECDSAFactory.attach(pessimisticRollupContract.target) as any;
 
         const aggchainManagerSC = await ECDSARollupContract.aggchainManager();
         expect(aggchainManagerSC).to.be.equal(aggchainManager.address);
@@ -788,5 +943,369 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         await expect(
             rollupManagerContract.connect(pessimisticRollupContract).onSequenceBatches(3, computeRandomBytes(32)),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'OnlyStateTransitionChains');
+    });
+
+    it('should upgrade from Pessimistic consensus to ECDSA', async () => {
+        // Create pessimistic rollup type
+        const pessimisticRollupTypeID = await createPessimisticRollupType();
+
+        // Create pessimistic rollup
+        const precomputedRollupAddress = ethers.getCreateAddress({
+            from: rollupManagerContract.target as string,
+            nonce: await ethers.provider.getTransactionCount(rollupManagerContract.target),
+        });
+        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
+        const pessimisticRollupContract = ppConsensusFactory.attach(
+            precomputedRollupAddress,
+        ) as PolygonPessimisticConsensus;
+
+        const chainID = 100;
+        const gasTokenAddress = ethers.ZeroAddress;
+        const urlSequencer = 'https://pessimistic:8545';
+        const networkName = 'testPessimistic';
+        const pessimisticRollupID = 1;
+
+        const initializeBytesPessimistic = encodeInitializeBytesLegacy(
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+        );
+
+        await expect(
+            rollupManagerContract
+                .connect(admin)
+                .attachAggchainToAL(pessimisticRollupTypeID, chainID, initializeBytesPessimistic),
+        )
+            .to.emit(rollupManagerContract, 'CreateNewRollup')
+            .withArgs(pessimisticRollupID, pessimisticRollupTypeID, precomputedRollupAddress, chainID, gasTokenAddress);
+
+        // Create ECDSA rollup type
+        const rollupTypeECDSAId = await createAggchainRollupType(aggchainECDSAImplementationContract);
+
+        // Upgrade from pessimistic to ECDSA
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+
+        const initializeBytesWrongECDSA = aggchainECDSAFactory.interface.encodeFunctionData(
+            'initialize(address,address,address,string,string,bool,(address,string)[],uint256)',
+            [
+                admin.address,
+                trustedSequencer.address,
+                ethers.ZeroAddress, // gas token address
+                '', // trusted sequencer url
+                '', // network name
+                false, // useDefaultSigners
+                [], // No signers to add initially
+                0, // Threshold of 0 initially
+            ],
+        );
+
+        const ECDSARollupContract = aggchainECDSAFactory.attach(pessimisticRollupContract.target) as any;
+
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(pessimisticRollupContract.target, rollupTypeECDSAId, initializeBytesWrongECDSA),
+        ).to.be.revertedWithCustomError(ECDSARollupContract, 'OnlyAggchainManager');
+
+        // For ECDSA upgrade, we use initAggchainManager as ECDSA doesn't have special migration from pessimistic
+        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromPessimisticConsensus()');
+
+        // Do not redeclare those variables, update the name
+        const signersECDSA = [trustedSequencer.address];
+        const thresholdECDSA = 1;
+        const aggchainSignersHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
+
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(pessimisticRollupContract.target, rollupTypeECDSAId, upgradeData),
+        )
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(pessimisticRollupID, rollupTypeECDSAId, 0)
+            .to.emit(ECDSARollupContract, 'SignersAndThresholdUpdated')
+            .withArgs(signersECDSA, thresholdECDSA, aggchainSignersHashECDSA);
+
+        expect(await ECDSARollupContract.aggchainManager()).to.be.equal(admin.address);
+
+        // check the signers and threshold and all the previosu params are coherent
+        const signersECDSAFromContract = await ECDSARollupContract.getAggchainSigners();
+        expect(signersECDSAFromContract).to.be.deep.equal(signersECDSA);
+        const thresholdECDSAFromContract = await ECDSARollupContract.threshold();
+        expect(thresholdECDSAFromContract).to.be.equal(thresholdECDSA);
+        const aggchainSignersHashECDSAFromContract = await ECDSARollupContract.getAggchainSignersHash();
+        expect(aggchainSignersHashECDSAFromContract).to.be.equal(aggchainSignersHashECDSA);
+        const aggchainManagerFromContract = await ECDSARollupContract.aggchainManager();
+        expect(aggchainManagerFromContract).to.be.equal(admin.address);
+    });
+
+    it('should upgrade from Pessimistic consensus to FEP', async () => {
+        // Create pessimistic rollup type
+        const pessimisticRollupTypeID = await createPessimisticRollupType();
+
+        // Create pessimistic rollup
+        const precomputedRollupAddress = ethers.getCreateAddress({
+            from: rollupManagerContract.target as string,
+            nonce: await ethers.provider.getTransactionCount(rollupManagerContract.target),
+        });
+        const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
+        const pessimisticRollupContract = ppConsensusFactory.attach(
+            precomputedRollupAddress,
+        ) as PolygonPessimisticConsensus;
+
+        const chainID = 200;
+        const gasTokenAddress = ethers.ZeroAddress;
+        const urlSequencer = 'https://pessimistic-fep:8545';
+        const networkName = 'testPessimisticToFEP';
+        const pessimisticRollupID = 1;
+
+        const initializeBytesPessimistic = encodeInitializeBytesLegacy(
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+        );
+
+        await expect(
+            rollupManagerContract
+                .connect(admin)
+                .attachAggchainToAL(pessimisticRollupTypeID, chainID, initializeBytesPessimistic),
+        )
+            .to.emit(rollupManagerContract, 'CreateNewRollup')
+            .withArgs(pessimisticRollupID, pessimisticRollupTypeID, precomputedRollupAddress, chainID, gasTokenAddress);
+
+        // Create FEP rollup type
+        const rollupTypeFEPId = await createAggchainRollupType(aggchainFEPImplementationContract);
+
+        // Upgrade from pessimistic to FEP
+        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+
+        // Prepare InitParams for FEP initialization
+        const initParams = {
+            l2BlockTime: 2, // 2 seconds per block
+            rollupConfigHash: computeRandomBytes(32),
+            startingOutputRoot: computeRandomBytes(32),
+            startingBlockNumber: 0,
+            startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
+            submissionInterval: 100, // Every 100 blocks
+            optimisticModeManager: admin.address,
+            aggregationVkey: computeRandomBytes(32),
+            rangeVkeyCommitment: computeRandomBytes(32),
+        };
+
+        // Encode upgrade data for initializeFromPessimisticConsensus
+        const wrongUpgradeData = aggchainFEPFactory.interface.encodeFunctionData(
+            'initializeFromPessimisticConsensus((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bool,bytes32,bytes4,(address,string)[],uint256)',
+            [
+                initParams,
+                false, // useDefaultVkeys
+                false, // useDefaultSigners
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP (AGGCHAIN_TYPE = 0x0001)
+                [], // signersToAdd
+                0, // newThreshold
+            ],
+        );
+
+        const FEPRollupContract = aggchainFEPFactory.attach(pessimisticRollupContract.target) as AggchainFEP;
+
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(pessimisticRollupContract.target, rollupTypeFEPId, wrongUpgradeData),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
+
+        const upgradeData = FEPRollupContract.interface.encodeFunctionData('initAggchainManager', [
+            aggchainManager.address,
+        ]);
+
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(pessimisticRollupContract.target, rollupTypeFEPId, upgradeData),
+        )
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(pessimisticRollupID, rollupTypeFEPId, 0);
+
+        // Migrate from PessimisticConsensus
+        await ethers.provider.send('hardhat_setBalance', [rollupManagerContract.target, '0x100000000000000']);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
+        const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
+
+        await expect(
+            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidInitializer');
+
+        await expect(
+            FEPRollupContract.connect(rollupManagerSigner).initializeFromECDSAMultisig(initParams),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
+
+        await expect(
+            FEPRollupContract.connect(rollupManagerSigner).upgradeFromPreviousFEP(),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidInitializer');
+
+        const signersECDSA = [trustedSequencer.address];
+        const thresholdECDSA = 1;
+        const aggchainSignersHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
+
+        await expect(
+            FEPRollupContract.connect(rollupManagerSigner).initializeFromPessimisticConsensus(
+                initParams,
+                false, // useDefaultVkeys
+                false, // useDefaultSigners
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP (AGGCHAIN_TYPE = 0x0001)
+                [{ addr: trustedSequencer.address, url: 'http://signer1' }],
+                thresholdECDSA, // newThreshold
+                { gasPrice: 0 },
+            ),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
+
+        await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+            initParams,
+            false, // useDefaultVkeys
+            false, // useDefaultSigners
+            ethers.ZeroHash, // initOwnedAggchainVKey
+            '0x00010001', // initAggchainVKeySelector for FEP (AGGCHAIN_TYPE = 0x0001)
+            [{ addr: trustedSequencer.address, url: 'http://signer1' }],
+            thresholdECDSA, // newThreshold
+            { gasPrice: 0 },
+        );
+
+        expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
+        expect(await FEPRollupContract.getAggchainSignersHash()).to.be.equal(aggchainSignersHashECDSA);
+        expect(await FEPRollupContract.threshold()).to.be.equal(thresholdECDSA);
+        expect(await FEPRollupContract.getAggchainSigners()).to.be.deep.equal(signersECDSA);
+    });
+
+    it('should upgrade from ECDSA to FEP', async () => {
+        // Create ECDSA rollup type and rollup
+        const rollupTypeECDSAId = await createAggchainRollupType(aggchainECDSAImplementationContract);
+        const [ecdsaRollupID, ecdsaRollupAddress] = await createECDSARollup(rollupTypeECDSAId);
+
+        // Create FEP rollup type
+        const rollupTypeFEPId = await createAggchainRollupType(aggchainFEPImplementationContract);
+
+        // Upgrade from ECDSA to FEP
+        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+
+        // Prepare InitParams for FEP initialization from ECDSA
+        const initParams = {
+            l2BlockTime: 2, // 2 seconds per block
+            rollupConfigHash: computeRandomBytes(32),
+            startingOutputRoot: computeRandomBytes(32),
+            startingBlockNumber: 0,
+            startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
+            submissionInterval: 100, // Every 100 blocks
+            optimisticModeManager: admin.address,
+            aggregationVkey: computeRandomBytes(32),
+            rangeVkeyCommitment: computeRandomBytes(32),
+        };
+
+        // Encode upgrade data for initializeFromECDSAMultisig
+        const upgradeData = aggchainFEPFactory.interface.encodeFunctionData(
+            'initializeFromECDSAMultisig((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32))',
+            [initParams],
+        );
+        const FEPRollupContract = aggchainFEPFactory.attach(ecdsaRollupAddress as string) as any;
+
+        // same as last test
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(ecdsaRollupAddress as string, rollupTypeFEPId, upgradeData),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
+
+        await expect(
+            rollupManagerContract.connect(timelock).updateRollup(ecdsaRollupAddress as string, rollupTypeFEPId, '0x'),
+        )
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(ecdsaRollupID, rollupTypeFEPId, 0);
+
+        await expect(FEPRollupContract.connect(aggchainManager).upgradeFromPreviousFEP()).to.be.revertedWithCustomError(
+            FEPRollupContract,
+            'OnlyRollupManager',
+        );
+
+        // Migrate from PessimisticConsensus
+        await ethers.provider.send('hardhat_setBalance', [rollupManagerContract.target, '0x100000000000000']);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
+        const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
+
+        await expect(
+            FEPRollupContract.connect(rollupManagerSigner).upgradeFromPreviousFEP(),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidInitializer');
+
+        const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
+
+        await expect(FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams))
+            .to.emit(FEPRollupContract, 'OpSuccinctConfigUpdated')
+            .withArgs(
+                GENESIS_CONFIG_NAME,
+                initParams.aggregationVkey,
+                initParams.rangeVkeyCommitment,
+                initParams.rollupConfigHash,
+            )
+            .to.emit(FEPRollupContract, 'OpSuccinctConfigSelected')
+            .withArgs(GENESIS_CONFIG_NAME);
+
+        // Verify the upgrade
+        expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
+    });
+
+    it('should upgrade from Legacy FEP to new FEP', async () => {
+        // Create Legacy FEP rollup type and rollup
+        const rollupTypeLegacyFEPId = await createAggchainRollupType(aggchainFEPPreviousImplementationContract);
+        const [legacyFEPRollupID, legacyFEPRollupAddress] = await createLegacyFEPRollup(rollupTypeLegacyFEPId);
+
+        // Create new FEP rollup type
+        const rollupTypeFEPId = await createAggchainRollupType(aggchainFEPImplementationContract);
+
+        // Upgrade from Legacy FEP to new FEP
+        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+
+        // For upgrade from previous FEP, the contract has a special upgradeFromPreviousFEP function
+        // that is called automatically by the rollup manager during the upgrade
+        const upgradeData = aggchainFEPFactory.interface.encodeFunctionData('upgradeFromPreviousFEP()');
+
+        const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
+
+        // fetch legacy aprams FEP, aggregationVkey, rangeVkeyCommitment, rollupConfigHash
+        const FEPRollupContract = aggchainFEPFactory.attach(legacyFEPRollupAddress as string) as any;
+
+        const legacyFEPVkey = await FEPRollupContract.aggregationVkey();
+        const legacyFEPRangeVkeyCommitment = await FEPRollupContract.rangeVkeyCommitment();
+        const legacyFEPRollupConfigHash = await FEPRollupContract.rollupConfigHash();
+
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(legacyFEPRollupAddress as string, rollupTypeFEPId, upgradeData),
+        )
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(legacyFEPRollupID, rollupTypeFEPId, 0)
+            .to.emit(FEPRollupContract, 'OpSuccinctConfigUpdated')
+            .withArgs(GENESIS_CONFIG_NAME, legacyFEPVkey, legacyFEPRangeVkeyCommitment, legacyFEPRollupConfigHash)
+            .to.emit(FEPRollupContract, 'OpSuccinctConfigSelected')
+            .withArgs(GENESIS_CONFIG_NAME);
+
+        // Impersonate rollup manager to call upgradeFromPreviousFEP
+        await ethers.provider.send('hardhat_setBalance', [rollupManagerContract.target, '0x100000000000000']);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
+        const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
+
+        // Call upgradeFromPreviousFEP to complete the migration
+        await expect(
+            FEPRollupContract.connect(aggchainManager).upgradeFromPreviousFEP({ gasPrice: 0 }),
+        ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyRollupManager');
+
+        await expect(
+            FEPRollupContract.connect(rollupManagerSigner).upgradeFromPreviousFEP({ gasPrice: 0 }),
+        ).to.be.revertedWith('Initializable: contract is already initialized');
+
+        // Verify the upgrade
+        expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
     });
 });

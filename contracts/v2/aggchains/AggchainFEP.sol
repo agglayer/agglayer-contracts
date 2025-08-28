@@ -448,12 +448,8 @@ contract AggchainFEP is AggchainBase {
     function initializeFromECDSAMultisig(
         InitParams memory _initParams
     ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
-        if (_initializerVersion != 2) {
-            revert InvalidInitializer();
-        }
-
         // Check that the l2Outputs array is empty
-        if (l2Outputs.length != 0) {
+        if (_initializerVersion != 2 || l2Outputs.length != 0) {
             revert InvalidInitializer();
         }
 
@@ -468,10 +464,11 @@ contract AggchainFEP is AggchainBase {
     function upgradeFromPreviousFEP()
         external
         onlyRollupManager
+        getInitializedVersion
         reinitializer(3)
     {
         // Check that the aggchainSignersHash is not set
-        if (aggchainSignersHash != bytes32(0)) {
+        if (_initializerVersion != 2 || aggchainSignersHash != bytes32(0)) {
             revert InvalidInitializer();
         }
 
@@ -484,8 +481,23 @@ contract AggchainFEP is AggchainBase {
         });
         selectedOpSuccinctConfigName = GENESIS_CONFIG_NAME;
 
+        // emit OP succinct config events
+        emit OpSuccinctConfigUpdated(
+            GENESIS_CONFIG_NAME,
+            aggregationVkey,
+            rangeVkeyCommitment,
+            rollupConfigHash
+        );
+
+        emit OpSuccinctConfigSelected(GENESIS_CONFIG_NAME);
+
         // set signer to trustedSequencer and threshold to 1
-        _addSignerInternal(trustedSequencer, trustedSequencerURL);
+        // handle trustedSequencerURL as empty string
+        if (bytes(trustedSequencerURL).length == 0) {
+            _addSignerInternal(trustedSequencer, "NO_URL"); // cannot be empty string
+        } else {
+            _addSignerInternal(trustedSequencer, trustedSequencerURL);
+        }
         threshold = 1;
 
         // update aggchainSignersHash
@@ -539,7 +551,6 @@ contract AggchainFEP is AggchainBase {
         optimisticModeManager = _initParams.optimisticModeManager;
 
         // Initialize genesis configuration
-        // TODO: genesis config name should be param?
         opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
             aggregationVkey: _initParams.aggregationVkey,
             rangeVkeyCommitment: _initParams.rangeVkeyCommitment,
@@ -547,6 +558,15 @@ contract AggchainFEP is AggchainBase {
         });
 
         selectedOpSuccinctConfigName = GENESIS_CONFIG_NAME;
+
+        // emit OP succinct config events
+        emit OpSuccinctConfigUpdated(
+            GENESIS_CONFIG_NAME,
+            _initParams.aggregationVkey,
+            _initParams.rangeVkeyCommitment,
+            _initParams.rollupConfigHash
+        );
+        emit OpSuccinctConfigSelected(GENESIS_CONFIG_NAME);
     }
 
     ////////////////////////////////////////////////////////////
