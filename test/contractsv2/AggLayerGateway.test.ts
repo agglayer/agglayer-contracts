@@ -774,8 +774,6 @@ describe('AggLayerGateway tests', () => {
         const signersList = await ethers.getSigners();
         const signer1 = signersList[6];
         const signer2 = signersList[7];
-        const admin = defaultAdmin;
-        const aggLayerAdmin = signersList[9];
 
         // Initialize with empty signers to test edge case
         await edgeCaseGateway.initialize(
