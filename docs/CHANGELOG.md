@@ -1,19 +1,39 @@
+
+## [v12.1.0-rc.2] - 2025-08-29
+
+### 🚨 Breaking Changes
+- contracts/v2/PolygonRollupManager.sol: al-v0.3.1 -> v1.0.0
+- contracts/v2/PolygonZkEVMBridgeV2.sol: al-v0.3.1 -> v1.1.0
+- contracts/v2/PolygonZkEVMGlobalExitRootV2.sol: al-v0.3.0 -> v1.0.0
+- contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol: al-v0.3.0 -> v1.0.0
+- contracts/v2/sovereignChains/BridgeL2SovereignChain.sol: v10.1.2 -> v1.1.0
+- New tooling package (v12.1.0-rc.2)
+
+### ✨ New Features
+- ➕ New! contracts/v2/AggLayerGateway.sol: v1.1.0
+- ➕ New! contracts/v2/aggchains/AggchainECDSAMultisig.sol: v1.0.0
+- ➕ New! contracts/v2/aggchains/AggchainFEP.sol: v3.0.0 // Op L2OO Semantic version
+- ➕ New! contracts/v2/sovereignChains/AggOracleCommittee.sol: v1.0.0
+
+### 📜 Changelog (PRs)
+[PR #506](https://github.com/agglayer/agglayer-contracts/pull/506) - L2OO v3
+[PR #509](https://github.com/agglayer/agglayer-contracts/pull/509) - Add IVersion interface
+[PR #499](https://github.com/agglayer/agglayer-contracts/pull/499) - agg oracle comittee
+[PR #502](https://github.com/agglayer/agglayer-contracts/pull/502) - update versions
+
+---
 > This CHANGELOG is a bit different; we are only adding the versions for the first time.
 > In the Breaking Changes section, we’ve listed the versions that have been changed.
 > In the New Features section, we’ve listed the versions that didn’t exist before.
 
-## [v11.0.0] - 2025-07-24
+## [v11.0.0-rc.3] - 2025-07-24
 
 ### 🚨 Breaking Changes
-- contracts/v2/PolygonRollupManager.sol: al-v0.3.1 -> v1.0.0
-- contracts/v2/PolygonZkEVMBridgeV2.sol: al-v0.3.1 -> v1.0.0
-- contracts/v2/PolygonZkEVMGlobalExitRootV2.sol: al-v0.3.0 -> v1.0.0
-- contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol: al-v0.3.0 -> v1.0.0
-- contracts/v2/sovereignChains/BridgeL2SovereignChain.sol: v10.1.2 -> v1.0.0
-
-### ✨ New Features
-- ➕ New! contracts/v2/AggLayerGateway.sol: v1.0.0
-- ➕ New! contracts/v2/aggchains/AggchainECDSA.sol: v1.0.0
+- contracts/v2/PolygonRollupManager.sol: al-v0.3.1
+- contracts/v2/PolygonZkEVMBridgeV2.sol: al-v0.3.1
+- contracts/v2/PolygonZkEVMGlobalExitRootV2.sol: al-v0.3.0
+- contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol: al-v0.3.0
+- contracts/v2/sovereignChains/BridgeL2SovereignChain.sol: v10.1.2
 
 ### 📝 Updates / 🐛 Bugfixes
 - New tooling package (v11.0.0)

@@ -15,8 +15,9 @@ const contracts = [
     'contracts/v2/AggLayerGateway.sol',
     'contracts/v2/sovereignChains/BridgeL2SovereignChain.sol',
     'contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol',
-    'contracts/v2/aggchains/AggchainECDSA.sol',
+    'contracts/v2/aggchains/AggchainECDSAMultisig.sol',
     'contracts/v2/aggchains/AggchainFEP.sol',
+    'contracts/v2/sovereignChains/AggOracleCommittee.sol',
 ];
 
 function parseVersion(line: string): string | null {
@@ -147,7 +148,6 @@ async function main() {
 
     let hasBreaking = false;
     let hasFeature = false;
-
     contracts.forEach((file) => {
         const oldVersion = extractVersionFromTag(file, PREVIOUS_TAG);
         const newVersion = extractVersionFromHEAD(file);
@@ -156,8 +156,10 @@ async function main() {
             const changeType = classifyContractChange(oldVersion, newVersion);
             if (!changeType) return;
 
-            const changeString = `${file}: ${oldVersion} -> ${newVersion}`;
-
+            let changeString = `${file}: ${oldVersion} -> ${newVersion}`;
+            if (file.includes("AggchainFEP")) {
+                changeString += "// Op L2OO Semantic version"
+            }
             if (changeType === 'breaking') {
                 breakingChanges.push(`- ${changeString}`);
                 hasBreaking = true;
@@ -168,8 +170,10 @@ async function main() {
                 notes.push(`- ${changeString}`);
             }
         } else if (!oldVersion && newVersion) {
-            const changeString = `➕ New! ${file}: ${newVersion}`;
-
+            let changeString = `➕ New! ${file}: ${newVersion}`;
+            if (file.includes("AggchainFEP")) {
+                changeString += " // Op L2OO Semantic version"
+            }
             features.push(`- ${changeString}`);
             hasFeature = true;
         }
