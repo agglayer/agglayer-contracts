@@ -42,6 +42,12 @@ interface IAggchainSigners {
     function isSigner(address _signer) external view returns (bool);
 
     /**
+     * @notice Get the threshold for the multisig
+     * @return threshold for the multisig
+     */
+    function getThreshold() external view returns (uint256);
+
+    /**
      * @notice Get the number of aggchainSigners
      * @return Number of aggchainSigners in the multisig
      */

@@ -559,6 +559,14 @@ contract AggLayerGateway is
     }
 
     /**
+     * @notice Get the threshold for the multisig
+     * @return threshold for the multisig
+     */
+    function getThreshold() external view returns (uint256) {
+        return threshold;
+    }
+
+    /**
      * @notice Check if an address is a signer
      * @param _signer Address to check
      * @return True if the address is a signer

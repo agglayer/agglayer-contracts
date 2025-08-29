@@ -345,8 +345,10 @@ abstract contract AggchainBase is
             revert AggchainSignersTooHigh();
         }
 
-        // Update threshold if provided
-        if (_newThreshold > aggchainSigners.length) {
+        if (
+            _newThreshold > aggchainSigners.length ||
+            (aggchainSigners.length != 0 && _newThreshold == 0)
+        ) {
             revert InvalidThreshold();
         }
 
@@ -517,18 +519,6 @@ abstract contract AggchainBase is
     }
 
     /**
-     * @notice Check if an address is a signer
-     * @param _signer Address to check
-     * @return True if the address is a signer
-     */
-    function isSigner(address _signer) public view returns (bool) {
-        if (useDefaultSigners) {
-            return aggLayerGateway.isSigner(_signer);
-        }
-        return bytes(signerToURLs[_signer]).length > 0;
-    }
-
-    /**
      * @notice Computes the selector for the aggchain verification key from the aggchain type and the aggchainVKeyVersion.
      * @dev It joins two bytes2 values into a bytes4 value.
      * @param aggchainVKeyVersion The aggchain verification key version, used to identify the aggchain verification key.
@@ -568,6 +558,29 @@ abstract contract AggchainBase is
         bytes4 aggchainVKeySelector
     ) public pure returns (bytes2) {
         return bytes2(aggchainVKeySelector);
+    }
+
+    /**
+     * @notice Get the threshold for the multisig
+     * @return threshold for the multisig
+     */
+    function getThreshold() external view returns (uint256) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.getThreshold();
+        }
+        return threshold;
+    }
+
+    /**
+     * @notice Check if an address is a signer
+     * @param _signer Address to check
+     * @return True if the address is a signer
+     */
+    function isSigner(address _signer) public view returns (bool) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.isSigner(_signer);
+        }
+        return bytes(signerToURLs[_signer]).length > 0;
     }
 
     /**

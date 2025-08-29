@@ -583,10 +583,10 @@ describe('AggchainECDSAMultisig', () => {
         );
 
         // Test updateThreshold - zero threshold is valid since we have signers
-        // Zero threshold is actually allowed, so this should succeed
+        // Zero threshold is actually not allowed, so this should revert
         await expect(
             aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0),
-        ).to.emit(aggchainECDSAMultisigContract, 'SignersAndThresholdUpdated');
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidThreshold');
 
         // Restore threshold
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], threshold);
