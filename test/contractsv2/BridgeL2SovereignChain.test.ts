@@ -159,7 +159,7 @@ describe('BridgeL2SovereignChain Contract', () => {
             deployer.address,
             tokenInitialBalance,
         );
-        expect(await sovereignChainBridgeContract.version()).to.be.equal('v2.0.0');
+        expect(await sovereignChainBridgeContract.version()).to.be.equal('v1.1.0');
         expect(await sovereignChainGlobalExitRootContract.version()).to.be.equal('v1.0.0');
     });
 

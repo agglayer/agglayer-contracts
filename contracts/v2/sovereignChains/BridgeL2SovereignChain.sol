@@ -21,7 +21,7 @@ contract BridgeL2SovereignChain is
     address private immutable deployer;
 
     // Current bridge version
-    string public constant BRIDGE_SOVEREIGN_VERSION = "v2.0.0";
+    string public constant BRIDGE_SOVEREIGN_VERSION = "v1.1.0";
 
     // Struct to represent leaf data for forwardLET function
     struct LeafData {
