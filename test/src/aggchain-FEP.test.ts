@@ -202,7 +202,7 @@ describe('Test vectors aggchain FEP', () => {
 
             // Cast to AggchainFEP type for the initialization
             const ppConsensusAsFEP = ppConsensusContract as unknown as AggchainFEP;
-            await ppConsensusAsFEP.connect(aggchainManager).initializeFromPessimisticConsensus(
+            await ppConsensusAsFEP.connect(aggchainManager).initializeFromLegacyConsensus(
                 data.initParams,
                 data.useDefaultVkeys,
                 data.useDefaultSigners,

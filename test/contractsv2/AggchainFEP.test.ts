@@ -353,14 +353,14 @@ describe('AggchainFEP', () => {
         };
 
         // Initialize parameters will be passed directly to the contract
-        // initializeFromPessimisticConsensus function uses similar parameters
+        // initializeFromLegacyConsensus function uses similar parameters
 
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
-        // For v1, we use initializeFromPessimisticConsensus
-        await aggchainFEPContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+        // For v1, we use initializeFromLegacyConsensus
+        await aggchainFEPContract.connect(aggchainManager).initializeFromLegacyConsensus(
             initParams,
             useDefaultVkeys,
             useDefaultSigners,

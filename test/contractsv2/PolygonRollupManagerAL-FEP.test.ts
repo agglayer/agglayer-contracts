@@ -755,7 +755,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
 
         // initialize the FEP aggchain - test wrong aggchain type
         await expect(
-            FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+            FEPRollupContract.connect(aggchainManager).initializeFromLegacyConsensus(
                 initParams,
                 false, // useDefaultVkeys (set to false to test aggchain type validation)
                 false, // useDefaultSigners
@@ -766,7 +766,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidAggchainType');
 
-        await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+        await FEPRollupContract.connect(aggchainManager).initializeFromLegacyConsensus(
             initParams,
             false, // useDefaultVkeys (set to false to avoid needing gateway vkey)
             false, // useDefaultSigners
@@ -840,7 +840,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         await FEPRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
 
         // Create CUSTOM_DATA_FEP with the correct selector that was used during initialization
-        const correctSelector = '0x00010001'; // This matches what was used in initializeFromPessimisticConsensus
+        const correctSelector = '0x00010001'; // This matches what was used in initializeFromLegacyConsensus
         const CUSTOM_DATA_FEP_CORRECT = encodeAggchainDataFEP(correctSelector, newStateRoot, newl2BlockNumber);
 
         // verify pessimist proof with the new FEP rollup

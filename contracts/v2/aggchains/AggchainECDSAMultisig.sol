@@ -125,12 +125,12 @@ contract AggchainECDSAMultisig is AggchainBase {
     }
 
     /**
-     * @notice Migrates from PolygonPessimisticConsensus to AggchainECDSAMultisig
+     * @notice Migrates from PolygonPessimisticConsensus or PolygonRollupBaseEtrog to AggchainECDSAMultisig
      * @dev This function is called when upgrading from a PolygonPessimisticConsensus contract
      *      It sets up the initial multisig configuration using the existing admin and trustedSequencer
      *      Sets the threshold to 1 and adds the trustedSequencer as the initial signer
      */
-    function migrateFromPessimisticConsensus()
+    function migrateFromLegacyConsensus()
         external
         onlyRollupManager
         getInitializedVersion

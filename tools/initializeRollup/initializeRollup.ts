@@ -192,10 +192,10 @@ async function main() {
         // Contract needs v1 initialization (migration from pessimistic consensus)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
             // Migrate from pessimistic consensus to ECDSA Multisig
-            initializeTx = await aggchainContract.populateTransaction.migrateFromPessimisticConsensus();
+            initializeTx = await aggchainContract.populateTransaction.migrateFromLegacyConsensus();
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
             // Initialize FEP from pessimistic consensus with direct parameters
-            initializeTx = await aggchainContract.populateTransaction.initializeFromPessimisticConsensus(
+            initializeTx = await aggchainContract.populateTransaction.initializeFromLegacyConsensus(
                 aggchainParams.initParams,
                 aggchainParams.signers || [],
                 aggchainParams.threshold || 0,

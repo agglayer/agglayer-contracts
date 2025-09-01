@@ -46,7 +46,7 @@ async function main() {
     logger.info(JSON.stringify(initializationParams, null, 2));
 
     logger.info('\nTo initialize the FEP contract from pessimistic consensus, call:');
-    logger.info('aggchainContract.initializeFromPessimisticConsensus(');
+    logger.info('aggchainContract.initializeFromLegacyConsensus(');
     logger.info('  initParams,');
     logger.info('  [], // signers');
     logger.info('  0, // threshold');

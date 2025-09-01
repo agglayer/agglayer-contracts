@@ -690,7 +690,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         // Compute initialize upgrade data
         const aggchainECDSAMultisigFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
 
-        // For migration from PessimisticConsensus, the migrateFromPessimisticConsensus function
+        // For migration from PessimisticConsensus, the migrateFromLegacyConsensus function
         // will be called automatically by the RollupManager
         // No initialization bytes needed for migration
 
@@ -711,10 +711,10 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         expect(aggchainManagerSC).to.be.equal(aggchainManager.address);
 
         // migrate from PessimisticConsensus
-        // Impersonate rollup manager to call migrateFromPessimisticConsensus
+        // Impersonate rollup manager to call migrateFromLegacyConsensus
         await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
-        await ECDSAMultisigRollupContract.connect(rollupManagerSigner).migrateFromPessimisticConsensus({ gasPrice: 0 });
+        await ECDSAMultisigRollupContract.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 });
         // assert that the rollup is migrated, check the signershash is coorect, threshold 1 and trusted sequencer
         expect(await ECDSAMultisigRollupContract.aggchainSignersHash()).to.be.equal(
             computeSignersHash(1, [trustedSequencer.address]),

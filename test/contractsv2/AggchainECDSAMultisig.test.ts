@@ -202,9 +202,7 @@ describe('AggchainECDSAMultisig', () => {
         ) as unknown as AggchainECDSAMultisig;
 
         // Migrate from PessimisticConsensus using the new migration function
-        await aggchainECDSAMultisigContract
-            .connect(rollupManagerSigner)
-            .migrateFromPessimisticConsensus({ gasPrice: 0 });
+        await aggchainECDSAMultisigContract.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 });
 
         // After migration:
         // - aggchainManager is set to admin
@@ -1057,7 +1055,7 @@ describe('AggchainECDSAMultisig', () => {
                 { gasPrice: 0 },
             );
 
-        // Deploy a second fresh contract for testing migrateFromPessimisticConsensus
+        // Deploy a second fresh contract for testing migrateFromLegacyConsensus
         const aggchainECDSAMultisigFactory2 = await ethers.getContractFactory('AggchainECDSAMultisig');
         const aggchainContract2 = await upgrades.deployProxy(aggchainECDSAMultisigFactory2, [], {
             initializer: false,
@@ -1076,7 +1074,7 @@ describe('AggchainECDSAMultisig', () => {
         // We can't use initConsensusBase directly as it doesn't exist
         // Instead we'll test the InvalidInitializer case directly
 
-        // Try to call migrateFromPessimisticConsensus on fresh contract (version 0)
+        // Try to call migrateFromLegacyConsensus on fresh contract (version 0)
         // This should fail because the contract is at version 0, not version 1
         const aggchainFactory3 = await ethers.getContractFactory('AggchainECDSAMultisig');
         const aggchainContract3 = await upgrades.deployProxy(aggchainFactory3, [], {
@@ -1091,9 +1089,9 @@ describe('AggchainECDSAMultisig', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
         });
 
-        // Try to call migrateFromPessimisticConsensus on fresh contract (version 0)
+        // Try to call migrateFromLegacyConsensus on fresh contract (version 0)
         await expect(
-            aggchainContract3.connect(rollupManagerSigner).migrateFromPessimisticConsensus({ gasPrice: 0 }),
+            aggchainContract3.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 }),
         ).to.be.revertedWithCustomError(aggchainContract3, 'InvalidInitializer');
     });
 

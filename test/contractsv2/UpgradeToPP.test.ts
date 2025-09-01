@@ -17,7 +17,7 @@ import {
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
 import { encodeAggchainDataFEP } from '../../src/utils-aggchain-FEP';
-import { AggchainFEP } from '../../typechain-types/contracts/aggchains';
+import { AggchainECDSAMultisig } from '../../typechain-types/contracts/aggchains';
 
 const MerkleTreeBridge = MTBridge;
 const { getLeafValue } = mtBridgeUtils;
@@ -39,7 +39,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
     let rollupManagerContract: PolygonRollupManagerMock;
-    let aggchainFEPContract: AggchainFEP;
+    let aggchainECDSAContract: AggchainECDSAMultisig;
 
     const networkIDMainnet = 0;
 
@@ -57,7 +57,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     const newStateRoot = ethers.id('newStateRoot');
     const newl2BlockNumber = 1200;
     const aggchainVKeySelector = '0x12340001';
-    const CUSTOM_DATA_FEP = encodeAggchainDataFEP(aggchainVKeySelector, newStateRoot, newl2BlockNumber);
+    const CUSTOM_DATA_ECDSA = '0x';
 
     beforeEach('Deploy contracts & add type pp', async () => {
         upgrades.silenceWarnings();
@@ -229,8 +229,8 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
 
         // create aggchainFEP implementation
-        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
-        aggchainFEPContract = await aggchainFEPFactory.deploy(
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        aggchainECDSAContract = await aggchainECDSAFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
             polygonZkEVMBridgeContract.target,
@@ -238,11 +238,11 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             aggLayerGatewayContract.target,
         );
 
-        await aggchainFEPContract.waitForDeployment();
+        await aggchainECDSAContract.waitForDeployment();
 
         await expect(
             rollupManagerContract.connect(timelock).addNewRollupType(
-                aggchainFEPContract.target,
+                aggchainECDSAContract.target,
                 ethers.ZeroAddress, // verifier
                 0, // fork id
                 VerifierType.ALGateway,
@@ -254,7 +254,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .to.emit(rollupManagerContract, 'AddNewRollupType')
             .withArgs(
                 2,
-                aggchainFEPContract.target,
+                aggchainECDSAContract.target,
                 ethers.ZeroAddress, // verifier
                 0, // fork id
                 VerifierType.ALGateway,
@@ -1325,10 +1325,8 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const lastBatchVerified = rollupData[6];
         expect(lastBatchSequenced).to.be.equal(lastBatchVerified);
 
-        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
-        const upgradeData = aggchainFEPFactory.interface.encodeFunctionData('initAggchainManager(address)', [
-            aggchainManager.address,
-        ]);
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()');
 
         await expect(
             rollupManagerContract
@@ -1362,18 +1360,6 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        const FEPRollupContract = aggchainFEPFactory.attach(rollupAddress);
-        // Initialize FEP contract directly with parameters
-        await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
-            initParams,
-            true, // useDefaultVkeys
-            true, // useDefaultSigners
-            ethers.ZeroHash, // ownedAggchainVKey
-            '0x00000000', // aggchainVkeySelector (should be zero when useDefaultVkeys is true)
-            [], // No signers to add initially
-            0, // Threshold of 0 initially
-        );
-
         await expect(
             rollupManagerContract
                 .connect(trustedAggregator)
@@ -1383,12 +1369,12 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                     newWrongLER,
                     newPPRoot,
                     proofWithSelector,
-                    CUSTOM_DATA_FEP,
+                    CUSTOM_DATA_ECDSA,
                 ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidNewLocalExitRoot');
 
-        // Ensure signers hash initialized (empty)
-        await FEPRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
+        // // Ensure signers hash initialized (empty)
+        // await aggchainECDSARollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
 
         const prevPP = ethers.ZeroHash;
         const prevLER = ethers.ZeroHash;
@@ -1402,7 +1388,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                     lastLER,
                     newPPRoot,
                     proofWithSelector,
-                    CUSTOM_DATA_FEP,
+                    CUSTOM_DATA_ECDSA,
                 ),
         )
             .to.emit(rollupManagerContract, 'CompletedMigration')

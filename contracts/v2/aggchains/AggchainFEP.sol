@@ -382,7 +382,7 @@ contract AggchainFEP is AggchainBase {
     }
 
     /**
-     * @notice Initialize function for upgrade from PolygonPessimisticConsensus
+     * @notice Initialize function for upgrade from PolygonPessimisticConsensus or PolygonRollupBaseEtrog
      * @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
      * @param _initParams The initialization parameters for FEP
      * @param _useDefaultVkeys Whether to use default verification keys from gateway
@@ -391,7 +391,7 @@ contract AggchainFEP is AggchainBase {
      * @param _signersToAdd Array of signers to add to the multisig
      * @param _newThreshold New threshold for multisig operations
      */
-    function initializeFromPessimisticConsensus(
+    function initializeFromLegacyConsensus(
         InitParams memory _initParams,
         bool _useDefaultVkeys,
         bool _useDefaultSigners,
