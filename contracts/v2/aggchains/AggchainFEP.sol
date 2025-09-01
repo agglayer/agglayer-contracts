@@ -467,8 +467,8 @@ contract AggchainFEP is AggchainBase {
         getInitializedVersion
         reinitializer(3)
     {
-        // Check that the aggchainSignersHash is not set
-        if (_initializerVersion != 2 || aggchainSignersHash != bytes32(0)) {
+        // Check that the aggchainMultisigHash is not set
+        if (_initializerVersion != 2 || aggchainMultisigHash != bytes32(0)) {
             revert InvalidInitializer();
         }
 
@@ -500,8 +500,8 @@ contract AggchainFEP is AggchainBase {
         }
         threshold = 1;
 
-        // update aggchainSignersHash
-        _updateAggchainSignersHash();
+        // update aggchainMultisigHash
+        _updateAggchainMultisigHash();
     }
 
     /**

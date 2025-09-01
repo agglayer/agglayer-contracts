@@ -474,11 +474,11 @@ describe('AggLayerGateway tests', () => {
             'SignersAndThresholdUpdated',
         );
 
-        // Now getAggchainSignersHash should work
+        // Now getAggchainMultisigHash should work
         // Use computeSignersHash from utils-common-aggchain to check the hash matches the contract's value
         // (Assume computeSignersHash is imported or available in scope)
         let expectedSignersHash = computeSignersHash(0, []);
-        const emptySignersHash = await aggLayerGatewayContract.getAggchainSignersHash();
+        const emptySignersHash = await aggLayerGatewayContract.getAggchainMultisigHash();
         expect(emptySignersHash).to.be.equal(expectedSignersHash);
 
         // Test isSigner with no signers
@@ -760,8 +760,8 @@ describe('AggLayerGateway tests', () => {
         ).to.be.revertedWithCustomError(freshGateway, 'InvalidInitialization');
     });
 
-    it('should test getAggchainSignersHash edge case', async () => {
-        // Test the edge case when aggchainSignersHash is not set (line 595)
+    it('should test getAggchainMultisigHash edge case', async () => {
+        // Test the edge case when aggchainMultisigHash is not set (line 595)
         // Deploy a fresh contract
         const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
         const edgeCaseGateway = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
@@ -789,8 +789,8 @@ describe('AggLayerGateway tests', () => {
             0, // threshold
         );
 
-        // Test getAggchainSignersHash when no signers are set
-        const signersHash = await edgeCaseGateway.getAggchainSignersHash();
+        // Test getAggchainMultisigHash when no signers are set
+        const signersHash = await edgeCaseGateway.getAggchainMultisigHash();
         expect(signersHash).to.not.equal(ethers.ZeroHash);
 
         // Add signers and verify hash changes
@@ -804,7 +804,7 @@ describe('AggLayerGateway tests', () => {
             1,
         );
 
-        const newSignersHash = await edgeCaseGateway.getAggchainSignersHash();
+        const newSignersHash = await edgeCaseGateway.getAggchainMultisigHash();
         expect(newSignersHash).to.not.equal(signersHash);
         expect(newSignersHash).to.not.equal(ethers.ZeroHash);
     });

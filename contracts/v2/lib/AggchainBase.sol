@@ -74,8 +74,9 @@ abstract contract AggchainBase is
     /// @notice Threshold required for multisig operations
     uint256 public threshold;
 
-    /// @notice Hash of the current aggchainSigners array
-    bytes32 public aggchainSignersHash;
+    /// @notice Hash of the current multisig configuration.
+    /// @dev Computed as keccak256(abi.encodePacked(threshold, aggchainSigners))
+    bytes32 public aggchainMultisigHash;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -263,7 +264,7 @@ abstract contract AggchainBase is
         bytes memory aggchainData
     ) external view returns (bytes32) {
         // Get signers hash from gateway if using default signers, otherwise use local storage
-        bytes32 cachedSignersHash = getAggchainSignersHash();
+        bytes32 cachedMultisigHash = getAggchainMultisigHash();
 
         (
             bytes32 aggchainVKey,
@@ -276,7 +277,7 @@ abstract contract AggchainBase is
                     CONSENSUS_TYPE,
                     aggchainVKey,
                     aggchainParams,
-                    cachedSignersHash
+                    cachedMultisigHash
                 )
             );
     }
@@ -355,7 +356,7 @@ abstract contract AggchainBase is
         threshold = _newThreshold;
 
         // Update the signers hash once after all operations
-        _updateAggchainSignersHash();
+        _updateAggchainMultisigHash();
     }
 
     /**
@@ -609,18 +610,18 @@ abstract contract AggchainBase is
      * @notice Get the aggchain signers hash
      * @return The aggchain signers hash
      */
-    function getAggchainSignersHash() public view returns (bytes32) {
+    function getAggchainMultisigHash() public view returns (bytes32) {
         if (useDefaultSigners) {
-            return aggLayerGateway.getAggchainSignersHash();
+            return aggLayerGateway.getAggchainMultisigHash();
         }
 
         // Check if the aggchain signers hash been set
         // Empty signers is supported, but must be done explicitly
-        if (aggchainSignersHash == bytes32(0)) {
+        if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();
         }
 
-        return aggchainSignersHash;
+        return aggchainMultisigHash;
     }
     /**
      * @notice Get all aggchainSigners with their URLs
@@ -709,15 +710,15 @@ abstract contract AggchainBase is
      * @notice Update the hash of the aggchainSigners array
      * @dev Combines threshold and signers array into a single hash for efficient verification
      */
-    function _updateAggchainSignersHash() internal {
-        aggchainSignersHash = keccak256(
+    function _updateAggchainMultisigHash() internal {
+        aggchainMultisigHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
 
         emit SignersAndThresholdUpdated(
             aggchainSigners,
             threshold,
-            aggchainSignersHash
+            aggchainMultisigHash
         );
     }
 }

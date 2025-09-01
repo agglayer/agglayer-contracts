@@ -62,9 +62,9 @@ interface IAggchainSigners {
     /**
      * @notice Returns the aggchain signers hash for verification
      * @dev Used by aggchain contracts to include in their hash computation
-     * @return The current aggchainSignersHash
+     * @return The current aggchainMultisigHash
      */
-    function getAggchainSignersHash() external view returns (bytes32);
+    function getAggchainMultisigHash() external view returns (bytes32);
 
     /**
      * @notice Get all aggchainSigners with their URLs

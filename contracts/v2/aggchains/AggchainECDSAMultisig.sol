@@ -152,27 +152,18 @@ contract AggchainECDSAMultisig is AggchainBase {
         }
         threshold = 1;
 
-        // update aggchainSignersHash
-        _updateAggchainSignersHash();
+        // update aggchainMultisigHash
+        _updateAggchainMultisigHash();
     }
 
     ////////////////////////////////////////////////////////////
     //                    Functions: views                    //
     ////////////////////////////////////////////////////////////
     /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey
-    ///
-    ///     aggchain_hash:
-    ///     Field:           | CONSENSUS_TYPE | aggchain_vkey  | aggchain_params  |
-    ///     length (bits):   | 32             | 256            | 256              |
-    ///
-    ///     aggchain_params:
-    ///     Field:           | aggchainSignersHash    | threshold      |
-    ///     length (bits):   | 256            | 32             |
-    ///
     /// @param aggchainData custom bytes provided by the chain
     ///     aggchainData:
-    ///     Field:           | _aggchainVKeySelector |
-    ///     length (bits):   | 32                    |
+    ///     Field:           |   |
+    ///     length (bits):   | 0 |
     ///
     /// aggchainData._aggchainVKeySelector 4 bytes aggchain vkey selector (ABI-encoded as 32 bytes)
     ///

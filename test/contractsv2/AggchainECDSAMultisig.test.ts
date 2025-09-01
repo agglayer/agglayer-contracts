@@ -289,7 +289,7 @@ describe('AggchainECDSAMultisig', () => {
         const aggchainHashSC = await aggchainECDSAMultisigContract.getAggchainHash(aggchainData);
 
         // Calculate expected hash in JS
-        const signersHash = await aggchainECDSAMultisigContract.aggchainSignersHash();
+        const signersHash = await aggchainECDSAMultisigContract.aggchainMultisigHash();
 
         // The aggchain hash is calculated as: keccak256(consensusType, aggchainVKey, aggchainParams, signersHash)
         // Since getAggchainParamsAndVKeySelector returns (0, 0), both aggchainVKey and aggchainParams are zero
@@ -345,7 +345,7 @@ describe('AggchainECDSAMultisig', () => {
 
         // Test signersHash
         const expectedSignersHash = utilsAggchain.computeSignersHash(threshold, initialSigners);
-        expect(await aggchainECDSAMultisigContract.aggchainSignersHash()).to.be.equal(expectedSignersHash);
+        expect(await aggchainECDSAMultisigContract.aggchainMultisigHash()).to.be.equal(expectedSignersHash);
     });
 
     it('should check onVerifyPessimistic', async () => {
@@ -914,11 +914,11 @@ describe('AggchainECDSAMultisig', () => {
             { gasPrice: 0 },
         );
 
-        // Initialize with empty signers (should set aggchainSignersHash)
+        // Initialize with empty signers (should set aggchainMultisigHash)
         await aggchainECDSAMultisigContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
 
         // Verify empty signers hash is set
-        const emptySignersHash = await aggchainECDSAMultisigContract.aggchainSignersHash();
+        const emptySignersHash = await aggchainECDSAMultisigContract.aggchainMultisigHash();
         expect(emptySignersHash).to.not.equal(ethers.ZeroHash);
 
         // Now we can call getAggchainHash

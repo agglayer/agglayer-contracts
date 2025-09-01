@@ -78,7 +78,7 @@ contract AggLayerGateway is
     uint256 public threshold;
 
     /// @notice Hash of the current aggchainSigners array
-    bytes32 public aggchainSignersHash;
+    bytes32 public aggchainMultisigHash;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -487,7 +487,7 @@ contract AggLayerGateway is
         threshold = _newThreshold;
 
         // Update the signers hash once after all operations
-        _updateAggchainSignersHash();
+        _updateAggchainMultisigHash();
     }
 
     /**
@@ -546,15 +546,15 @@ contract AggLayerGateway is
      * @notice Update the hash of the aggchainSigners array
      * @dev Combines threshold and signers array into a single hash for efficient verification
      */
-    function _updateAggchainSignersHash() internal {
-        aggchainSignersHash = keccak256(
+    function _updateAggchainMultisigHash() internal {
+        aggchainMultisigHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
 
         emit SignersAndThresholdUpdated(
             aggchainSigners,
             threshold,
-            aggchainSignersHash
+            aggchainMultisigHash
         );
     }
 
@@ -594,15 +594,15 @@ contract AggLayerGateway is
     /**
      * @notice Returns the aggchain signers hash for verification
      * @dev Used by aggchain contracts to include in their hash computation
-     * @return The current aggchainSignersHash
+     * @return The current aggchainMultisigHash
      */
-    function getAggchainSignersHash() external view returns (bytes32) {
+    function getAggchainMultisigHash() external view returns (bytes32) {
         // Check if the aggchain signers hash been set
         // Empty signers is supported, but must be done explicitly
-        if (aggchainSignersHash == bytes32(0)) {
+        if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();
         }
-        return aggchainSignersHash;
+        return aggchainMultisigHash;
     }
 
     /**

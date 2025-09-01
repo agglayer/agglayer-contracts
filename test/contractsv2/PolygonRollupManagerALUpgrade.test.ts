@@ -953,7 +953,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // Do not redeclare those variables, update the name
         const signersECDSA = [trustedSequencer.address];
         const thresholdECDSA = 1;
-        const aggchainSignersHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
+        const aggchainMultisigHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
 
         await expect(
             rollupManagerContract
@@ -963,7 +963,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(pessimisticRollupID, rollupTypeECDSAId, 0)
             .to.emit(ECDSARollupContract, 'SignersAndThresholdUpdated')
-            .withArgs(signersECDSA, thresholdECDSA, aggchainSignersHashECDSA);
+            .withArgs(signersECDSA, thresholdECDSA, aggchainMultisigHashECDSA);
 
         expect(await ECDSARollupContract.aggchainManager()).to.be.equal(admin.address);
 
@@ -972,8 +972,8 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         expect(signersECDSAFromContract).to.be.deep.equal(signersECDSA);
         const thresholdECDSAFromContract = await ECDSARollupContract.threshold();
         expect(thresholdECDSAFromContract).to.be.equal(thresholdECDSA);
-        const aggchainSignersHashECDSAFromContract = await ECDSARollupContract.getAggchainSignersHash();
-        expect(aggchainSignersHashECDSAFromContract).to.be.equal(aggchainSignersHashECDSA);
+        const aggchainMultisigHashECDSAFromContract = await ECDSARollupContract.getAggchainMultisigHash();
+        expect(aggchainMultisigHashECDSAFromContract).to.be.equal(aggchainMultisigHashECDSA);
         const aggchainManagerFromContract = await ECDSARollupContract.aggchainManager();
         expect(aggchainManagerFromContract).to.be.equal(admin.address);
     });
@@ -1086,7 +1086,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         const signersECDSA = [trustedSequencer.address];
         const thresholdECDSA = 1;
-        const aggchainSignersHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
+        const aggchainMultisigHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
 
         await expect(
             FEPRollupContract.connect(rollupManagerSigner).initializeFromLegacyConsensus(
@@ -1113,7 +1113,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         );
 
         expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
-        expect(await FEPRollupContract.getAggchainSignersHash()).to.be.equal(aggchainSignersHashECDSA);
+        expect(await FEPRollupContract.getAggchainMultisigHash()).to.be.equal(aggchainMultisigHashECDSA);
         expect(await FEPRollupContract.threshold()).to.be.equal(thresholdECDSA);
         expect(await FEPRollupContract.getAggchainSigners()).to.be.deep.equal(signersECDSA);
     });

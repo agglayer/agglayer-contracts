@@ -716,7 +716,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
         await ECDSAMultisigRollupContract.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 });
         // assert that the rollup is migrated, check the signershash is coorect, threshold 1 and trusted sequencer
-        expect(await ECDSAMultisigRollupContract.aggchainSignersHash()).to.be.equal(
+        expect(await ECDSAMultisigRollupContract.aggchainMultisigHash()).to.be.equal(
             computeSignersHash(1, [trustedSequencer.address]),
         );
         // Try update rollup by rollupAdmin but trigger UpdateToOldRollupTypeID
