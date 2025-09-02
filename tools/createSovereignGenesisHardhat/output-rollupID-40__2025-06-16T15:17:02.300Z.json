@@ -1,0 +1,60 @@
+{
+  "gitInfo": {
+    "commit": "7dd14d0e3e2ca96bf8c987f0218f8fcba4ead079",
+    "repo": "https://github.com/agglayer/agglayer-contracts"
+  },
+  "network": "sepolia",
+  "rollupManagerAddress": "0x32d33d5137a7cffb54c5bf8371172bcec5f310ff",
+  "RollupManagerInfo": {
+    "bridgeAddress": "0x528e26b25a34a4A5d0dbDa1d57D318153d2ED582",
+    "globalExitRootManager": "0xAd1490c248c5d3CbAE399Fd529b79B42984277DF",
+    "pol": "0x6a7c3F4B0651d6DA389AD1d11D962ea458cDCA70",
+    "rollupData": {
+      "rollupID": 40,
+      "rollupAddress": "0x09fD5DD907C73068371cE6E72417C7ff2Fb21c51"
+    }
+  },
+  "gasTokenAddress": "0x0000000000000000000000000000000000000000",
+  "gasTokenNetwork": 0,
+  "gasTokenMetadata": "0x",
+  "chainID": 828,
+  "bridgeManager": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C",
+  "sovereignWETHAddress": "0x0000000000000000000000000000000000000000",
+  "sovereignWETHAddressIsNotMintable": false,
+  "globalExitRootUpdater": "0xDD12734DCa6D5825D9244e299b60d112CD09e554",
+  "globalExitRootRemover": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C",
+  "emergencyBridgePauser": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C",
+  "emergencyBridgeUnpauser": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C",
+  "proxiedTokensManager": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C",
+  "genesisSCNames": {
+    "PolygonZkEVMDeployer": "0x36810012486fc134D0679c07f85fe5ba5A087D8C",
+    "ProxyAdmin": "0x85cEB41028B1a5ED2b88E395145344837308b251",
+    "BridgeL2SovereignChain implementation": "0x8BD36ca1A55e389335004872aA3C3Be0969D3aA7",
+    "BridgeL2SovereignChain proxy": "0x528e26b25a34a4A5d0dbDa1d57D318153d2ED582",
+    "GlobalExitRootManagerL2SovereignChain implementation": "0x282a631D9F3Ef04Bf1A44B4C9e8bDC8EB278917f",
+    "GlobalExitRootManagerL2SovereignChain proxy": "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa",
+    "PolygonZkEVMTimelock": "0xdbC6981a11fc2B000c635bFA7C47676b25C87D39",
+    "BytecodeStorer": "0x511bC80aBF4a97961B1309Cb09110eb8cae0eD5D",
+    "TokenWrapped implementation": "0x19692b93C14944f8c7A9CD87bFa8052D3f9913c4"
+  },
+  "preMintAccounts": [
+    {
+      "balance": "1000000000000000000",
+      "address": "0x1a98f32E7f7A82BfBAb2Ef8B322424465b530302"
+    },
+    {
+      "balance": "1000000000000000000",
+      "address": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C"
+    },
+    {
+      "balance": "1000000000000000000",
+      "address": "0xDD12734DCa6D5825D9244e299b60d112CD09e554"
+    }
+  ],
+  "totalPreMintedAmount": "3000000000000000000",
+  "timelockParameters": {
+    "adminAddress": "0x23BA22Dd7923F3a3f2495bB32a6f3c9b9CD1EC6C",
+    "minDelay": 60
+  },
+  "formatGenesis": "geth"
+}
