@@ -194,7 +194,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // Should have the same optimizations as PolygonTransparentProxy
+                        runs: 10, // Should have the same optimizations as PolygonTransparentProxy
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
