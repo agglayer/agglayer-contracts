@@ -317,6 +317,7 @@ contract AggchainFEP is AggchainBase {
     /// @param _signersToAdd Array of signers to add to the multisig
     /// @param _newThreshold New threshold for multisig operations
     /// @param _useDefaultVkeys Whether to use default verification keys from gateway
+    /// @param _useDefaultSigners Whether to use default signers from gateway
     /// @param _initOwnedAggchainVKey The owned aggchain verification key
     /// @param _initAggchainVKeySelector The aggchain verification key selector
     /// @param _admin The admin address
