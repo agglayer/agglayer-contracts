@@ -42,23 +42,6 @@ interface IAggchainBaseEvents {
      */
     event DisableUseDefaultSignersFlag();
 
-    /**
-     * @notice Emitted when the vKeyManager starts the two-step transfer role setting a new pending vKeyManager.
-     * @param currentVKeyManager The current vKeyManager.
-     * @param newPendingVKeyManager The new pending vKeyManager.
-     */
-    event TransferVKeyManagerRole(
-        address currentVKeyManager,
-        address newPendingVKeyManager
-    );
-
-    /**
-     * @notice Emitted when the pending vKeyManager accepts the vKeyManager role.
-     * @param oldVKeyManager The previous vKeyManager.
-     * @param newVKeyManager The new vKeyManager.
-     */
-    event AcceptVKeyManagerRole(address oldVKeyManager, address newVKeyManager);
-
     /// @dev Emitted when the aggchainManager starts the two-step transfer role setting a new pending newAggchainManager
     /// @param currentAggchainManager The current pending aggchainManager
     /// @param newPendingAggchainManager The new pending aggchainManager
@@ -73,18 +56,6 @@ interface IAggchainBaseEvents {
     event AcceptAggchainManagerRole(
         address oldAggchainManager,
         address newAggchainManager
-    );
-
-    /**
-     * @notice Emitted when signers and threshold are updated in a batch operation.
-     * @param aggchainSigners The updated array of signer addresses.
-     * @param newThreshold The new threshold value.
-     * @param newAggchainMultisigHash The new hash of the aggchainMultisig configuration.
-     */
-    event SignersAndThresholdUpdated(
-        address[] aggchainSigners,
-        uint256 newThreshold,
-        bytes32 newAggchainMultisigHash
     );
 
     /**
@@ -122,10 +93,6 @@ interface IAggchainBaseErrors {
     error UseDefaultSignersAlreadyEnabled();
     /// @notice Thrown when trying to disable the default signers when it is already disabled.
     error UseDefaultSignersAlreadyDisabled();
-    /// @notice Thrown when trying to call a function that only the VKeyManager can call.
-    error OnlyVKeyManager();
-    /// @notice Thrown when trying to call a function that only the pending VKeyManager can call.
-    error OnlyPendingVKeyManager();
     /// @notice Thrown when trying to retrieve an aggchain verification key from the mapping that doesn't exists.
     error AggchainVKeyNotFound();
     /// @notice Thrown when trying to deploy the aggchain with a zero address as the AggLayerGateway
@@ -136,6 +103,8 @@ interface IAggchainBaseErrors {
     error AggchainManagerAlreadyInitialized();
     /// @notice Thrown when an invalid initial aggchain vkey is provided.
     error InvalidInitAggchainVKey();
+    /// @notice Thrown when trying to use default signers but also providing signers to add
+    error ConflictingDefaultSignersConfiguration();
     /// @notice Thrown when the caller is not the aggchain manager
     error OnlyAggchainManager();
     /// @notice Thrown when the caller is not the pending aggchain manager
@@ -144,7 +113,7 @@ interface IAggchainBaseErrors {
     error InvalidZeroAddress();
     /// @notice Thrown when the aggchainData has an invalid format
     error InvalidAggchainDataLength();
-    /// @notice Thrown when the aggchainvKeySelectir contains an invalid aggchain type.
+    /// @notice Thrown when the aggchainvKeySelector contains an invalid aggchain type.
     error InvalidAggchainType();
     /// @notice Thrown when threshold is zero, greater than the number of aggchainSigners.
     error InvalidThreshold();
@@ -152,10 +121,6 @@ interface IAggchainBaseErrors {
     error SignerAlreadyExists();
     /// @notice Thrown when trying to remove a signer that doesn't exist.
     error SignerDoesNotExist();
-    /// @notice Thrown when the aggchainSigners array is empty.
-    error EmptyAggchainSignersArray();
-    /// @notice Thrown when threshold would be greater than aggchainSigners count after removal.
-    error ThresholdTooHighAfterRemoval();
     /// @notice Thrown when trying to add a zero address as a signer.
     error SignerCannotBeZero();
     /// @notice Thrown when the aggchainSingers is greater than 255.

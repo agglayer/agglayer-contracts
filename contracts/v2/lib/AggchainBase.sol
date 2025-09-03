@@ -23,6 +23,9 @@ abstract contract AggchainBase is
     // Naming has been kept as CONSENSUS_TYPE for consistency with the previous consensus type (PolygonPessimisticConsensus.sol)
     uint32 public constant CONSENSUS_TYPE = 1;
 
+    // Maximum number of aggchain signers supported
+    uint256 public constant MAX_AGGCHAIN_SIGNERS = 255;
+
     // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
     IAggLayerGateway public immutable aggLayerGateway;
 
@@ -365,7 +368,7 @@ abstract contract AggchainBase is
             _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
         }
 
-        if (aggchainSigners.length > 255) {
+        if (aggchainSigners.length > MAX_AGGCHAIN_SIGNERS) {
             revert AggchainSignersTooHigh();
         }
 

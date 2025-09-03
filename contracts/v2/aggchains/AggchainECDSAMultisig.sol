@@ -162,7 +162,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     }
 
     ////////////////////////////////////////////////////////////
-    //                    Functions: views                    //
+    //                    Functions: pure                    //
     ////////////////////////////////////////////////////////////
     /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey
     /// @param aggchainData custom bytes provided by the chain
@@ -186,8 +186,16 @@ contract AggchainECDSAMultisig is AggchainBase {
         return (bytes32(0), bytes32(0));
     }
 
+    /**
+     * @notice Function to retrieve the current version of the contract.
+     * @return version of the contract.
+     */
+    function version() external pure returns (string memory) {
+        return AGGCHAIN_ECDSA_MULTISIG_VERSION;
+    }
+
     ////////////////////////////////////////////////////////////
-    //                       Functions                        //
+    //               Functions: Callbacks                     //
     ////////////////////////////////////////////////////////////
 
     /// @inheritdoc IAggchainBase
@@ -201,14 +209,6 @@ contract AggchainECDSAMultisig is AggchainBase {
         // Only aggchainVKeySelector is provided (bytes4 ABI-encoded as 32 bytes), no need to decode anything
         // Just emit event to confirm verification
         emit OnVerifyPessimisticECDSAMultisig();
-    }
-
-    /**
-     * @notice Function to retrieve the current version of the contract.
-     * @return version of the contract.
-     */
-    function version() external pure returns (string memory) {
-        return AGGCHAIN_ECDSA_MULTISIG_VERSION;
     }
 
     ////////////////////////////////////////////////////////////

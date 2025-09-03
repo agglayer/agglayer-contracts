@@ -95,7 +95,7 @@ interface IAggchainBaseErrorsPrevious {
     error InvalidZeroAddress();
     /// @notice Thrown when the aggchainData has an invalid format
     error InvalidAggchainDataLength();
-    /// @notice Thrown when the aggchainvKeySelectir contains an invalid aggchain type.
+    /// @notice Thrown when the aggchainvKeySelector contains an invalid aggchain type.
     error InvalidAggchainType();
 }
 

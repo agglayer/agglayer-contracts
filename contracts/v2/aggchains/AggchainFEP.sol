@@ -314,6 +314,8 @@ contract AggchainFEP is AggchainBase {
     /// @notice Initialize function for fresh deployment
     /// @custom:security Initializes all contracts including PolygonConsensusBase
     /// @param _initParams The initialization parameters for FEP
+    /// @param _signersToAdd Array of signers to add to the multisig
+    /// @param _newThreshold New threshold for multisig operations
     /// @param _useDefaultVkeys Whether to use default verification keys from gateway
     /// @param _initOwnedAggchainVKey The owned aggchain verification key
     /// @param _initAggchainVKeySelector The aggchain verification key selector
@@ -347,6 +349,12 @@ contract AggchainFEP is AggchainBase {
             _initOwnedAggchainVKey
         );
 
+        // Check the used default signers is consistent
+        _validateDefaultSignersConsistency(
+            _useDefaultSigners,
+            _signersToAdd.length
+        );
+
         // Set aggchainBase variables
         _initializeAggchainBaseAndConsensusBase(
             _admin,
@@ -376,6 +384,7 @@ contract AggchainFEP is AggchainBase {
      * @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
      * @param _initParams The initialization parameters for FEP
      * @param _useDefaultVkeys Whether to use default verification keys from gateway
+     * @param _useDefaultSigners Whether to use default signers from gateway
      * @param _initOwnedAggchainVKey The owned aggchain verification key
      * @param _initAggchainVKeySelector The aggchain verification key selector
      * @param _signersToAdd Array of signers to add to the multisig
@@ -399,6 +408,12 @@ contract AggchainFEP is AggchainBase {
             _useDefaultVkeys,
             _initAggchainVKeySelector,
             _initOwnedAggchainVKey
+        );
+
+        // Check the used default signers is consistent
+        _validateDefaultSignersConsistency(
+            _useDefaultSigners,
+            _signersToAdd.length
         );
 
         // init FEP params
@@ -596,6 +611,21 @@ contract AggchainFEP is AggchainBase {
             ) {
                 revert InvalidAggchainType();
             }
+        }
+    }
+
+    /**
+     * @dev Internal function to validate default signers consistency
+     * @param _useDefaultSigners Whether to use default signers
+     * @param _signersToAddLength Length of the signers to add array
+     */
+    function _validateDefaultSignersConsistency(
+        bool _useDefaultSigners,
+        uint256 _signersToAddLength
+    ) internal pure {
+        // Check the used default signers is consistent
+        if (_useDefaultSigners && _signersToAddLength > 0) {
+            revert ConflictingDefaultSignersConfiguration();
         }
     }
 

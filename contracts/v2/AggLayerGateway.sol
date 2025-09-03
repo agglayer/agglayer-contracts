@@ -45,6 +45,9 @@ contract AggLayerGateway is
     // Current AggLayerGateway version
     string public constant AGGLAYER_GATEWAY_VERSION = "v1.1.0";
 
+    // Maximum number of aggchain signers supported
+    uint256 public constant MAX_AGGCHAIN_SIGNERS = 255;
+
     ////////////////////////////////////////////////////////////
     //                  Transient Storage                     //
     ////////////////////////////////////////////////////////////
@@ -475,7 +478,7 @@ contract AggLayerGateway is
             _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
         }
 
-        if (aggchainSigners.length > 255) {
+        if (aggchainSigners.length > MAX_AGGCHAIN_SIGNERS) {
             revert AggchainSignersTooHigh();
         }
 
