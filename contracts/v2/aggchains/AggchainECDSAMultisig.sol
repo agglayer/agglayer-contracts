@@ -119,12 +119,19 @@ contract AggchainECDSAMultisig is AggchainBase {
             bytes4(0) // initAggchainVKeySelector
         );
 
-        // update signers and threshold
-        _updateSignersAndThreshold(
-            new RemoveSignerInfo[](0), // No signers to remove
-            _signersToAdd,
-            _newThreshold
-        );
+        // Check the used default signers is consistent
+        if (_useDefaultSigners) {
+            if (_signersToAdd.length != 0 || threshold != 0) {
+                revert ConflictingDefaultSignersConfiguration();
+            }
+        } else {
+            // update signers and threshold
+            _updateSignersAndThreshold(
+                new RemoveSignerInfo[](0), // No signers to remove
+                _signersToAdd,
+                _newThreshold
+            );
+        }
     }
 
     /**

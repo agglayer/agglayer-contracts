@@ -349,12 +349,6 @@ contract AggchainFEP is AggchainBase {
             _initOwnedAggchainVKey
         );
 
-        // Check the used default signers is consistent
-        _validateDefaultSignersConsistency(
-            _useDefaultSigners,
-            _signersToAdd.length
-        );
-
         // Set aggchainBase variables
         _initializeAggchainBaseAndConsensusBase(
             _admin,
@@ -371,12 +365,19 @@ contract AggchainFEP is AggchainBase {
         // init FEP params
         _initializeAggchain(_initParams);
 
-        // update signers and threshold
-        _updateSignersAndThreshold(
-            new RemoveSignerInfo[](0), // No signers to remove
-            _signersToAdd,
-            _newThreshold
-        );
+        // Check the used default signers is consistent
+        if (_useDefaultSigners) {
+            if (_signersToAdd.length != 0 || threshold != 0) {
+                revert ConflictingDefaultSignersConfiguration();
+            }
+        } else {
+            // update signers and threshold
+            _updateSignersAndThreshold(
+                new RemoveSignerInfo[](0), // No signers to remove
+                _signersToAdd,
+                _newThreshold
+            );
+        }
     }
 
     /**
@@ -410,12 +411,6 @@ contract AggchainFEP is AggchainBase {
             _initOwnedAggchainVKey
         );
 
-        // Check the used default signers is consistent
-        _validateDefaultSignersConsistency(
-            _useDefaultSigners,
-            _signersToAdd.length
-        );
-
         // init FEP params
         _initializeAggchain(_initParams);
 
@@ -427,12 +422,19 @@ contract AggchainFEP is AggchainBase {
             _initAggchainVKeySelector
         );
 
-        // update signers and threshold
-        _updateSignersAndThreshold(
-            new RemoveSignerInfo[](0), // No signers to remove
-            _signersToAdd,
-            _newThreshold
-        );
+        // Check the used default signers is consistent
+        if (_useDefaultSigners) {
+            if (_signersToAdd.length != 0 || threshold != 0) {
+                revert ConflictingDefaultSignersConfiguration();
+            }
+        } else {
+            // update signers and threshold
+            _updateSignersAndThreshold(
+                new RemoveSignerInfo[](0), // No signers to remove
+                _signersToAdd,
+                _newThreshold
+            );
+        }
     }
 
     /**
@@ -611,21 +613,6 @@ contract AggchainFEP is AggchainBase {
             ) {
                 revert InvalidAggchainType();
             }
-        }
-    }
-
-    /**
-     * @dev Internal function to validate default signers consistency
-     * @param _useDefaultSigners Whether to use default signers
-     * @param _signersToAddLength Length of the signers to add array
-     */
-    function _validateDefaultSignersConsistency(
-        bool _useDefaultSigners,
-        uint256 _signersToAddLength
-    ) internal pure {
-        // Check the used default signers is consistent
-        if (_useDefaultSigners && _signersToAddLength > 0) {
-            revert ConflictingDefaultSignersConfiguration();
         }
     }
 
