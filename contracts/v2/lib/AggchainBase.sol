@@ -78,12 +78,22 @@ abstract contract AggchainBase is
     /// @dev Computed as keccak256(abi.encodePacked(threshold, aggchainSigners))
     bytes32 public aggchainMultisigHash;
 
+    ////////////////////////////////////////////////////////////
+    //                      Metadata                          //
+    ////////////////////////////////////////////////////////////
+
+    /// @notice Address that manages the metadata functionality
+    address public aggchainMetadataManager;
+
+    /// @notice Optional mapping to store metadata for the aggchain
+    mapping(string => string) public aggchainMetadata;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[46] private __gap;
+    uint256[44] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -93,6 +103,14 @@ abstract contract AggchainBase is
     modifier onlyAggchainManager() {
         if (aggchainManager != msg.sender) {
             revert OnlyAggchainManager();
+        }
+        _;
+    }
+
+    /// @dev Only allows a function to be callable if the message sender is the aggchain metadata manager
+    modifier onlyAggchainMetadataManager() {
+        if (aggchainMetadataManager != msg.sender) {
+            revert OnlyAggchainMetadataManager();
         }
         _;
     }
@@ -398,6 +416,23 @@ abstract contract AggchainBase is
     }
 
     /**
+     * @notice Sets the aggchain metadata manager
+     * @dev Can only be called by the aggchain manager
+     * @param newAggchainMetadataManager Address of the new aggchain metadata manager
+     */
+    function setAggchainMetadataManager(
+        address newAggchainMetadataManager
+    ) external onlyAggchainManager {
+        address oldAggchainMetadataManager = aggchainMetadataManager;
+        aggchainMetadataManager = newAggchainMetadataManager;
+
+        emit SetAggchainMetadataManager(
+            oldAggchainMetadataManager,
+            newAggchainMetadataManager
+        );
+    }
+
+    /**
      * @notice Enable the use of default verification keys from gateway
      */
     function enableUseDefaultVkeysFlag() external virtual onlyAggchainManager {
@@ -497,6 +532,39 @@ abstract contract AggchainBase is
             previousAggchainVKey,
             updatedAggchainVKey
         );
+    }
+
+    /**
+     * @notice Sets or updates metadata for the aggchain.
+     * @dev Can only be called by the aggchain metadata manager. Empty values are allowed to clear metadata.
+     * @param key The metadata key to set.
+     * @param value The metadata value to set.
+     */
+    function setAggchainMetadata(
+        string calldata key,
+        string calldata value
+    ) external onlyAggchainMetadataManager {
+        _setAggchainMetadataInternal(key, value);
+    }
+
+    /**
+     * @notice Sets or updates multiple metadata entries in a single transaction.
+     * @dev Can only be called by the aggchain metadata manager.
+     * @param keys Array of metadata keys to set.
+     * @param values Array of metadata values to set (must be same length as keys).
+     */
+    function batchSetAggchainMetadata(
+        string[] calldata keys,
+        string[] calldata values
+    ) external onlyAggchainMetadataManager {
+        uint256 length = keys.length;
+        if (length != values.length) {
+            revert MetadataArrayLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < length; i++) {
+            _setAggchainMetadataInternal(keys[i], values[i]);
+        }
     }
 
     //////////////////////////
@@ -725,5 +793,19 @@ abstract contract AggchainBase is
             threshold,
             aggchainMultisigHash
         );
+    }
+
+    /**
+     * @notice Internal function to set or update metadata for the aggchain
+     * @dev Empty values are allowed to clear metadata
+     * @param key The metadata key to set
+     * @param value The metadata value to set
+     */
+    function _setAggchainMetadataInternal(
+        string memory key,
+        string memory value
+    ) internal {
+        aggchainMetadata[key] = value;
+        emit AggchainMetadataSet(key, value);
     }
 }

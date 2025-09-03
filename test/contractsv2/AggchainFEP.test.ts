@@ -1394,8 +1394,6 @@ describe('AggchainFEP', () => {
         // Test that trying to initialize an already initialized aggchainManager fails
         // Since we can't easily test the initializeAggchainBase function in isolation,
         // we'll test that the aggchainManager initialization works properly
-        const signers = await ethers.getSigners();
-        const anotherManager = signers[5];
         // Verify the aggchainManager is set to the initial value
         expect(await baseInitContract.aggchainManager()).to.equal(aggchainManager.address);
     });

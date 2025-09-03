@@ -86,6 +86,23 @@ interface IAggchainBaseEvents {
         uint256 newThreshold,
         bytes32 newAggchainMultisigHash
     );
+
+    /**
+     * @notice Emitted when metadata is set or updated.
+     * @param key The metadata key.
+     * @param value The metadata value.
+     */
+    event AggchainMetadataSet(string indexed key, string value);
+
+    /**
+     * @notice Emitted when the aggchain metadata manager is set.
+     * @param oldAggchainMetadataManager The old aggchain metadata manager.
+     * @param newAggchainMetadataManager The new aggchain metadata manager.
+     */
+    event SetAggchainMetadataManager(
+        address oldAggchainMetadataManager,
+        address newAggchainMetadataManager
+    );
 }
 
 interface IAggchainBaseErrors {
@@ -149,6 +166,10 @@ interface IAggchainBaseErrors {
     error IndicesNotInDescendingOrder();
     /// @notice Thrown when trying to compute the aggchain hash without initializing the signers hash.
     error AggchainSignersHashNotInitialized();
+    /// @notice Thrown when the keys and values arrays have different lengths in batch metadata operations.
+    error MetadataArrayLengthMismatch();
+    /// @notice Thrown when the caller is not the aggchain metadata manager
+    error OnlyAggchainMetadataManager();
 }
 
 /**

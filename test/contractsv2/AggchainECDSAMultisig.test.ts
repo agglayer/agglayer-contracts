@@ -35,9 +35,7 @@ describe('AggchainECDSAMultisig', () => {
     const gasTokenAddress = ethers.ZeroAddress;
 
     // aggchain variables
-    const useDefaultVkeys = false;
     const aggchainVKeySelector = '0x12340002';
-    const newAggchainVKey = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
     beforeEach('Deploy contract', async () => {
         upgrades.silenceWarnings();

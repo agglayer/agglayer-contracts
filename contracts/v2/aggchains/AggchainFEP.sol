@@ -341,21 +341,11 @@ contract AggchainFEP is AggchainBase {
         }
 
         // Check the use default vkeys is consistent
-        if (_useDefaultVkeys) {
-            if (
-                _initAggchainVKeySelector != bytes4(0) ||
-                _initOwnedAggchainVKey != bytes32(0)
-            ) {
-                revert InvalidInitAggchainVKey();
-            }
-        } else {
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
-            }
-        }
+        _validateVKeysConsistency(
+            _useDefaultVkeys,
+            _initAggchainVKeySelector,
+            _initOwnedAggchainVKey
+        );
 
         // Set aggchainBase variables
         _initializeAggchainBaseAndConsensusBase(
@@ -405,21 +395,11 @@ contract AggchainFEP is AggchainBase {
         }
 
         // Check the use default vkeys is consistent
-        if (_useDefaultVkeys) {
-            if (
-                _initAggchainVKeySelector != bytes4(0) ||
-                _initOwnedAggchainVKey != bytes32(0)
-            ) {
-                revert InvalidInitializer();
-            }
-        } else {
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
-            }
-        }
+        _validateVKeysConsistency(
+            _useDefaultVkeys,
+            _initAggchainVKeySelector,
+            _initOwnedAggchainVKey
+        );
 
         // init FEP params
         _initializeAggchain(_initParams);
@@ -460,21 +440,11 @@ contract AggchainFEP is AggchainBase {
         }
 
         // Check the use default vkeys is consistent
-        if (_useDefaultVkeys) {
-            if (
-                _initAggchainVKeySelector != bytes4(0) ||
-                _initOwnedAggchainVKey != bytes32(0)
-            ) {
-                revert InvalidInitializer();
-            }
-        } else {
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
-            }
-        }
+        _validateVKeysConsistency(
+            _useDefaultVkeys,
+            _initAggchainVKeySelector,
+            _initOwnedAggchainVKey
+        );
 
         // Set aggchainBase variables
         _initializeAggchainBase(
@@ -598,6 +568,35 @@ contract AggchainFEP is AggchainBase {
             _initParams.rollupConfigHash
         );
         emit OpSuccinctConfigSelected(GENESIS_CONFIG_NAME);
+    }
+
+    /**
+     * @dev Internal function to validate VKeys consistency
+     * @param _useDefaultVkeys Whether to use default verification keys
+     * @param _initAggchainVKeySelector The aggchain verification key selector
+     * @param _initOwnedAggchainVKey The owned aggchain verification key
+     */
+    function _validateVKeysConsistency(
+        bool _useDefaultVkeys,
+        bytes4 _initAggchainVKeySelector,
+        bytes32 _initOwnedAggchainVKey
+    ) internal pure {
+        // Check the use default vkeys is consistent
+        if (_useDefaultVkeys) {
+            if (
+                _initAggchainVKeySelector != bytes4(0) ||
+                _initOwnedAggchainVKey != bytes32(0)
+            ) {
+                revert InvalidInitAggchainVKey();
+            }
+        } else {
+            if (
+                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                AGGCHAIN_TYPE
+            ) {
+                revert InvalidAggchainType();
+            }
+        }
     }
 
     ////////////////////////////////////////////////////////////

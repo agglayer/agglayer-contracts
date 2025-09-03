@@ -16,7 +16,6 @@ import {
 } from '../../typechain-types';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
-import { encodeAggchainDataFEP } from '../../src/utils-aggchain-FEP';
 import { AggchainECDSAMultisig } from '../../typechain-types/contracts/aggchains';
 
 const MerkleTreeBridge = MTBridge;
@@ -31,7 +30,6 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     let admin: any;
     let beneficiary: any;
     let aggLayerAdmin: any;
-    let aggchainManager: any;
 
     let polTokenContract: ERC20PermitMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
@@ -55,7 +53,6 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     const PESSIMISTIC_SELECTOR = '0x00000001';
     // calculate aggchainHash
     const newStateRoot = ethers.id('newStateRoot');
-    const newl2BlockNumber = 1200;
     const aggchainVKeySelector = '0x12340001';
     const CUSTOM_DATA_ECDSA = '0x';
 
@@ -63,17 +60,8 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [
-            deployer,
-            trustedAggregator,
-            trustedSequencer,
-            admin,
-            timelock,
-            emergencyCouncil,
-            beneficiary,
-            aggLayerAdmin,
-            aggchainManager,
-        ] = await ethers.getSigners();
+        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary, aggLayerAdmin] =
+            await ethers.getSigners();
 
         // deploy mock verifier
         const VerifierRollupHelperFactory = await ethers.getContractFactory('VerifierRollupHelperMock');
@@ -1347,18 +1335,6 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         const newPPRoot = computeRandomBytes(32);
         const proofPP = '0x00';
         const proofWithSelector = `${PESSIMISTIC_SELECTOR}${proofPP.slice(2)}`;
-
-        const initParams = {
-            l2BlockTime: 10,
-            rollupConfigHash: ethers.id('rollupConfigHash'),
-            startingOutputRoot: ethers.id('startingOutputRoot'),
-            startingBlockNumber: 100,
-            startingTimestamp: 0,
-            submissionInterval: 5,
-            optimisticModeManager: admin.address,
-            aggregationVkey: ethers.id('aggregationVkey'),
-            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
-        };
 
         await expect(
             rollupManagerContract
