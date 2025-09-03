@@ -3306,6 +3306,55 @@ describe('BridgeL2SovereignChain Contract', () => {
                 // This test confirms proper input validation behavior ✅
             });
 
+            it('should reject backwardLET with non-zero values in non-matched frontier positions', async () => {
+                // TEST FOCUS: Validates that frontiers with non-zero values in unused positions are rejected
+
+                const leaves = generateTestLeaves(3);
+                const tree = buildMerkleTreeForTesting(leaves);
+
+                // Add 3 leaves to the contract
+                await sovereignChainBridgeContract.connect(globalExitRootRemover).forwardLET(leaves, tree.getRoot());
+
+                // Create a subtree with 1 leaf (rollback from 3 to 1)
+                const newDepositCount = 1;
+
+                // Create a valid frontier for 1 leaf but pollute non-matched positions
+                const pollutedFrontier = Array(32).fill(ethers.ZeroHash) as [string, ...string[]];
+                pollutedFrontier[0] = getLeafValue(
+                    leaves[0].leafType,
+                    leaves[0].originNetwork,
+                    leaves[0].originAddress,
+                    leaves[0].destinationNetwork,
+                    leaves[0].destinationAddress,
+                    leaves[0].amount,
+                    leaves[0].metadataHash,
+                );
+
+                // Pollute non-matched positions with non-zero values
+                // For depositCount=1, only position 0 should be used, positions 1+ should be zero
+                pollutedFrontier[1] = ethers.keccak256(ethers.toUtf8Bytes('pollute1')); // Should be zero
+                pollutedFrontier[5] = ethers.keccak256(ethers.toUtf8Bytes('pollute5')); // Should be zero
+
+                const nextLeaf = leaves[newDepositCount]; // leaves[1]
+                const nextLeafValue = getLeafValue(
+                    nextLeaf.leafType,
+                    nextLeaf.originNetwork,
+                    nextLeaf.originAddress,
+                    nextLeaf.destinationNetwork,
+                    nextLeaf.destinationAddress,
+                    nextLeaf.amount,
+                    nextLeaf.metadataHash,
+                );
+                const proof = tree.getProofTreeByIndex(newDepositCount);
+
+                // Should reject due to non-zero values in non-matched frontier positions
+                await expect(
+                    sovereignChainBridgeContract
+                        .connect(globalExitRootRemover)
+                        .backwardLET(newDepositCount, pollutedFrontier, nextLeafValue, proof),
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSubtreeFrontier');
+            });
+
             it('should successfully execute backwardLET with valid subtree proof', async () => {
                 // SUCCESS TEST: Demonstrates actual backwardLET rollback from 3 leaves to 1 leaf
 
@@ -3353,15 +3402,19 @@ describe('BridgeL2SovereignChain Contract', () => {
                 // Get proof for nextLeaf at position 1 in the original tree
                 const proof = originalTree.getProofTreeByIndex(newDepositCount);
 
+                // Store current values before rollback for event verification
+                const currentDepositCount = await sovereignChainBridgeContract.depositCount();
+                const currentRoot = await sovereignChainBridgeContract.getRoot();
+
                 // Execute successful backwardLET
                 const tx = await sovereignChainBridgeContract
                     .connect(globalExitRootRemover)
                     .backwardLET(newDepositCount, newFrontier as [string, ...string[]], nextLeafValue, proof);
 
-                // Verify success: event emitted with correct parameters
+                // Verify success: event emitted with correct parameters (4 parameters)
                 await expect(tx)
                     .to.emit(sovereignChainBridgeContract, 'BackwardLET')
-                    .withArgs(newDepositCount, subtree.getRoot());
+                    .withArgs(currentDepositCount, currentRoot, newDepositCount, subtree.getRoot());
 
                 // Verify contract state changes
                 expect(await sovereignChainBridgeContract.depositCount()).to.equal(newDepositCount);
@@ -3399,7 +3452,7 @@ describe('BridgeL2SovereignChain Contract', () => {
                     sovereignChainBridgeContract
                         .connect(globalExitRootRemover)
                         .forwardLET(newLeaves, wrongExpectedRoot),
-                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidExpectedRoot');
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidExpectedLER');
             });
 
             it('should successfully add new leaves and update tree state', async () => {
@@ -3417,7 +3470,12 @@ describe('BridgeL2SovereignChain Contract', () => {
                 // Verify event emission
                 await expect(tx)
                     .to.emit(sovereignChainBridgeContract, 'ForwardLET')
-                    .withArgs(Number(originalDepositCount) + newLeaves.length, expectedRoot);
+                    .withArgs(
+                        originalDepositCount,
+                        originalRoot,
+                        Number(originalDepositCount) + newLeaves.length,
+                        expectedRoot,
+                    );
 
                 // Verify state changes
                 expect(await sovereignChainBridgeContract.depositCount()).to.equal(
@@ -3437,6 +3495,7 @@ describe('BridgeL2SovereignChain Contract', () => {
                     .forwardLET(initialLeaves, initialTree.getRoot());
 
                 const initialDepositCount = await sovereignChainBridgeContract.depositCount();
+                const initialRoot = await sovereignChainBridgeContract.getRoot();
 
                 // Add more leaves
                 const additionalLeaves = generateTestLeaves(2);
@@ -3453,7 +3512,12 @@ describe('BridgeL2SovereignChain Contract', () => {
                 // Verify event
                 await expect(tx)
                     .to.emit(sovereignChainBridgeContract, 'ForwardLET')
-                    .withArgs(Number(initialDepositCount) + additionalLeaves.length, expectedFinalRoot);
+                    .withArgs(
+                        initialDepositCount,
+                        initialRoot,
+                        Number(initialDepositCount) + additionalLeaves.length,
+                        expectedFinalRoot,
+                    );
 
                 // Verify final state
                 expect(await sovereignChainBridgeContract.depositCount()).to.equal(
@@ -3464,6 +3528,7 @@ describe('BridgeL2SovereignChain Contract', () => {
 
             it('should handle single leaf addition', async () => {
                 const originalDepositCount = await sovereignChainBridgeContract.depositCount();
+                const originalRoot = await sovereignChainBridgeContract.getRoot();
 
                 const singleLeaf = generateTestLeaves(1);
                 const expectedTree = buildMerkleTreeForTesting(singleLeaf);
@@ -3473,7 +3538,7 @@ describe('BridgeL2SovereignChain Contract', () => {
                     sovereignChainBridgeContract.connect(globalExitRootRemover).forwardLET(singleLeaf, expectedRoot),
                 )
                     .to.emit(sovereignChainBridgeContract, 'ForwardLET')
-                    .withArgs(Number(originalDepositCount) + 1, expectedRoot);
+                    .withArgs(originalDepositCount, originalRoot, Number(originalDepositCount) + 1, expectedRoot);
 
                 expect(await sovereignChainBridgeContract.depositCount()).to.equal(Number(originalDepositCount) + 1);
             });

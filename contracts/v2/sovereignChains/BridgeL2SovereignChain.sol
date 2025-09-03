@@ -182,17 +182,31 @@ contract BridgeL2SovereignChain is
 
     /**
      * @dev Emitted when local exit tree is moved backward
+     * @param previousDepositCount The deposit count before moving backward
+     * @param previousRoot The root of the local exit tree before moving backward
      * @param newDepositCount The resulting deposit count after moving backward
      * @param newRoot The resulting root of the local exit tree after moving backward
      */
-    event BackwardLET(uint256 newDepositCount, bytes32 newRoot);
+    event BackwardLET(
+        uint256 previousDepositCount,
+        bytes32 previousRoot,
+        uint256 newDepositCount,
+        bytes32 newRoot
+    );
 
     /**
      * @dev Emitted when local exit tree is moved forward
+     * @param previousDepositCount The deposit count before moving forward
+     * @param previousRoot The root of the local exit tree before moving forward
      * @param newDepositCount The resulting deposit count after moving forward
      * @param newRoot The resulting root of the local exit tree after moving forward
      */
-    event ForwardLET(uint256 newDepositCount, bytes32 newRoot);
+    event ForwardLET(
+        uint256 previousDepositCount,
+        bytes32 previousRoot,
+        uint256 newDepositCount,
+        bytes32 newRoot
+    );
 
     /**
      * @dev Emitted when local balance tree is updated
@@ -609,35 +623,11 @@ contract BridgeL2SovereignChain is
         for (uint256 i = 0; i < globalIndexes.length; i++) {
             uint256 globalIndex = globalIndexes[i];
 
-            // Compute leaf index and sourceBridgeNetwork from global index
-            // Last 32 bits are leafIndex
-            uint32 leafIndex = uint32(globalIndex);
-            // If the network is mainnet, sourceBridgeNetwork is 0
-            uint32 sourceBridgeNetwork = 0;
-
-            // Get origin network from global index
-            if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG == 0) {
-                // The network is a rollup, therefore sourceBridgeNetwork must be decoded
-                uint32 indexRollup = uint32(globalIndex >> 32);
-                sourceBridgeNetwork = indexRollup + 1;
-
-                // Reconstruct global index to assert that all unused bits are 0
-                require(
-                    (uint256(indexRollup) << uint256(32)) +
-                        uint256(leafIndex) ==
-                        globalIndex,
-                    InvalidGlobalIndex()
-                );
-            } else {
-                // The network is mainnet, therefore sourceBridgeNetwork is 0
-
-                // Reconstruct global index to assert that all unused bits are 0
-                require(
-                    _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) ==
-                        globalIndex,
-                    InvalidGlobalIndex()
-                );
-            }
+            // Validate and decode global index using shared logic
+            (
+                uint32 leafIndex,
+                uint32 sourceBridgeNetwork
+            ) = _validateAndDecodeGlobalIndex(globalIndex);
 
             // Unset the claim
             _unsetClaimedBitmap(leafIndex, sourceBridgeNetwork);
@@ -668,35 +658,11 @@ contract BridgeL2SovereignChain is
         for (uint256 i = 0; i < globalIndexes.length; i++) {
             uint256 globalIndex = globalIndexes[i];
 
-            // Compute leaf index and sourceBridgeNetwork from global index
-            // Last 32 bits are leafIndex
-            uint32 leafIndex = uint32(globalIndex);
-            // If the network is mainnet, sourceBridgeNetwork is 0
-            uint32 sourceBridgeNetwork = 0;
-
-            // Get origin network from global index
-            if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG == 0) {
-                // The network is a rollup, therefore sourceBridgeNetwork must be decoded
-                uint32 indexRollup = uint32(globalIndex >> 32);
-                sourceBridgeNetwork = indexRollup + 1;
-
-                // Reconstruct global index to assert that all unused bits are 0
-                require(
-                    (uint256(indexRollup) << uint256(32)) +
-                        uint256(leafIndex) ==
-                        globalIndex,
-                    InvalidGlobalIndex()
-                );
-            } else {
-                // The network is mainnet, therefore sourceBridgeNetwork is 0
-
-                // Reconstruct global index to assert that all unused bits are 0
-                require(
-                    _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) ==
-                        globalIndex,
-                    InvalidGlobalIndex()
-                );
-            }
+            // Validate and decode global index using shared logic
+            (
+                uint32 leafIndex,
+                uint32 sourceBridgeNetwork
+            ) = _validateAndDecodeGlobalIndex(globalIndex);
 
             // Set the claim
             _setAndCheckClaimed(leafIndex, sourceBridgeNetwork);
@@ -752,19 +718,28 @@ contract BridgeL2SovereignChain is
             revert InvalidSubtreeFrontier();
         }
 
-        // Rollback tree to the new state
+        // Store previous values before rollback
+        uint256 previousDepositCount = depositCount;
+        bytes32 previousRoot = getRoot();
+
+        // Rollback tree to the new LER
         for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
             _branch[i] = newFrontier[i];
         }
 
         depositCount = newDepositCount;
 
-        // Update GER
-        bytes32 newGER = getRoot();
-        globalExitRootManager.updateExitRoot(newGER);
+        // Update LER
+        bytes32 newLER = getRoot();
+        globalExitRootManager.updateExitRoot(newLER);
 
         // emit event
-        emit BackwardLET(newDepositCount, newGER);
+        emit BackwardLET(
+            previousDepositCount,
+            previousRoot,
+            newDepositCount,
+            newLER
+        );
     }
 
     /**
@@ -772,16 +747,20 @@ contract BridgeL2SovereignChain is
      * @dev Permissioned function by the GlobalExitRootRemover role
      * @dev Adds new leaves incrementally using structured data and validates against expected root as health check
      * @param newLeaves Array of leaf data to add to the current tree
-     * @param expectedStateRoot The expected root after adding all new leaves (health check)
+     * @param expectedLER The expected root after adding all new leaves (health check)
      */
     function forwardLET(
         LeafData[] calldata newLeaves,
-        bytes32 expectedStateRoot
+        bytes32 expectedLER
     ) external onlyGlobalExitRootRemover {
         // Validate that newLeaves array is not empty
         if (newLeaves.length == 0) {
             revert InvalidLeavesLength();
         }
+
+        // Store previous values before adding leaves
+        uint256 previousDepositCount = depositCount;
+        bytes32 previousRoot = getRoot();
 
         // Add each new leaf incrementally using the _addLeafBridge function
         // _addLeafBridge automatically handles depositCount increment and MAX_DEPOSIT_COUNT validation
@@ -798,17 +777,22 @@ contract BridgeL2SovereignChain is
             );
         }
 
-        // Health check: verify the final root matches the expected state root
+        // Health check: verify the final root matches the expected LER
         bytes32 computedRoot = getRoot();
-        if (computedRoot != expectedStateRoot) {
-            revert InvalidExpectedRoot();
+        if (computedRoot != expectedLER) {
+            revert InvalidExpectedLER();
         }
 
         // Update GER
         globalExitRootManager.updateExitRoot(computedRoot);
 
         // emit event with the new deposit count
-        emit ForwardLET(depositCount, computedRoot);
+        emit ForwardLET(
+            previousDepositCount,
+            previousRoot,
+            depositCount,
+            computedRoot
+        );
     }
 
     /**
