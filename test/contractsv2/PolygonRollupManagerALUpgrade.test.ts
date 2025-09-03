@@ -1073,11 +1073,21 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
 
         await expect(
-            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams),
+            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+            ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidInitializer');
 
         await expect(
-            FEPRollupContract.connect(rollupManagerSigner).initializeFromECDSAMultisig(initParams),
+            FEPRollupContract.connect(rollupManagerSigner).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+            ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
 
         await expect(
@@ -1144,8 +1154,8 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // Encode upgrade data for initializeFromECDSAMultisig
         const upgradeData = aggchainFEPFactory.interface.encodeFunctionData(
-            'initializeFromECDSAMultisig((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32))',
-            [initParams],
+            'initializeFromECDSAMultisig((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bytes32,bytes4)',
+            [initParams, false, ethers.ZeroHash, '0x00010001'],
         );
         const FEPRollupContract = aggchainFEPFactory.attach(ecdsaRollupAddress as string) as any;
 
@@ -1178,7 +1188,14 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
 
-        await expect(FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams))
+        await expect(
+            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+            ),
+        )
             .to.emit(FEPRollupContract, 'OpSuccinctConfigUpdated')
             .withArgs(
                 GENESIS_CONFIG_NAME,

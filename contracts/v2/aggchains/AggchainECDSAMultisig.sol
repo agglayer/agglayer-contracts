@@ -31,6 +31,9 @@ contract AggchainECDSAMultisig is AggchainBase {
     /// @notice Thrown when trying to initialize the wrong initialize function.
     error InvalidInitializer();
 
+    /// @notice Thrown when calling a function that is not supported by this implementation.
+    error FunctionNotSupported();
+
     ////////////////////////////////////////////////////////////
     //                         Events                         //
     ////////////////////////////////////////////////////////////
@@ -126,9 +129,11 @@ contract AggchainECDSAMultisig is AggchainBase {
 
     /**
      * @notice Migrates from PolygonPessimisticConsensus or PolygonRollupBaseEtrog to AggchainECDSAMultisig
-     * @dev This function is called when upgrading from a PolygonPessimisticConsensus contract
-     *      It sets up the initial multisig configuration using the existing admin and trustedSequencer
-     *      Sets the threshold to 1 and adds the trustedSequencer as the initial signer
+     * @dev This function is called when upgrading from a PolygonPessimisticConsensus contract.
+     *      - Therefore the consensusBase is already initialized.
+     *      - The AggchainBase is initialized using the values from the ConsensusBase.
+     *      It sets up the initial multisig configuration using the existing admin and trustedSequencer,
+     *      Sets the threshold to 1, and adds the trustedSequencer as the only signer.
      */
     function migrateFromLegacyConsensus()
         external
@@ -204,5 +209,69 @@ contract AggchainECDSAMultisig is AggchainBase {
      */
     function version() external pure returns (string memory) {
         return AGGCHAIN_ECDSA_MULTISIG_VERSION;
+    }
+
+    ////////////////////////////////////////////////////////////
+    //                      Overrides                         //
+    ////////////////////////////////////////////////////////////
+
+    /**
+     * @notice This function is not used in ECDSA multisig implementation
+     * @dev Overridden to prevent usage
+     */
+    function enableUseDefaultVkeysFlag()
+        external
+        view
+        override
+        onlyAggchainManager
+    {
+        revert FunctionNotSupported();
+    }
+
+    /**
+     * @notice This function is not used in ECDSA multisig implementation
+     * @dev Overridden to prevent usage
+     */
+    function disableUseDefaultVkeysFlag()
+        external
+        view
+        override
+        onlyAggchainManager
+    {
+        revert FunctionNotSupported();
+    }
+
+    /**
+     * @notice This function is not used in ECDSA multisig implementation
+     * @dev Overridden to prevent usage
+     */
+    function addOwnedAggchainVKey(
+        bytes4,
+        bytes32
+    ) external view override onlyAggchainManager {
+        revert FunctionNotSupported();
+    }
+
+    /**
+     * @notice This function is not used in ECDSA multisig implementation
+     * @dev Overridden to prevent usage
+     */
+    function updateOwnedAggchainVKey(
+        bytes4,
+        bytes32
+    ) external view override onlyAggchainManager {
+        revert FunctionNotSupported();
+    }
+
+    /**
+     * @notice Returns the aggchain verification key - always returns zero in ECDSA multisig
+     * @dev Overridden to return bytes32(0) since vkeys are not used in ECDSA multisig
+     * @return aggchainVKey Always returns bytes32(0)
+     */
+    function getAggchainVKey(
+        bytes4
+    ) public pure override returns (bytes32 aggchainVKey) {
+        // ECDSA multisig doesn't use vkeys, always return zero
+        return bytes32(0);
     }
 }

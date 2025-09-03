@@ -146,6 +146,11 @@ abstract contract AggchainBase is
     function initAggchainManager(
         address newAggchainManager
     ) external onlyRollupManager {
+        // Can only be initialized if current aggchainmanger is zero
+        if (aggchainManager != address(0)) {
+            revert AggchainManagerAlreadyInitialized();
+        }
+
         if (newAggchainManager == address(0)) {
             revert AggchainManagerCannotBeZero();
         }
@@ -395,7 +400,7 @@ abstract contract AggchainBase is
     /**
      * @notice Enable the use of default verification keys from gateway
      */
-    function enableUseDefaultVkeysFlag() external onlyAggchainManager {
+    function enableUseDefaultVkeysFlag() external virtual onlyAggchainManager {
         if (useDefaultVkeys) {
             revert UseDefaultVkeysAlreadyEnabled();
         }
@@ -409,7 +414,7 @@ abstract contract AggchainBase is
     /**
      * @notice Disable the use of default verification keys from gateway
      */
-    function disableUseDefaultVkeysFlag() external onlyAggchainManager {
+    function disableUseDefaultVkeysFlag() external virtual onlyAggchainManager {
         if (!useDefaultVkeys) {
             revert UseDefaultVkeysAlreadyDisabled();
         }
@@ -456,7 +461,7 @@ abstract contract AggchainBase is
     function addOwnedAggchainVKey(
         bytes4 aggchainVKeySelector,
         bytes32 newAggchainVKey
-    ) external onlyAggchainManager {
+    ) external virtual onlyAggchainManager {
         if (newAggchainVKey == bytes32(0)) {
             revert ZeroValueAggchainVKey();
         }
@@ -478,7 +483,7 @@ abstract contract AggchainBase is
     function updateOwnedAggchainVKey(
         bytes4 aggchainVKeySelector,
         bytes32 updatedAggchainVKey
-    ) external onlyAggchainManager {
+    ) external virtual onlyAggchainManager {
         // Check already added
         if (ownedAggchainVKeys[aggchainVKeySelector] == bytes32(0)) {
             revert OwnedAggchainVKeyNotFound();
@@ -504,7 +509,7 @@ abstract contract AggchainBase is
      */
     function getAggchainVKey(
         bytes4 aggchainVKeySelector
-    ) public view returns (bytes32 aggchainVKey) {
+    ) public view virtual returns (bytes32 aggchainVKey) {
         if (useDefaultVkeys == false) {
             aggchainVKey = ownedAggchainVKeys[aggchainVKeySelector];
 
@@ -615,7 +620,7 @@ abstract contract AggchainBase is
             return aggLayerGateway.getAggchainMultisigHash();
         }
 
-        // Check if the aggchain signers hash been set
+        // Sanity check if the aggchain signers hash been set
         // Empty signers is supported, but must be done explicitly
         if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();

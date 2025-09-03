@@ -39,7 +39,7 @@ contract AggLayerGateway is
         keccak256("AL_FREEZE_PP_ROUTE_ROLE");
 
     // Can manage multisig signers and threshold
-    // @dev value 0x93285f0a0c5811f0df0c8e5e8c70c2e8c2f8c9a3e3f3e3f3e3f3e3f3e3f3e3f3
+    // @dev value 0x0c3038a1ecdf82843b70709289ff1703351ad391e3e27df7f6fa7d913601e15e
     bytes32 internal constant AL_MULTISIG_ROLE = keccak256("AL_MULTISIG_ROLE");
 
     // Current AggLayerGateway version
@@ -172,7 +172,7 @@ contract AggLayerGateway is
     }
 
     /**
-     * @notice  Upgrade initializer to add multisig functionality to existing deployment.
+     * @notice Upgrade initializer to add multisig functionality to existing deployment.
      * @param multisigRole The address of the multisig role. Can manage multisig signers and threshold.
      * @param signersToAdd Array of signers to add with their URLs
      * @param newThreshold New threshold value
@@ -597,7 +597,7 @@ contract AggLayerGateway is
      * @return The current aggchainMultisigHash
      */
     function getAggchainMultisigHash() external view returns (bytes32) {
-        // Check if the aggchain signers hash been set
+        // Sanity check check if the aggchain signers hash been set
         // Empty signers is supported, but must be done explicitly
         if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();

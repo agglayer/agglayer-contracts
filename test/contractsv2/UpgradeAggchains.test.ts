@@ -357,9 +357,6 @@ describe('UpgradeAggchains', () => {
         const signers = await upgradedFEP.getAggchainSigners();
         expect(signers[0]).to.equal(trustedSequencer.address);
 
-        // Test new functionality - add OP Succinct configs
-        await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-
         await upgradedFEP
             .connect(aggchainManager)
             .addOpSuccinctConfig(
@@ -430,11 +427,10 @@ describe('UpgradeAggchains', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as unknown as AggchainFEP;
 
-        // Init aggchain manager first
-        await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(admin);
 
         // Now call initializeFromLegacyConsensus from aggchain manager
-        await upgradedFEP.connect(aggchainManager).initializeFromLegacyConsensus(
+        await upgradedFEP.connect(admin).initializeFromLegacyConsensus(
             initParams,
             false, // useDefaultVkeys
             false, // useDefaultSigners

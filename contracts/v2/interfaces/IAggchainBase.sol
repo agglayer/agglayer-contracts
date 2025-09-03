@@ -115,6 +115,10 @@ interface IAggchainBaseErrors {
     error InvalidAggLayerGatewayAddress();
     /// @notice Thrown when trying to set the aggchain manager to zero address.
     error AggchainManagerCannotBeZero();
+    /// @notice Thrown when the aggchain manager is already initialized.
+    error AggchainManagerAlreadyInitialized();
+    /// @notice Thrown when an invalid initial aggchain vkey is provided.
+    error InvalidInitAggchainVKey();
     /// @notice Thrown when the caller is not the aggchain manager
     error OnlyAggchainManager();
     /// @notice Thrown when the caller is not the pending aggchain manager

@@ -700,7 +700,7 @@ describe('AggchainECDSAMultisig', () => {
         expect(await aggchainECDSAMultisigContract.isSigner(signer2.address)).to.be.equal(false);
     });
 
-    it('should check vKeyManager functions', async () => {
+    it('should check vKeyManager functions revert with FunctionNotSupported', async () => {
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
@@ -717,47 +717,26 @@ describe('AggchainECDSAMultisig', () => {
             { gasPrice: 0 },
         );
 
-        // Test addOwnedAggchainVKey - not aggchainManager
+        // Test addOwnedAggchainVKey - should revert with FunctionNotSupported (not used in ECDSA multisig)
         await expect(
-            aggchainECDSAMultisigContract.addOwnedAggchainVKey('0x00010001', ethers.randomBytes(32)),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'OnlyAggchainManager');
+            aggchainECDSAMultisigContract
+                .connect(aggchainManager)
+                .addOwnedAggchainVKey('0x00010001', ethers.randomBytes(32)),
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'FunctionNotSupported');
 
-        // Test addOwnedAggchainVKey - zero value
-        await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).addOwnedAggchainVKey('0x00010001', ethers.ZeroHash),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'ZeroValueAggchainVKey');
-
-        // Test addOwnedAggchainVKey - already added (but aggchainVKeySelector is not added in this aggchain type)
-        // So we skip this test since ECDSA Multisig doesn't add owned vkeys during init
-
-        // Test successful add
-        const newSelector = '0x00010001';
-        const newVKey = ethers.hexlify(ethers.randomBytes(32));
-        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).addOwnedAggchainVKey(newSelector, newVKey))
-            .to.emit(aggchainECDSAMultisigContract, 'AddAggchainVKey')
-            .withArgs(newSelector, newVKey);
-
-        expect(await aggchainECDSAMultisigContract.ownedAggchainVKeys(newSelector)).to.be.equal(newVKey);
-
-        // Test updateOwnedAggchainVKey - not found
+        // Test updateOwnedAggchainVKey - should revert with FunctionNotSupported
         await expect(
             aggchainECDSAMultisigContract
                 .connect(aggchainManager)
                 .updateOwnedAggchainVKey('0x99999999', ethers.randomBytes(32)),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'OwnedAggchainVKeyNotFound');
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'FunctionNotSupported');
 
-        // Test successful update
-        const updatedVKey = ethers.hexlify(ethers.randomBytes(32));
-        await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).updateOwnedAggchainVKey(newSelector, updatedVKey),
-        )
-            .to.emit(aggchainECDSAMultisigContract, 'UpdateAggchainVKey')
-            .withArgs(newSelector, newVKey, updatedVKey);
-
-        expect(await aggchainECDSAMultisigContract.ownedAggchainVKeys(newSelector)).to.be.equal(updatedVKey);
+        // Verify that ownedAggchainVKeys mapping is not used
+        const testSelector = '0x00010001';
+        expect(await aggchainECDSAMultisigContract.ownedAggchainVKeys(testSelector)).to.be.equal(ethers.ZeroHash);
     });
 
-    it('should check vkeys flag functions', async () => {
+    it('should check vkeys flag functions revert with FunctionNotSupported', async () => {
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
@@ -774,46 +753,21 @@ describe('AggchainECDSAMultisig', () => {
             { gasPrice: 0 },
         );
 
-        // Check initial useDefaultVkeys
-        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
-
-        // Test enable vkeys - not aggchainManager
-        await expect(aggchainECDSAMultisigContract.enableUseDefaultVkeysFlag()).to.be.revertedWithCustomError(
-            aggchainECDSAMultisigContract,
-            'OnlyAggchainManager',
-        );
-
-        // Since useDefaultVkeys is false initially, we can enable it
-        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultVkeysFlag()).to.emit(
-            aggchainECDSAMultisigContract,
-            'EnableUseDefaultVkeysFlag',
-        );
-
-        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(true);
-
-        // Test enable again - already enabled
-        await expect(
-            aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultVkeysFlag(),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'UseDefaultVkeysAlreadyEnabled');
-
-        // Test disable vkeys - not aggchainManager
-        await expect(aggchainECDSAMultisigContract.disableUseDefaultVkeysFlag()).to.be.revertedWithCustomError(
-            aggchainECDSAMultisigContract,
-            'OnlyAggchainManager',
-        );
-
-        // Test successful disable
-        await expect(aggchainECDSAMultisigContract.connect(aggchainManager).disableUseDefaultVkeysFlag()).to.emit(
-            aggchainECDSAMultisigContract,
-            'DisableUseDefaultVkeysFlag',
-        );
-
+        // Check initial useDefaultVkeys (should be false as set in initialize)
         expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(false);
 
-        // Test disable again - already disabled
+        // Test enableUseDefaultVkeysFlag - should revert with FunctionNotSupported (not used in ECDSA multisig)
+        await expect(
+            aggchainECDSAMultisigContract.connect(aggchainManager).enableUseDefaultVkeysFlag(),
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'FunctionNotSupported');
+
+        // Test disableUseDefaultVkeysFlag - should revert with FunctionNotSupported
         await expect(
             aggchainECDSAMultisigContract.connect(aggchainManager).disableUseDefaultVkeysFlag(),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'UseDefaultVkeysAlreadyDisabled');
+        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'FunctionNotSupported');
+
+        // Verify that useDefaultVkeys remains unchanged
+        expect(await aggchainECDSAMultisigContract.useDefaultVkeys()).to.be.equal(false);
     });
 
     it('should test the maximum uint32 threshold edge case', async () => {
@@ -852,7 +806,7 @@ describe('AggchainECDSAMultisig', () => {
         ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidThreshold');
     });
 
-    it('should test getAggchainVKey functions', async () => {
+    it('should test getAggchainVKey functions with vkey management disabled', async () => {
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
@@ -869,30 +823,24 @@ describe('AggchainECDSAMultisig', () => {
             { gasPrice: 0 },
         );
 
-        // Since ECDSA Multisig doesn't add owned vkeys during init, add one first
-        await aggchainECDSAMultisigContract
-            .connect(aggchainManager)
-            .addOwnedAggchainVKey(aggchainVKeySelector, newAggchainVKey);
-
-        // Test getAggchainVKey with useDefaultVkeys false
+        // Since ECDSA Multisig doesn't use vkeys, getAggchainVKey should always return bytes32(0)
+        // Test getAggchainVKey - should return zero for any selector
         const vKey = await aggchainECDSAMultisigContract.getAggchainVKey(aggchainVKeySelector);
-        expect(vKey).to.be.equal(newAggchainVKey);
+        expect(vKey).to.be.equal(ethers.ZeroHash);
 
-        // Test getAggchainVKey with non-existent selector
-        await expect(aggchainECDSAMultisigContract.getAggchainVKey('0x99999999')).to.be.revertedWithCustomError(
-            aggchainECDSAMultisigContract,
-            'AggchainVKeyNotFound',
-        );
+        // Test with another selector - should also return zero
+        const vKey2 = await aggchainECDSAMultisigContract.getAggchainVKey('0x99999999');
+        expect(vKey2).to.be.equal(ethers.ZeroHash);
 
-        // Test getAggchainVKeySelector
+        // Test getAggchainVKeySelector utility function (should still work)
         const selector = await aggchainECDSAMultisigContract.getAggchainVKeySelector('0x0001', '0x0002');
         expect(selector).to.be.equal('0x00010002');
 
-        // Test getAggchainTypeFromSelector
+        // Test getAggchainTypeFromSelector utility function (should still work)
         const aggchainType = await aggchainECDSAMultisigContract.getAggchainTypeFromSelector(aggchainVKeySelector);
         expect(aggchainType).to.be.equal('0x0002');
 
-        // Test getAggchainVKeyVersionFromSelector
+        // Test getAggchainVKeyVersionFromSelector utility function (should still work)
         const version = await aggchainECDSAMultisigContract.getAggchainVKeyVersionFromSelector(aggchainVKeySelector);
         expect(version).to.be.equal('0x1234');
     });

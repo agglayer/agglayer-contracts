@@ -346,7 +346,7 @@ contract AggchainFEP is AggchainBase {
                 _initAggchainVKeySelector != bytes4(0) ||
                 _initOwnedAggchainVKey != bytes32(0)
             ) {
-                revert InvalidInitializer();
+                revert InvalidInitAggchainVKey();
             }
         } else {
             if (
@@ -444,14 +444,45 @@ contract AggchainFEP is AggchainBase {
      * @notice Initialize function for upgrade from AggchainECDSAMultisig to AggchainFEP
      * @dev Only initializes FEP specific parameters, assumes base and consensus are already initialized
      * @param _initParams The initialization parameters for FEP
+     * @param _useDefaultVkeys Whether to use default verification keys from gateway
+     * @param _initOwnedAggchainVKey The owned aggchain verification key
+     * @param _initAggchainVKeySelector The aggchain verification key selector
      */
     function initializeFromECDSAMultisig(
-        InitParams memory _initParams
+        InitParams memory _initParams,
+        bool _useDefaultVkeys,
+        bytes32 _initOwnedAggchainVKey,
+        bytes4 _initAggchainVKeySelector
     ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
         // Check that the l2Outputs array is empty
         if (_initializerVersion != 2 || l2Outputs.length != 0) {
             revert InvalidInitializer();
         }
+
+        // Check the use default vkeys is consistent
+        if (_useDefaultVkeys) {
+            if (
+                _initAggchainVKeySelector != bytes4(0) ||
+                _initOwnedAggchainVKey != bytes32(0)
+            ) {
+                revert InvalidInitializer();
+            }
+        } else {
+            if (
+                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                AGGCHAIN_TYPE
+            ) {
+                revert InvalidAggchainType();
+            }
+        }
+
+        // Set aggchainBase variables
+        _initializeAggchainBase(
+            _useDefaultVkeys,
+            useDefaultSigners, // keep existing value
+            _initOwnedAggchainVKey,
+            _initAggchainVKeySelector
+        );
 
         // init FEP params
         _initializeAggchain(_initParams);
