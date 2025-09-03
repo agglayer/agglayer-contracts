@@ -176,14 +176,18 @@ describe('Aggchain Metadata Simple Tests', () => {
             ];
 
             // Set all entries
-            for (const entry of entries) {
-                await aggchainFEP.connect(metadataManager).setAggchainMetadata(entry.key, entry.value);
-            }
+            await Promise.all(
+                entries.map((entry) =>
+                    aggchainFEP.connect(metadataManager).setAggchainMetadata(entry.key, entry.value),
+                ),
+            );
 
             // Verify all entries
-            for (const entry of entries) {
-                expect(await aggchainFEP.aggchainMetadata(entry.key)).to.equal(entry.value);
-            }
+            await Promise.all(
+                entries.map(async (entry) => {
+                    expect(await aggchainFEP.aggchainMetadata(entry.key)).to.equal(entry.value);
+                }),
+            );
 
             // Update one entry
             await aggchainFEP.connect(metadataManager).setAggchainMetadata('version', '2.0.0');

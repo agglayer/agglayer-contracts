@@ -208,4 +208,7 @@ interface IAggchainBase is
 
     /// @notice Returns the unique aggchain type identifier.
     function AGGCHAIN_TYPE() external view returns (bytes2);
+
+    /// @notice Returns the aggchain manager address.
+    function aggchainManager() external view returns (address);
 }
