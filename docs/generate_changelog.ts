@@ -157,8 +157,8 @@ async function main() {
             if (!changeType) return;
 
             let changeString = `${file}: ${oldVersion} -> ${newVersion}`;
-            if (file.includes("AggchainFEP")) {
-                changeString += "// Op L2OO Semantic version"
+            if (file.includes('AggchainFEP')) {
+                changeString += '// Op L2OO Semantic version';
             }
             if (changeType === 'breaking') {
                 breakingChanges.push(`- ${changeString}`);
@@ -171,8 +171,8 @@ async function main() {
             }
         } else if (!oldVersion && newVersion) {
             let changeString = `➕ New! ${file}: ${newVersion}`;
-            if (file.includes("AggchainFEP")) {
-                changeString += " // Op L2OO Semantic version"
+            if (file.includes('AggchainFEP')) {
+                changeString += ' // Op L2OO Semantic version';
             }
             features.push(`- ${changeString}`);
             hasFeature = true;
