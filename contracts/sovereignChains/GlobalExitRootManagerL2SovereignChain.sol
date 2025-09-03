@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity 0.8.28;
-import "../v1/PolygonZkEVMGlobalExitRootL2.sol";
+import "../PolygonZkEVMGlobalExitRootL2.sol";
 import "../lib/Hashes.sol";
-<<<<<<< HEAD:contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol
-import "../../v2/interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
-import "../../v2/interfaces/IVersion.sol";
-=======
+import "../interfaces/IVersion.sol";
 import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
->>>>>>> dfec4561 (v2 --> contracts, contracts --> v1):contracts/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
