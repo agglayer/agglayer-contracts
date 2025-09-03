@@ -3225,7 +3225,44 @@ describe('BridgeL2SovereignChain Contract', () => {
                     sovereignChainBridgeContract
                         .connect(globalExitRootRemover)
                         .backwardLET(newDepositCount, invalidFrontier, nextLeafValue, proof),
-                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSubtreeFrontier');
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NonZeroValueForUnusedFrontier');
+            });
+
+            it('should reject backwardLET when frontier elements mismatch proof siblings', async () => {
+                // TEST FOCUS: Validates SubtreeFrontierMismatch error when matched positions have wrong values
+
+                const leaves = generateTestLeaves(3);
+                const tree = buildMerkleTreeForTesting(leaves);
+
+                // Add 3 leaves to the contract
+                await sovereignChainBridgeContract.connect(globalExitRootRemover).forwardLET(leaves, tree.getRoot());
+
+                // Create a subtree with 1 leaf (rollback from 3 to 1)
+                const newDepositCount = 1;
+
+                // Create frontier with zero unused positions but wrong value in matched position
+                const mismatchedFrontier = Array(32).fill(ethers.ZeroHash) as [string, ...string[]];
+                // Position 0 should match proof sibling but we set it to wrong value
+                mismatchedFrontier[0] = ethers.keccak256(ethers.toUtf8Bytes('wrong_value'));
+
+                const nextLeaf = leaves[newDepositCount]; // leaves[1]
+                const nextLeafValue = getLeafValue(
+                    nextLeaf.leafType,
+                    nextLeaf.originNetwork,
+                    nextLeaf.originAddress,
+                    nextLeaf.destinationNetwork,
+                    nextLeaf.destinationAddress,
+                    nextLeaf.amount,
+                    nextLeaf.metadataHash,
+                );
+                const proof = tree.getProofTreeByIndex(newDepositCount);
+
+                // Should reject due to frontier element mismatch with proof sibling
+                await expect(
+                    sovereignChainBridgeContract
+                        .connect(globalExitRootRemover)
+                        .backwardLET(newDepositCount, mismatchedFrontier, nextLeafValue, proof),
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'SubtreeFrontierMismatch');
             });
 
             it('should validate backwardLET functionality and parameter checking', async () => {
@@ -3352,7 +3389,7 @@ describe('BridgeL2SovereignChain Contract', () => {
                     sovereignChainBridgeContract
                         .connect(globalExitRootRemover)
                         .backwardLET(newDepositCount, pollutedFrontier, nextLeafValue, proof),
-                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSubtreeFrontier');
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'NonZeroValueForUnusedFrontier');
             });
 
             it('should successfully execute backwardLET with valid subtree proof', async () => {

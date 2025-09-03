@@ -626,6 +626,7 @@ contract BridgeL2SovereignChain is
             // Validate and decode global index using shared logic
             (
                 uint32 leafIndex,
+                , // indexRollup
                 uint32 sourceBridgeNetwork
             ) = _validateAndDecodeGlobalIndex(globalIndex);
 
@@ -661,6 +662,7 @@ contract BridgeL2SovereignChain is
             // Validate and decode global index using shared logic
             (
                 uint32 leafIndex,
+                , // indexRollup
                 uint32 sourceBridgeNetwork
             ) = _validateAndDecodeGlobalIndex(globalIndex);
 
@@ -714,9 +716,10 @@ contract BridgeL2SovereignChain is
 
         // 2. Verify that newFrontier is a valid subtree frontier by checking it matches
         // the Merkle proof siblings at appropriate heights
-        if (!_isValidSubtreeFrontier(newDepositCount, newFrontier, proof)) {
-            revert InvalidSubtreeFrontier();
-        }
+        // NOTE: This function reverts with specific errors:
+        // - SubtreeFrontierMismatch: when frontier elements don't match proof siblings
+        // - NonZeroValueForUnusedFrontier: when unused frontier positions are not zero
+        _checkValidSubtreeFrontier(newDepositCount, newFrontier, proof);
 
         // Store previous values before rollback
         uint256 previousDepositCount = depositCount;

@@ -937,6 +937,7 @@ contract PolygonZkEVMBridgeV2 is
         // Validate and decode global index
         (
             uint32 leafIndex,
+            uint32 indexRollup,
             uint32 sourceBridgeNetwork
         ) = _validateAndDecodeGlobalIndex(globalIndex);
 
@@ -954,9 +955,6 @@ contract PolygonZkEVMBridgeV2 is
                 revert InvalidSmtProof();
             }
         } else {
-            // Obtain rollup index from sourceBridgeNetwork
-            uint32 indexRollup = sourceBridgeNetwork - 1;
-
             // Verify merkle proof against rollup exit root
             if (
                 !verifyMerkleProof(
@@ -1136,20 +1134,30 @@ contract PolygonZkEVMBridgeV2 is
 
     /**
      * @notice Internal function to validate and decode global index
-     * @dev Validates global index format and extracts leafIndex and sourceBridgeNetwork
+     * @dev Validates global index format and extracts leafIndex, indexRollup, and sourceBridgeNetwork
      * @param globalIndex The global index to validate and decode
      * @return leafIndex The leaf index extracted from global index
-     * @return sourceBridgeNetwork The source bridge network extracted from global index
+     * @return indexRollup The rollup index extracted from global index (0 for mainnet)
+     * @return sourceBridgeNetwork The source bridge network (0 for mainnet, indexRollup + 1 for rollups)
      */
     function _validateAndDecodeGlobalIndex(
         uint256 globalIndex
-    ) internal pure returns (uint32 leafIndex, uint32 sourceBridgeNetwork) {
+    )
+        internal
+        pure
+        returns (
+            uint32 leafIndex,
+            uint32 indexRollup,
+            uint32 sourceBridgeNetwork
+        )
+    {
         // Last 32 bits are leafIndex
         leafIndex = uint32(globalIndex);
 
         // Get origin network from global index
         if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
-            // The network is mainnet, therefore sourceBridgeNetwork is 0
+            // The network is mainnet
+            indexRollup = 0;
             sourceBridgeNetwork = 0;
 
             // Reconstruct global index to assert that all unused bits are 0
@@ -1158,8 +1166,8 @@ contract PolygonZkEVMBridgeV2 is
                 InvalidGlobalIndex()
             );
         } else {
-            // The network is a rollup, therefore sourceBridgeNetwork must be decoded
-            uint32 indexRollup = uint32(globalIndex >> 32);
+            // The network is a rollup
+            indexRollup = uint32(globalIndex >> 32);
             sourceBridgeNetwork = indexRollup + 1;
 
             // Reconstruct global index to assert that all unused bits are 0

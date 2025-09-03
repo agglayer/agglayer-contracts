@@ -18,6 +18,16 @@ contract DepositContractBase {
      */
     error NewDepositCountExceedsMax();
 
+    /**
+     * @dev Thrown when subtree frontier element doesn't match the expected proof sibling
+     */
+    error SubtreeFrontierMismatch();
+
+    /**
+     * @dev Thrown when non-matched frontier positions contain non-zero values
+     */
+    error NonZeroValueForUnusedFrontier();
+
     // Merkle tree levels
     uint256 internal constant _DEPOSIT_CONTRACT_TREE_DEPTH = 32;
 
@@ -144,13 +154,12 @@ contract DepositContractBase {
      * @param subTreeLeafCount The number of leaves in the subtree
      * @param subTreeFrontier The proposed frontier of the subtree (unused positions must be zero)
      * @param currentTreeProof The Merkle proof siblings from the current tree
-     * @return true if the subtree frontier is valid
      */
-    function _isValidSubtreeFrontier(
+    function _checkValidSubtreeFrontier(
         uint256 subTreeLeafCount,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata subTreeFrontier,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata currentTreeProof
-    ) internal pure returns (bool) {
+    ) internal pure {
         // Verify subtree frontier consistency with the proof
         uint256 index = subTreeLeafCount;
         uint256 height = 0;
@@ -160,7 +169,7 @@ contract DepositContractBase {
             if ((index & 1) == 1) {
                 // At this height, subtree has an element that must match proof sibling
                 if (subTreeFrontier[height] != currentTreeProof[height]) {
-                    return false; // Frontier element doesn't match proof
+                    revert SubtreeFrontierMismatch();
                 }
             } else {
                 // If bit is 0, subtree doesn't have element at this height
@@ -168,7 +177,7 @@ contract DepositContractBase {
                 // to prevent random values and ensure clean frontier data.
                 // This way, a zero frontier would match depositCount=0 as in the SC
                 if (subTreeFrontier[height] != bytes32(0)) {
-                    return false; // Non-matched position must be zero
+                    revert NonZeroValueForUnusedFrontier();
                 }
             }
 
@@ -179,11 +188,9 @@ contract DepositContractBase {
         // Ensure all remaining frontier positions beyond the subtree size are zero
         while (height < _DEPOSIT_CONTRACT_TREE_DEPTH) {
             if (subTreeFrontier[height] != bytes32(0)) {
-                return false; // All positions beyond subtree size must be zero
+                revert NonZeroValueForUnusedFrontier();
             }
             height++;
         }
-
-        return true; // All validations passed
     }
 }
