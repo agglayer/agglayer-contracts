@@ -222,6 +222,7 @@ contract BridgeL2SovereignChain is
 
     /**
      * Disable initializers on the implementation following the best practices
+     * @dev the deployer is set to the contract creator and will be the only allowed to initialize the contract in a 2 steps process
      */
     constructor() PolygonZkEVMBridgeV2() {
         deployer = msg.sender;
@@ -624,8 +625,9 @@ contract BridgeL2SovereignChain is
             uint256 globalIndex = globalIndexes[i];
 
             // Validate and decode global index using shared logic
+            // second parameter: rollupIndex not used
             (
-                uint32 leafIndex, // indexRollup
+                uint32 leafIndex,
                 ,
                 uint32 sourceBridgeNetwork
             ) = _validateAndDecodeGlobalIndex(globalIndex);
@@ -660,8 +662,9 @@ contract BridgeL2SovereignChain is
             uint256 globalIndex = globalIndexes[i];
 
             // Validate and decode global index using shared logic
+            // second parameter: rollupIndex not used
             (
-                uint32 leafIndex, // indexRollup
+                uint32 leafIndex,
                 ,
                 uint32 sourceBridgeNetwork
             ) = _validateAndDecodeGlobalIndex(globalIndex);
