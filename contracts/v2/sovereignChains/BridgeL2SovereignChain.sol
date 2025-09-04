@@ -625,8 +625,8 @@ contract BridgeL2SovereignChain is
 
             // Validate and decode global index using shared logic
             (
-                uint32 leafIndex,
-                , // indexRollup
+                uint32 leafIndex, // indexRollup
+                ,
                 uint32 sourceBridgeNetwork
             ) = _validateAndDecodeGlobalIndex(globalIndex);
 
@@ -661,8 +661,8 @@ contract BridgeL2SovereignChain is
 
             // Validate and decode global index using shared logic
             (
-                uint32 leafIndex,
-                , // indexRollup
+                uint32 leafIndex, // indexRollup
+                ,
                 uint32 sourceBridgeNetwork
             ) = _validateAndDecodeGlobalIndex(globalIndex);
 
