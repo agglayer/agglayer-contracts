@@ -156,6 +156,13 @@ contract AggchainECDSAMultisig is AggchainBase {
         // aggchainManager
         aggchainManager = admin;
 
+        // _initializeAggchainBase(
+        //            _useDefaultVkeys, // false
+        //            _useDefaultSigners, // false
+        //            _initOwnedAggchainVKey, // not used
+        //            _initAggchainVKeySelector // not used
+        //        );
+
         // set signer to trustedSequencer and threshold to 1
         // handle trustedSequencerURL as empty string
         if (bytes(trustedSequencerURL).length == 0) {

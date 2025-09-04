@@ -694,8 +694,8 @@ abstract contract AggchainBase is
             return aggLayerGateway.getAggchainMultisigHash();
         }
 
-        // Sanity check if the aggchain signers hash been set
-        // Empty signers is supported, but must be done explicitly
+        // Sanity check to realize earlier that the aggchainMultisigHash has not been set given
+        // that the proof cannot be computed since there is no hash reconstruction to be 0
         if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();
         }
