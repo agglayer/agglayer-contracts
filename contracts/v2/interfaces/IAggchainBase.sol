@@ -4,6 +4,10 @@ pragma solidity 0.8.28;
 
 import "./IAggchainSigners.sol";
 
+/**
+ * @title IAggchainBaseEvents
+ * @notice Events emitted by AggchainBase implementations
+ */
 interface IAggchainBaseEvents {
     /**
      * @notice Emitted when the admin adds an aggchain verification key.
@@ -76,6 +80,10 @@ interface IAggchainBaseEvents {
     );
 }
 
+/**
+ * @title IAggchainBaseErrors
+ * @notice Error definitions for AggchainBase implementations
+ */
 interface IAggchainBaseErrors {
     /// @notice Thrown when trying to add zero value verification key.
     error ZeroValueAggchainVKey();
@@ -95,8 +103,6 @@ interface IAggchainBaseErrors {
     error UseDefaultSignersAlreadyDisabled();
     /// @notice Thrown when trying to retrieve an aggchain verification key from the mapping that doesn't exists.
     error AggchainVKeyNotFound();
-    /// @notice Thrown when trying to deploy the aggchain with a zero address as the AggLayerGateway
-    error InvalidAggLayerGatewayAddress();
     /// @notice Thrown when trying to set the aggchain manager to zero address.
     error AggchainManagerCannotBeZero();
     /// @notice Thrown when the aggchain manager is already initialized.
@@ -139,41 +145,48 @@ interface IAggchainBaseErrors {
 
 /**
  * @title IAggchainBase
- * @notice Shared interface for native aggchain implementations.
+ * @notice Core interface for aggchain implementations
+ * @dev All aggchain contracts must implement these functions for integration with the rollup manager.
+ *      Different implementations (FEP, ECDSA) may handle these functions differently based on their consensus mechanism.
  */
 interface IAggchainBase is
     IAggchainBaseErrors,
     IAggchainBaseEvents,
     IAggchainSigners
 {
-    ////////////////////////////////////////////////////////////
-    //                       Structs                          //
-    ////////////////////////////////////////////////////////////
     /**
-     * @notice Gets aggchain hash.
-     * @dev Each chain should properly manage its own aggchain hash.
-     * @param aggchainData Custom chain data to build the consensus hash.
+     * @notice Gets aggchain hash for consensus verification
+     * @dev Each implementation computes this hash differently based on its consensus mechanism.
+     *      The hash is used by the rollup manager to verify state transitions.
+     * @param aggchainData Custom chain data to build the consensus hash
+     * @return The computed aggchain hash for verification
      */
     function getAggchainHash(
         bytes calldata aggchainData
     ) external view returns (bytes32);
 
     /**
-     * @notice Callback from the PolygonRollupManager to update the chain's state.
-     * @dev Each chain should properly manage its own state.
-     * @param aggchainData Custom chain data to update chain's state
+     * @notice Callback from the PolygonRollupManager after successful pessimistic proof verification
+     * @dev Each implementation handles state updates differently
+     * @param aggchainData Custom chain data containing state update information
      */
     function onVerifyPessimistic(bytes calldata aggchainData) external;
 
     /**
-     * @notice Sets the aggchain manager.
-     * @param newAggchainManager The address of the new aggchain manager.
+     * @notice Sets the initial aggchain manager during contract deployment
+     * @dev Can only be called once by the rollup manager during initialization.
+     *      The aggchain manager has privileged access to modify consensus parameters.
+     * @param newAggchainManager The address of the new aggchain manager
      */
     function initAggchainManager(address newAggchainManager) external;
 
     /// @notice Returns the unique aggchain type identifier.
     function AGGCHAIN_TYPE() external view returns (bytes2);
 
-    /// @notice Returns the aggchain manager address.
+    /**
+     * @notice Returns the current aggchain manager address
+     * @dev The aggchain manager has administrative privileges over consensus parameters
+     * @return The address of the current aggchain manager
+     */
     function aggchainManager() external view returns (address);
 }

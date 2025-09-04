@@ -7,7 +7,7 @@ import "../lib/AggchainBase.sol";
 /// @custom:implementation
 /// @title AggchainFEP
 /// @notice Heavily based on https://github.com/succinctlabs/op-succinct/blob/main/contracts/src/validity/OPSuccinctL2OutputOracle.sol
-/// @dev this contract aims to be the implementation of a FEP chain that is attached to the aggLayer
+/// @dev This contract aims to be the implementation of a FEP chain that is attached to the aggLayer
 ///       contract is responsible for managing the states and the updates of a L2 network
 contract AggchainFEP is AggchainBase {
     ////////////////////////////////////////////////////////////
@@ -440,7 +440,8 @@ contract AggchainFEP is AggchainBase {
 
     /**
      * @notice Initialize function for upgrade from AggchainECDSAMultisig to AggchainFEP
-     * @dev Only initializes FEP specific parameters, assumes base and consensus are already initialized
+     * @custom:security Only initializes FEP specific parameters, assumes base and consensus are already initialized
+     * @dev Used when transitioning from ECDSA multisig to FEP verification
      * @param _initParams The initialization parameters for FEP
      * @param _useDefaultVkeys Whether to use default verification keys from gateway
      * @param _initOwnedAggchainVKey The owned aggchain verification key
@@ -478,7 +479,8 @@ contract AggchainFEP is AggchainBase {
 
     /**
      * @notice Upgrade function from a previous FEP version
-     * @dev Migrates existing FEP configuration to new format with genesis config and multisig
+     * @custom:security Migrates existing FEP configuration to new format with genesis config and multisig
+     * @dev Preserves existing configuration by moving it to genesis config slot
      */
     function upgradeFromPreviousFEP()
         external
@@ -491,8 +493,7 @@ contract AggchainFEP is AggchainBase {
             revert InvalidInitializer();
         }
 
-        // Add config to genesis
-        // TODO: review - ensure this is the correct approach for upgrade path
+        // Add existing configuration to genesis for backward compatibility
         opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
             aggregationVkey: aggregationVkey,
             rangeVkeyCommitment: rangeVkeyCommitment,
@@ -525,7 +526,7 @@ contract AggchainFEP is AggchainBase {
 
     /**
      * @notice Initializer AggchainFEP storage
-     * @dev Internal function to set up FEP-specific parameters
+     * @dev Internal function to set up FEP-specific parameters. Validates all parameters before setting.
      * @param _initParams The initialization parameters for the contract
      */
     function _initializeAggchain(InitParams memory _initParams) internal {

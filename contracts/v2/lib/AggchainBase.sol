@@ -47,7 +47,6 @@ abstract contract AggchainBase is
     bool public useDefaultVkeys;
 
     // Flag to enable/disable the use of the default signers from the gateway
-    // review should be upgrade safe since it's completing an storage slot and does not shift other ones
     bool public useDefaultSigners;
 
     /// @notice Address that manages all the functionalities related to the aggchain
@@ -186,7 +185,7 @@ abstract contract AggchainBase is
      * @param _admin Admin address
      * @param sequencer Trusted sequencer address
      * @param _gasTokenAddress Indicates the token address in mainnet that will be used as a gas token
-     * Note if a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
+     * @dev If a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
      * @param sequencerURL Trusted sequencer URL
      * @param _networkName L2 network name
      * @param _useDefaultVkeys Flag to use default verification keys from gateway
@@ -577,6 +576,7 @@ abstract contract AggchainBase is
     /**
      * @notice returns the current aggchain verification key. If the flag `useDefaultVkeys` is set to true, the gateway verification key is returned, else, the custom chain verification key is returned.
      * @param aggchainVKeySelector The selector for the verification key query. This selector identifies the aggchain type + sp1 verifier version
+     * @return aggchainVKey The verification key for the specified selector
      */
     function getAggchainVKey(
         bytes4 aggchainVKeySelector
@@ -600,6 +600,7 @@ abstract contract AggchainBase is
      * @dev It joins two bytes2 values into a bytes4 value.
      * @param aggchainVKeyVersion The aggchain verification key version, used to identify the aggchain verification key.
      * @param aggchainType The aggchain type, hardcoded in the aggchain contract.
+     * @return getAggchainVKeySelector computed bytes4 selector combining version and type
      * [            aggchainVKeySelector         ]
      * [  aggchainVKeyVersion   |  AGGCHAIN_TYPE ]
      * [        2 bytes         |    2 bytes     ]
@@ -614,6 +615,7 @@ abstract contract AggchainBase is
     /**
      * @notice Computes the aggchainType from the aggchainVKeySelector.
      * @param aggchainVKeySelector The aggchain verification key selector.
+     * @return AGGCHAIN_TYPE extracted aggchain type (last 2 bytes)
      * [            aggchainVKeySelector         ]
      * [  aggchainVKeyVersion   |  AGGCHAIN_TYPE ]
      * [        2 bytes         |    2 bytes     ]
@@ -627,6 +629,7 @@ abstract contract AggchainBase is
     /**
      * @notice Computes the aggchainVKeyVersion from the aggchainVKeySelector.
      * @param aggchainVKeySelector The aggchain verification key selector.
+     * @return aggchainVKeyVersion extracted aggchain verification key version (first 2 bytes)
      * [            aggchainVKeySelector         ]
      * [  aggchainVKeyVersion   |  AGGCHAIN_TYPE ]
      * [        2 bytes         |    2 bytes     ]
@@ -732,6 +735,7 @@ abstract contract AggchainBase is
 
     /**
      * @notice Internal function to add a signer with validation
+     * @dev Validates that signer is not zero address, URL is not empty, and signer doesn't already exist
      * @param _signer Address of the signer to add
      * @param url URL associated with the signer
      */
@@ -754,6 +758,7 @@ abstract contract AggchainBase is
 
     /**
      * @notice Internal function to remove a signer with validation
+     * @dev Validates index bounds and that the signer at the index matches the provided address
      * @param _signer Address of the signer to remove
      * @param _signerIndex Index of the signer in the aggchainSigners array
      */

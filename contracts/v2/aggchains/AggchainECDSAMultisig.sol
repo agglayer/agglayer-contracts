@@ -86,6 +86,7 @@ contract AggchainECDSAMultisig is AggchainBase {
      * @param _gasTokenAddress Gas token address
      * @param _trustedSequencerURL Trusted sequencer URL
      * @param _networkName Network name
+     * @param _useDefaultSigners Whether to use default signers from gateway
      * @param _signersToAdd Array of signers to add
      * @param _newThreshold New threshold for multisig operations
      * @custom:security First initialization takes into account this contracts and all the inheritance contracts
@@ -171,17 +172,14 @@ contract AggchainECDSAMultisig is AggchainBase {
     ////////////////////////////////////////////////////////////
     //                    Functions: pure                    //
     ////////////////////////////////////////////////////////////
-    /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey
-    /// @param aggchainData custom bytes provided by the chain
-    ///     aggchainData:
-    ///     Field:           |   |
-    ///     length (bits):   | 0 |
-    ///
-    /// aggchainData._aggchainVKeySelector 4 bytes aggchain vkey selector (ABI-encoded as 32 bytes)
-    ///
-    /// @return aggchainVKey The aggchain verification key
-    /// @return aggchainParams The computed aggchain parameters hash
-    /// @inheritdoc AggchainBase
+    /**
+     * @notice Validates the provided aggchain data and returns the computed aggchain parameters and vkey
+     * @dev For ECDSA multisig, no data is needed as verification is done through signatures
+     * @param aggchainData Must be empty for ECDSA multisig implementation
+     * @return aggchainVKey Always returns bytes32(0) as ECDSA doesn't use verification keys
+     * @return aggchainParams Always returns bytes32(0) as parameters are included directly in hash
+     * @inheritdoc AggchainBase
+     */
     function getAggchainParamsAndVKeySelector(
         bytes memory aggchainData
     ) public pure override returns (bytes32, bytes32) {
@@ -195,7 +193,7 @@ contract AggchainECDSAMultisig is AggchainBase {
 
     /**
      * @notice Function to retrieve the current version of the contract.
-     * @return version of the contract.
+     * @return version String representation of the contract version
      */
     function version() external pure returns (string memory) {
         return AGGCHAIN_ECDSA_MULTISIG_VERSION;
@@ -205,7 +203,12 @@ contract AggchainECDSAMultisig is AggchainBase {
     //               Functions: Callbacks                     //
     ////////////////////////////////////////////////////////////
 
-    /// @inheritdoc IAggchainBase
+    /**
+     * @notice Callback when pessimistic proof is verified
+     * @dev For ECDSA multisig, just validates empty data and emits event
+     * @param aggchainData Must be empty for ECDSA implementation
+     * @inheritdoc IAggchainBase
+     */
     function onVerifyPessimistic(
         bytes calldata aggchainData
     ) external onlyRollupManager {
@@ -223,8 +226,9 @@ contract AggchainECDSAMultisig is AggchainBase {
     ////////////////////////////////////////////////////////////
 
     /**
-     * @notice This function is not used in ECDSA multisig implementation
-     * @dev Overridden to prevent usage
+     * @notice This function is not supported in ECDSA multisig implementation
+     * @dev Overridden to prevent usage as ECDSA doesn't use verification keys
+     * @custom:security Always reverts with FunctionNotSupported error
      */
     function enableUseDefaultVkeysFlag()
         external
@@ -236,8 +240,9 @@ contract AggchainECDSAMultisig is AggchainBase {
     }
 
     /**
-     * @notice This function is not used in ECDSA multisig implementation
-     * @dev Overridden to prevent usage
+     * @notice This function is not supported in ECDSA multisig implementation
+     * @dev Overridden to prevent usage as ECDSA doesn't use verification keys
+     * @custom:security Always reverts with FunctionNotSupported error
      */
     function disableUseDefaultVkeysFlag()
         external
@@ -249,8 +254,9 @@ contract AggchainECDSAMultisig is AggchainBase {
     }
 
     /**
-     * @notice This function is not used in ECDSA multisig implementation
-     * @dev Overridden to prevent usage
+     * @notice This function is not supported in ECDSA multisig implementation
+     * @dev Overridden to prevent usage as ECDSA doesn't use verification keys
+     * @custom:security Always reverts with FunctionNotSupported error
      */
     function addOwnedAggchainVKey(
         bytes4,
@@ -260,8 +266,9 @@ contract AggchainECDSAMultisig is AggchainBase {
     }
 
     /**
-     * @notice This function is not used in ECDSA multisig implementation
-     * @dev Overridden to prevent usage
+     * @notice This function is not supported in ECDSA multisig implementation
+     * @dev Overridden to prevent usage as ECDSA doesn't use verification keys
+     * @custom:security Always reverts with FunctionNotSupported error
      */
     function updateOwnedAggchainVKey(
         bytes4,
@@ -272,8 +279,8 @@ contract AggchainECDSAMultisig is AggchainBase {
 
     /**
      * @notice Returns the aggchain verification key - always returns zero in ECDSA multisig
-     * @dev Overridden to return bytes32(0) since vkeys are not used in ECDSA multisig
-     * @return aggchainVKey Always returns bytes32(0)
+     * @dev Overridden to return bytes32(0) since verification keys are not used in ECDSA multisig
+     * @return aggchainVKey Always returns bytes32(0) as ECDSA doesn't use verification keys
      */
     function getAggchainVKey(
         bytes4
