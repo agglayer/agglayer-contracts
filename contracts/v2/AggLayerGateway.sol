@@ -482,8 +482,10 @@ contract AggLayerGateway is
             revert AggchainSignersTooHigh();
         }
 
-        // Update threshold if provided
-        if (_newThreshold > aggchainSigners.length) {
+        if (
+            _newThreshold > aggchainSigners.length ||
+            (aggchainSigners.length != 0 && _newThreshold == 0)
+        ) {
             revert InvalidThreshold();
         }
 
