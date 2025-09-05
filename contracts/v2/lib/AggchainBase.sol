@@ -816,4 +816,35 @@ abstract contract AggchainBase is
         aggchainMetadata[key] = value;
         emit AggchainMetadataSet(key, value);
     }
+
+    /**
+     * @dev Internal function to validate VKeys consistency
+     * @param _useDefaultVkeys Whether to use default verification keys
+     * @param _initAggchainVKeySelector The aggchain verification key selector
+     * @param _initOwnedAggchainVKey The owned aggchain verification key
+     * @param aggchainType The expected aggchain type
+     */
+    function _validateVKeysConsistency(
+        bool _useDefaultVkeys,
+        bytes4 _initAggchainVKeySelector,
+        bytes32 _initOwnedAggchainVKey,
+        bytes2 aggchainType
+    ) internal pure {
+        // Check the use default vkeys is consistent
+        if (_useDefaultVkeys) {
+            if (
+                _initAggchainVKeySelector != bytes4(0) ||
+                _initOwnedAggchainVKey != bytes32(0)
+            ) {
+                revert InvalidInitAggchainVKey();
+            }
+        } else {
+            if (
+                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                aggchainType
+            ) {
+                revert InvalidAggchainType();
+            }
+        }
+    }
 }
