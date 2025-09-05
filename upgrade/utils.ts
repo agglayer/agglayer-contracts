@@ -33,6 +33,7 @@ function genTimelockOperation(target: any, value: any, data: any, predecessor: a
  * @param implementationAddress the contract address to verify
  * @param constructorArguments the constructor arguments of the contract
  * @param waitTimeSeconds optional wait time in seconds before verification (default: 20)
+ * @param contractPath optional path to the contract file to be verified in case of collision (default: undefined)
  * @dev In case the verification fails, the function will print the command to run the verification manually
  */
 async function verifyContractEtherscan(

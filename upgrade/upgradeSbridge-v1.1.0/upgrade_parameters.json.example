@@ -1,0 +1,11 @@
+{
+    "tagSCPreviousVersion": "v10.1.0-rc.8",
+    "tagSCCurrentVersion": "v10.1.0-rc.10",
+    "bridgeL2SovereignChainAddress": "",
+    "timelockDelay": 60,
+    "timelockSalt": "",
+    "timelockAdminAddress": "",
+    "forkParams": {
+        "rpc": ""
+    }
+}
