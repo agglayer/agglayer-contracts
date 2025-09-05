@@ -544,7 +544,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         const [, aggchainECDSAAddress] = await createECDSARollup(rollupTypeIdECDSA);
 
         // Get aggchain hash
-        // For ECDSA Multisig, getAggchainParamsAndVKeySelector correctly returns (bytes32(0), bytes32(0))
+        // For ECDSA Multisig, getVKeyAndAggchainParams correctly returns (bytes32(0), bytes32(0))
         // because ECDSA Multisig uses only signersHash for consensus, not specific vKeys or params
         const actualAggchainVKey = ethers.ZeroHash; // Correctly zero for ECDSA Multisig
         const aggchainParams = ethers.ZeroHash; // Correctly zero for ECDSA Multisig

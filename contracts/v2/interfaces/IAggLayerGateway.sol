@@ -193,7 +193,7 @@ interface IAggLayerGateway is
      * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
      * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
      * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     * @param _newThreshold New threshold value
      */
     function updateSignersAndThreshold(
         RemoveSignerInfo[] memory _signersToRemove,

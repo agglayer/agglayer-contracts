@@ -242,7 +242,7 @@ describe('AggchainECDSAMultisig', () => {
         const aggchainHash = await aggchainECDSAMultisigContract.getAggchainHash(aggchainData);
 
         // Just verify that the hash is calculated (we don't need to verify the exact value)
-        // The contract will use its internal signersHash and the getAggchainParamsAndVKeySelector result
+        // The contract will use its internal signersHash and the getVKeyAndAggchainParams result
         expect(aggchainHash).to.not.be.equal(ethers.ZeroHash);
     });
 
@@ -290,7 +290,7 @@ describe('AggchainECDSAMultisig', () => {
         const signersHash = await aggchainECDSAMultisigContract.aggchainMultisigHash();
 
         // The aggchain hash is calculated as: keccak256(consensusType, aggchainVKey, aggchainParams, signersHash)
-        // Since getAggchainParamsAndVKeySelector returns (0, 0), both aggchainVKey and aggchainParams are zero
+        // Since getVKeyAndAggchainParams returns (0, 0), both aggchainVKey and aggchainParams are zero
         const consensusType = await aggchainECDSAMultisigContract.CONSENSUS_TYPE();
         const expectedAggchainHash = ethers.solidityPackedKeccak256(
             ['uint32', 'bytes32', 'bytes32', 'bytes32'],
@@ -941,7 +941,7 @@ describe('AggchainECDSAMultisig', () => {
         expect(await aggchainECDSAMultisigContract.pendingAggchainManager()).to.be.equal(ethers.ZeroAddress);
     });
 
-    it('should test getAggchainParamsAndVKeySelector', async () => {
+    it('should test getVKeyAndAggchainParams', async () => {
         await aggchainECDSAMultisigContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
@@ -959,18 +959,20 @@ describe('AggchainECDSAMultisig', () => {
         );
 
         // Test invalid data length - any non-empty data should revert
-        await expect(
-            aggchainECDSAMultisigContract.getAggchainParamsAndVKeySelector('0x1234'),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidAggchainDataLength');
+        await expect(aggchainECDSAMultisigContract.getVKeyAndAggchainParams('0x1234')).to.be.revertedWithCustomError(
+            aggchainECDSAMultisigContract,
+            'InvalidAggchainDataLength',
+        );
 
         // For ECDSA Multisig, any non-empty data is invalid
         const invalidData = ethers.AbiCoder.defaultAbiCoder().encode(['bytes4'], ['0x12340001']);
-        await expect(
-            aggchainECDSAMultisigContract.getAggchainParamsAndVKeySelector(invalidData),
-        ).to.be.revertedWithCustomError(aggchainECDSAMultisigContract, 'InvalidAggchainDataLength');
+        await expect(aggchainECDSAMultisigContract.getVKeyAndAggchainParams(invalidData)).to.be.revertedWithCustomError(
+            aggchainECDSAMultisigContract,
+            'InvalidAggchainDataLength',
+        );
 
         // Test valid data - empty data for ECDSA Multisig
-        const [vKey, params] = await aggchainECDSAMultisigContract.getAggchainParamsAndVKeySelector('0x');
+        const [vKey, params] = await aggchainECDSAMultisigContract.getVKeyAndAggchainParams('0x');
 
         // Should return zeros for both vKey and params in this implementation
         expect(vKey).to.equal(ethers.ZeroHash);
