@@ -3693,6 +3693,117 @@ describe('BridgeL2SovereignChain Contract', () => {
 
                 expect(await sovereignChainBridgeContract.depositCount()).to.equal(2);
             });
+
+            it('should revert when leaf has invalid leafType', async () => {
+                // TEST FOCUS: Validates that forwardLET rejects leaves with invalid leafType
+
+                // Activate emergency state for forwardLET function
+                await sovereignChainBridgeContract.connect(emergencyBridgePauser).activateEmergencyState();
+
+                const invalidLeafType = 99; // Invalid leafType (not 0 or 1)
+                const invalidLeaves = [
+                    {
+                        leafType: invalidLeafType,
+                        originNetwork: networkIDRollup2,
+                        originAddress: ethers.Wallet.createRandom().address,
+                        destinationNetwork: networkIDRollup2,
+                        destinationAddress: ethers.Wallet.createRandom().address,
+                        amount: ethers.parseEther('1'),
+                        metadata: ethers.toUtf8Bytes('test_metadata'),
+                    },
+                ];
+
+                const expectedRoot = ethers.ZeroHash; // Won't reach root calculation
+
+                await expect(
+                    sovereignChainBridgeContract.connect(globalExitRootRemover).forwardLET(invalidLeaves, expectedRoot),
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLeafType');
+            });
+
+            it('should accept valid leafTypes (ASSET and MESSAGE)', async () => {
+                // TEST FOCUS: Validates that forwardLET accepts both valid leafTypes
+
+                // Activate emergency state for forwardLET function
+                await sovereignChainBridgeContract.connect(emergencyBridgePauser).activateEmergencyState();
+
+                // Use the existing generateTestLeaves function which creates ASSET type leaves
+                const assetLeaves = generateTestLeaves(1); // Creates _LEAF_TYPE_ASSET
+                const assetTree = buildMerkleTreeForTesting(assetLeaves);
+
+                // Should not revert with InvalidLeafType for valid ASSET type
+                await expect(
+                    sovereignChainBridgeContract
+                        .connect(globalExitRootRemover)
+                        .forwardLET(assetLeaves, assetTree.getRoot()),
+                ).to.not.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLeafType');
+
+                // Verify leaf was added
+                expect(await sovereignChainBridgeContract.depositCount()).to.equal(1);
+
+                // Test _LEAF_TYPE_MESSAGE separately
+                const messageLeaf = [
+                    {
+                        leafType: LEAF_TYPE_MESSAGE, // 1
+                        originNetwork: networkIDRollup2,
+                        originAddress: ethers.Wallet.createRandom().address,
+                        destinationNetwork: networkIDRollup2,
+                        destinationAddress: ethers.Wallet.createRandom().address,
+                        amount: ethers.parseEther('0'),
+                        metadata: ethers.toUtf8Bytes('message_metadata'),
+                    },
+                ];
+
+                // Calculate expected root after adding message leaf
+                const currentLeaves = [...assetLeaves, ...messageLeaf];
+                const finalTree = buildMerkleTreeForTesting(currentLeaves);
+
+                // Should not revert with InvalidLeafType for valid MESSAGE type
+                await expect(
+                    sovereignChainBridgeContract
+                        .connect(globalExitRootRemover)
+                        .forwardLET(messageLeaf, finalTree.getRoot()),
+                ).to.not.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLeafType');
+
+                // Verify both leaves were added
+                expect(await sovereignChainBridgeContract.depositCount()).to.equal(2);
+            });
+
+            it('should revert when mixed valid and invalid leafTypes are provided', async () => {
+                // TEST FOCUS: Validates that forwardLET fails fast when any leaf has invalid leafType
+
+                // Activate emergency state for forwardLET function
+                await sovereignChainBridgeContract.connect(emergencyBridgePauser).activateEmergencyState();
+
+                const mixedLeaves = [
+                    {
+                        leafType: LEAF_TYPE_ASSET, // Valid (0)
+                        originNetwork: networkIDRollup2,
+                        originAddress: ethers.Wallet.createRandom().address,
+                        destinationNetwork: networkIDRollup2,
+                        destinationAddress: ethers.Wallet.createRandom().address,
+                        amount: ethers.parseEther('1'),
+                        metadata: ethers.toUtf8Bytes('valid_metadata'),
+                    },
+                    {
+                        leafType: 255, // Invalid leafType
+                        originNetwork: networkIDRollup2,
+                        originAddress: ethers.Wallet.createRandom().address,
+                        destinationNetwork: networkIDRollup2,
+                        destinationAddress: ethers.Wallet.createRandom().address,
+                        amount: ethers.parseEther('1'),
+                        metadata: ethers.toUtf8Bytes('invalid_metadata'),
+                    },
+                ];
+
+                const expectedRoot = ethers.ZeroHash; // Won't reach root calculation
+
+                await expect(
+                    sovereignChainBridgeContract.connect(globalExitRootRemover).forwardLET(mixedLeaves, expectedRoot),
+                ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidLeafType');
+
+                // Verify no leaves were added (transaction reverted)
+                expect(await sovereignChainBridgeContract.depositCount()).to.equal(0);
+            });
         });
 
         describe('Combined LET Operations', () => {
@@ -3922,14 +4033,6 @@ describe('BridgeL2SovereignChain Contract', () => {
             if (await sovereignChainBridgeContract.isEmergencyState()) {
                 await sovereignChainBridgeContract.connect(emergencyBridgeUnpauser).deactivateEmergencyState();
             }
-        });
-
-        it('should revert setMultipleClaims when emergency state is not active', async () => {
-            const globalIndexes = [computeGlobalIndex(1, 1, false)];
-
-            await expect(
-                sovereignChainBridgeContract.connect(globalExitRootRemover).setMultipleClaims(globalIndexes),
-            ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyEmergencyState');
         });
 
         it('should revert backwardLET when emergency state is not active', async () => {

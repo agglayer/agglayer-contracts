@@ -76,6 +76,11 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error InvalidLeavesLength();
 
     /**
+     * @dev Thrown when a leaf has an invalid leafType (must be _LEAF_TYPE_ASSET or _LEAF_TYPE_MESSAGE)
+     */
+    error InvalidLeafType();
+
+    /**
      * @dev Thrown when the expected Local Exit Root doesn't match the computed root
      */
     error InvalidExpectedLER();

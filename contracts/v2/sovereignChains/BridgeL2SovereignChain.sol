@@ -240,13 +240,13 @@ contract BridgeL2SovereignChain is
     event DetailedClaimEvent(
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] smtProofLocalExitRoot,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] smtProofRollupExitRoot,
-        uint256 globalIndex,
+        uint256 indexed globalIndex,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
         uint32 originNetwork,
         address originTokenAddress,
         uint32 destinationNetwork,
-        address destinationAddress,
+        address indexed destinationAddress,
         uint256 amount,
         bytes metadata
     );
@@ -688,7 +688,7 @@ contract BridgeL2SovereignChain is
      */
     function setMultipleClaims(
         uint256[] memory globalIndexes
-    ) external onlyGlobalExitRootRemover ifEmergencyState {
+    ) external onlyGlobalExitRootRemover {
         for (uint256 i = 0; i < globalIndexes.length; i++) {
             uint256 globalIndex = globalIndexes[i];
 
@@ -803,7 +803,16 @@ contract BridgeL2SovereignChain is
         // _addLeafBridge automatically handles depositCount increment and MAX_DEPOSIT_COUNT validation
         for (uint256 i = 0; i < newLeaves.length; i++) {
             LeafData memory leaf = newLeaves[i];
-            _addLeafBridge(
+
+            // Validate leafType is either _LEAF_TYPE_ASSET or _LEAF_TYPE_MESSAGE
+            if (
+                leaf.leafType != _LEAF_TYPE_ASSET &&
+                leaf.leafType != _LEAF_TYPE_MESSAGE
+            ) {
+                revert InvalidLeafType();
+            }
+
+            super._addLeafBridge(
                 leaf.leafType,
                 leaf.originNetwork,
                 leaf.originAddress,

@@ -1135,7 +1135,9 @@ contract PolygonZkEVMBridgeV2 is
     /**
      * @notice Internal function to validate and decode global index
      * @dev Validates global index format and extracts leafIndex, indexRollup, and sourceBridgeNetwork
-     * @param globalIndex The global index to validate and decode
+     * @param globalIndex The global index to validate and decode, defined as:
+     * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
      * @return leafIndex The leaf index extracted from global index
      * @return indexRollup The rollup index extracted from global index (0 for mainnet)
      * @return sourceBridgeNetwork The source bridge network (0 for mainnet, indexRollup + 1 for rollups)
