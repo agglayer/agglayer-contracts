@@ -31,7 +31,7 @@ contract BridgeL2SovereignChain is
         uint32 destinationNetwork;
         address destinationAddress;
         uint256 amount;
-        bytes32 metadataHash;
+        bytes metadata;
     }
 
     // Map to store wrappedAddresses that are not mintable
@@ -200,12 +200,14 @@ contract BridgeL2SovereignChain is
      * @param previousRoot The root of the local exit tree before moving forward
      * @param newDepositCount The resulting deposit count after moving forward
      * @param newRoot The resulting root of the local exit tree after moving forward
+     * @param newLeaves The raw bytes of all new leaves added
      */
     event ForwardLET(
         uint256 previousDepositCount,
         bytes32 previousRoot,
         uint256 newDepositCount,
-        bytes32 newRoot
+        bytes32 newRoot,
+        bytes newLeaves
     );
 
     /**
@@ -218,6 +220,35 @@ contract BridgeL2SovereignChain is
         uint32 indexed originNetwork,
         address indexed originTokenAddress,
         uint256 newAmount
+    );
+
+    /**
+     * @dev Emitted when a claim is processed on L2 rollups for better gas efficiency
+     * @dev This event can be emitted on rollups because gas costs are cheaper than on L1
+     * @param smtProofLocalExitRoot Smt proof to proof the leaf against the network exit root
+     * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot against the rollups exit root
+     * @param globalIndex Global index of the claim
+     * @param mainnetExitRoot Mainnet exit root
+     * @param rollupExitRoot Rollup exit root
+     * @param originNetwork Origin network
+     * @param originTokenAddress Origin token address
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     */
+    event DetailedClaimEvent(
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] smtProofRollupExitRoot,
+        uint256 globalIndex,
+        bytes32 mainnetExitRoot,
+        bytes32 rollupExitRoot,
+        uint32 originNetwork,
+        address originTokenAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes metadata
     );
 
     /**
@@ -657,7 +688,7 @@ contract BridgeL2SovereignChain is
      */
     function setMultipleClaims(
         uint256[] memory globalIndexes
-    ) external onlyGlobalExitRootRemover {
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
         for (uint256 i = 0; i < globalIndexes.length; i++) {
             uint256 globalIndex = globalIndexes[i];
 
@@ -695,7 +726,7 @@ contract BridgeL2SovereignChain is
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier,
         bytes32 nextLeaf,
         bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata proof
-    ) external onlyGlobalExitRootRemover {
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
         // Validate that new deposit count is less than current
         if (newDepositCount >= depositCount) {
             revert InvalidDepositCount();
@@ -758,7 +789,7 @@ contract BridgeL2SovereignChain is
     function forwardLET(
         LeafData[] calldata newLeaves,
         bytes32 expectedLER
-    ) external onlyGlobalExitRootRemover {
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
         // Validate that newLeaves array is not empty
         if (newLeaves.length == 0) {
             revert InvalidLeavesLength();
@@ -779,7 +810,7 @@ contract BridgeL2SovereignChain is
                 leaf.destinationNetwork,
                 leaf.destinationAddress,
                 leaf.amount,
-                leaf.metadataHash
+                keccak256(leaf.metadata)
             );
         }
 
@@ -797,7 +828,8 @@ contract BridgeL2SovereignChain is
             previousDepositCount,
             previousRoot,
             depositCount,
-            computedRoot
+            computedRoot,
+            abi.encode(newLeaves)
         );
     }
 
@@ -813,7 +845,7 @@ contract BridgeL2SovereignChain is
         uint32[] memory originNetwork,
         address[] memory originTokenAddress,
         uint256[] memory amount
-    ) external onlyGlobalExitRootRemover {
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
         if (
             originNetwork.length != originTokenAddress.length ||
             originNetwork.length != amount.length
@@ -1140,6 +1172,74 @@ contract BridgeL2SovereignChain is
         onlyEmergencyBridgeUnpauser
     {
         _deactivateEmergencyState();
+    }
+
+    /**
+     * @notice Override claimAsset to emit additional DetailedClaimEvent for rollup gas efficiency
+     * @dev This function extends the parent claimAsset functionality by emitting an additional event
+     *      with all calldata parameters. This event can be emitted on rollups because gas costs are
+     *      cheaper than on L1, providing more detailed information about the claim parameters.
+     * @dev The function inherits all security modifiers from the parent implementation:
+     *      - ifNotEmergencyState: Prevents claims during emergency state
+     *      - nonReentrant: Prevents reentrancy attacks during token transfers
+     * @param smtProofLocalExitRoot Smt proof to proof the leaf against the network exit root
+     * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot against the rollups exit root
+     * @param globalIndex Global index is defined as:
+     *        | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     *        |    0     |  mainnetFlag | rollupIndex | localRootIndex |
+     * @param mainnetExitRoot Mainnet exit root
+     * @param rollupExitRoot Rollup exit root
+     * @param originNetwork Origin network
+     * @param originTokenAddress Origin token address
+     * @param destinationNetwork Network destination (must be this networkID)
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens to claim
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     * @dev Emits both ClaimEvent (from parent) and DetailedClaimEvent (sovereign-specific)
+     */
+    function claimAsset(
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofRollupExitRoot,
+        uint256 globalIndex,
+        bytes32 mainnetExitRoot,
+        bytes32 rollupExitRoot,
+        uint32 originNetwork,
+        address originTokenAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes calldata metadata
+    ) public override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2) {
+        // Call parent implementation with all inherited security modifiers:
+        // - ifNotEmergencyState: Only allows claims when emergency state is inactive
+        // - nonReentrant: Prevents reentrancy attacks during token operations
+        super.claimAsset(
+            smtProofLocalExitRoot,
+            smtProofRollupExitRoot,
+            globalIndex,
+            mainnetExitRoot,
+            rollupExitRoot,
+            originNetwork,
+            originTokenAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata
+        );
+
+        emit DetailedClaimEvent(
+            smtProofLocalExitRoot,
+            smtProofRollupExitRoot,
+            globalIndex,
+            mainnetExitRoot,
+            rollupExitRoot,
+            originNetwork,
+            originTokenAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata
+        );
     }
 
     ///////////////////////////
