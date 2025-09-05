@@ -698,7 +698,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // Compute initialize upgrade data
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
 
-        // For migration from PessimisticConsensus, the migrateFromPessimisticConsensus function
+        // For migration from PessimisticConsensus, the migrateFromLegacyConsensus function
         // will be called automatically by the RollupManager
         // No initialization bytes needed for migration
 
@@ -719,10 +719,10 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         expect(aggchainManagerSC).to.be.equal(aggchainManager.address);
 
         // migrate from PessimisticConsensus
-        // Impersonate rollup manager to call migrateFromPessimisticConsensus
+        // Impersonate rollup manager to call migrateFromLegacyConsensus
         await ethers.provider.send('hardhat_impersonateAccount', [rollupManagerContract.target]);
         const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
-        await ECDSARollupContract.connect(rollupManagerSigner).migrateFromPessimisticConsensus({ gasPrice: 0 });
+        await ECDSARollupContract.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 });
 
         // Try update rollup by rollupAdmin but trigger UpdateToOldRollupTypeID
         // Create a new pessimistic rollup type
@@ -948,12 +948,12 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         ).to.be.revertedWithCustomError(ECDSARollupContract, 'OnlyAggchainManager');
 
         // For ECDSA upgrade, we use initAggchainManager as ECDSA doesn't have special migration from pessimistic
-        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromPessimisticConsensus()');
+        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()');
 
         // Do not redeclare those variables, update the name
         const signersECDSA = [trustedSequencer.address];
         const thresholdECDSA = 1;
-        const aggchainSignersHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
+        const aggchainMultisigHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
 
         await expect(
             rollupManagerContract
@@ -963,7 +963,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(pessimisticRollupID, rollupTypeECDSAId, 0)
             .to.emit(ECDSARollupContract, 'SignersAndThresholdUpdated')
-            .withArgs(signersECDSA, thresholdECDSA, aggchainSignersHashECDSA);
+            .withArgs(signersECDSA, thresholdECDSA, aggchainMultisigHashECDSA);
 
         expect(await ECDSARollupContract.aggchainManager()).to.be.equal(admin.address);
 
@@ -972,8 +972,8 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         expect(signersECDSAFromContract).to.be.deep.equal(signersECDSA);
         const thresholdECDSAFromContract = await ECDSARollupContract.threshold();
         expect(thresholdECDSAFromContract).to.be.equal(thresholdECDSA);
-        const aggchainSignersHashECDSAFromContract = await ECDSARollupContract.getAggchainSignersHash();
-        expect(aggchainSignersHashECDSAFromContract).to.be.equal(aggchainSignersHashECDSA);
+        const aggchainMultisigHashECDSAFromContract = await ECDSARollupContract.getAggchainMultisigHash();
+        expect(aggchainMultisigHashECDSAFromContract).to.be.equal(aggchainMultisigHashECDSA);
         const aggchainManagerFromContract = await ECDSARollupContract.aggchainManager();
         expect(aggchainManagerFromContract).to.be.equal(admin.address);
     });
@@ -1033,9 +1033,9 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             rangeVkeyCommitment: computeRandomBytes(32),
         };
 
-        // Encode upgrade data for initializeFromPessimisticConsensus
+        // Encode upgrade data for initializeFromLegacyConsensus
         const wrongUpgradeData = aggchainFEPFactory.interface.encodeFunctionData(
-            'initializeFromPessimisticConsensus((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bool,bytes32,bytes4,(address,string)[],uint256)',
+            'initializeFromLegacyConsensus((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bool,bytes32,bytes4,(address,string)[],uint256)',
             [
                 initParams,
                 false, // useDefaultVkeys
@@ -1073,11 +1073,21 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         const rollupManagerSigner = await ethers.getSigner(rollupManagerContract.target as any);
 
         await expect(
-            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams),
+            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+            ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidInitializer');
 
         await expect(
-            FEPRollupContract.connect(rollupManagerSigner).initializeFromECDSAMultisig(initParams),
+            FEPRollupContract.connect(rollupManagerSigner).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+            ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
 
         await expect(
@@ -1086,10 +1096,10 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         const signersECDSA = [trustedSequencer.address];
         const thresholdECDSA = 1;
-        const aggchainSignersHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
+        const aggchainMultisigHashECDSA = computeSignersHash(thresholdECDSA, signersECDSA);
 
         await expect(
-            FEPRollupContract.connect(rollupManagerSigner).initializeFromPessimisticConsensus(
+            FEPRollupContract.connect(rollupManagerSigner).initializeFromLegacyConsensus(
                 initParams,
                 false, // useDefaultVkeys
                 false, // useDefaultSigners
@@ -1101,7 +1111,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'OnlyAggchainManager');
 
-        await FEPRollupContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+        await FEPRollupContract.connect(aggchainManager).initializeFromLegacyConsensus(
             initParams,
             false, // useDefaultVkeys
             false, // useDefaultSigners
@@ -1113,7 +1123,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         );
 
         expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
-        expect(await FEPRollupContract.getAggchainSignersHash()).to.be.equal(aggchainSignersHashECDSA);
+        expect(await FEPRollupContract.getAggchainMultisigHash()).to.be.equal(aggchainMultisigHashECDSA);
         expect(await FEPRollupContract.threshold()).to.be.equal(thresholdECDSA);
         expect(await FEPRollupContract.getAggchainSigners()).to.be.deep.equal(signersECDSA);
     });
@@ -1144,8 +1154,8 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // Encode upgrade data for initializeFromECDSAMultisig
         const upgradeData = aggchainFEPFactory.interface.encodeFunctionData(
-            'initializeFromECDSAMultisig((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32))',
-            [initParams],
+            'initializeFromECDSAMultisig((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bytes32,bytes4)',
+            [initParams, false, ethers.ZeroHash, '0x00010001'],
         );
         const FEPRollupContract = aggchainFEPFactory.attach(ecdsaRollupAddress as string) as any;
 
@@ -1178,7 +1188,14 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
 
-        await expect(FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams))
+        await expect(
+            FEPRollupContract.connect(aggchainManager).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+            ),
+        )
             .to.emit(FEPRollupContract, 'OpSuccinctConfigUpdated')
             .withArgs(
                 GENESIS_CONFIG_NAME,

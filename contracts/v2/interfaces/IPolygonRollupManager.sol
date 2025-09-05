@@ -188,6 +188,11 @@ interface IPolygonRollupManager {
     error OnlyRollupAdmin();
 
     /**
+     * @dev When try to upgrade a rollup a sender that's not the aggchain manager
+     */
+    error OnlyAggchainManager();
+
+    /**
      * @dev When try to update a rollup with sequences pending to verify
      */
     error AllSequencedMustBeVerified();

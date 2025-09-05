@@ -123,8 +123,8 @@ describe('UpgradeAggchains', () => {
         // Init aggchain manager first
         await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
-        // Now call initializeFromPessimisticConsensus from aggchain manager
-        await upgradedFEP.connect(aggchainManager).initializeFromPessimisticConsensus(
+        // Now call initializeFromLegacyConsensus from aggchain manager
+        await upgradedFEP.connect(aggchainManager).initializeFromLegacyConsensus(
             initParams,
             false, // useDefaultVkeys
             false, // useDefaultSigners
@@ -215,8 +215,8 @@ describe('UpgradeAggchains', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as unknown as AggchainECDSAMultisig;
 
-        // Now call migrateFromPessimisticConsensus from rollup manager
-        await upgradedECDSA.connect(rollupManagerSigner).migrateFromPessimisticConsensus({ gasPrice: 0 });
+        // Now call migrateFromLegacyConsensus from rollup manager
+        await upgradedECDSA.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 });
 
         // Verify that base state is preserved
         expect(await upgradedECDSA.admin()).to.equal(admin.address);
@@ -357,9 +357,6 @@ describe('UpgradeAggchains', () => {
         const signers = await upgradedFEP.getAggchainSigners();
         expect(signers[0]).to.equal(trustedSequencer.address);
 
-        // Test new functionality - add OP Succinct configs
-        await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-
         await upgradedFEP
             .connect(aggchainManager)
             .addOpSuccinctConfig(
@@ -430,11 +427,10 @@ describe('UpgradeAggchains', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as unknown as AggchainFEP;
 
-        // Init aggchain manager first
-        await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await upgradedFEP.connect(rollupManagerSigner).initAggchainManager(admin);
 
-        // Now call initializeFromPessimisticConsensus from aggchain manager
-        await upgradedFEP.connect(aggchainManager).initializeFromPessimisticConsensus(
+        // Now call initializeFromLegacyConsensus from aggchain manager
+        await upgradedFEP.connect(admin).initializeFromLegacyConsensus(
             initParams,
             false, // useDefaultVkeys
             false, // useDefaultSigners

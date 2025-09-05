@@ -835,19 +835,41 @@ contract PolygonRollupManager is
         ITransparentUpgradeableProxy rollupContract,
         uint32 newRollupTypeID
     ) external {
-        // Check admin of the network is msg.sender
-        if (IPolygonRollupBase(address(rollupContract)).admin() != msg.sender) {
-            revert OnlyRollupAdmin();
-        }
-
-        // Check all sequences are verified before upgrading
         RollupData storage rollup = _rollupIDToRollupData[
             rollupAddressToID[address(rollupContract)]
         ];
 
-        // Check all sequenced batches are verified
-        if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
-            revert AllSequencedMustBeVerified();
+        if (rollup.rollupVerifierType == VerifierType.ALGateway) {
+            // Check aggchain manager is msg.sender
+            if (
+                IAggchainBase(address(rollupContract)).aggchainManager() !=
+                msg.sender
+            ) {
+                revert OnlyAggchainManager();
+            }
+
+            // Check AGGCHAIN_TYPE is the same (both are ALGateway at this point)
+            if (
+                IAggchainBase(address(rollupContract)).AGGCHAIN_TYPE() !=
+                IAggchainBase(
+                    rollupTypeMap[newRollupTypeID].consensusImplementation
+                ).AGGCHAIN_TYPE()
+            ) {
+                revert UpdateNotCompatible();
+            }
+        } else {
+            // Check admin of the network is msg.sender
+            if (
+                IPolygonRollupBase(address(rollupContract)).admin() !=
+                msg.sender
+            ) {
+                revert OnlyRollupAdmin();
+            }
+
+            // Check all sequenced batches are verified
+            if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
+                revert AllSequencedMustBeVerified();
+            }
         }
 
         // Not allowed to update to an older rollup type id, only supported from updateRollup function

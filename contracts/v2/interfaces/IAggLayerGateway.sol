@@ -49,18 +49,6 @@ interface IAggLayerGatewayEvents {
      * @param selector The 4 bytes selector of the updated default aggchain verification key.
      */
     event UnsetDefaultAggchainVKey(bytes4 selector);
-
-    /**
-     * @notice Emitted when signers and threshold are updated
-     * @param signers The new array of signer addresses
-     * @param threshold The new threshold for multisig operations
-     * @param signersHash The hash of the new signers and threshold
-     */
-    event SignersAndThresholdUpdated(
-        address[] signers,
-        uint256 threshold,
-        bytes32 signersHash
-    );
 }
 
 /// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol

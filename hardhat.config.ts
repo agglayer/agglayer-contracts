@@ -194,7 +194,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // Should have the same optimizations as PolygonTransparentProxy
+                        runs: 10, // Should have the same optimizations as PolygonTransparentProxy
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
@@ -251,6 +251,16 @@ const config: HardhatUserConfig = {
                     },
                     evmVersion: 'shanghai', // Same evm version than PolygonZkEVMBridgeV2
                 }, // try yul optimizer
+            },
+            'contracts/v2/aggchains/AggchainFEP.sol': {
+                version: '0.8.28',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 1000,
+                    },
+                    evmVersion: 'cancun',
+                },
             },
         },
     },

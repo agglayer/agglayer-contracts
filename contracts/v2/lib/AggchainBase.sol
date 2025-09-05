@@ -23,6 +23,9 @@ abstract contract AggchainBase is
     // Naming has been kept as CONSENSUS_TYPE for consistency with the previous consensus type (PolygonPessimisticConsensus.sol)
     uint32 public constant CONSENSUS_TYPE = 1;
 
+    // Maximum number of aggchain signers supported
+    uint256 public constant MAX_AGGCHAIN_SIGNERS = 255;
+
     // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
     IAggLayerGateway public immutable aggLayerGateway;
 
@@ -44,7 +47,6 @@ abstract contract AggchainBase is
     bool public useDefaultVkeys;
 
     // Flag to enable/disable the use of the default signers from the gateway
-    // review should be upgrade safe since it's completing an storage slot and does not shift other ones
     bool public useDefaultSigners;
 
     /// @notice Address that manages all the functionalities related to the aggchain
@@ -74,15 +76,26 @@ abstract contract AggchainBase is
     /// @notice Threshold required for multisig operations
     uint256 public threshold;
 
-    /// @notice Hash of the current aggchainSigners array
-    bytes32 public aggchainSignersHash;
+    /// @notice Hash of the current multisig configuration.
+    /// @dev Computed as keccak256(abi.encodePacked(threshold, aggchainSigners))
+    bytes32 public aggchainMultisigHash;
+
+    ////////////////////////////////////////////////////////////
+    //                      Metadata                          //
+    ////////////////////////////////////////////////////////////
+
+    /// @notice Address that manages the metadata functionality
+    address public aggchainMetadataManager;
+
+    /// @notice Optional mapping to store metadata for the aggchain
+    mapping(string => string) public aggchainMetadata;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
     /// @custom:oz-renamed-from _gap
-    uint256[46] private __gap;
+    uint256[44] private __gap;
 
     ////////////////////////////////////////////////////////////
     //                        Modifiers                       //
@@ -92,6 +105,14 @@ abstract contract AggchainBase is
     modifier onlyAggchainManager() {
         if (aggchainManager != msg.sender) {
             revert OnlyAggchainManager();
+        }
+        _;
+    }
+
+    /// @dev Only allows a function to be callable if the message sender is the aggchain metadata manager
+    modifier onlyAggchainMetadataManager() {
+        if (aggchainMetadataManager != msg.sender) {
+            revert OnlyAggchainMetadataManager();
         }
         _;
     }
@@ -145,6 +166,11 @@ abstract contract AggchainBase is
     function initAggchainManager(
         address newAggchainManager
     ) external onlyRollupManager {
+        // Can only be initialized if current aggchainmanger is zero
+        if (aggchainManager != address(0)) {
+            revert AggchainManagerAlreadyInitialized();
+        }
+
         if (newAggchainManager == address(0)) {
             revert AggchainManagerCannotBeZero();
         }
@@ -159,7 +185,7 @@ abstract contract AggchainBase is
      * @param _admin Admin address
      * @param sequencer Trusted sequencer address
      * @param _gasTokenAddress Indicates the token address in mainnet that will be used as a gas token
-     * Note if a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
+     * @dev If a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
      * @param sequencerURL Trusted sequencer URL
      * @param _networkName L2 network name
      * @param _useDefaultVkeys Flag to use default verification keys from gateway
@@ -263,7 +289,7 @@ abstract contract AggchainBase is
         bytes memory aggchainData
     ) external view returns (bytes32) {
         // Get signers hash from gateway if using default signers, otherwise use local storage
-        bytes32 cachedSignersHash = getAggchainSignersHash();
+        bytes32 cachedMultisigHash = getAggchainMultisigHash();
 
         (
             bytes32 aggchainVKey,
@@ -276,7 +302,7 @@ abstract contract AggchainBase is
                     CONSENSUS_TYPE,
                     aggchainVKey,
                     aggchainParams,
-                    cachedSignersHash
+                    cachedMultisigHash
                 )
             );
     }
@@ -309,7 +335,7 @@ abstract contract AggchainBase is
      * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
      * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
      * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     * @param _newThreshold New threshold value
      */
     function _updateSignersAndThreshold(
         RemoveSignerInfo[] memory _signersToRemove,
@@ -341,19 +367,21 @@ abstract contract AggchainBase is
             _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
         }
 
-        if (aggchainSigners.length > 255) {
+        if (aggchainSigners.length > MAX_AGGCHAIN_SIGNERS) {
             revert AggchainSignersTooHigh();
         }
 
-        // Update threshold if provided
-        if (_newThreshold > aggchainSigners.length) {
+        if (
+            _newThreshold > aggchainSigners.length ||
+            (aggchainSigners.length != 0 && _newThreshold == 0)
+        ) {
             revert InvalidThreshold();
         }
 
         threshold = _newThreshold;
 
         // Update the signers hash once after all operations
-        _updateAggchainSignersHash();
+        _updateAggchainMultisigHash();
     }
 
     /**
@@ -390,9 +418,26 @@ abstract contract AggchainBase is
     }
 
     /**
+     * @notice Sets the aggchain metadata manager
+     * @dev Can only be called by the aggchain manager
+     * @param newAggchainMetadataManager Address of the new aggchain metadata manager
+     */
+    function setAggchainMetadataManager(
+        address newAggchainMetadataManager
+    ) external onlyAggchainManager {
+        address oldAggchainMetadataManager = aggchainMetadataManager;
+        aggchainMetadataManager = newAggchainMetadataManager;
+
+        emit SetAggchainMetadataManager(
+            oldAggchainMetadataManager,
+            newAggchainMetadataManager
+        );
+    }
+
+    /**
      * @notice Enable the use of default verification keys from gateway
      */
-    function enableUseDefaultVkeysFlag() external onlyAggchainManager {
+    function enableUseDefaultVkeysFlag() external virtual onlyAggchainManager {
         if (useDefaultVkeys) {
             revert UseDefaultVkeysAlreadyEnabled();
         }
@@ -406,7 +451,7 @@ abstract contract AggchainBase is
     /**
      * @notice Disable the use of default verification keys from gateway
      */
-    function disableUseDefaultVkeysFlag() external onlyAggchainManager {
+    function disableUseDefaultVkeysFlag() external virtual onlyAggchainManager {
         if (!useDefaultVkeys) {
             revert UseDefaultVkeysAlreadyDisabled();
         }
@@ -453,7 +498,7 @@ abstract contract AggchainBase is
     function addOwnedAggchainVKey(
         bytes4 aggchainVKeySelector,
         bytes32 newAggchainVKey
-    ) external onlyAggchainManager {
+    ) external virtual onlyAggchainManager {
         if (newAggchainVKey == bytes32(0)) {
             revert ZeroValueAggchainVKey();
         }
@@ -475,7 +520,7 @@ abstract contract AggchainBase is
     function updateOwnedAggchainVKey(
         bytes4 aggchainVKeySelector,
         bytes32 updatedAggchainVKey
-    ) external onlyAggchainManager {
+    ) external virtual onlyAggchainManager {
         // Check already added
         if (ownedAggchainVKeys[aggchainVKeySelector] == bytes32(0)) {
             revert OwnedAggchainVKeyNotFound();
@@ -491,6 +536,39 @@ abstract contract AggchainBase is
         );
     }
 
+    /**
+     * @notice Sets or updates metadata for the aggchain.
+     * @dev Can only be called by the aggchain metadata manager. Empty values are allowed to clear metadata.
+     * @param key The metadata key to set.
+     * @param value The metadata value to set.
+     */
+    function setAggchainMetadata(
+        string calldata key,
+        string calldata value
+    ) external onlyAggchainMetadataManager {
+        _setAggchainMetadataInternal(key, value);
+    }
+
+    /**
+     * @notice Sets or updates multiple metadata entries in a single transaction.
+     * @dev Can only be called by the aggchain metadata manager.
+     * @param keys Array of metadata keys to set.
+     * @param values Array of metadata values to set (must be same length as keys).
+     */
+    function batchSetAggchainMetadata(
+        string[] calldata keys,
+        string[] calldata values
+    ) external onlyAggchainMetadataManager {
+        uint256 length = keys.length;
+        if (length != values.length) {
+            revert MetadataArrayLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < length; i++) {
+            _setAggchainMetadataInternal(keys[i], values[i]);
+        }
+    }
+
     //////////////////////////
     //    view functions    //
     //////////////////////////
@@ -498,10 +576,11 @@ abstract contract AggchainBase is
     /**
      * @notice returns the current aggchain verification key. If the flag `useDefaultVkeys` is set to true, the gateway verification key is returned, else, the custom chain verification key is returned.
      * @param aggchainVKeySelector The selector for the verification key query. This selector identifies the aggchain type + sp1 verifier version
+     * @return aggchainVKey The verification key for the specified selector
      */
     function getAggchainVKey(
         bytes4 aggchainVKeySelector
-    ) public view returns (bytes32 aggchainVKey) {
+    ) public view virtual returns (bytes32 aggchainVKey) {
         if (useDefaultVkeys == false) {
             aggchainVKey = ownedAggchainVKeys[aggchainVKeySelector];
 
@@ -517,22 +596,11 @@ abstract contract AggchainBase is
     }
 
     /**
-     * @notice Check if an address is a signer
-     * @param _signer Address to check
-     * @return True if the address is a signer
-     */
-    function isSigner(address _signer) public view returns (bool) {
-        if (useDefaultSigners) {
-            return aggLayerGateway.isSigner(_signer);
-        }
-        return bytes(signerToURLs[_signer]).length > 0;
-    }
-
-    /**
      * @notice Computes the selector for the aggchain verification key from the aggchain type and the aggchainVKeyVersion.
      * @dev It joins two bytes2 values into a bytes4 value.
      * @param aggchainVKeyVersion The aggchain verification key version, used to identify the aggchain verification key.
      * @param aggchainType The aggchain type, hardcoded in the aggchain contract.
+     * @return getAggchainVKeySelector computed bytes4 selector combining version and type
      * [            aggchainVKeySelector         ]
      * [  aggchainVKeyVersion   |  AGGCHAIN_TYPE ]
      * [        2 bytes         |    2 bytes     ]
@@ -547,6 +615,7 @@ abstract contract AggchainBase is
     /**
      * @notice Computes the aggchainType from the aggchainVKeySelector.
      * @param aggchainVKeySelector The aggchain verification key selector.
+     * @return AGGCHAIN_TYPE extracted aggchain type (last 2 bytes)
      * [            aggchainVKeySelector         ]
      * [  aggchainVKeyVersion   |  AGGCHAIN_TYPE ]
      * [        2 bytes         |    2 bytes     ]
@@ -560,6 +629,7 @@ abstract contract AggchainBase is
     /**
      * @notice Computes the aggchainVKeyVersion from the aggchainVKeySelector.
      * @param aggchainVKeySelector The aggchain verification key selector.
+     * @return aggchainVKeyVersion extracted aggchain verification key version (first 2 bytes)
      * [            aggchainVKeySelector         ]
      * [  aggchainVKeyVersion   |  AGGCHAIN_TYPE ]
      * [        2 bytes         |    2 bytes     ]
@@ -568,6 +638,29 @@ abstract contract AggchainBase is
         bytes4 aggchainVKeySelector
     ) public pure returns (bytes2) {
         return bytes2(aggchainVKeySelector);
+    }
+
+    /**
+     * @notice Get the threshold for the multisig
+     * @return threshold for the multisig
+     */
+    function getThreshold() external view returns (uint256) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.getThreshold();
+        }
+        return threshold;
+    }
+
+    /**
+     * @notice Check if an address is a signer
+     * @param _signer Address to check
+     * @return True if the address is a signer
+     */
+    function isSigner(address _signer) public view returns (bool) {
+        if (useDefaultSigners) {
+            return aggLayerGateway.isSigner(_signer);
+        }
+        return bytes(signerToURLs[_signer]).length > 0;
     }
 
     /**
@@ -596,18 +689,18 @@ abstract contract AggchainBase is
      * @notice Get the aggchain signers hash
      * @return The aggchain signers hash
      */
-    function getAggchainSignersHash() public view returns (bytes32) {
+    function getAggchainMultisigHash() public view returns (bytes32) {
         if (useDefaultSigners) {
-            return aggLayerGateway.getAggchainSignersHash();
+            return aggLayerGateway.getAggchainMultisigHash();
         }
 
-        // Check if the aggchain signers hash been set
-        // Empty signers is supported, but must be done explicitly
-        if (aggchainSignersHash == bytes32(0)) {
+        // Sanity check to realize earlier that the aggchainMultisigHash has not been set given
+        // that the proof cannot be computed since there is no hash reconstruction to be 0
+        if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();
         }
 
-        return aggchainSignersHash;
+        return aggchainMultisigHash;
     }
     /**
      * @notice Get all aggchainSigners with their URLs
@@ -642,6 +735,7 @@ abstract contract AggchainBase is
 
     /**
      * @notice Internal function to add a signer with validation
+     * @dev Validates that signer is not zero address, URL is not empty, and signer doesn't already exist
      * @param _signer Address of the signer to add
      * @param url URL associated with the signer
      */
@@ -664,6 +758,7 @@ abstract contract AggchainBase is
 
     /**
      * @notice Internal function to remove a signer with validation
+     * @dev Validates index bounds and that the signer at the index matches the provided address
      * @param _signer Address of the signer to remove
      * @param _signerIndex Index of the signer in the aggchainSigners array
      */
@@ -696,15 +791,60 @@ abstract contract AggchainBase is
      * @notice Update the hash of the aggchainSigners array
      * @dev Combines threshold and signers array into a single hash for efficient verification
      */
-    function _updateAggchainSignersHash() internal {
-        aggchainSignersHash = keccak256(
+    function _updateAggchainMultisigHash() internal {
+        aggchainMultisigHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
 
         emit SignersAndThresholdUpdated(
             aggchainSigners,
             threshold,
-            aggchainSignersHash
+            aggchainMultisigHash
         );
+    }
+
+    /**
+     * @notice Internal function to set or update metadata for the aggchain
+     * @dev Empty values are allowed to clear metadata
+     * @param key The metadata key to set
+     * @param value The metadata value to set
+     */
+    function _setAggchainMetadataInternal(
+        string memory key,
+        string memory value
+    ) internal {
+        aggchainMetadata[key] = value;
+        emit AggchainMetadataSet(key, value);
+    }
+
+    /**
+     * @dev Internal function to validate VKeys consistency
+     * @param _useDefaultVkeys Whether to use default verification keys
+     * @param _initAggchainVKeySelector The aggchain verification key selector
+     * @param _initOwnedAggchainVKey The owned aggchain verification key
+     * @param aggchainType The expected aggchain type
+     */
+    function _validateVKeysConsistency(
+        bool _useDefaultVkeys,
+        bytes4 _initAggchainVKeySelector,
+        bytes32 _initOwnedAggchainVKey,
+        bytes2 aggchainType
+    ) internal pure {
+        // Check the use default vkeys is consistent
+        if (_useDefaultVkeys) {
+            if (
+                _initAggchainVKeySelector != bytes4(0) ||
+                _initOwnedAggchainVKey != bytes32(0)
+            ) {
+                revert InvalidInitAggchainVKey();
+            }
+        } else {
+            if (
+                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
+                aggchainType
+            ) {
+                revert InvalidAggchainType();
+            }
+        }
     }
 }

@@ -4,6 +4,10 @@ pragma solidity 0.8.28;
 
 import "./IAggchainSigners.sol";
 
+/**
+ * @title IAggchainBaseEvents
+ * @notice Events emitted by AggchainBase implementations
+ */
 interface IAggchainBaseEvents {
     /**
      * @notice Emitted when the admin adds an aggchain verification key.
@@ -42,23 +46,6 @@ interface IAggchainBaseEvents {
      */
     event DisableUseDefaultSignersFlag();
 
-    /**
-     * @notice Emitted when the vKeyManager starts the two-step transfer role setting a new pending vKeyManager.
-     * @param currentVKeyManager The current vKeyManager.
-     * @param newPendingVKeyManager The new pending vKeyManager.
-     */
-    event TransferVKeyManagerRole(
-        address currentVKeyManager,
-        address newPendingVKeyManager
-    );
-
-    /**
-     * @notice Emitted when the pending vKeyManager accepts the vKeyManager role.
-     * @param oldVKeyManager The previous vKeyManager.
-     * @param newVKeyManager The new vKeyManager.
-     */
-    event AcceptVKeyManagerRole(address oldVKeyManager, address newVKeyManager);
-
     /// @dev Emitted when the aggchainManager starts the two-step transfer role setting a new pending newAggchainManager
     /// @param currentAggchainManager The current pending aggchainManager
     /// @param newPendingAggchainManager The new pending aggchainManager
@@ -76,18 +63,27 @@ interface IAggchainBaseEvents {
     );
 
     /**
-     * @notice Emitted when signers and threshold are updated in a batch operation.
-     * @param aggchainSigners The updated array of signer addresses.
-     * @param newThreshold The new threshold value.
-     * @param newAggchainSignersHash The new hash of the aggchainSigners array.
+     * @notice Emitted when metadata is set or updated.
+     * @param key The metadata key.
+     * @param value The metadata value.
      */
-    event SignersAndThresholdUpdated(
-        address[] aggchainSigners,
-        uint256 newThreshold,
-        bytes32 newAggchainSignersHash
+    event AggchainMetadataSet(string indexed key, string value);
+
+    /**
+     * @notice Emitted when the aggchain metadata manager is set.
+     * @param oldAggchainMetadataManager The old aggchain metadata manager.
+     * @param newAggchainMetadataManager The new aggchain metadata manager.
+     */
+    event SetAggchainMetadataManager(
+        address oldAggchainMetadataManager,
+        address newAggchainMetadataManager
     );
 }
 
+/**
+ * @title IAggchainBaseErrors
+ * @notice Error definitions for AggchainBase implementations
+ */
 interface IAggchainBaseErrors {
     /// @notice Thrown when trying to add zero value verification key.
     error ZeroValueAggchainVKey();
@@ -105,16 +101,16 @@ interface IAggchainBaseErrors {
     error UseDefaultSignersAlreadyEnabled();
     /// @notice Thrown when trying to disable the default signers when it is already disabled.
     error UseDefaultSignersAlreadyDisabled();
-    /// @notice Thrown when trying to call a function that only the VKeyManager can call.
-    error OnlyVKeyManager();
-    /// @notice Thrown when trying to call a function that only the pending VKeyManager can call.
-    error OnlyPendingVKeyManager();
     /// @notice Thrown when trying to retrieve an aggchain verification key from the mapping that doesn't exists.
     error AggchainVKeyNotFound();
-    /// @notice Thrown when trying to deploy the aggchain with a zero address as the AggLayerGateway
-    error InvalidAggLayerGatewayAddress();
     /// @notice Thrown when trying to set the aggchain manager to zero address.
     error AggchainManagerCannotBeZero();
+    /// @notice Thrown when the aggchain manager is already initialized.
+    error AggchainManagerAlreadyInitialized();
+    /// @notice Thrown when an invalid initial aggchain vkey is provided.
+    error InvalidInitAggchainVKey();
+    /// @notice Thrown when trying to use default signers but also providing signers to add
+    error ConflictingDefaultSignersConfiguration();
     /// @notice Thrown when the caller is not the aggchain manager
     error OnlyAggchainManager();
     /// @notice Thrown when the caller is not the pending aggchain manager
@@ -123,7 +119,7 @@ interface IAggchainBaseErrors {
     error InvalidZeroAddress();
     /// @notice Thrown when the aggchainData has an invalid format
     error InvalidAggchainDataLength();
-    /// @notice Thrown when the aggchainvKeySelectir contains an invalid aggchain type.
+    /// @notice Thrown when the aggchainvKeySelector contains an invalid aggchain type.
     error InvalidAggchainType();
     /// @notice Thrown when threshold is zero, greater than the number of aggchainSigners.
     error InvalidThreshold();
@@ -131,10 +127,6 @@ interface IAggchainBaseErrors {
     error SignerAlreadyExists();
     /// @notice Thrown when trying to remove a signer that doesn't exist.
     error SignerDoesNotExist();
-    /// @notice Thrown when the aggchainSigners array is empty.
-    error EmptyAggchainSignersArray();
-    /// @notice Thrown when threshold would be greater than aggchainSigners count after removal.
-    error ThresholdTooHighAfterRemoval();
     /// @notice Thrown when trying to add a zero address as a signer.
     error SignerCannotBeZero();
     /// @notice Thrown when the aggchainSingers is greater than 255.
@@ -145,42 +137,56 @@ interface IAggchainBaseErrors {
     error IndicesNotInDescendingOrder();
     /// @notice Thrown when trying to compute the aggchain hash without initializing the signers hash.
     error AggchainSignersHashNotInitialized();
+    /// @notice Thrown when the keys and values arrays have different lengths in batch metadata operations.
+    error MetadataArrayLengthMismatch();
+    /// @notice Thrown when the caller is not the aggchain metadata manager
+    error OnlyAggchainMetadataManager();
 }
 
 /**
  * @title IAggchainBase
- * @notice Shared interface for native aggchain implementations.
+ * @notice Core interface for aggchain implementations
+ * @dev All aggchain contracts must implement these functions for integration with the rollup manager.
+ *      Different implementations (FEP, ECDSA) may handle these functions differently based on their consensus mechanism.
  */
 interface IAggchainBase is
     IAggchainBaseErrors,
     IAggchainBaseEvents,
     IAggchainSigners
 {
-    ////////////////////////////////////////////////////////////
-    //                       Structs                          //
-    ////////////////////////////////////////////////////////////
     /**
-     * @notice Gets aggchain hash.
-     * @dev Each chain should properly manage its own aggchain hash.
-     * @param aggchainData Custom chain data to build the consensus hash.
+     * @notice Gets aggchain hash for consensus verification
+     * @dev Each implementation computes this hash differently based on its consensus mechanism.
+     *      The hash is used by the rollup manager to verify state transitions.
+     * @param aggchainData Custom chain data to build the consensus hash
+     * @return The computed aggchain hash for verification
      */
     function getAggchainHash(
         bytes calldata aggchainData
     ) external view returns (bytes32);
 
     /**
-     * @notice Callback from the PolygonRollupManager to update the chain's state.
-     * @dev Each chain should properly manage its own state.
-     * @param aggchainData Custom chain data to update chain's state
+     * @notice Callback from the PolygonRollupManager after successful pessimistic proof verification
+     * @dev Each implementation handles state updates differently
+     * @param aggchainData Custom chain data containing state update information
      */
     function onVerifyPessimistic(bytes calldata aggchainData) external;
 
     /**
-     * @notice Sets the aggchain manager.
-     * @param newAggchainManager The address of the new aggchain manager.
+     * @notice Sets the initial aggchain manager during contract deployment
+     * @dev Can only be called once by the rollup manager during initialization.
+     *      The aggchain manager has privileged access to modify consensus parameters.
+     * @param newAggchainManager The address of the new aggchain manager
      */
     function initAggchainManager(address newAggchainManager) external;
 
     /// @notice Returns the unique aggchain type identifier.
     function AGGCHAIN_TYPE() external view returns (bytes2);
+
+    /**
+     * @notice Returns the current aggchain manager address
+     * @dev The aggchain manager has administrative privileges over consensus parameters
+     * @return The address of the current aggchain manager
+     */
+    function aggchainManager() external view returns (address);
 }

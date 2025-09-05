@@ -3,7 +3,10 @@ pragma solidity 0.8.28;
 
 /**
  * @title IAggchainSigners
- * @notice Interface for signer-related functionality shared by AggchainBase and AggLayerGateway
+ * @notice Interface for multisig signer management functionality
+ * @dev This interface is implemented by both AggchainBase contracts and AggLayerGateway,
+ *      providing a unified way to manage signers for consensus verification.
+ *      Implementations may use local storage or delegate to a gateway contract.
  */
 interface IAggchainSigners {
     ////////////////////////////////////////////////////////////
@@ -30,6 +33,18 @@ interface IAggchainSigners {
         uint256 index;
     }
 
+    /**
+     * @notice Emitted when signers and threshold are updated in a batch operation.
+     * @param aggchainSigners The updated array of signer addresses.
+     * @param newThreshold The new threshold value.
+     * @param newAggchainMultisigHash The new hash of the aggchainMultisig configuration.
+     */
+    event SignersAndThresholdUpdated(
+        address[] aggchainSigners,
+        uint256 newThreshold,
+        bytes32 newAggchainMultisigHash
+    );
+
     ////////////////////////////////////////////////////////////
     //                    View Functions                      //
     ////////////////////////////////////////////////////////////
@@ -42,27 +57,38 @@ interface IAggchainSigners {
     function isSigner(address _signer) external view returns (bool);
 
     /**
-     * @notice Get the number of aggchainSigners
-     * @return Number of aggchainSigners in the multisig
+     * @notice Get the minimum number of signatures required for consensus
+     * @dev Returns the threshold value for multisig validation
+     * @return threshold Minimum number of signatures required
+     */
+    function getThreshold() external view returns (uint256);
+
+    /**
+     * @notice Get the total number of registered signers
+     * @dev Returns the count of active signers in the multisig
+     * @return count Total number of aggchainSigners currently registered
      */
     function getAggchainSignersCount() external view returns (uint256);
 
     /**
-     * @notice Get all aggchainSigners
-     * @return Array of signer addresses
+     * @notice Get all registered signer addresses
+     * @dev Returns the complete list of active signers
+     * @return signers Array containing all signer addresses
      */
     function getAggchainSigners() external view returns (address[] memory);
 
     /**
-     * @notice Returns the aggchain signers hash for verification
-     * @dev Used by aggchain contracts to include in their hash computation
-     * @return The current aggchainSignersHash
+     * @notice Returns the hash of current multisig configuration
+     * @dev Computed as keccak256(abi.encodePacked(threshold, aggchainSigners)).
+     *      Used by aggchain contracts for efficient consensus verification.
+     * @return multisigHash The current aggchainMultisigHash for validation
      */
-    function getAggchainSignersHash() external view returns (bytes32);
+    function getAggchainMultisigHash() external view returns (bytes32);
 
     /**
-     * @notice Get all aggchainSigners with their URLs
-     * @return Array of SignerInfo structs containing signer addresses and URLs
+     * @notice Get detailed information for all registered signers
+     * @dev Returns both addresses and associated URLs/endpoints for each signer
+     * @return signerInfos Array of SignerInfo structs containing complete signer details
      */
     function getAggchainSignerInfos()
         external

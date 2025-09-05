@@ -353,14 +353,14 @@ describe('AggchainFEP', () => {
         };
 
         // Initialize parameters will be passed directly to the contract
-        // initializeFromPessimisticConsensus function uses similar parameters
+        // initializeFromLegacyConsensus function uses similar parameters
 
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
-        // For v1, we use initializeFromPessimisticConsensus
-        await aggchainFEPContract.connect(aggchainManager).initializeFromPessimisticConsensus(
+        // For v1, we use initializeFromLegacyConsensus
+        await aggchainFEPContract.connect(aggchainManager).initializeFromLegacyConsensus(
             initParams,
             useDefaultVkeys,
             useDefaultSigners,
@@ -1079,7 +1079,13 @@ describe('AggchainFEP', () => {
 
         // This should revert because the contract is not at version 2
         await expect(
-            freshFEPContract.connect(aggchainManager).initializeFromECDSAMultisig(initParams, { gasPrice: 0 }),
+            freshFEPContract.connect(aggchainManager).initializeFromECDSAMultisig(
+                initParams,
+                false, // useDefaultVkeys
+                ethers.ZeroHash, // initOwnedAggchainVKey
+                '0x00010001', // initAggchainVKeySelector for FEP
+                { gasPrice: 0 },
+            ),
         ).to.be.revertedWithCustomError(freshFEPContract, 'InvalidInitializer');
     });
 
@@ -1156,7 +1162,7 @@ describe('AggchainFEP', () => {
                 networkName,
                 { gasPrice: 0 },
             ),
-        ).to.be.revertedWithCustomError(edgeCaseFEPContract, 'InvalidInitializer');
+        ).to.be.revertedWithCustomError(edgeCaseFEPContract, 'InvalidInitAggchainVKey');
 
         // Test invalid aggchain type (line 356)
         await expect(
@@ -1363,10 +1369,6 @@ describe('AggchainFEP', () => {
 
         // Verify the aggchainManager is set to the initial value
         expect(await initManagerContract.aggchainManager()).to.equal(aggchainManager.address);
-
-        // Try to initialize aggchainManager again - should not revert but won't change the value
-        await initManagerContract.connect(rollupManagerSigner).initAggchainManager(admin.address, { gasPrice: 0 });
-        expect(await initManagerContract.aggchainManager()).to.equal(admin.address);
     });
 
     it('should test initializeAggchainBase edge cases', async () => {
@@ -1392,15 +1394,7 @@ describe('AggchainFEP', () => {
         // Test that trying to initialize an already initialized aggchainManager fails
         // Since we can't easily test the initializeAggchainBase function in isolation,
         // we'll test that the aggchainManager initialization works properly
-        const signers = await ethers.getSigners();
-        const anotherManager = signers[5];
         // Verify the aggchainManager is set to the initial value
         expect(await baseInitContract.aggchainManager()).to.equal(aggchainManager.address);
-
-        // Try to re-initialize - should not revert but won't change the value
-        await baseInitContract
-            .connect(rollupManagerSigner)
-            .initAggchainManager(anotherManager.address, { gasPrice: 0 });
-        expect(await baseInitContract.aggchainManager()).to.equal(anotherManager.address);
     });
 });

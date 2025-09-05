@@ -7,7 +7,7 @@ import "../lib/AggchainBase.sol";
 /// @custom:implementation
 /// @title AggchainFEP
 /// @notice Heavily based on https://github.com/succinctlabs/op-succinct/blob/main/contracts/src/validity/OPSuccinctL2OutputOracle.sol
-/// @dev this contract aims to be the implementation of a FEP chain that is attached to the aggLayer
+/// @dev This contract aims to be the implementation of a FEP chain that is attached to the aggLayer
 ///       contract is responsible for managing the states and the updates of a L2 network
 contract AggchainFEP is AggchainBase {
     ////////////////////////////////////////////////////////////
@@ -314,7 +314,10 @@ contract AggchainFEP is AggchainBase {
     /// @notice Initialize function for fresh deployment
     /// @custom:security Initializes all contracts including PolygonConsensusBase
     /// @param _initParams The initialization parameters for FEP
+    /// @param _signersToAdd Array of signers to add to the multisig
+    /// @param _newThreshold New threshold for multisig operations
     /// @param _useDefaultVkeys Whether to use default verification keys from gateway
+    /// @param _useDefaultSigners Whether to use default signers from gateway
     /// @param _initOwnedAggchainVKey The owned aggchain verification key
     /// @param _initAggchainVKeySelector The aggchain verification key selector
     /// @param _admin The admin address
@@ -341,21 +344,12 @@ contract AggchainFEP is AggchainBase {
         }
 
         // Check the use default vkeys is consistent
-        if (_useDefaultVkeys) {
-            if (
-                _initAggchainVKeySelector != bytes4(0) ||
-                _initOwnedAggchainVKey != bytes32(0)
-            ) {
-                revert InvalidInitializer();
-            }
-        } else {
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
-            }
-        }
+        _validateVKeysConsistency(
+            _useDefaultVkeys,
+            _initAggchainVKeySelector,
+            _initOwnedAggchainVKey,
+            AGGCHAIN_TYPE
+        );
 
         // Set aggchainBase variables
         _initializeAggchainBaseAndConsensusBase(
@@ -373,25 +367,33 @@ contract AggchainFEP is AggchainBase {
         // init FEP params
         _initializeAggchain(_initParams);
 
-        // update signers and threshold
-        _updateSignersAndThreshold(
-            new RemoveSignerInfo[](0), // No signers to remove
-            _signersToAdd,
-            _newThreshold
-        );
+        // Check the used default signers is consistent
+        if (_useDefaultSigners) {
+            if (_signersToAdd.length != 0 || threshold != 0) {
+                revert ConflictingDefaultSignersConfiguration();
+            }
+        } else {
+            // update signers and threshold
+            _updateSignersAndThreshold(
+                new RemoveSignerInfo[](0), // No signers to remove
+                _signersToAdd,
+                _newThreshold
+            );
+        }
     }
 
     /**
-     * @notice Initialize function for upgrade from PolygonPessimisticConsensus
+     * @notice Initialize function for upgrade from PolygonPessimisticConsensus or PolygonRollupBaseEtrog
      * @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
      * @param _initParams The initialization parameters for FEP
      * @param _useDefaultVkeys Whether to use default verification keys from gateway
+     * @param _useDefaultSigners Whether to use default signers from gateway
      * @param _initOwnedAggchainVKey The owned aggchain verification key
      * @param _initAggchainVKeySelector The aggchain verification key selector
      * @param _signersToAdd Array of signers to add to the multisig
      * @param _newThreshold New threshold for multisig operations
      */
-    function initializeFromPessimisticConsensus(
+    function initializeFromLegacyConsensus(
         InitParams memory _initParams,
         bool _useDefaultVkeys,
         bool _useDefaultSigners,
@@ -405,21 +407,12 @@ contract AggchainFEP is AggchainBase {
         }
 
         // Check the use default vkeys is consistent
-        if (_useDefaultVkeys) {
-            if (
-                _initAggchainVKeySelector != bytes4(0) ||
-                _initOwnedAggchainVKey != bytes32(0)
-            ) {
-                revert InvalidInitializer();
-            }
-        } else {
-            if (
-                getAggchainTypeFromSelector(_initAggchainVKeySelector) !=
-                AGGCHAIN_TYPE
-            ) {
-                revert InvalidAggchainType();
-            }
-        }
+        _validateVKeysConsistency(
+            _useDefaultVkeys,
+            _initAggchainVKeySelector,
+            _initOwnedAggchainVKey,
+            AGGCHAIN_TYPE
+        );
 
         // init FEP params
         _initializeAggchain(_initParams);
@@ -432,26 +425,56 @@ contract AggchainFEP is AggchainBase {
             _initAggchainVKeySelector
         );
 
-        // update signers and threshold
-        _updateSignersAndThreshold(
-            new RemoveSignerInfo[](0), // No signers to remove
-            _signersToAdd,
-            _newThreshold
-        );
+        // Check the used default signers is consistent
+        if (_useDefaultSigners) {
+            if (_signersToAdd.length != 0 || threshold != 0) {
+                revert ConflictingDefaultSignersConfiguration();
+            }
+        } else {
+            // update signers and threshold
+            _updateSignersAndThreshold(
+                new RemoveSignerInfo[](0), // No signers to remove
+                _signersToAdd,
+                _newThreshold
+            );
+        }
     }
 
     /**
      * @notice Initialize function for upgrade from AggchainECDSAMultisig to AggchainFEP
-     * @dev Only initializes FEP specific parameters, assumes base and consensus are already initialized
+     * @custom:security Only initializes FEP specific parameters, assumes base and consensus are already initialized
+     * @dev Used when transitioning from ECDSA multisig to FEP verification
      * @param _initParams The initialization parameters for FEP
+     * @param _useDefaultVkeys Whether to use default verification keys from gateway
+     * @param _initOwnedAggchainVKey The owned aggchain verification key
+     * @param _initAggchainVKeySelector The aggchain verification key selector
      */
     function initializeFromECDSAMultisig(
-        InitParams memory _initParams
+        InitParams memory _initParams,
+        bool _useDefaultVkeys,
+        bytes32 _initOwnedAggchainVKey,
+        bytes4 _initAggchainVKeySelector
     ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
         // Check that the l2Outputs array is empty
         if (_initializerVersion != 2 || l2Outputs.length != 0) {
             revert InvalidInitializer();
         }
+
+        // Check the use default vkeys is consistent
+        _validateVKeysConsistency(
+            _useDefaultVkeys,
+            _initAggchainVKeySelector,
+            _initOwnedAggchainVKey,
+            AGGCHAIN_TYPE
+        );
+
+        // Set aggchainBase variables
+        _initializeAggchainBase(
+            _useDefaultVkeys,
+            useDefaultSigners, // keep existing value
+            _initOwnedAggchainVKey,
+            _initAggchainVKeySelector
+        );
 
         // init FEP params
         _initializeAggchain(_initParams);
@@ -459,7 +482,8 @@ contract AggchainFEP is AggchainBase {
 
     /**
      * @notice Upgrade function from a previous FEP version
-     * @dev Migrates existing FEP configuration to new format with genesis config and multisig
+     * @custom:security Migrates existing FEP configuration to new format with genesis config and multisig
+     * @dev Preserves existing configuration by moving it to genesis config slot
      */
     function upgradeFromPreviousFEP()
         external
@@ -467,13 +491,12 @@ contract AggchainFEP is AggchainBase {
         getInitializedVersion
         reinitializer(3)
     {
-        // Check that the aggchainSignersHash is not set
-        if (_initializerVersion != 2 || aggchainSignersHash != bytes32(0)) {
+        // Check that the aggchainMultisigHash is not set
+        if (_initializerVersion != 2 || aggchainMultisigHash != bytes32(0)) {
             revert InvalidInitializer();
         }
 
-        // Add config to genesis
-        // TODO: review - ensure this is the correct approach for upgrade path
+        // Add existing configuration to genesis for backward compatibility
         opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
             aggregationVkey: aggregationVkey,
             rangeVkeyCommitment: rangeVkeyCommitment,
@@ -500,13 +523,13 @@ contract AggchainFEP is AggchainBase {
         }
         threshold = 1;
 
-        // update aggchainSignersHash
-        _updateAggchainSignersHash();
+        // update aggchainMultisigHash
+        _updateAggchainMultisigHash();
     }
 
     /**
      * @notice Initializer AggchainFEP storage
-     * @dev Internal function to set up FEP-specific parameters
+     * @dev Internal function to set up FEP-specific parameters. Validates all parameters before setting.
      * @param _initParams The initialization parameters for the contract
      */
     function _initializeAggchain(InitParams memory _initParams) internal {

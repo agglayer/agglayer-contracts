@@ -39,11 +39,14 @@ contract AggLayerGateway is
         keccak256("AL_FREEZE_PP_ROUTE_ROLE");
 
     // Can manage multisig signers and threshold
-    // @dev value 0x93285f0a0c5811f0df0c8e5e8c70c2e8c2f8c9a3e3f3e3f3e3f3e3f3e3f3e3f3
+    // @dev value 0x0c3038a1ecdf82843b70709289ff1703351ad391e3e27df7f6fa7d913601e15e
     bytes32 internal constant AL_MULTISIG_ROLE = keccak256("AL_MULTISIG_ROLE");
 
     // Current AggLayerGateway version
     string public constant AGGLAYER_GATEWAY_VERSION = "v1.1.0";
+
+    // Maximum number of aggchain signers supported
+    uint256 public constant MAX_AGGCHAIN_SIGNERS = 255;
 
     ////////////////////////////////////////////////////////////
     //                  Transient Storage                     //
@@ -78,7 +81,7 @@ contract AggLayerGateway is
     uint256 public threshold;
 
     /// @notice Hash of the current aggchainSigners array
-    bytes32 public aggchainSignersHash;
+    bytes32 public aggchainMultisigHash;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -172,7 +175,7 @@ contract AggLayerGateway is
     }
 
     /**
-     * @notice  Upgrade initializer to add multisig functionality to existing deployment.
+     * @notice Upgrade initializer to add multisig functionality to existing deployment.
      * @param multisigRole The address of the multisig role. Can manage multisig signers and threshold.
      * @param signersToAdd Array of signers to add with their URLs
      * @param newThreshold New threshold value
@@ -424,7 +427,7 @@ contract AggLayerGateway is
      * @dev Removes signers first (in descending index order), then adds new signers, then updates threshold
      * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
      * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     * @param _newThreshold New threshold value
      */
     function updateSignersAndThreshold(
         RemoveSignerInfo[] memory _signersToRemove,
@@ -443,7 +446,7 @@ contract AggLayerGateway is
      * @dev Internal function that handles the actual logic
      * @param _signersToRemove Array of signers to remove with their indices (MUST be in descending index order)
      * @param _signersToAdd Array of new signers to add with their URLs
-     * @param _newThreshold New threshold value (set to 0 to keep current threshold)
+     * @param _newThreshold New threshold value
      */
     function _updateSignersAndThreshold(
         RemoveSignerInfo[] memory _signersToRemove,
@@ -475,19 +478,21 @@ contract AggLayerGateway is
             _addSignerInternal(_signersToAdd[i].addr, _signersToAdd[i].url);
         }
 
-        if (aggchainSigners.length > 255) {
+        if (aggchainSigners.length > MAX_AGGCHAIN_SIGNERS) {
             revert AggchainSignersTooHigh();
         }
 
-        // Update threshold if provided
-        if (_newThreshold > aggchainSigners.length) {
+        if (
+            _newThreshold > aggchainSigners.length ||
+            (aggchainSigners.length != 0 && _newThreshold == 0)
+        ) {
             revert InvalidThreshold();
         }
 
         threshold = _newThreshold;
 
         // Update the signers hash once after all operations
-        _updateAggchainSignersHash();
+        _updateAggchainMultisigHash();
     }
 
     /**
@@ -546,16 +551,24 @@ contract AggLayerGateway is
      * @notice Update the hash of the aggchainSigners array
      * @dev Combines threshold and signers array into a single hash for efficient verification
      */
-    function _updateAggchainSignersHash() internal {
-        aggchainSignersHash = keccak256(
+    function _updateAggchainMultisigHash() internal {
+        aggchainMultisigHash = keccak256(
             abi.encodePacked(threshold, aggchainSigners)
         );
 
         emit SignersAndThresholdUpdated(
             aggchainSigners,
             threshold,
-            aggchainSignersHash
+            aggchainMultisigHash
         );
+    }
+
+    /**
+     * @notice Get the threshold for the multisig
+     * @return threshold for the multisig
+     */
+    function getThreshold() external view returns (uint256) {
+        return threshold;
     }
 
     /**
@@ -586,15 +599,15 @@ contract AggLayerGateway is
     /**
      * @notice Returns the aggchain signers hash for verification
      * @dev Used by aggchain contracts to include in their hash computation
-     * @return The current aggchainSignersHash
+     * @return The current aggchainMultisigHash
      */
-    function getAggchainSignersHash() external view returns (bytes32) {
-        // Check if the aggchain signers hash been set
-        // Empty signers is supported, but must be done explicitly
-        if (aggchainSignersHash == bytes32(0)) {
+    function getAggchainMultisigHash() external view returns (bytes32) {
+        // Sanity check to realize earlier that the aggchainMultisigHash has not been set given
+        // that the proof cannot be computed since there is no hash reconstruction to be 0
+        if (aggchainMultisigHash == bytes32(0)) {
             revert AggchainSignersHashNotInitialized();
         }
-        return aggchainSignersHash;
+        return aggchainMultisigHash;
     }
 
     /**

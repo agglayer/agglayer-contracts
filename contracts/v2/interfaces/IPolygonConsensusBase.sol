@@ -3,6 +3,11 @@
 pragma solidity ^0.8.20;
 
 interface IPolygonConsensusBase {
+    /**
+     * @dev Thrown when trying to set the admin to the zero address
+     */
+    error AdminCannotBeZeroAddress();
+
     function initialize(
         address _admin,
         address sequencer,
