@@ -33,7 +33,7 @@ contract BridgeLib {
      * returns 'NOT_VALID_ENCODING' as fallback value.
      * @param data returned data
      */
-    function returnDataToString(
+    function _returnDataToString(
         bytes memory data
     ) internal pure returns (string memory) {
         if (data.length >= 64) {
@@ -68,7 +68,7 @@ contract BridgeLib {
         (bool success, bytes memory data) = address(token).staticcall(
             abi.encodeCall(IERC20Metadata.symbol, ())
         );
-        return success ? returnDataToString(data) : "NO_SYMBOL";
+        return success ? _returnDataToString(data) : "NO_SYMBOL";
     }
 
     /**
@@ -79,7 +79,7 @@ contract BridgeLib {
         (bool success, bytes memory data) = address(token).staticcall(
             abi.encodeCall(IERC20Metadata.name, ())
         );
-        return success ? returnDataToString(data) : "NO_NAME";
+        return success ? _returnDataToString(data) : "NO_NAME";
     }
 
     /**
@@ -150,7 +150,15 @@ contract BridgeLib {
                 revert NotValidSpender();
             }
 
-            // Call permit without checking result to prevent DoS attacks
+            /// @dev To be more aligned with the latest OpenZeppelin ERC20 implementation where ERC20 tokens allow approvals of uint.max and it is widely adopted by DeFi,
+            ///  this check has been removed. Important to warn that removing it is not the most secure approach but has been applied because it is widely used and reduce friction and gas cost
+            // if (value != amount) {
+            //     revert NotValidAmount();
+            // }
+
+            // we call without checking the result, in case it fails and the sender doesn't have enough balance
+            // the following transferFrom should fail. This prevents DoS attacks from using a signature
+            // before the smart contract call
             /* solhint-disable avoid-low-level-calls */
             (bool callSuccess, ) = address(token).call(
                 abi.encodeWithSelector(
@@ -196,7 +204,9 @@ contract BridgeLib {
                 revert NotValidSpender();
             }
 
-            // Call permit without checking result to prevent DoS attacks
+            // we call without checking the result, in case it fails and sender doesn't have enough balance
+            // the following transferFrom should fail. This prevents DoS attacks from using a signature
+            // before the smart contract call
             /* solhint-disable avoid-low-level-calls */
             (bool callSuccess, ) = address(token).call(
                 abi.encodeWithSelector(

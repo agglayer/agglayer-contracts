@@ -571,7 +571,7 @@ contract PolygonZkEVMBridgeV2 is
         address destinationAddress,
         uint256 amount,
         bytes calldata metadata
-    ) external ifNotEmergencyState nonReentrant {
+    ) public virtual ifNotEmergencyState nonReentrant {
         // Destination network must be this networkID
         if (destinationNetwork != networkID) {
             revert DestinationNetworkInvalid();
@@ -934,23 +934,16 @@ contract PolygonZkEVMBridgeV2 is
             revert GlobalExitRootInvalid();
         }
 
-        uint32 leafIndex;
-        uint32 sourceBridgeNetwork;
+        // Validate and decode global index
+        (
+            uint32 leafIndex,
+            uint32 indexRollup,
+            uint32 sourceBridgeNetwork
+        ) = _validateAndDecodeGlobalIndex(globalIndex);
 
-        // Get origin network from global index
+        // Verify merkle proof based on network type
         if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
-            // The network is mainnet, therefore sourceBridgeNetwork is 0
-
-            // Last 32 bits are leafIndex
-            leafIndex = uint32(globalIndex);
-
-            // Reconstruct global index to assert that all unused bits are 0
-            require(
-                _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) == globalIndex,
-                InvalidGlobalIndex()
-            );
-
-            // Verify merkle proof
+            // Verify merkle proof for mainnet
             if (
                 !verifyMerkleProof(
                     leafValue,
@@ -962,20 +955,6 @@ contract PolygonZkEVMBridgeV2 is
                 revert InvalidSmtProof();
             }
         } else {
-            // The network is a rollup, therefore sourceBridgeNetwork must be decoded
-            uint32 indexRollup = uint32(globalIndex >> 32);
-            sourceBridgeNetwork = indexRollup + 1;
-
-            // Last 32 bits are leafIndex
-            leafIndex = uint32(globalIndex);
-
-            // Reconstruct global index to assert that all unused bits are 0
-            require(
-                (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
-                    globalIndex,
-                InvalidGlobalIndex()
-            );
-
             // Verify merkle proof against rollup exit root
             if (
                 !verifyMerkleProof(
@@ -1151,6 +1130,55 @@ contract PolygonZkEVMBridgeV2 is
     ) internal pure returns (uint256 wordPos, uint256 bitPos) {
         wordPos = uint248(index >> 8);
         bitPos = uint8(index);
+    }
+
+    /**
+     * @notice Internal function to validate and decode global index
+     * @dev Validates global index format and extracts leafIndex, indexRollup, and sourceBridgeNetwork
+     * @param globalIndex The global index to validate and decode, defined as:
+     * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
+     * @return leafIndex The leaf index extracted from global index
+     * @return indexRollup The rollup index extracted from global index (0 for mainnet)
+     * @return sourceBridgeNetwork The source bridge network (0 for mainnet, indexRollup + 1 for rollups)
+     */
+    function _validateAndDecodeGlobalIndex(
+        uint256 globalIndex
+    )
+        internal
+        pure
+        returns (
+            uint32 leafIndex,
+            uint32 indexRollup,
+            uint32 sourceBridgeNetwork
+        )
+    {
+        // Last 32 bits are leafIndex
+        leafIndex = uint32(globalIndex);
+
+        // Get origin network from global index
+        if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
+            // The network is mainnet
+            indexRollup = 0;
+            sourceBridgeNetwork = 0;
+
+            // Reconstruct global index to assert that all unused bits are 0
+            require(
+                _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) == globalIndex,
+                InvalidGlobalIndex()
+            );
+        } else {
+            // The network is a rollup
+            indexRollup = uint32(globalIndex >> 32);
+            sourceBridgeNetwork = indexRollup + 1;
+
+            // Reconstruct global index to assert that all unused bits are 0
+            require(
+                (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
+                    globalIndex,
+                InvalidGlobalIndex()
+            );
+        }
     }
 
     /**

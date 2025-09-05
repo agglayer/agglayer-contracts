@@ -76,9 +76,14 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error InvalidLeavesLength();
 
     /**
-     * @dev Thrown when the expected root doesn't match the computed root
+     * @dev Thrown when a leaf has an invalid leafType (must be _LEAF_TYPE_ASSET or _LEAF_TYPE_MESSAGE)
      */
-    error InvalidExpectedRoot();
+    error InvalidLeafType();
+
+    /**
+     * @dev Thrown when the expected Local Exit Root doesn't match the computed root
+     */
+    error InvalidExpectedLER();
 
     /**
      * @dev Thrown when the subtree frontier doesn't match the parent tree structure
@@ -86,12 +91,12 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error InvalidSubtreeFrontier();
 
     /**
-     * @dev Thrown when trying set a LFT leaf with same origin network thank chain network ID
+     * @dev Thrown when trying set a LBT leaf with same origin network than chain network ID
      */
     error InvalidLBTLeaf();
 
     /**
-     @dev Thrown when trying to substract more rather than available balance
+     @dev Thrown when trying to subtract more rather than available balance
      */
     error LocalBalanceTreeUnderflow(
         uint32 originNetwork,
