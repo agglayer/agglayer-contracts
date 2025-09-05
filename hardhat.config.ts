@@ -30,6 +30,8 @@ const config: HardhatUserConfig = {
             '@openzeppelin/contracts4/token/ERC20/presets/ERC20PresetFixedSupply.sol',
             '@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol',
             '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol',
+            '@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol',
+            '@openzeppelin/contracts/governance/TimelockController.sol',
         ], // ,
         // keep: true
     },
@@ -130,7 +132,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500, // should have same runs than BridgeL2SovereignChain
+                        runs: 100, // should have same runs than BridgeL2SovereignChain
                     },
                     evmVersion: 'shanghai',
                 },
@@ -150,7 +152,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500, // should have same runs than PolygonZkEVMBridgeV2
+                        runs: 100, // should have same runs than PolygonZkEVMBridgeV2
                     },
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
@@ -192,7 +194,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // Should have the same optimizations as PolygonTransparentProxy
+                        runs: 10, // Should have the same optimizations as PolygonTransparentProxy
                     },
                     evmVersion: 'cancun',
                 }, // try yul optimizer
@@ -224,7 +226,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 500,
+                        runs: 100,
                     },
                     evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
                 },
@@ -239,6 +241,26 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
+            },
+            'contracts/v2/lib/bridgeLib.sol': {
+                version: '0.8.28',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 100, // should have same runs than PolygonZkEVMBridgeV2
+                    },
+                    evmVersion: 'shanghai', // Same evm version than PolygonZkEVMBridgeV2
+                }, // try yul optimizer
+            },
+            'contracts/v2/aggchains/AggchainFEP.sol': {
+                version: '0.8.28',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 1000,
+                    },
+                    evmVersion: 'cancun',
+                },
             },
         },
     },

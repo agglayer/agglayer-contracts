@@ -10,7 +10,8 @@ import "./interfaces/IPolygonZkEVMBridgeV2.sol";
 import "../lib/EmergencyManager.sol";
 import "../lib/GlobalExitRootLib.sol";
 import "./lib/BytecodeStorer.sol";
-import {ITokenWrappedBridgeUpgradeable, TokenWrappedBridgeUpgradeable, IERC20Metadata} from "./lib/TokenWrappedBridgeUpgradeable.sol";
+import {BridgeLib} from "./lib/BridgeLib.sol";
+import {ITokenWrappedBridgeUpgradeable, TokenWrappedBridgeUpgradeable} from "./lib/TokenWrappedBridgeUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts5/proxy/ERC1967/ERC1967Utils.sol";
 import {IProxyAdmin} from "./interfaces/IProxyAdmin.sol";
 import {IVersion} from "./interfaces/IVersion.sol";
@@ -38,15 +39,13 @@ contract PolygonZkEVMBridgeV2 is
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IBytecodeStorer public immutable wrappedTokenBytecodeStorer;
 
+    /// Instance of the BridgeLib contract deployed for bytecode optimization
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    BridgeLib public immutable bridgeLib;
+
     /// Address of the wrappedToken implementation, it is set at constructor and all proxied wrapped tokens will point to this implementation
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address internal immutable wrappedTokenBridgeImplementation;
-
-    // bytes4(keccak256(bytes("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)")));
-    bytes4 internal constant _PERMIT_SIGNATURE = 0xd505accf;
-
-    // bytes4(keccak256(bytes("permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)")));
-    bytes4 internal constant _PERMIT_SIGNATURE_DAI = 0x8fcbaf0c;
 
     // Mainnet identifier
     uint32 internal constant _MAINNET_NETWORK_ID = 0;
@@ -67,7 +66,7 @@ contract PolygonZkEVMBridgeV2 is
     uint256 internal constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
 
     // Current bridge version
-    string public constant BRIDGE_VERSION = "v1.0.0";
+    string public constant BRIDGE_VERSION = "v1.1.0";
 
     // Network identifier
     uint32 public networkID;
@@ -194,6 +193,11 @@ contract PolygonZkEVMBridgeV2 is
         wrappedTokenBridgeImplementation = address(
             new TokenWrappedBridgeUpgradeable()
         );
+
+        // Deploy the BridgeLib library
+        /// @dev this contract is used to store the bytecode of the BridgeLib library, previously stored in the bridge contract but moved to a separate contract to reduce the bytecode size.
+        bridgeLib = new BridgeLib();
+
         // Disable initializers on the implementation following the best practices
         _disableInitializers();
     }
@@ -396,7 +400,7 @@ contract PolygonZkEVMBridgeV2 is
                     originNetwork = networkID;
                 }
                 // Encode metadata
-                metadata = getTokenMetadata(token);
+                metadata = bridgeLib.getTokenMetadata(token);
             }
         }
 
@@ -567,7 +571,7 @@ contract PolygonZkEVMBridgeV2 is
         address destinationAddress,
         uint256 amount,
         bytes calldata metadata
-    ) external ifNotEmergencyState nonReentrant {
+    ) public virtual ifNotEmergencyState nonReentrant {
         // Destination network must be this networkID
         if (destinationNetwork != networkID) {
             revert DestinationNetworkInvalid();
@@ -930,23 +934,16 @@ contract PolygonZkEVMBridgeV2 is
             revert GlobalExitRootInvalid();
         }
 
-        uint32 leafIndex;
-        uint32 sourceBridgeNetwork;
+        // Validate and decode global index
+        (
+            uint32 leafIndex,
+            uint32 indexRollup,
+            uint32 sourceBridgeNetwork
+        ) = _validateAndDecodeGlobalIndex(globalIndex);
 
-        // Get origin network from global index
+        // Verify merkle proof based on network type
         if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
-            // The network is mainnet, therefore sourceBridgeNetwork is 0
-
-            // Last 32 bits are leafIndex
-            leafIndex = uint32(globalIndex);
-
-            // Reconstruct global index to assert that all unused bits are 0
-            require(
-                _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) == globalIndex,
-                InvalidGlobalIndex()
-            );
-
-            // Verify merkle proof
+            // Verify merkle proof for mainnet
             if (
                 !verifyMerkleProof(
                     leafValue,
@@ -958,20 +955,6 @@ contract PolygonZkEVMBridgeV2 is
                 revert InvalidSmtProof();
             }
         } else {
-            // The network is a rollup, therefore sourceBridgeNetwork must be decoded
-            uint32 indexRollup = uint32(globalIndex >> 32);
-            sourceBridgeNetwork = indexRollup + 1;
-
-            // Last 32 bits are leafIndex
-            leafIndex = uint32(globalIndex);
-
-            // Reconstruct global index to assert that all unused bits are 0
-            require(
-                (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
-                    globalIndex,
-                InvalidGlobalIndex()
-            );
-
             // Verify merkle proof against rollup exit root
             if (
                 !verifyMerkleProof(
@@ -1150,116 +1133,66 @@ contract PolygonZkEVMBridgeV2 is
     }
 
     /**
+     * @notice Internal function to validate and decode global index
+     * @dev Validates global index format and extracts leafIndex, indexRollup, and sourceBridgeNetwork
+     * @param globalIndex The global index to validate and decode, defined as:
+     * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
+     * @return leafIndex The leaf index extracted from global index
+     * @return indexRollup The rollup index extracted from global index (0 for mainnet)
+     * @return sourceBridgeNetwork The source bridge network (0 for mainnet, indexRollup + 1 for rollups)
+     */
+    function _validateAndDecodeGlobalIndex(
+        uint256 globalIndex
+    )
+        internal
+        pure
+        returns (
+            uint32 leafIndex,
+            uint32 indexRollup,
+            uint32 sourceBridgeNetwork
+        )
+    {
+        // Last 32 bits are leafIndex
+        leafIndex = uint32(globalIndex);
+
+        // Get origin network from global index
+        if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
+            // The network is mainnet
+            indexRollup = 0;
+            sourceBridgeNetwork = 0;
+
+            // Reconstruct global index to assert that all unused bits are 0
+            require(
+                _GLOBAL_INDEX_MAINNET_FLAG + uint256(leafIndex) == globalIndex,
+                InvalidGlobalIndex()
+            );
+        } else {
+            // The network is a rollup
+            indexRollup = uint32(globalIndex >> 32);
+            sourceBridgeNetwork = indexRollup + 1;
+
+            // Reconstruct global index to assert that all unused bits are 0
+            require(
+                (uint256(indexRollup) << uint256(32)) + uint256(leafIndex) ==
+                    globalIndex,
+                InvalidGlobalIndex()
+            );
+        }
+    }
+
+    /**
      * @notice Function to call token permit method of extended ERC20
-     + @param token ERC20 token address
+     * @param token ERC20 token address
      * @param permitData Raw data of the call `permit` of the token
      */
     function _permit(address token, bytes calldata permitData) internal {
-        bytes4 sig = bytes4(permitData[:4]);
-        if (sig == _PERMIT_SIGNATURE) {
-            (
-                address owner,
-                address spender,
-                uint256 value,
-                uint256 deadline,
-                uint8 v,
-                bytes32 r,
-                bytes32 s
-            ) = abi.decode(
-                    permitData[4:],
-                    (
-                        address,
-                        address,
-                        uint256,
-                        uint256,
-                        uint8,
-                        bytes32,
-                        bytes32
-                    )
-                );
-            if (owner != msg.sender) {
-                revert NotValidOwner();
-            }
-            if (spender != address(this)) {
-                revert NotValidSpender();
-            }
-
-            /// @dev To be more aligned with the latest OpenZeppelin ERC20 implementation where ERC20 tokens allow approvals of uint.max and it is widely adopted by DeFi,
-            ///  this check has been removed. Important to warn that removing it is not the most secure approach but has been applied because it is widely used and reduce friction and gas cost
-            // if (value != amount) {
-            //     revert NotValidAmount();
-            // }
-
-            // we call without checking the result, in case it fails and he doesn't have enough balance
-            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-            // before the smart contract call
-            /* solhint-disable avoid-low-level-calls */
-            address(token).call(
-                abi.encodeWithSelector(
-                    _PERMIT_SIGNATURE,
-                    owner,
-                    spender,
-                    value,
-                    deadline,
-                    v,
-                    r,
-                    s
-                )
-            );
-        } else {
-            if (sig != _PERMIT_SIGNATURE_DAI) {
-                revert NotValidSignature();
-            }
-
-            (
-                address holder,
-                address spender,
-                uint256 nonce,
-                uint256 expiry,
-                bool allowed,
-                uint8 v,
-                bytes32 r,
-                bytes32 s
-            ) = abi.decode(
-                    permitData[4:],
-                    (
-                        address,
-                        address,
-                        uint256,
-                        uint256,
-                        bool,
-                        uint8,
-                        bytes32,
-                        bytes32
-                    )
-                );
-
-            if (holder != msg.sender) {
-                revert NotValidOwner();
-            }
-
-            if (spender != address(this)) {
-                revert NotValidSpender();
-            }
-
-            // we call without checking the result, in case it fails and he doesn't have enough balance
-            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-            // before the smart contract call
-            /* solhint-disable avoid-low-level-calls */
-            address(token).call(
-                abi.encodeWithSelector(
-                    _PERMIT_SIGNATURE_DAI,
-                    holder,
-                    spender,
-                    nonce,
-                    expiry,
-                    allowed,
-                    v,
-                    r,
-                    s
-                )
-            );
-        }
+        bridgeLib.validateAndProcessPermit(
+            token,
+            permitData,
+            msg.sender,
+            address(this)
+        );
     }
 
     /**
@@ -1317,72 +1250,7 @@ contract PolygonZkEVMBridgeV2 is
         return wrappedTokenBridgeImplementation;
     }
 
-    // Helpers to safely get the metadata from a token, inspired by https://github.com/traderjoe-xyz/joe-core/blob/main/contracts/MasterChefJoeV3.sol#L55-L95
-    /**
-     * @notice Provides a safe ERC20.symbol version which returns 'NO_SYMBOL' as fallback string
-     * @param token The address of the ERC-20 token contract
-     */
-    function _safeSymbol(address token) internal view returns (string memory) {
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeCall(IERC20Metadata.symbol, ())
-        );
-        return success ? _returnDataToString(data) : "NO_SYMBOL";
-    }
-
-    /**
-     * @notice  Provides a safe ERC20.name version which returns 'NO_NAME' as fallback string.
-     * @param token The address of the ERC-20 token contract.
-     */
-    function _safeName(address token) internal view returns (string memory) {
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeCall(IERC20Metadata.name, ())
-        );
-        return success ? _returnDataToString(data) : "NO_NAME";
-    }
-
-    /**
-     * @notice Provides a safe ERC20.decimals version which returns '18' as fallback value.
-     * Note Tokens with (decimals > 255) are not supported
-     * @param token The address of the ERC-20 token contract
-     */
-    function _safeDecimals(address token) internal view returns (uint8) {
-        (bool success, bytes memory data) = address(token).staticcall(
-            abi.encodeCall(IERC20Metadata.decimals, ())
-        );
-        return success && data.length == 32 ? abi.decode(data, (uint8)) : 18;
-    }
-
-    /**
-     * @notice Function to convert returned data to string
-     * returns 'NOT_VALID_ENCODING' as fallback value.
-     * @param data returned data
-     */
-    function _returnDataToString(
-        bytes memory data
-    ) internal pure returns (string memory) {
-        if (data.length >= 64) {
-            return abi.decode(data, (string));
-        } else if (data.length == 32) {
-            // Since the strings on bytes32 are encoded left-right, check the first zero in the data
-            uint256 nonZeroBytes;
-            while (nonZeroBytes < 32 && data[nonZeroBytes] != 0) {
-                nonZeroBytes++;
-            }
-
-            // If the first one is 0, we do not handle the encoding
-            if (nonZeroBytes == 0) {
-                return "NOT_VALID_ENCODING";
-            }
-            // Create a byte array with nonZeroBytes length
-            bytes memory bytesArray = new bytes(nonZeroBytes);
-            for (uint256 i = 0; i < nonZeroBytes; i++) {
-                bytesArray[i] = data[i];
-            }
-            return string(bytesArray);
-        } else {
-            return "NOT_VALID_ENCODING";
-        }
-    }
+    // Helpers to safely get the metadata from a token are now in BridgeLib library
 
     ////////////////////////////////
     ////    View functions    /////
@@ -1392,16 +1260,10 @@ contract PolygonZkEVMBridgeV2 is
      * @notice Returns the encoded token metadata
      * @param token Address of the token
      */
-
     function getTokenMetadata(
         address token
-    ) public view returns (bytes memory) {
-        return
-            abi.encode(
-                _safeName(token),
-                _safeSymbol(token),
-                _safeDecimals(token)
-            );
+    ) external view returns (bytes memory) {
+        return bridgeLib.getTokenMetadata(token);
     }
 
     /**

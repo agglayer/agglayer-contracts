@@ -66,7 +66,37 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     error InvalidZeroNetworkID();
 
     /**
-     @dev Thrown when trying to substract more rather than available balance
+     * @dev Thrown when an invalid deposit count is provided for LET operations
+     */
+    error InvalidDepositCount();
+
+    /**
+     * @dev Thrown when the leaves array length doesn't match the expected deposit count
+     */
+    error InvalidLeavesLength();
+
+    /**
+     * @dev Thrown when a leaf has an invalid leafType (must be _LEAF_TYPE_ASSET or _LEAF_TYPE_MESSAGE)
+     */
+    error InvalidLeafType();
+
+    /**
+     * @dev Thrown when the expected Local Exit Root doesn't match the computed root
+     */
+    error InvalidExpectedLER();
+
+    /**
+     * @dev Thrown when the subtree frontier doesn't match the parent tree structure
+     */
+    error InvalidSubtreeFrontier();
+
+    /**
+     * @dev Thrown when trying set a LBT leaf with same origin network than chain network ID
+     */
+    error InvalidLBTLeaf();
+
+    /**
+     @dev Thrown when trying to subtract more rather than available balance
      */
     error LocalBalanceTreeUnderflow(
         uint32 originNetwork,
@@ -109,6 +139,11 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
      * @dev Thrown when trying to call a function that only pending bridge unpauser can call.
      */
     error OnlyPendingEmergencyBridgeUnpauser();
+
+    /**
+     * @dev Thrown when the caller is not the deployer
+     */
+    error OnlyDeployer();
 
     function initialize(
         uint32 _networkID,

@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { ethers, run } from 'hardhat';
 import { convertBigIntsToNumbers } from '../tools/utils';
+import { logger } from '../src/logger';
 
 /**
  * Generates a timelock operation with the given input valies
@@ -31,31 +32,46 @@ function genTimelockOperation(target: any, value: any, data: any, predecessor: a
  * Function to handle the verification of a contract on etherscan
  * @param implementationAddress the contract address to verify
  * @param constructorArguments the constructor arguments of the contract
+ * @param waitTimeSeconds optional wait time in seconds before verification (default: 20)
  * @dev In case the verification fails, the function will print the command to run the verification manually
  */
-async function verifyContractEtherscan(implementationAddress: string, constructorArguments: Array<string>) {
+async function verifyContractEtherscan(
+    implementationAddress: string,
+    constructorArguments: Array<any>,
+    waitTimeSeconds: number = 20,
+    contractPath: any = undefined,
+) {
     try {
-        console.log(
-            `Trying to verify implementation contract ${implementationAddress} with arguments ${constructorArguments}`,
+        logger.info(
+            `Trying to verify implementation contract ${implementationAddress} with arguments ${JSON.stringify(constructorArguments)}`,
         );
         // wait a few seconds before trying etherscan verification
-        console.log('Waiting 20 seconds before verifying on Etherscan');
+        logger.info(`Waiting ${waitTimeSeconds} seconds before verifying on Etherscan`);
         await new Promise((r) => {
-            setTimeout(r, 20000);
+            setTimeout(r, waitTimeSeconds * 1000);
         });
-        console.log('Verifying...');
+        logger.info('Verifying...');
         // verify
         await run('verify:verify', {
             address: implementationAddress,
             constructorArguments,
+            contract: contractPath,
         });
+        logger.info(`✅ Contract ${implementationAddress} verified successfully on Etherscan`);
     } catch (error) {
-        console.log('Error verifying the new implementation contract: ', error);
-        console.log('you can verify the new impl address with:');
-        console.log(
+        if (error.name === 'ContractAlreadyVerifiedError') {
+            logger.info(`✅ Contract ${implementationAddress} is already verified on Etherscan`);
+            return;
+        }
+        logger.error('❌ Error verifying the new implementation contract: ', error);
+        logger.info('you can verify the new impl address with:');
+        logger.info(
             `npx hardhat verify --constructor-args upgrade/arguments.js ${implementationAddress} --network ${process.env.HARDHAT_NETWORK}\n`,
         );
-        console.log('Copy the following constructor arguments on: upgrade/arguments.js \n', constructorArguments);
+        logger.info(
+            'Copy the following constructor arguments on: upgrade/arguments.js \n',
+            JSON.stringify(constructorArguments),
+        );
     }
 }
 

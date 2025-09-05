@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2 } from '../../typechain-types';
+import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, BridgeLib } from '../../typechain-types';
 import {
     createPermitSignature,
     ifacePermit,
@@ -23,6 +23,7 @@ describe('PolygonZkEVMBridge Contract', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRoot;
+    let bridgeLibContract: BridgeLib;
 
     let deployer: any;
     let rollupManager: any;
@@ -67,6 +68,10 @@ describe('PolygonZkEVMBridge Contract', () => {
             rollupManager.address,
             '0x',
         );
+
+        // get bridge lib instance
+        const bridgeLibAddress = await polygonZkEVMBridgeContract.bridgeLib();
+        bridgeLibContract = await ethers.getContractAt('BridgeLib', bridgeLibAddress);
 
         // deploy token
         const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
@@ -478,7 +483,7 @@ describe('PolygonZkEVMBridge Contract', () => {
                     s,
                 ]),
             ),
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'NotValidOwner');
+        ).to.be.revertedWithCustomError(bridgeLibContract, 'NotValidOwner');
 
         await expect(
             polygonZkEVMBridgeContract.bridgeAsset(
@@ -497,7 +502,7 @@ describe('PolygonZkEVMBridge Contract', () => {
                     s,
                 ]),
             ),
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'NotValidSpender');
+        ).to.be.revertedWithCustomError(bridgeLibContract, 'NotValidSpender');
 
         await expect(
             polygonZkEVMBridgeContract.bridgeAsset(
@@ -508,7 +513,7 @@ describe('PolygonZkEVMBridge Contract', () => {
                 true,
                 ethers.ZeroHash,
             ),
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'NotValidSignature');
+        ).to.be.revertedWithCustomError(bridgeLibContract, 'NotValidSignature');
 
         const dataPermit = ifacePermit.encodeFunctionData('permit', [
             deployer.address,
@@ -647,7 +652,7 @@ describe('PolygonZkEVMBridge Contract', () => {
                     s,
                 ]),
             ),
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'NotValidOwner');
+        ).to.be.revertedWithCustomError(bridgeLibContract, 'NotValidOwner');
 
         await expect(
             polygonZkEVMBridgeContract.bridgeAsset(
@@ -667,7 +672,7 @@ describe('PolygonZkEVMBridge Contract', () => {
                     s,
                 ]),
             ),
-        ).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'NotValidSpender');
+        ).to.be.revertedWithCustomError(bridgeLibContract, 'NotValidSpender');
 
         const dataPermit = ifacePermitDAI.encodeFunctionData('permit', [
             deployer.address,

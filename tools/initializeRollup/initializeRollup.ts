@@ -7,11 +7,8 @@ import { ethers } from 'hardhat';
 import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
 import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
-import {
-    encodeInitializeBytesAggchainECDSAv0,
-    encodeInitializeBytesAggchainECDSAv1,
-} from '../../src/utils-aggchain-ECDSA';
-import { encodeInitializeBytesAggchainFEPv0, encodeInitializeBytesAggchainFEPv1 } from '../../src/utils-aggchain-FEP';
+// NOTE: Direct initialization is now used instead of encoded bytes
+// The deprecated encoding functions have been removed
 import { PolygonRollupManager } from '../../typechain-types';
 import initializeRollupParameters from './initialize_rollup.json';
 
@@ -155,28 +152,33 @@ async function main() {
     const initializedSlot = await ethers.provider.getStorage(aggchainContract.target, 0);
     const initializedValue = Number(BigInt(initializedSlot) & BigInt(0xff)); // Extract only the first byte
 
-    let initializeBytesAggchain;
+    // Build the initialization transaction based on the consensus contract type and initialization state
+    let initializeTx;
 
     if (initializedValue === 0) {
+        // Contract needs v0 initialization (first-time initialization)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            initializeBytesAggchain = encodeInitializeBytesAggchainECDSAv0(
-                aggchainParams.useDefaultGateway,
-                aggchainParams.initOwnedAggchainVKey,
-                aggchainParams.initAggchainVKeySelector,
-                aggchainParams.vKeyManager,
+            // Initialize ECDSA Multisig with direct parameters
+            initializeTx = await aggchainContract.populateTransaction.initialize(
                 rollupAdminAddress,
                 trustedSequencer,
                 initializeRollupParameters.gasTokenAddress,
                 trustedSequencerURL,
                 networkName,
+                aggchainParams.useDefaultSigners || false,
+                aggchainParams.signers || [],
+                aggchainParams.threshold || 0,
             );
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-            initializeBytesAggchain = encodeInitializeBytesAggchainFEPv0(
+            // Initialize FEP with direct parameters
+            initializeTx = await aggchainContract.populateTransaction.initialize(
                 aggchainParams.initParams,
-                aggchainParams.useDefaultGateway,
+                aggchainParams.signers || [],
+                aggchainParams.threshold || 0,
+                aggchainParams.useDefaultVkeys,
+                aggchainParams.useDefaultSigners || false,
                 aggchainParams.initOwnedAggchainVKey,
                 aggchainParams.initAggchainVKeySelector,
-                aggchainParams.vKeyManager,
                 rollupAdminAddress,
                 trustedSequencer,
                 initializeRollupParameters.gasTokenAddress,
@@ -187,17 +189,18 @@ async function main() {
             throw new Error(`Aggchain ${consensusContractName} not supported`);
         }
     } else if (initializedValue === 1) {
+        // Contract needs v1 initialization (migration from pessimistic consensus)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            initializeBytesAggchain = encodeInitializeBytesAggchainECDSAv1(
-                aggchainParams.useDefaultGateway,
-                aggchainParams.initOwnedAggchainVKey,
-                aggchainParams.initAggchainVKeySelector,
-                aggchainParams.vKeyManager,
-            );
+            // Migrate from pessimistic consensus to ECDSA Multisig
+            initializeTx = await aggchainContract.populateTransaction.migrateFromLegacyConsensus();
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-            initializeBytesAggchain = encodeInitializeBytesAggchainFEPv1(
+            // Initialize FEP from pessimistic consensus with direct parameters
+            initializeTx = await aggchainContract.populateTransaction.initializeFromLegacyConsensus(
                 aggchainParams.initParams,
-                aggchainParams.useDefaultGateway,
+                aggchainParams.signers || [],
+                aggchainParams.threshold || 0,
+                aggchainParams.useDefaultVkeys,
+                aggchainParams.useDefaultSigners || false,
                 aggchainParams.initOwnedAggchainVKey,
                 aggchainParams.initAggchainVKeySelector,
                 aggchainParams.vKeyManager,
@@ -208,6 +211,9 @@ async function main() {
     } else {
         throw new Error(`Unexpected value in _initialized storage slot: ${initializedValue}`);
     }
+
+    // Store the initialization transaction data for later use
+    const initializeBytesAggchain = initializeTx.data;
 
     if (initializeRollupParameters.type === transactionTypes.TIMELOCK) {
         console.log('Creating timelock txs for initialization...');

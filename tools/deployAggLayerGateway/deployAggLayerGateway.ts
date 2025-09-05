@@ -25,6 +25,7 @@ async function main() {
         'verifierAddress',
         'ppVKey',
         'ppVKeySelector',
+        'multisigRoleAddress',
     ];
     checkParams(deployParameters, mandatoryUpgradeParameters);
     const {
@@ -35,6 +36,9 @@ async function main() {
         verifierAddress,
         ppVKey,
         ppVKeySelector,
+        multisigRoleAddress,
+        signersToAdd = [],
+        newThreshold = 0,
     } = deployParameters;
     // Load provider
     const currentProvider = getProviderAdjustingMultiplierGas(deployParameters, ethers);
@@ -60,6 +64,9 @@ async function main() {
             ppVKeySelector,
             verifierAddress,
             ppVKey,
+            multisigRoleAddress,
+            signersToAdd,
+            newThreshold,
         ],
         {
             unsafeAllow: ['constructor'],
@@ -89,6 +96,9 @@ async function main() {
             ppVKeySelector,
             verifierAddress,
             ppVKey,
+            multisigRoleAddress,
+            signersToAdd,
+            newThreshold,
         ),
     ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'InvalidInitialization');
 
@@ -96,6 +106,7 @@ async function main() {
     const AGGCHAIN_DEFAULT_VKEY_ROLE = ethers.id('AGGCHAIN_DEFAULT_VKEY_ROLE');
     const AL_ADD_PP_ROUTE_ROLE = ethers.id('AL_ADD_PP_ROUTE_ROLE');
     const AL_FREEZE_PP_ROUTE_ROLE = ethers.id('AL_FREEZE_PP_ROUTE_ROLE');
+    const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
     // Admin role
     const hasRoleDefaultAdmin = await aggLayerGateway.hasRole(ethers.ZeroHash, defaultAdminAddress);
     expect(hasRoleDefaultAdmin).to.be.equal(true);
@@ -109,6 +120,8 @@ async function main() {
     expect(hasRoleAddRoute).to.be.equal(true);
     const hasRoleFreezeRoute = await aggLayerGateway.hasRole(AL_FREEZE_PP_ROUTE_ROLE, freezeRouteRoleAddress);
     expect(hasRoleFreezeRoute).to.be.equal(true);
+    const hasRoleMultisig = await aggLayerGateway.hasRole(AL_MULTISIG_ROLE, multisigRoleAddress);
+    expect(hasRoleMultisig).to.be.equal(true);
 
     // Compute output
     const outputJson = {

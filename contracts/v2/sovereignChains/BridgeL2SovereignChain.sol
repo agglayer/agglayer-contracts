@@ -16,9 +16,23 @@ contract BridgeL2SovereignChain is
     IBridgeL2SovereignChains
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
+    // address used to permission the initialization of the contract
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    address private immutable deployer;
 
     // Current bridge version
-    string public constant BRIDGE_SOVEREIGN_VERSION = "v1.0.0";
+    string public constant BRIDGE_SOVEREIGN_VERSION = "v1.1.0";
+
+    // Struct to represent leaf data for forwardLET function
+    struct LeafData {
+        uint8 leafType;
+        uint32 originNetwork;
+        address originAddress;
+        uint32 destinationNetwork;
+        address destinationAddress;
+        uint256 amount;
+        bytes metadata;
+    }
 
     // Map to store wrappedAddresses that are not mintable
     mapping(address wrappedAddress => bool isNotMintable)
@@ -160,9 +174,89 @@ contract BridgeL2SovereignChain is
     );
 
     /**
+     * @dev Emitted when a claim is set
+     * @param leafIndex Index of the leaf of the set claim in the Merkle tree
+     * @param sourceNetwork Identifier of the source network of the claim (0 = Ethereum).
+     */
+    event SetClaim(uint32 leafIndex, uint32 sourceNetwork);
+
+    /**
+     * @dev Emitted when local exit tree is moved backward
+     * @param previousDepositCount The deposit count before moving backward
+     * @param previousRoot The root of the local exit tree before moving backward
+     * @param newDepositCount The resulting deposit count after moving backward
+     * @param newRoot The resulting root of the local exit tree after moving backward
+     */
+    event BackwardLET(
+        uint256 previousDepositCount,
+        bytes32 previousRoot,
+        uint256 newDepositCount,
+        bytes32 newRoot
+    );
+
+    /**
+     * @dev Emitted when local exit tree is moved forward
+     * @param previousDepositCount The deposit count before moving forward
+     * @param previousRoot The root of the local exit tree before moving forward
+     * @param newDepositCount The resulting deposit count after moving forward
+     * @param newRoot The resulting root of the local exit tree after moving forward
+     * @param newLeaves The raw bytes of all new leaves added
+     */
+    event ForwardLET(
+        uint256 previousDepositCount,
+        bytes32 previousRoot,
+        uint256 newDepositCount,
+        bytes32 newRoot,
+        bytes newLeaves
+    );
+
+    /**
+     * @dev Emitted when local balance tree is updated
+     * @param originNetwork The origin network of the set leaf
+     * @param originTokenAddress The origin token address of the set leaf
+     * @param newAmount The new amount set for this token
+     */
+    event SetLocalBalanceTree(
+        uint32 indexed originNetwork,
+        address indexed originTokenAddress,
+        uint256 newAmount
+    );
+
+    /**
+     * @dev Emitted when a claim is processed on L2 rollups for better gas efficiency
+     * @dev This event can be emitted on rollups because gas costs are cheaper than on L1
+     * @param smtProofLocalExitRoot Smt proof to proof the leaf against the network exit root
+     * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot against the rollups exit root
+     * @param globalIndex Global index of the claim
+     * @param mainnetExitRoot Mainnet exit root
+     * @param rollupExitRoot Rollup exit root
+     * @param originNetwork Origin network
+     * @param originTokenAddress Origin token address
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     */
+    event DetailedClaimEvent(
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] smtProofRollupExitRoot,
+        uint256 indexed globalIndex,
+        bytes32 mainnetExitRoot,
+        bytes32 rollupExitRoot,
+        uint32 originNetwork,
+        address originTokenAddress,
+        uint32 destinationNetwork,
+        address indexed destinationAddress,
+        uint256 amount,
+        bytes metadata
+    );
+
+    /**
      * Disable initializers on the implementation following the best practices
+     * @dev the deployer is set to the contract creator and will be the only allowed to initialize the contract in a 2 steps process
      */
     constructor() PolygonZkEVMBridgeV2() {
+        deployer = msg.sender;
         _disableInitializers();
     }
 
@@ -197,6 +291,11 @@ contract BridgeL2SovereignChain is
         address _emergencyBridgeUnpauser,
         address _proxiedTokensManager
     ) public virtual reinitializer(3) {
+        // only the deployer can initialize the contract.
+        /// @dev the complexity of the initializes makes it very complex to deploy a proxy and
+        /// @dev initialize the contract in an atomic transaction, so we need to permission the function to avoid frontrunning attacks
+        require(msg.sender == deployer, OnlyDeployer());
+
         require(
             address(_globalExitRootManager) != address(0),
             InvalidZeroAddress()
@@ -545,7 +644,7 @@ contract BridgeL2SovereignChain is
 
     /**
      * @notice Unset multiple claims from the claimedBitmap
-     * @dev This function is a "multi/batch call" to `unsetClaimedBitmap`
+     * @dev This function is a "multi/batch call" to `_unsetClaimedBitmap`
      * @param globalIndexes Global index is defined as:
      * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
      * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
@@ -556,24 +655,13 @@ contract BridgeL2SovereignChain is
         for (uint256 i = 0; i < globalIndexes.length; i++) {
             uint256 globalIndex = globalIndexes[i];
 
-            // Compute leaf index and sourceBridgeNetwork from global index
-            uint32 leafIndex;
-            uint32 sourceBridgeNetwork;
-
-            // Get origin network from global index
-            if (globalIndex & _GLOBAL_INDEX_MAINNET_FLAG != 0) {
-                // The network is mainnet, therefore sourceBridgeNetwork is 0
-
-                // Last 32 bits are leafIndex
-                leafIndex = uint32(globalIndex);
-            } else {
-                // The network is a rollup, therefore sourceBridgeNetwork must be decoded
-                uint32 indexRollup = uint32(globalIndex >> 32);
-                sourceBridgeNetwork = indexRollup + 1;
-
-                // Last 32 bits are leafIndex
-                leafIndex = uint32(globalIndex);
-            }
+            // Validate and decode global index using shared logic
+            // second parameter: rollupIndex not used
+            (
+                uint32 leafIndex,
+                ,
+                uint32 sourceBridgeNetwork
+            ) = _validateAndDecodeGlobalIndex(globalIndex);
 
             // Unset the claim
             _unsetClaimedBitmap(leafIndex, sourceBridgeNetwork);
@@ -587,6 +675,211 @@ contract BridgeL2SovereignChain is
             emit UpdatedUnsetGlobalIndexHashChain(
                 bytes32(globalIndex),
                 unsetGlobalIndexHashChain
+            );
+        }
+    }
+
+    /**
+     * @notice Set multiple claims from the claimedBitmap
+     * @dev This function is a "multi/batch call" to `_setAndCheckClaimed`
+     * @param globalIndexes Global index is defined as:
+     * | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     * |    0     |  mainnetFlag | rollupIndex | localRootIndex |
+     */
+    function setMultipleClaims(
+        uint256[] memory globalIndexes
+    ) external onlyGlobalExitRootRemover {
+        for (uint256 i = 0; i < globalIndexes.length; i++) {
+            uint256 globalIndex = globalIndexes[i];
+
+            // Validate and decode global index using shared logic
+            // second parameter: rollupIndex not used
+            (
+                uint32 leafIndex,
+                ,
+                uint32 sourceBridgeNetwork
+            ) = _validateAndDecodeGlobalIndex(globalIndex);
+
+            // Set the claim
+            _setAndCheckClaimed(leafIndex, sourceBridgeNetwork);
+
+            emit SetClaim(leafIndex, sourceBridgeNetwork);
+        }
+    }
+
+    /**
+     * @notice Move the LET backward to a previous state with a lower deposit count
+     * @dev Permissioned function by the GlobalExitRootRemover role
+     * @dev Validates that the new tree state is a valid subtree of the current tree
+     * @param newDepositCount The new deposit count (must be less than current)
+     * @param newFrontier The frontier of the subtree at newDepositCount
+     * @param nextLeaf The leaf that comes immediately after the last leaf of the subset.
+     * This is the leaf at position `newDepositCount` in the current tree.
+     * For example: if the subset has 5 leaves (positions 0,1,2,3,4), then nextLeaf
+     * is the actual leaf stored at position 5 in the current (larger) tree.
+     * This leaf must exist in the current tree and serves as proof that the subset
+     * is indeed contained within the current tree structure.
+     * @param proof Merkle proof showing nextLeaf exists at position newDepositCount in current tree
+     */
+    function backwardLET(
+        uint256 newDepositCount,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata newFrontier,
+        bytes32 nextLeaf,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata proof
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
+        // Validate that new deposit count is less than current
+        if (newDepositCount >= depositCount) {
+            revert InvalidDepositCount();
+        }
+
+        // 1. Verify that nextLeaf exists at position newDepositCount in current tree.
+        // NextLeaf is the leaf that comes immediately after the last leaf of the subset
+        // If the subset has 5 leaves (positions 0,1,2,3,4), nextLeaf is the actual
+        // leaf stored at position 5 in the current (larger) tree
+        /// @dev This check is a must because new frontier must match with proof siblings at subtree inclusion verification.
+        if (
+            !verifyMerkleProof(
+                nextLeaf,
+                proof,
+                uint32(newDepositCount),
+                getRoot()
+            )
+        ) {
+            revert InvalidSmtProof();
+        }
+
+        // 2. Verify that newFrontier is a valid subtree frontier by checking it matches
+        // the Merkle proof siblings at appropriate heights
+        // NOTE: This function reverts with specific errors:
+        // - SubtreeFrontierMismatch: when frontier elements don't match proof siblings
+        // - NonZeroValueForUnusedFrontier: when unused frontier positions are not zero
+        _checkValidSubtreeFrontier(newDepositCount, newFrontier, proof);
+
+        // Store previous values before rollback
+        uint256 previousDepositCount = depositCount;
+        bytes32 previousRoot = getRoot();
+
+        // Rollback tree to the new LER
+        for (uint256 i = 0; i < _DEPOSIT_CONTRACT_TREE_DEPTH; i++) {
+            _branch[i] = newFrontier[i];
+        }
+
+        depositCount = newDepositCount;
+
+        // Update LER
+        bytes32 newLER = getRoot();
+        globalExitRootManager.updateExitRoot(newLER);
+
+        // emit event
+        emit BackwardLET(
+            previousDepositCount,
+            previousRoot,
+            newDepositCount,
+            newLER
+        );
+    }
+
+    /**
+     * @notice Move the LET forward by adding new leaves in bulk
+     * @dev Permissioned function by the GlobalExitRootRemover role
+     * @dev Adds new leaves incrementally using structured data and validates against expected root as health check
+     * @param newLeaves Array of leaf data to add to the current tree
+     * @param expectedLER The expected root after adding all new leaves (health check)
+     */
+    function forwardLET(
+        LeafData[] calldata newLeaves,
+        bytes32 expectedLER
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
+        // Validate that newLeaves array is not empty
+        if (newLeaves.length == 0) {
+            revert InvalidLeavesLength();
+        }
+
+        // Store previous values before adding leaves
+        uint256 previousDepositCount = depositCount;
+        bytes32 previousRoot = getRoot();
+
+        // Add each new leaf incrementally using the _addLeafBridge function
+        // _addLeafBridge automatically handles depositCount increment and MAX_DEPOSIT_COUNT validation
+        for (uint256 i = 0; i < newLeaves.length; i++) {
+            LeafData memory leaf = newLeaves[i];
+
+            // Validate leafType is either _LEAF_TYPE_ASSET or _LEAF_TYPE_MESSAGE
+            if (
+                leaf.leafType != _LEAF_TYPE_ASSET &&
+                leaf.leafType != _LEAF_TYPE_MESSAGE
+            ) {
+                revert InvalidLeafType();
+            }
+
+            super._addLeafBridge(
+                leaf.leafType,
+                leaf.originNetwork,
+                leaf.originAddress,
+                leaf.destinationNetwork,
+                leaf.destinationAddress,
+                leaf.amount,
+                keccak256(leaf.metadata)
+            );
+        }
+
+        // Health check: verify the final root matches the expected LER
+        bytes32 computedRoot = getRoot();
+        if (computedRoot != expectedLER) {
+            revert InvalidExpectedLER();
+        }
+
+        // Update GER
+        globalExitRootManager.updateExitRoot(computedRoot);
+
+        // emit event with the new deposit count
+        emit ForwardLET(
+            previousDepositCount,
+            previousRoot,
+            depositCount,
+            computedRoot,
+            abi.encode(newLeaves)
+        );
+    }
+
+    /**
+     * @notice Set local balance tree leaves to specific amounts
+     * @dev Permissioned function by the GlobalExitRootRemover role
+     * @param originNetwork The origin network of the token, involved in the tokenInfoHash to generate the key to be set at localBalanceTree
+     * @param originTokenAddress The origin address of the token, involved in the tokenInfoHash to generate the key to be set at localBalanceTree
+     * @dev The key is generated as keccak256(abi.encodePacked(originNetwork, originTokenAddress))
+     * @param amount The amount to set for the local balance tree leaf
+     */
+    function setLocalBalanceTree(
+        uint32[] memory originNetwork,
+        address[] memory originTokenAddress,
+        uint256[] memory amount
+    ) external onlyGlobalExitRootRemover ifEmergencyState {
+        if (
+            originNetwork.length != originTokenAddress.length ||
+            originNetwork.length != amount.length
+        ) {
+            revert InputArraysLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < originNetwork.length; i++) {
+            // Ensures that only tokens from other networks are updated in the Local Balance Tree.
+            if (originNetwork[i] == networkID) {
+                revert InvalidLBTLeaf();
+            }
+
+            // Compute token info hash
+            bytes32 tokenInfoHash = keccak256(
+                abi.encodePacked(originNetwork[i], originTokenAddress[i])
+            );
+            // Set the local balance tree
+            localBalanceTree[tokenInfoHash] = amount[i];
+
+            // Emit event
+            emit SetLocalBalanceTree(
+                originNetwork[i],
+                originTokenAddress[i],
+                amount[i]
             );
         }
     }
@@ -820,7 +1113,9 @@ contract BridgeL2SovereignChain is
         uint256 globalIndex = uint256(leafIndex) +
             uint256(sourceBridgeNetwork) *
             _MAX_LEAFS_PER_NETWORK;
+
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
+
         uint256 mask = 1 << bitPos;
         uint256 flipped = claimedBitMap[wordPos] ^= mask;
         if (flipped & mask != 0) {
@@ -843,6 +1138,7 @@ contract BridgeL2SovereignChain is
             _MAX_LEAFS_PER_NETWORK;
 
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
+
         uint256 mask = (1 << bitPos);
         return (claimedBitMap[wordPos] & mask) == mask;
     }
@@ -860,7 +1156,9 @@ contract BridgeL2SovereignChain is
         uint256 globalIndex = uint256(leafIndex) +
             uint256(sourceBridgeNetwork) *
             _MAX_LEAFS_PER_NETWORK;
+
         (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
+
         uint256 mask = 1 << bitPos;
         uint256 flipped = claimedBitMap[wordPos] ^= mask;
         if (flipped & mask == 0) {
@@ -883,6 +1181,74 @@ contract BridgeL2SovereignChain is
         onlyEmergencyBridgeUnpauser
     {
         _deactivateEmergencyState();
+    }
+
+    /**
+     * @notice Override claimAsset to emit additional DetailedClaimEvent for rollup gas efficiency
+     * @dev This function extends the parent claimAsset functionality by emitting an additional event
+     *      with all calldata parameters. This event can be emitted on rollups because gas costs are
+     *      cheaper than on L1, providing more detailed information about the claim parameters.
+     * @dev The function inherits all security modifiers from the parent implementation:
+     *      - ifNotEmergencyState: Prevents claims during emergency state
+     *      - nonReentrant: Prevents reentrancy attacks during token transfers
+     * @param smtProofLocalExitRoot Smt proof to proof the leaf against the network exit root
+     * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot against the rollups exit root
+     * @param globalIndex Global index is defined as:
+     *        | 191 bits |    1 bit     |   32 bits   |     32 bits    |
+     *        |    0     |  mainnetFlag | rollupIndex | localRootIndex |
+     * @param mainnetExitRoot Mainnet exit root
+     * @param rollupExitRoot Rollup exit root
+     * @param originNetwork Origin network
+     * @param originTokenAddress Origin token address
+     * @param destinationNetwork Network destination (must be this networkID)
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens to claim
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     * @dev Emits both ClaimEvent (from parent) and DetailedClaimEvent (sovereign-specific)
+     */
+    function claimAsset(
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofRollupExitRoot,
+        uint256 globalIndex,
+        bytes32 mainnetExitRoot,
+        bytes32 rollupExitRoot,
+        uint32 originNetwork,
+        address originTokenAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes calldata metadata
+    ) public override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2) {
+        // Call parent implementation with all inherited security modifiers:
+        // - ifNotEmergencyState: Only allows claims when emergency state is inactive
+        // - nonReentrant: Prevents reentrancy attacks during token operations
+        super.claimAsset(
+            smtProofLocalExitRoot,
+            smtProofRollupExitRoot,
+            globalIndex,
+            mainnetExitRoot,
+            rollupExitRoot,
+            originNetwork,
+            originTokenAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata
+        );
+
+        emit DetailedClaimEvent(
+            smtProofLocalExitRoot,
+            smtProofRollupExitRoot,
+            globalIndex,
+            mainnetExitRoot,
+            rollupExitRoot,
+            originNetwork,
+            originTokenAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata
+        );
     }
 
     ///////////////////////////

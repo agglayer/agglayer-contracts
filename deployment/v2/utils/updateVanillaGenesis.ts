@@ -101,6 +101,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         },
     };
     let txObject = ethers.Transaction.from(injectedTx);
+    const bridgeDeployer = txObject.from?.toLocaleLowerCase();
     const txDeployBridge = processorUtils.rawTxToCustomRawTx(txObject.serialized);
     // Check ecrecover
     expect(txObject.from).to.equal(ethers.recoverAddress(txObject.unsignedHash, txObject.signature as any));
@@ -175,9 +176,6 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         from: sovereignBridgeAddress,
         nonce: 2,
     });
-    // Check nonce is 3
-    const bridgeState = await zkEVMDB.getCurrentAccountState(sovereignBridgeAddress);
-    expect(Number(bridgeState.nonce)).to.equal(3);
 
     // Check if the genesis contains TokenWrappedImplementation contract
     let tokenWrappedImplementationObject = genesis.genesis.find(function (obj) {
@@ -213,6 +211,48 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         );
     }
 
+    // Compute the address of the bridgeLib contract deployed by the deployed sovereign bridge with nonce 3
+    const precalculatedAddressBridgeLib = ethers.getCreateAddress({
+        from: sovereignBridgeAddress,
+        nonce: 3,
+    });
+
+    // Check nonce is 4
+    const bridgeState = await zkEVMDB.getCurrentAccountState(sovereignBridgeAddress);
+    expect(Number(bridgeState.nonce)).to.equal(4);
+
+    // Check if the genesis contains TokenWrappedImplementation contract
+    let bridgeLibImplementationObject = genesis.genesis.find(function (obj) {
+        return obj.contractName === GENESIS_CONTRACT_NAMES.BRIDGE_LIB;
+    });
+
+    // If its not contained add it to the genesis
+    if (typeof bridgeLibImplementationObject === 'undefined') {
+        const bridgeLibImplementationDeployedBytecode = `0x${await zkEVMDB.getBytecode(precalculatedAddressBridgeLib)}`;
+        bridgeLibImplementationObject = {
+            contractName: GENESIS_CONTRACT_NAMES.BRIDGE_LIB,
+            balance: '0',
+            nonce: '1',
+            address: precalculatedAddressBridgeLib,
+            bytecode: bridgeLibImplementationDeployedBytecode,
+        };
+        bridgeLibImplementationObject.storage = await zkEVMDB.dumpStorage(precalculatedAddressBridgeLib);
+        bridgeLibImplementationObject.storage = Object.entries(bridgeLibImplementationObject.storage).reduce(
+            (acc, [key, value]) => {
+                acc[key] = padTo32Bytes(value);
+                return acc;
+            },
+            {},
+        );
+        genesis.genesis.push(bridgeLibImplementationObject);
+    } else {
+        bridgeLibImplementationObject.address = precalculatedAddressBridgeLib;
+        // Check bytecode of the BridgeLibImplementation contract
+        expect(bridgeLibImplementationObject.bytecode).to.equal(
+            `0x${await zkEVMDB.getBytecode(precalculatedAddressBridgeLib)}`,
+        );
+    }
+
     const oldGer = genesis.genesis.find(function (obj) {
         return supportedGERManagers.includes(obj.contractName);
     });
@@ -224,35 +264,10 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         return acc;
     }, {});
 
-    // Setup a second zkEVM to initialize both contracts
-    const zkEVMDB2 = await ZkEVMDB.newZkEVM(
-        new MemDB(F),
-        poseidon,
-        genesisRoot,
-        accHashInput,
-        genesis.genesis,
-        null,
-        null,
-        chainID,
-    );
-    const batch2 = await zkEVMDB2.buildBatch(
-        1000, // limitTimestamp
-        ethers.ZeroAddress, // trustedSequencer
-        smtUtils.stringToH4(ethers.ZeroHash), // l1InfoRoot
-        ethers.ZeroHash, // Forced block hash
-        undefined,
-        {
-            vcmConfig: {
-                skipCounters: true,
-            },
-        },
-    );
-    // Add changeL2Block tx
-    batch2.addRawTx(`0x${rawChangeL2BlockTx}`);
+    // Initialize bridge
     const gerProxy = genesis.genesis.find(function (obj) {
         return obj.contractName === GENESIS_CONTRACT_NAMES.GER_L2_PROXY;
     });
-    // Initialize bridge
     const {
         rollupID,
         gasTokenAddress,
@@ -287,6 +302,42 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     injectedTx.data = initializeData;
     injectedTx.gasPrice = 0;
     txObject = ethers.Transaction.from(injectedTx);
+    // replace deployer from bridge bytecode
+    const bridgeInitializer = txObject.from?.toLowerCase();
+    expect(oldBridge.bytecode).to.include(bridgeDeployer?.slice(2));
+    // replace deployer in bytecode
+    const bridgeBytecodeWithInitializerAsDeployer = oldBridge.bytecode.replace(
+        bridgeDeployer?.slice(2),
+        bridgeInitializer?.slice(2),
+    );
+    expect(bridgeBytecodeWithInitializerAsDeployer).to.include(bridgeInitializer?.slice(2));
+    oldBridge.bytecode = bridgeBytecodeWithInitializerAsDeployer;
+    // Setup a second zkEVM to initialize both contracts
+    const zkEVMDB2 = await ZkEVMDB.newZkEVM(
+        new MemDB(F),
+        poseidon,
+        genesisRoot,
+        accHashInput,
+        genesis.genesis,
+        null,
+        null,
+        chainID,
+    );
+    const batch2 = await zkEVMDB2.buildBatch(
+        1000, // limitTimestamp
+        ethers.ZeroAddress, // trustedSequencer
+        smtUtils.stringToH4(ethers.ZeroHash), // l1InfoRoot
+        ethers.ZeroHash, // Forced block hash
+        undefined,
+        {
+            vcmConfig: {
+                skipCounters: true,
+            },
+        },
+    );
+    // Add changeL2Block tx
+    batch2.addRawTx(`0x${rawChangeL2BlockTx}`);
+
     const txInitializeBridge = processorUtils.rawTxToCustomRawTx(txObject.serialized);
     // Check ecrecover
     expect(txObject.from).to.equal(ethers.recoverAddress(txObject.unsignedHash, txObject.signature as any));
@@ -534,6 +585,9 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
     // Check bridge implementation bytecode contains tokenWrappedImplementation contract address
     expect(oldBridge.bytecode).to.include(precalculatedAddressTokenWrappedImplementation.toLowerCase().slice(2));
+
+    // Check bridge implementation bytecode contains bridgeLib contract address
+    expect(oldBridge.bytecode).to.include(precalculatedAddressBridgeLib.toLowerCase().slice(2));
 
     // Check bridge implementation has initializer disabled
     expect(oldBridge.storage['0x0000000000000000000000000000000000000000000000000000000000000000'].slice(-2)).to.equal(

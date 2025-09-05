@@ -16,10 +16,13 @@ describe('Test vectors aggchain common utils', () => {
     for (let i = 0; i < aggchainHashTestVectors.length; i++) {
         it(`Check test-vectors compute aggchain hash ID=${i}`, async () => {
             const testVector = aggchainHashTestVectors[i].input;
+            // Use default signers hash from test vector or empty defaults
+            const signersHash = testVector.signersHash || utilsCommon.computeSignersHash(0, []);
             const aggchainHash = utilsCommon.computeAggchainHash(
                 testVector.consensusType,
                 testVector.aggchainVKey,
                 testVector.hashAggchainParams,
+                signersHash,
             );
             if (update) {
                 aggchainHashTestVectors[i].output = {};
@@ -43,7 +46,7 @@ describe('Test vectors aggchain common utils', () => {
                 testVector.aggchainType,
             );
             if (update) {
-                const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSA');
+                const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
                 const aggchainContract = await upgrades.deployProxy(aggchainECDSAFactory, [], {
                     initializer: false,
                     constructorArgs: [

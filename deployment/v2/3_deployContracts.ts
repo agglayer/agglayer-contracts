@@ -429,6 +429,11 @@ async function main() {
 
     let pessimisticVKeyRouteALGateway;
 
+    // Get multisig parameters from deployment parameters with defaults
+    const multisigRoleAddress = deployParameters.multisigRoleAddress || admin;
+    const signersToAdd = deployParameters.signersToAdd || [];
+    const newThreshold = deployParameters.newThreshold || 0;
+
     if (!ongoingDeployment.aggLayerGatewayContract) {
         for (let i = 0; i < attemptsDeployProxy; i++) {
             try {
@@ -446,9 +451,16 @@ async function main() {
                         ppVKeySelector,
                         verifierContract.target,
                         ppVKey,
+                        // multisigRole: The address that can manage multisig signers and threshold
+                        multisigRoleAddress,
+                        // signersToAdd: Array of signers to add with their URLs
+                        signersToAdd,
+                        // newThreshold: Threshold for multisig operations
+                        newThreshold,
                     ],
                     {
-                        initializer: 'initialize(address,address,address,address,bytes4,address,bytes32)',
+                        initializer:
+                            'initialize(address,address,address,address,bytes4,address,bytes32,address,(address,string)[],uint256)',
                         unsafeAllow: ['constructor', 'state-variable-immutable'],
                     },
                 );

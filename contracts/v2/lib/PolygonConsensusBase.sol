@@ -171,6 +171,10 @@ abstract contract PolygonConsensusBase is
         string memory sequencerURL,
         string memory _networkName
     ) internal {
+        if (_admin == address(0)) {
+            revert AdminCannotBeZeroAddress();
+        }
+
         admin = _admin;
         trustedSequencer = sequencer;
 
