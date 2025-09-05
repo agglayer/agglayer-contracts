@@ -615,10 +615,10 @@ contract AggchainFEP is AggchainBase {
     /// aggchainData._outputRoot Proposed new output root
     /// aggchainData._l2BlockNumber Proposed new l2 block number
     ///
-    /// @return aggchainParams The computed aggchain parameters hash
     /// @return aggchainVKey The aggchain verification key decoded from the input data
+    /// @return aggchainParams The computed aggchain parameters hash
     /// @inheritdoc AggchainBase
-    function getAggchainParamsAndVKeySelector(
+    function getVKeyAndAggchainParams(
         bytes memory aggchainData
     ) public view override returns (bytes32, bytes32) {
         if (aggchainData.length != 32 * 3) {

@@ -187,7 +187,7 @@ contract AggchainECDSAMultisig is AggchainBase {
      * @return aggchainParams Always returns bytes32(0) as parameters are included directly in hash
      * @inheritdoc AggchainBase
      */
-    function getAggchainParamsAndVKeySelector(
+    function getVKeyAndAggchainParams(
         bytes memory aggchainData
     ) public pure override returns (bytes32, bytes32) {
         if (aggchainData.length != 0) {

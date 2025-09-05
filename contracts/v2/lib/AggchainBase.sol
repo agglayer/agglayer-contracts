@@ -271,7 +271,7 @@ abstract contract AggchainBase is
      * @return aggchainVKey The extracted aggchain verification key
      * @return aggchainParams The extracted aggchain parameters
      */
-    function getAggchainParamsAndVKeySelector(
+    function getVKeyAndAggchainParams(
         bytes memory aggchainData
     ) public view virtual returns (bytes32, bytes32);
 
@@ -294,7 +294,7 @@ abstract contract AggchainBase is
         (
             bytes32 aggchainVKey,
             bytes32 aggchainParams
-        ) = getAggchainParamsAndVKeySelector(aggchainData);
+        ) = getVKeyAndAggchainParams(aggchainData);
 
         return
             keccak256(

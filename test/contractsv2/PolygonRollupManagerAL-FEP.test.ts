@@ -547,7 +547,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             initParams.aggregationVkey,
         );
 
-        // Since getAggchainParamsAndVKeySelector returns (0, 0) for AggchainFEP,
+        // Since getVKeyAndAggchainParams returns (0, 0) for AggchainFEP,
         // and we initialized empty signers, we need to compute the hash accordingly
         // The hash includes: consensusType, vKey, params, signersHash
         const emptySignersHash = computeSignersHash(0, []);
