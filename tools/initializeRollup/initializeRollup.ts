@@ -9,7 +9,7 @@ import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../util
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 // NOTE: Direct initialization is now used instead of encoded bytes
 // The deprecated encoding functions have been removed
-import { PolygonRollupManager } from '../../typechain-types';
+import { AgglayerManager } from '../../typechain-types';
 import initializeRollupParameters from './initialize_rollup.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -127,10 +127,10 @@ async function main() {
     }
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
-    const rollupManagerContract = PolygonRollupManagerFactory.attach(
+    const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
+    const rollupManagerContract = AgglayerManagerFactory.attach(
         initializeRollupParameters.rollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
 
@@ -260,7 +260,7 @@ async function main() {
             objectDecoded[currentParam.name] = timelockTx?.args[i];
 
             if (currentParam.name === 'data') {
-                const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
+                const decodedRollupManagerData = AgglayerManagerFactory.interface.parseTransaction({
                     data: timelockTx?.args[i],
                 });
                 const objectDecodedData = {};

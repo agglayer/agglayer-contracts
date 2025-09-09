@@ -7,7 +7,7 @@ import { processorUtils, contractUtils, MTBridge, mtBridgeUtils, utils } from '@
 import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
+    AgglayerManagerMock,
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMEtrog,
@@ -61,7 +61,7 @@ function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any,
     );
 }
 
-describe('Polygon Rollup Manager', () => {
+describe('Polygon AgglayerManager', () => {
     let deployer: any;
     let timelock: any;
     let emergencyCouncil: any;
@@ -74,7 +74,7 @@ describe('Polygon Rollup Manager', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let rollupManagerContract: AgglayerManagerMock;
 
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
@@ -178,7 +178,7 @@ describe('Polygon Rollup Manager', () => {
         });
 
         // deploy PolygonRollupManager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
@@ -189,7 +189,7 @@ describe('Polygon Rollup Manager', () => {
                 aggLayerGatewayContract.target,
             ],
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'state-variable-immutable'],
-        })) as unknown as PolygonRollupManagerMock;
+        })) as unknown as AgglayerManagerMock;
 
         await rollupManagerContract.waitForDeployment();
 

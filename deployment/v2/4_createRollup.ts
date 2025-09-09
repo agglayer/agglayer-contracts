@@ -13,7 +13,7 @@ import * as utilsFEP from '../../src/utils-aggchain-FEP';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
 import * as utilsPP from '../../src/pessimistic-utils';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMEtrog,
     PolygonZkEVMBridgeV2,
     PolygonValidiumEtrog,
@@ -198,16 +198,16 @@ async function main() {
     }
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
-    const rollupManagerContract = PolygonRollupManagerFactory.attach(
+    const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
+    const rollupManagerContract = AgglayerManagerFactory.attach(
         deployOutput.polygonRollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     // Load global exit root manager
     const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
     const globalExitRootManagerContract = globalExitRootManagerFactory.attach(
         deployOutput.polygonZkEVMGlobalExitRootAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
     if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) === false) {

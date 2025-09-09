@@ -6,7 +6,7 @@ import { setCode } from '@nomicfoundation/hardhat-network-helpers';
 import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
+    AgglayerManagerMock,
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     Address,
@@ -21,7 +21,7 @@ import {
 } from '../../src/pessimistic-utils';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 
-describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
+describe('Polygon AgglayerManager with Polygon Pessimistic Consensus', () => {
     let deployer: any;
     let timelock: any;
     let emergencyCouncil: any;
@@ -34,7 +34,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let rollupManagerContract: AgglayerManagerMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
 
     const polTokenName = 'POL Token';
@@ -127,7 +127,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         });
 
         // deploy polygon rollup manager mock
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
@@ -138,7 +138,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
                 aggLayerGatewayContract.target,
             ],
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'state-variable-immutable'],
-        })) as unknown as PolygonRollupManagerMock;
+        })) as unknown as AgglayerManagerMock;
 
         await rollupManagerContract.waitForDeployment();
 

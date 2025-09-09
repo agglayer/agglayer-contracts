@@ -10,7 +10,7 @@ import {
     VerifierRollupHelperMock,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMGlobalExitRootV2,
-    PolygonRollupManagerMock,
+    AgglayerManagerMock,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
 } from '../../typechain-types';
@@ -36,7 +36,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let rollupManagerContract: AgglayerManagerMock;
     let aggchainECDSAContract: AggchainECDSAMultisig;
 
     const networkIDMainnet = 0;
@@ -123,7 +123,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         });
 
         // deploy PolygonRollupManager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
@@ -134,7 +134,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 aggLayerGatewayContract.target,
             ],
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'state-variable-immutable'],
-        })) as unknown as PolygonRollupManagerMock;
+        })) as unknown as AgglayerManagerMock;
 
         await rollupManagerContract.waitForDeployment();
 

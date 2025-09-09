@@ -7,7 +7,7 @@ import { ConsensusContracts } from '../src/pessimistic-utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../src/utils-common-aggchain';
 
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonPessimisticConsensus,
     PolygonValidiumEtrog,
     PolygonZkEVMEtrog,
@@ -48,10 +48,10 @@ describe('Tooling docker build tests Contract', () => {
             fs.readFileSync(path.join(__dirname, '../tools/createNewRollup/create_new_rollup_output.json'), 'utf8'),
         );
         // Check output values with current docker environment
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
-        const rollupManagerContract = PolygonRollupManagerFactory.attach(
+        const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager');
+        const rollupManagerContract = AgglayerManagerFactory.attach(
             createRollupOutput.rollupManagerAddress,
-        ) as PolygonRollupManager;
+        ) as AgglayerManager;
 
         expect(createRollupConfig.rollupManagerAddress).to.equal(rollupManagerContract.target);
         // Get rollup data
@@ -136,10 +136,10 @@ describe('Tooling docker build tests Contract', () => {
             fs.readFileSync(path.join(__dirname, '../tools/addRollupType/add_rollup_type_output.json'), 'utf8'),
         );
         // Check output values with current docker environment
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
-        const rollupManagerContract = PolygonRollupManagerFactory.attach(
+        const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager');
+        const rollupManagerContract = AgglayerManagerFactory.attach(
             dockerDeploymentOutput.polygonRollupManagerAddress,
-        ) as PolygonRollupManager;
+        ) as AgglayerManager;
 
         const rollupType = await rollupManagerContract.rollupTypeMap(Number(createRollupTypeOutput.rollupTypeID));
         // Consensus contract address

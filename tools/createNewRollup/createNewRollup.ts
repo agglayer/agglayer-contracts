@@ -18,7 +18,7 @@ import createRollupParameters from './create_new_rollup.json';
 import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis';
 import { logger } from '../../src/logger';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMEtrog,
     PolygonZkEVMBridgeV2,
     PolygonValidiumEtrog,
@@ -151,17 +151,17 @@ async function main() {
     }
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
-    const rollupManagerContract = PolygonRollupManagerFactory.attach(
+    const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
+    const rollupManagerContract = AgglayerManagerFactory.attach(
         createRollupParameters.rollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     // Load global exit root manager
     const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
     const globalExitRootManagerAddress = await rollupManagerContract.globalExitRootManager();
     const globalExitRootManagerContract = globalExitRootManagerFactory.attach(
         globalExitRootManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     // Check if the deployer has right to deploy new rollups from rollupManager contract
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
@@ -278,7 +278,7 @@ async function main() {
         const operation = genOperation(
             createRollupParameters.rollupManagerAddress,
             0, // value
-            PolygonRollupManagerFactory.interface.encodeFunctionData('attachAggchainToAL', [
+            AgglayerManagerFactory.interface.encodeFunctionData('attachAggchainToAL', [
                 createRollupParameters.rollupTypeId,
                 chainID,
                 initializeBytes,
@@ -319,7 +319,7 @@ async function main() {
             objectDecoded[currentParam.name] = timelockTx?.args[i];
 
             if (currentParam.name === 'data') {
-                const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
+                const decodedRollupManagerData = AgglayerManagerFactory.interface.parseTransaction({
                     data: timelockTx?.args[i],
                 });
                 const objectDecodedData = {};
@@ -339,7 +339,7 @@ async function main() {
         process.exit(0);
     } else if (createRollupParameters.type === transactionTypes.MULTISIG) {
         logger.info('Creating calldata for rollup creation from multisig...');
-        const txDeployRollupCalldata = PolygonRollupManagerFactory.interface.encodeFunctionData('attachAggchainToAL', [
+        const txDeployRollupCalldata = AgglayerManagerFactory.interface.encodeFunctionData('attachAggchainToAL', [
             createRollupParameters.rollupTypeId,
             chainID,
             initializeBytes,

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 import "../PolygonZkEVMGlobalExitRootV2.sol";
 
 /**
- * PolygonRollupManager mock
+ * AgglayerManager mock
  */
 contract PolygonZkEVMGlobalExitRootV2Mock is PolygonZkEVMGlobalExitRootV2 {
     /**

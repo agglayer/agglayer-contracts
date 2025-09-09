@@ -1108,7 +1108,7 @@ contract PolygonRollupManagerPessimistic is
     ////////////////////////
 
     /**
-     * @notice Function to activate emergency state, which also enables the emergency mode on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Function to activate emergency state, which also enables the emergency mode on both AgglayerManager and PolygonZkEVMBridge contracts
      * If not called by the owner must not have been aggregated in a _HALT_AGGREGATION_TIMEOUT period and an emergency state was not happened in the same period
      */
     function activateEmergencyState() external {
@@ -1128,7 +1128,7 @@ contract PolygonRollupManagerPessimistic is
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
      */
     function deactivateEmergencyState()
         external
@@ -1145,7 +1145,7 @@ contract PolygonRollupManagerPessimistic is
     }
 
     /**
-     * @notice Internal function to activate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Internal function to activate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
      */
     function _activateEmergencyState() internal override {
         // Activate emergency state on PolygonZkEVM Bridge

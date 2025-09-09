@@ -5,7 +5,7 @@ import fs = require('fs');
 
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
-import { PolygonRollupManager } from '../../typechain-types';
+import { AgglayerManager } from '../../typechain-types';
 import { transactionTypes, genOperation } from '../utils';
 import initMigrationParams from './initMigration.json';
 import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
@@ -52,10 +52,10 @@ async function main() {
     const { type, polygonRollupManagerAddress, rollupID, newRollupTypeID, upgradeData } = initMigrationParams;
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
-    const rollupManagerContract = PolygonRollupManagerFactory.attach(
+    const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
+    const rollupManagerContract = AgglayerManagerFactory.attach(
         polygonRollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     const outputJson = {} as any;
 
@@ -67,7 +67,7 @@ async function main() {
         const operation = genOperation(
             polygonRollupManagerAddress,
             0, // value
-            PolygonRollupManagerFactory.interface.encodeFunctionData('initMigration', [
+            AgglayerManagerFactory.interface.encodeFunctionData('initMigration', [
                 rollupID,
                 newRollupTypeID,
                 upgradeData,
@@ -97,10 +97,10 @@ async function main() {
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         // Decode the scheduleData for better readability
-        outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, PolygonRollupManagerFactory);
+        outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, AgglayerManagerFactory);
     } else if (type === transactionTypes.MULTISIG) {
         logger.info('Creating calldata to initMigration from multisig...');
-        const tx = PolygonRollupManagerFactory.interface.encodeFunctionData('initMigration', [
+        const tx = AgglayerManagerFactory.interface.encodeFunctionData('initMigration', [
             rollupID,
             newRollupTypeID,
             upgradeData,
