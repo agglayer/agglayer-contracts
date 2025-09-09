@@ -7,7 +7,7 @@ import "../interfaces/IAgglayerManagerGER.sol";
  * Since the current contract of PolygonZkEVMGlobalExitRoot will be upgraded to a AgglayerManagerGER, and it will implement
  * the DepositContractBase, this base is needed to preserve the previous storage slots
  */
-abstract contract PolygonZkEVMGlobalExitRootBaseStorage is
+abstract contract AgglayerManagerGERBaseStorage is
     IAgglayerManagerGER
 {
     // Rollup root, contains all exit roots of all rollups
