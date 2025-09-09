@@ -204,7 +204,7 @@ async function main() {
     ) as AgglayerManager;
 
     // Load global exit root manager
-    const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    const globalExitRootManagerFactory = await ethers.getContractFactory('AgglayerManagerGER', deployer);
     const globalExitRootManagerContract = globalExitRootManagerFactory.attach(
         deployOutput.polygonZkEVMGlobalExitRootAddress,
     ) as AgglayerManager;

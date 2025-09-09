@@ -7,7 +7,7 @@ import {
     AggLayerGateway,
     ERC20PermitMock,
     AgglayerManagerMock,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerManagerGER,
     PolygonZkEVMBridgeV2,
     AggchainECDSAMultisig,
     AggchainFEP,
@@ -45,7 +45,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
     // CONTRACTS
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
+    let polygonZkEVMGlobalExitRoot: AgglayerManagerGER;
     let rollupManagerContract: AgglayerManagerMock;
     let aggLayerGatewayContract: AggLayerGateway;
     let aggchainECDSAImplementationContract: AggchainECDSAMultisig;
@@ -343,13 +343,13 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             nonce: currentDeployerNonce + 3,
         });
         // deploy globalExitRootV2
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerManagerGER');
         polygonZkEVMGlobalExitRoot = (await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as any;
 
-        // deploy PolygonRollupManager previous (pessimistic)
+        // deploy AgglayerManager previous (pessimistic)
         const PolygonRollupManagerPreviousFactory = await ethers.getContractFactory('PolygonRollupManagerPessimistic');
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerPreviousFactory, [], {
             initializer: false,

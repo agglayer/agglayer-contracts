@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
-import "../PolygonZkEVMGlobalExitRootV2.sol";
+import "../AgglayerManagerGER.sol";
 
 /**
  * AgglayerManager mock
  */
-contract PolygonZkEVMGlobalExitRootV2Mock is PolygonZkEVMGlobalExitRootV2 {
+contract PolygonZkEVMGlobalExitRootV2Mock is AgglayerManagerGER {
     /**
      * @param _rollupManager Rollup manager contract address
      * @param _bridgeAddress PolygonZkEVMBridge contract address
@@ -13,7 +13,7 @@ contract PolygonZkEVMGlobalExitRootV2Mock is PolygonZkEVMGlobalExitRootV2 {
     constructor(
         address _rollupManager,
         address _bridgeAddress
-    ) PolygonZkEVMGlobalExitRootV2(_rollupManager, _bridgeAddress) {}
+    ) AgglayerManagerGER(_rollupManager, _bridgeAddress) {}
 
     function injectGER(bytes32 _root, uint32 depositCount) external {
         globalExitRootMap[_root] = block.timestamp;

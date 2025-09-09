@@ -190,8 +190,8 @@ async function main() {
     );
 
     // prepare upgrade global exit root
-    // Prepare Upgrade  PolygonZkEVMGlobalExitRootV2
-    const polygonGlobalExitRootV2 = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    // Prepare Upgrade  AgglayerManagerGER
+    const polygonGlobalExitRootV2 = await ethers.getContractFactory('AgglayerManagerGER', deployer);
 
     const newGlobalExitRoortImpl = await upgrades.prepareUpgrade(
         currentGlobalExitRootAddress,
@@ -270,7 +270,7 @@ async function main() {
     ]);
 
     // Upgrade to rollup manager previous polygonZKEVM
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
     const implRollupManager = await upgrades.prepareUpgrade(currentPolygonZkEVMAddress, PolygonRollupManagerFactory, {
         constructorArgs: [currentGlobalExitRootAddress, polTokenAddress, currentBridgeAddress],
         unsafeAllow: ['constructor', 'state-variable-immutable'],

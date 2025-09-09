@@ -143,8 +143,8 @@ async function main() {
         salt, // salt
     );
 
-    /// Upgrade PolygonZkEVMGlobalExitRootV2
-    const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    /// Upgrade AgglayerManagerGER
+    const globalExitRootManagerFactory = await ethers.getContractFactory('AgglayerManagerGER', deployer);
     const globalExitRootManagerImp = await upgrades.prepareUpgrade(
         globalExitRootManagerAddress,
         globalExitRootManagerFactory,

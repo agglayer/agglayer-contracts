@@ -11,7 +11,7 @@ import {
     AggLayerGateway,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMDeployer,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerManagerGER,
     PolygonZkEVMTimelock,
     ProxyAdmin,
 } from '../../typechain-types';
@@ -351,7 +351,7 @@ async function main() {
      *Deployment Global exit root manager
      */
     let polygonZkEVMGlobalExitRoot;
-    const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerManagerGER', deployer);
     if (!ongoingDeployment.polygonZkEVMGlobalExitRoot) {
         for (let i = 0; i < attemptsDeployProxy; i++) {
             try {
@@ -386,7 +386,7 @@ async function main() {
         // Expect the precalculate address matches de onogin deployment
         polygonZkEVMGlobalExitRoot = PolygonZkEVMGlobalExitRootFactory.attach(
             ongoingDeployment.polygonZkEVMGlobalExitRoot,
-        ) as PolygonZkEVMGlobalExitRootV2;
+        ) as AgglayerManagerGER;
 
         console.log('#######################\n');
         console.log('polygonZkEVMGlobalExitRoot already deployed on: ', ongoingDeployment.polygonZkEVMGlobalExitRoot);

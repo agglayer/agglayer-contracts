@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 
 /**
- * Since the current contract of PolygonZkEVMGlobalExitRoot will be upgraded to a PolygonZkEVMGlobalExitRootV2, and it will implement
+ * Since the current contract of PolygonZkEVMGlobalExitRoot will be upgraded to a AgglayerManagerGER, and it will implement
  * the DepositContractBase, this base is needed to preserve the previous storage slots
  */
 abstract contract PolygonZkEVMGlobalExitRootBaseStorage is

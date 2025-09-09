@@ -6,7 +6,7 @@ import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-
 import {
     ERC20PermitMock,
     AgglayerManagerMock,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerManagerGER,
     PolygonZkEVMBridgeV2,
     PolygonValidiumEtrog,
     PolygonRollupBaseEtrog,
@@ -60,7 +60,7 @@ describe('PolygonValidiumEtrog', () => {
 
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
+    let polygonZkEVMGlobalExitRoot: AgglayerManagerGER;
     let rollupManagerContract: AgglayerManagerMock;
     let PolygonZKEVMV2Contract: PolygonValidiumEtrog;
     let PolygonDataCommitee: PolygonDataCommittee;
@@ -119,7 +119,7 @@ describe('PolygonValidiumEtrog', () => {
         await rollupManagerContract.waitForDeployment();
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerManagerGER');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [rollupManagerContract.target, polygonZkEVMBridgeContract.target],
             unsafeAllow: ['constructor', 'state-variable-immutable'],

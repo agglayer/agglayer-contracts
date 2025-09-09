@@ -7,7 +7,7 @@ import { utils } from 'ffjavascript';
 
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
-import { PolygonRollupManager } from '../../typechain-types';
+import { AgglayerManager } from '../../typechain-types';
 import upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -51,7 +51,7 @@ async function main() {
 
     // Load onchain parameters
     const polygonRMFactory = await ethers.getContractFactory('PolygonRollupManagerPrevious');
-    const polygonRMContract = (await polygonRMFactory.attach(rollupManagerAddress)) as PolygonRollupManager;
+    const polygonRMContract = (await polygonRMFactory.attach(rollupManagerAddress)) as AgglayerManager;
 
     const globalExitRootManagerAddress = await polygonRMContract.globalExitRootManager();
     const polAddress = await polygonRMContract.pol();
@@ -118,8 +118,8 @@ async function main() {
     // prapare upgrades
 
     // prepare upgrade global exit root
-    // Prepare Upgrade  PolygonZkEVMGlobalExitRootV2
-    const polygonGlobalExitRootV2 = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    // Prepare Upgrade  AgglayerManagerGER
+    const polygonGlobalExitRootV2 = await ethers.getContractFactory('AgglayerManagerGER', deployer);
 
     const newGlobalExitRoortImpl = await upgrades.prepareUpgrade(
         globalExitRootManagerAddress,
@@ -155,7 +155,7 @@ async function main() {
     );
 
     // Upgrade to rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
     const implRollupManager = await upgrades.prepareUpgrade(rollupManagerAddress, PolygonRollupManagerFactory, {
         constructorArgs: [globalExitRootManagerAddress, polAddress, bridgeAddress],
         unsafeAllow: ['constructor', 'state-variable-immutable'],

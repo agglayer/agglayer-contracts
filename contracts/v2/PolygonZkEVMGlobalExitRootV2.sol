@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 /**
  * Contract responsible for managing the exit roots across multiple networks
  */
-contract PolygonZkEVMGlobalExitRootV2 is
+contract AgglayerManagerGER is
     PolygonZkEVMGlobalExitRootBaseStorage,
     DepositContractBase,
     Initializable,

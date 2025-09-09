@@ -23,7 +23,7 @@ describe('Aggchain Metadata Simple Tests', () => {
         ]);
 
         // Deploy global exit root manager
-        const globalExitRootManager = await ethers.deployContract('PolygonZkEVMGlobalExitRootV2', [
+        const globalExitRootManager = await ethers.deployContract('AgglayerManagerGER', [
             deployer.address,
             deployer.address,
         ]);

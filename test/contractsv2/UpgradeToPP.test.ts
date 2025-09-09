@@ -9,7 +9,7 @@ import {
     ERC20PermitMock,
     VerifierRollupHelperMock,
     PolygonZkEVMBridgeV2,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerManagerGER,
     AgglayerManagerMock,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
@@ -35,7 +35,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
     let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
+    let polygonZkEVMGlobalExitRoot: AgglayerManagerGER;
     let rollupManagerContract: AgglayerManagerMock;
     let aggchainECDSAContract: AggchainECDSAMultisig;
 
@@ -109,7 +109,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         firstDeployment = false;
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerManagerGER');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
@@ -122,7 +122,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
-        // deploy PolygonRollupManager
+        // deploy AgglayerManager
         const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
