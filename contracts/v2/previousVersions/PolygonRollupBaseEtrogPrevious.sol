@@ -8,7 +8,7 @@ import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "../AgglayerManager.sol";
 import "./IPolygonRollupBasePrevious.sol";
-import "../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "../interfaces/IAgglayerBridgeV2.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "../lib/PolygonConstantsBase.sol";
 
@@ -127,9 +127,9 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
 
     // Global Exit Root address L2
-    IBaseAgglayerManagerGER
+    IBaseAgglayerGER
         public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBaseAgglayerManagerGER(
+        IBaseAgglayerGER(
             0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
         );
 
@@ -143,7 +143,7 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     IAgglayerManagerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
-    IPolygonZkEVMBridgeV2 public immutable bridgeAddress;
+    IAgglayerBridgeV2 public immutable bridgeAddress;
 
     // Rollup manager
     AgglayerManager public immutable rollupManager;
@@ -276,7 +276,7 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     constructor(
         IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridgeV2 _bridgeAddress,
         AgglayerManager _rollupManager
     ) {
         globalExitRootManager = _globalExitRootManager;
@@ -864,7 +864,7 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         bytes memory _gasTokenMetadata
     ) public view returns (bytes memory) {
         bytes memory initializeBrigeData = abi.encodeCall(
-            IPolygonZkEVMBridgeV2.initialize,
+            IAgglayerBridgeV2.initialize,
             (
                 networkID,
                 _gasTokenAddress,

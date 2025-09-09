@@ -7,7 +7,7 @@ import { utils } from 'ffjavascript';
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
-import { PolygonRollupManagerPessimistic, PolygonZkEVMBridgeV2 } from '../../typechain-types';
+import { PolygonRollupManagerPessimistic, AgglayerBridgeV2 } from '../../typechain-types';
 import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData } from '../utils';
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters, getGitInfo } from '../../src/utils';
 import * as upgradeParameters from './upgrade_parameters.json';
@@ -98,7 +98,7 @@ async function main() {
     );
 
     // Upgrade bridge
-    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
 
     let impBridge;
     if (unsafeSkipStorageCheck === true) {
@@ -119,7 +119,7 @@ async function main() {
     await verifyContractEtherscan(impBridge, []);
 
     // Verify bytecodeStorer
-    const bridgeContract = bridgeFactory.attach(impBridge) as PolygonZkEVMBridgeV2;
+    const bridgeContract = bridgeFactory.attach(impBridge) as AgglayerBridgeV2;
     const bytecodeStorerAddress = await bridgeContract.wrappedTokenBytecodeStorer();
     await verifyContractEtherscan(bytecodeStorerAddress, []);
     logger.info('#######################\n');

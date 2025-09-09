@@ -4,7 +4,7 @@ import * as ethers from 'ethers';
 import { getGitInfo } from '../src/utils';
 
 export const supportedBridgeContracts = [
-    'PolygonZkEVMBridgeV2 proxy',
+    'AgglayerBridgeV2 proxy',
     'PolygonZkEVMBridge proxy',
     'AgglayerBridgeL2 proxy',
 ];

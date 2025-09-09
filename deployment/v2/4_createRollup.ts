@@ -15,7 +15,7 @@ import * as utilsPP from '../../src/pessimistic-utils';
 import {
     AgglayerManager,
     PolygonZkEVMEtrog,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridgeV2,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
     AggLayerGateway,
@@ -256,10 +256,10 @@ async function main() {
     let gasTokenMetadata;
 
     // Get bridge instance
-    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
     const polygonZkEVMBridgeContract = bridgeFactory.attach(
         deployOutput.polygonZkEVMBridgeAddress,
-    ) as PolygonZkEVMBridgeV2;
+    ) as AgglayerBridgeV2;
     if (
         createRollupParameters.gasTokenAddress &&
         createRollupParameters.gasTokenAddress !== '' &&

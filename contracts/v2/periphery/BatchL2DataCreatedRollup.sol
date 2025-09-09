@@ -23,9 +23,9 @@ contract BatchL2DataCreatedRollup {
     bytes32 public constant SIGNATURE_INITIALIZE_TX_S =
         0x000000000000000000000000000000000000000000000000000000005ca1ab1e;
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
-    IBaseAgglayerManagerGER
+    IBaseAgglayerGER
         public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBaseAgglayerManagerGER(
+        IBaseAgglayerGER(
             0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
         );
 
@@ -45,7 +45,7 @@ contract BatchL2DataCreatedRollup {
         bytes memory _gasTokenMetadata
     ) public view returns (bytes memory) {
         bytes memory initializeBrigeData = abi.encodeCall(
-            IPolygonZkEVMBridgeV2.initialize,
+            IAgglayerBridgeV2.initialize,
             (
                 networkID,
                 _gasTokenAddress,

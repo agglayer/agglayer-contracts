@@ -14,9 +14,9 @@ import { checkParams } from '../../../src/utils';
 // Genesis files have been created previously and so they have old naming, as it shown in the links above
 // Those genesis are already imported on different tooling and added as a metadata on-chain. Therefore, this util aims
 // to support them too
-const supportedGERManagers = ['AgglayerManagerGERL2 implementation'];
-const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'PolygonZkEVMBridgeV2 implementation'];
-const supportedBridgeContractsProxy = ['PolygonZkEVMBridgeV2 proxy', 'PolygonZkEVMBridge proxy'];
+const supportedGERManagers = ['AgglayerGERL2 implementation'];
+const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'AgglayerBridgeV2 implementation'];
+const supportedBridgeContractsProxy = ['AgglayerBridgeV2 proxy', 'PolygonZkEVMBridge proxy'];
 
 function toPaddedHex32(val: string | number | bigint): string {
     return ethers.zeroPadValue(ethers.toBeHex(val), 32);

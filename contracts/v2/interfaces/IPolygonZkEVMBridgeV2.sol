@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
-import "../../interfaces/IBaseAgglayerManagerGER.sol";
+import "../../interfaces/IBaseAgglayerGER.sol";
 
-interface IPolygonZkEVMBridgeV2 {
+interface IAgglayerBridgeV2 {
     /**
      * @dev Thrown when the destination network is invalid
      */
@@ -180,7 +180,7 @@ interface IPolygonZkEVMBridgeV2 {
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBaseAgglayerManagerGER _globalExitRootManager,
+        IBaseAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata
     ) external;

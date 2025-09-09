@@ -7,7 +7,7 @@ import {
     ERC20PermitMock,
     AgglayerManagerMock,
     AgglayerManagerGER,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridgeV2,
     AggchainFEP,
     VerifierRollupHelperMock,
     PolygonPessimisticConsensus,
@@ -41,7 +41,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
     let optModeManager: any;
 
     // CONTRACTS
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: AgglayerManagerGER;
     let rollupManagerContract: AgglayerManagerMock;
@@ -216,8 +216,8 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             POL_INITIAL_BALANCE,
         );
 
-        // deploy PolygonZkEVMBridgeV2, it's no initialized yet because rollupManager and globalExitRootManager addresses are not set yet (not deployed)
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        // deploy AgglayerBridgeV2, it's no initialized yet because rollupManager and globalExitRootManager addresses are not set yet (not deployed)
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],

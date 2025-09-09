@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
-import "../../interfaces/IBaseAgglayerManagerGER.sol";
+import "../../interfaces/IBaseAgglayerGER.sol";
 
-interface IAgglayerManagerGER is IBaseAgglayerManagerGER {
+interface IAgglayerManagerGER is IBaseAgglayerGER {
     function getLastGlobalExitRoot() external view returns (bytes32);
 
     function getRoot() external view returns (bytes32);

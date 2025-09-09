@@ -53,7 +53,7 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
     constructor(
         IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridgeV2 _bridgeAddress,
         AgglayerManager _rollupManager
     )
         PolygonRollupBaseEtrog(

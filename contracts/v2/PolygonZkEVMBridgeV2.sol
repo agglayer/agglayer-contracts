@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 
 import "./lib/DepositContractV2.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/IBaseAgglayerManagerGER.sol";
+import "../interfaces/IBaseAgglayerGER.sol";
 import "../interfaces/IBridgeMessageReceiver.sol";
-import "./interfaces/IPolygonZkEVMBridgeV2.sol";
+import "./interfaces/IAgglayerBridgeV2.sol";
 import "../lib/EmergencyManager.sol";
 import "../lib/GlobalExitRootLib.sol";
 import "./lib/BytecodeStorer.sol";
@@ -20,10 +20,10 @@ import {IVersion} from "./interfaces/IVersion.sol";
  * PolygonZkEVMBridge that will be deployed on Ethereum and all Polygon rollups
  * Contract responsible to manage the token interactions with other networks
  */
-contract PolygonZkEVMBridgeV2 is
+contract AgglayerBridgeV2 is
     DepositContractV2,
     EmergencyManager,
-    IPolygonZkEVMBridgeV2,
+    IAgglayerBridgeV2,
     IVersion
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
@@ -72,7 +72,7 @@ contract PolygonZkEVMBridgeV2 is
     uint32 public networkID;
 
     // Global Exit Root address
-    IBaseAgglayerManagerGER public globalExitRootManager;
+    IBaseAgglayerGER public globalExitRootManager;
 
     // Last updated deposit count to the global exit root manager
     uint32 public lastUpdatedDepositCount;
@@ -216,7 +216,7 @@ contract PolygonZkEVMBridgeV2 is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBaseAgglayerManagerGER _globalExitRootManager,
+        IBaseAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata
     ) external virtual getInitializedVersion reinitializer(2) {

@@ -2,13 +2,13 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import {
-    PolygonZkEVMBridgeV2Pessimistic,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridgeV2Pessimistic,
+    AgglayerBridgeV2,
     PolygonZkEVMGlobalExitRoot,
 } from '../../typechain-types';
 
 describe('BridgeV2 upgrade', () => {
-    let bridgeContract: PolygonZkEVMBridgeV2;
+    let bridgeContract: AgglayerBridgeV2;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRoot;
 
     let deployer: any;
@@ -21,11 +21,11 @@ describe('BridgeV2 upgrade', () => {
         [deployer, rollupManager] = await ethers.getSigners();
 
         // deploy bridgeV2Pessimistic
-        const bridgePessimisticFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2Pessimistic');
+        const bridgePessimisticFactory = await ethers.getContractFactory('AgglayerBridgeV2Pessimistic');
         bridgeContract = (await upgrades.deployProxy(bridgePessimisticFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as PolygonZkEVMBridgeV2Pessimistic;
+        })) as unknown as AgglayerBridgeV2Pessimistic;
 
         // deploy global exit root manager
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot');
@@ -44,7 +44,7 @@ describe('BridgeV2 upgrade', () => {
             '0x',
         );
 
-        const bridgeV2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeV2Factory = await ethers.getContractFactory('AgglayerBridgeV2');
 
         // Upgrade and initialize bridgeV2
         bridgeContract = (await upgrades.upgradeProxy(bridgeContract.target, bridgeV2Factory, {
@@ -53,7 +53,7 @@ describe('BridgeV2 upgrade', () => {
                 fn: 'initialize()',
                 args: [],
             },
-        })) as unknown as PolygonZkEVMBridgeV2;
+        })) as unknown as AgglayerBridgeV2;
     });
 
     it('Should check params after upgrade from pessimistic to bridgeV2', async () => {

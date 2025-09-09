@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-interface IBaseAgglayerManagerGER {
+interface IBaseAgglayerGER {
     /**
      * @dev Thrown when the caller is not the allowed contracts
      */

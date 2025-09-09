@@ -5,7 +5,7 @@ import path from 'path';
 import {
     AgglayerManager,
     AgglayerManagerGER,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridgeV2,
     AggchainFEP,
     AggLayerGateway,
 } from '../typechain-types';
@@ -61,17 +61,17 @@ describe('Docker build tests Contract', () => {
         );
     });
 
-    it('should check PolygonZkEVMBridgeV2', async () => {
-        const PolygonZkEVMBridgeV2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const PolygonZkEVMBridgeV2Contract = PolygonZkEVMBridgeV2Factory.attach(
+    it('should check AgglayerBridgeV2', async () => {
+        const AgglayerBridgeV2Factory = await ethers.getContractFactory('AgglayerBridgeV2');
+        const AgglayerBridgeV2Contract = AgglayerBridgeV2Factory.attach(
             polygonZkEVMBridgeAddress,
-        ) as PolygonZkEVMBridgeV2;
-        expect(PolygonZkEVMBridgeV2Contract.target).to.equal(polygonZkEVMBridgeAddress);
-        expect(await PolygonZkEVMBridgeV2Contract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
-        expect(await PolygonZkEVMBridgeV2Contract.polygonRollupManager()).to.equal(polygonRollupManagerAddress);
+        ) as AgglayerBridgeV2;
+        expect(AgglayerBridgeV2Contract.target).to.equal(polygonZkEVMBridgeAddress);
+        expect(await AgglayerBridgeV2Contract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
+        expect(await AgglayerBridgeV2Contract.polygonRollupManager()).to.equal(polygonRollupManagerAddress);
         // Check already initialized
         await expect(
-            PolygonZkEVMBridgeV2Contract.initialize(
+            AgglayerBridgeV2Contract.initialize(
                 0,
                 ethers.ZeroAddress, // zero for ether
                 ethers.ZeroAddress, // zero for ether

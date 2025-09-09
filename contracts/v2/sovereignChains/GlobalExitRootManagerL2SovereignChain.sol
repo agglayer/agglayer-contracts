@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity 0.8.28;
-import "../../AgglayerManagerGERL2.sol";
+import "../../AgglayerGERL2.sol";
 import "../lib/Hashes.sol";
 import "../../v2/interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
 import "../../v2/interfaces/IVersion.sol";
@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
  * Contract responsible for managing the exit roots for the Sovereign chains and global exit roots
  */
 contract GlobalExitRootManagerL2SovereignChain is
-    AgglayerManagerGERL2,
+    AgglayerGERL2,
     IGlobalExitRootManagerL2SovereignChain,
     Initializable,
     IVersion
@@ -109,7 +109,7 @@ contract GlobalExitRootManagerL2SovereignChain is
      */
     constructor(
         address _bridgeAddress
-    ) AgglayerManagerGERL2(_bridgeAddress) {
+    ) AgglayerGERL2(_bridgeAddress) {
         _disableInitializers();
     }
 

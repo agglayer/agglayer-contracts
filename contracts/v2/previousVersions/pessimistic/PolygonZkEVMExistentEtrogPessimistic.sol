@@ -55,7 +55,7 @@ contract PolygonZkEVMExistentEtrogPessimistic is
     constructor(
         IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridgeV2 _bridgeAddress,
         PolygonRollupManagerPessimistic _rollupManager
     )
         PolygonRollupBaseEtrogPessimistic(

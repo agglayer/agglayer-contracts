@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 
 import "./interfaces/IAgglayerManagerGER.sol";
 import "./interfaces/IVersion.sol";
-import "./lib/AgglayerManagerGERBaseStorage.sol";
+import "./lib/AgglayerGERBaseStorage.sol";
 import "../lib/GlobalExitRootLib.sol";
 import "./lib/DepositContractBase.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
@@ -13,7 +13,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
  * Contract responsible for managing the exit roots across multiple networks
  */
 contract AgglayerManagerGER is
-    AgglayerManagerGERBaseStorage,
+    AgglayerGERBaseStorage,
     DepositContractBase,
     Initializable,
     IVersion

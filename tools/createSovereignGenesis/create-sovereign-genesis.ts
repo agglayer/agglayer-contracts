@@ -10,7 +10,7 @@ import { ethers, hardhatArguments } from 'hardhat';
 // internal dependencies
 import { MemDB, ZkEVMDB, getPoseidon, smtUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis';
-import { AgglayerManager, PolygonZkEVMBridgeV2 } from '../../typechain-types';
+import { AgglayerManager, AgglayerBridgeV2 } from '../../typechain-types';
 import '../../deployment/helpers/utils';
 import { initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
 import { checkParams, getGitInfo } from '../../src/utils';
@@ -190,9 +190,9 @@ async function main() {
     let gasTokenMetadata;
 
     // Get bridge instance
-    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
     const bridgeContractAddress = await rollupManagerContract.bridgeAddress();
-    const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as PolygonZkEVMBridgeV2;
+    const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as AgglayerBridgeV2;
 
     // check bridge address is the same in genesisBase and on-chain
     checkBridgeAddress(genesisBase, bridgeContractAddress);

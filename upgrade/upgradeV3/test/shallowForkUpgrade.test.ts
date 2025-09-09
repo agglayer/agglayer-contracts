@@ -9,8 +9,8 @@ import {
     AgglayerManager,
     PolygonZkEVMTimelock,
     PolygonRollupManagerPessimistic,
-    PolygonZkEVMBridgeV2,
-    PolygonZkEVMBridgeV2Pessimistic,
+    AgglayerBridgeV2,
+    AgglayerBridgeV2Pessimistic,
     AgglayerManagerGER,
     PolygonZkEVMGlobalExitRootV2Pessimistic,
 } from '../../typechain-types';
@@ -61,10 +61,10 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         ) as PolygonRollupManagerPessimistic;
 
         const bridgeAddress = await rollupManagerPessimisticContract.bridgeAddress();
-        const bridgePessimisticFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2Pessimistic');
+        const bridgePessimisticFactory = await ethers.getContractFactory('AgglayerBridgeV2Pessimistic');
         const bridgePessimisticContract = bridgePessimisticFactory.attach(
             bridgeAddress,
-        ) as PolygonZkEVMBridgeV2Pessimistic;
+        ) as AgglayerBridgeV2Pessimistic;
 
         const globalExitRootManager = await rollupManagerPessimisticContract.globalExitRootManager();
         const gerPessimisticFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2Pessimistic');
@@ -185,8 +185,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Checked rollup manager contract storage parameters and new version`);
 
         // Check bridge contract
-        const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const bridgeContract = bridgeFactory.attach(bridgeAddress) as PolygonZkEVMBridgeV2;
+        const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
+        const bridgeContract = bridgeFactory.attach(bridgeAddress) as AgglayerBridgeV2;
         expect(await bridgeContract.BRIDGE_VERSION()).to.equal(AL_VERSION);
         expect(await bridgeContract.globalExitRootManager()).to.equal(bridgeGlobalExitRootManager);
         expect(await bridgeContract.lastUpdatedDepositCount()).to.equal(bridgeLastUpdatedDepositCount);

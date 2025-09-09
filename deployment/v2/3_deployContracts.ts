@@ -9,7 +9,7 @@ import { ethers, upgrades } from 'hardhat';
 
 import {
     AggLayerGateway,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridgeV2,
     PolygonZkEVMDeployer,
     AgglayerManagerGER,
     PolygonZkEVMTimelock,
@@ -203,7 +203,7 @@ async function main() {
     }
 
     // Deploy implementation PolygonZkEVMBridge
-    const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;
     const dataCallNull = null;
     // Mandatory to override the gasLimit since the estimation with create are mess up D:
@@ -323,7 +323,7 @@ async function main() {
         dataCallProxy,
         deployer,
     );
-    const polygonZkEVMBridgeContract = polygonZkEVMBridgeFactory.attach(proxyBridgeAddress) as PolygonZkEVMBridgeV2;
+    const polygonZkEVMBridgeContract = polygonZkEVMBridgeFactory.attach(proxyBridgeAddress) as AgglayerBridgeV2;
 
     if (isBridgeProxyDeployed) {
         console.log('#######################\n');

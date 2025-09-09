@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import "../../interfaces/IAgglayerManagerGER.sol";
-import "../../lib/AgglayerManagerGERBaseStorage.sol";
+import "../../lib/AgglayerGERBaseStorage.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 import "./DepositContractBasePessimistic.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
  * Contract responsible for managing the exit roots across multiple networks
  */
 contract PolygonZkEVMGlobalExitRootV2Pessimistic is
-    AgglayerManagerGERBaseStorage,
+    AgglayerGERBaseStorage,
     DepositContractBasePessimistic,
     Initializable
 {

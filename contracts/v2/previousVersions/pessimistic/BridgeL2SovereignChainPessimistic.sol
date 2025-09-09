@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import "./IBridgeL2SovereignChainsPessimistic.sol";
-import "./PolygonZkEVMBridgeV2Pessimistic.sol";
+import "./AgglayerBridgeV2Pessimistic.sol";
 
 /**
  * Sovereign chains bridge that will be deployed on all Sovereign chains
@@ -11,7 +11,7 @@ import "./PolygonZkEVMBridgeV2Pessimistic.sol";
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
 contract BridgeL2SovereignChainPessimistic is
-    PolygonZkEVMBridgeV2Pessimistic,
+    AgglayerBridgeV2Pessimistic,
     IBridgeL2SovereignChainsPessimistic
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -90,7 +90,7 @@ contract BridgeL2SovereignChainPessimistic is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBaseAgglayerManagerGER _globalExitRootManager,
+        IBaseAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata,
         address _bridgeManager,
@@ -153,14 +153,14 @@ contract BridgeL2SovereignChainPessimistic is
         uint32, // _networkID
         address, //_gasTokenAddress
         uint32, //_gasTokenNetwork
-        IBaseAgglayerManagerGER, //_globalExitRootManager
+        IBaseAgglayerGER, //_globalExitRootManager
         address, //_polygonRollupManager
         bytes memory //_gasTokenMetadata
     )
         external
         override(
-            IPolygonZkEVMBridgeV2Pessimistic,
-            PolygonZkEVMBridgeV2Pessimistic
+            IAgglayerBridgeV2Pessimistic,
+            AgglayerBridgeV2Pessimistic
         )
         initializer
     {
@@ -508,7 +508,7 @@ contract BridgeL2SovereignChainPessimistic is
 
     /**
      * @notice Function to call token permit method of extended ERC20
-     * @dev function overridden from PolygonZkEVMBridgeV2 to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
+     * @dev function overridden from AgglayerBridgeV2 to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
      + @param token ERC20 token address
      * @param amount Quantity that is expected to be allowed
      * @param permitData Raw data of the call `permit` of the token
@@ -614,8 +614,8 @@ contract BridgeL2SovereignChainPessimistic is
         external
         pure
         override(
-            IPolygonZkEVMBridgeV2Pessimistic,
-            PolygonZkEVMBridgeV2Pessimistic
+            IAgglayerBridgeV2Pessimistic,
+            AgglayerBridgeV2Pessimistic
         )
     {
         revert EmergencyStateNotAllowed();
@@ -625,8 +625,8 @@ contract BridgeL2SovereignChainPessimistic is
         external
         pure
         override(
-            IPolygonZkEVMBridgeV2Pessimistic,
-            PolygonZkEVMBridgeV2Pessimistic
+            IAgglayerBridgeV2Pessimistic,
+            AgglayerBridgeV2Pessimistic
         )
     {
         revert EmergencyStateNotAllowed();

@@ -2,7 +2,7 @@
 
 ## Contracts Versions
 * ⚠️ `PolygonRollupManager`: ~~v0.0.0~~ -> v1.0.0
-* `PolygonZkEVMBridgeV2`: v1.0.0
+* `AgglayerBridgeV2`: v1.0.0
 * `PolygonZkEVMGlobalExitRootV2`: v1.0.0
 * `AggLayerGateway`: v1.0.0
 * `AgglayerBridgeL2`: v1.0.0
