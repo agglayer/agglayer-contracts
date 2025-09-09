@@ -11,10 +11,7 @@ import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
  * Contract responsible to manage the token interactions with other networks
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
-contract AgglayerBridgeL2 is
-    AgglayerBridgeV2,
-    IBridgeL2SovereignChains
-{
+contract AgglayerBridgeL2 is AgglayerBridgeV2, IBridgeL2SovereignChains {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
     // address used to permission the initialization of the contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -385,11 +382,7 @@ contract AgglayerBridgeL2 is
         IBaseAgglayerGER, //_globalExitRootManager
         address, //_polygonRollupManager
         bytes memory //_gasTokenMetadata
-    )
-        external
-        override(IAgglayerBridgeV2, AgglayerBridgeV2)
-        initializer
-    {
+    ) external override(IAgglayerBridgeV2, AgglayerBridgeV2) initializer {
         revert InvalidInitializeFunction();
     }
 

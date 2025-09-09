@@ -11,9 +11,7 @@ contract AgglayerGERL2Mock is AgglayerGERL2 {
     /**
      * @param _bridgeAddress PolygonZkEVM Bridge contract address
      */
-    constructor(
-        address _bridgeAddress
-    ) AgglayerGERL2(_bridgeAddress) {}
+    constructor(address _bridgeAddress) AgglayerGERL2(_bridgeAddress) {}
 
     /**
      * @notice Set globalExitRoot

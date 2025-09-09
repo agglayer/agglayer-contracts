@@ -107,9 +107,7 @@ contract AgglayerManagerGERL2 is
     /**
      * @param _bridgeAddress AgglayerBridge contract address
      */
-    constructor(
-        address _bridgeAddress
-    ) AgglayerGERL2(_bridgeAddress) {
+    constructor(address _bridgeAddress) AgglayerGERL2(_bridgeAddress) {
         _disableInitializers();
     }
 
