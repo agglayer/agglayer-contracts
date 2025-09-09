@@ -6,7 +6,7 @@ import "../../lib/DepositContractV2.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "../../../lib/TokenWrapped.sol";
-import "../../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
+import "../../../interfaces/IBaseAgglayerManagerGER.sol";
 import "../../../interfaces/IBridgeMessageReceiver.sol";
 import "./IPolygonZkEVMBridgeV2Pessimistic.sol";
 import "../../../lib/EmergencyManager.sol";
@@ -61,7 +61,7 @@ contract PolygonZkEVMBridgeV2Pessimistic is
     uint32 public networkID;
 
     // Global Exit Root address
-    IBasePolygonZkEVMGlobalExitRoot public globalExitRootManager;
+    IBaseAgglayerManagerGER public globalExitRootManager;
 
     // Last updated deposit count to the global exit root manager
     uint32 public lastUpdatedDepositCount;
@@ -155,7 +155,7 @@ contract PolygonZkEVMBridgeV2Pessimistic is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        IBaseAgglayerManagerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata
     ) external virtual initializer {

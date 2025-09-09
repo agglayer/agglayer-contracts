@@ -126,9 +126,9 @@ abstract contract PolygonRollupBaseEtrog is
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
 
     // Global Exit Root address L2
-    IBasePolygonZkEVMGlobalExitRoot
+    IBaseAgglayerManagerGER
         public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBasePolygonZkEVMGlobalExitRoot(
+        IBaseAgglayerManagerGER(
             0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
         );
 
