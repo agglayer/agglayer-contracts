@@ -57,7 +57,7 @@ describe('Upgradeable Tokens', () => {
 
         maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
 
-        // deploy PolygonZkEVMBridge pessimistic
+        // deploy AgglayerBridge pessimistic
         const sovBridgePessimisticFactory = await ethers.getContractFactory('BridgeL2SovereignChainPessimistic');
         sovereignBridgeContract = (await upgrades.deployProxy(sovBridgePessimisticFactory, [], {
             initializer: false,

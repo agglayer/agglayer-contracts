@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 import "../../../interfaces/IBaseAgglayerGER.sol";
 
-interface IAgglayerBridgeV2V1010 {
+interface IPolygonZkEVMBridgeV2V1010 {
     /**
      * @dev Thrown when the destination network is invalid
      */

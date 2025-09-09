@@ -46,11 +46,11 @@ const mainnetZkEVMTimelockAddress = baseGenesisInfo.find(
 const mainnetProxyAdminAddress = baseGenesisInfo.find((account: any) => account.contractName === 'ProxyAdmin').address;
 
 const mainnetZkEVMBridgeImplementationAddress = baseGenesisInfo.find(
-    (account: any) => account.contractName === 'PolygonZkEVMBridge implementation',
+    (account: any) => account.contractName === 'AgglayerBridge implementation',
 ).address;
 
 const mainnetZkEVMBridgeProxyAddress = baseGenesisInfo.find(
-    (account: any) => account.contractName === 'PolygonZkEVMBridge proxy',
+    (account: any) => account.contractName === 'AgglayerBridge proxy',
 ).address;
 
 const mainnetGlobalExitRootL2ImplementationAddress = baseGenesisInfo.find(
@@ -121,7 +121,7 @@ async function main() {
         null,
     );
 
-    // Deploy implementation PolygonZkEVMBridge
+    // Deploy implementation AgglayerBridge
     const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;
     // Mandatory to override the gasLimit since the estimation with create are mess up D:
@@ -240,7 +240,7 @@ async function main() {
     // Bridge implementation
     const bridgeImplementationInfo = await getAddressInfo(bridgeImplementationAddress as string);
     genesis.push({
-        contractName: 'PolygonZkEVMBridge implementation',
+        contractName: 'AgglayerBridge implementation',
         balance: '0',
         nonce: bridgeImplementationInfo.nonce.toString(),
         address: finalBridgeImplAddress,
@@ -255,7 +255,7 @@ async function main() {
     bridgeProxyInfo.storage[_IMPLEMENTATION_SLOT] = ethers.zeroPadValue(finalBridgeImplAddress as string, 32);
 
     genesis.push({
-        contractName: 'PolygonZkEVMBridge proxy',
+        contractName: 'AgglayerBridge proxy',
         balance: balanceBrige,
         nonce: bridgeProxyInfo.nonce.toString(),
         address: finalBridgeProxyAddress,

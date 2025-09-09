@@ -48,7 +48,7 @@ describe('SovereignBridge Contract', () => {
         // load signers
         [deployer, rollupManager, , emergencyBridgePauser, proxiedTokensManager] = await ethers.getSigners();
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
@@ -92,7 +92,7 @@ describe('SovereignBridge Contract', () => {
         );
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata', async () => {
+    it('should AgglayerBridge with weird token metadata', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = 'nameToken';
@@ -167,7 +167,7 @@ describe('SovereignBridge Contract', () => {
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with reverts', async () => {
+    it('should AgglayerBridge with weird token metadata with reverts', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = 'nameToken';
@@ -260,7 +260,7 @@ describe('SovereignBridge Contract', () => {
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with empty data', async () => {
+    it('should AgglayerBridge with weird token metadata with empty data', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = '';
@@ -339,7 +339,7 @@ describe('SovereignBridge Contract', () => {
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with invalid data', async () => {
+    it('should AgglayerBridge with weird token metadata with invalid data', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20InvalidMetadata');
 
         const nameWeird = '';
@@ -418,7 +418,7 @@ describe('SovereignBridge Contract', () => {
         expect(await sovereignChainBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge and with permit eip-2612 compilant', async () => {
+    it('should AgglayerBridge and with permit eip-2612 compilant', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = polTokenContract.target;
@@ -536,7 +536,7 @@ describe('SovereignBridge Contract', () => {
         ).to.be.equal(true);
     });
 
-    it('should PolygonZkEVMBridge with permit DAI type contracts', async () => {
+    it('should AgglayerBridge with permit DAI type contracts', async () => {
         const { chainId } = await ethers.provider.getNetwork();
         const daiTokenFactory = await ethers.getContractFactory('DaiMock');
         const daiContract = (await daiTokenFactory.deploy(chainId)) as any;
@@ -649,7 +649,7 @@ describe('SovereignBridge Contract', () => {
         ).to.be.equal(true);
     });
 
-    it('should PolygonZkEVMBridge with permit UNI type contracts', async () => {
+    it('should AgglayerBridge with permit UNI type contracts', async () => {
         const uniTokenFactory = await ethers.getContractFactory('Uni');
         const lastBlock = (await ethers.provider.getBlock('latest')) as any;
         const uniContract = (await uniTokenFactory.deploy(

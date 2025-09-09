@@ -9,7 +9,7 @@ import "./lib/GlobalExitRootLib.sol";
  * Contract responsible for managing the exit roots across multiple networks
  */
 contract PolygonZkEVMGlobalExitRoot is IPolygonZkEVMGlobalExitRoot {
-    // PolygonZkEVMBridge address
+    // AgglayerBridge address
     address public immutable bridgeAddress;
 
     // Rollup contract address
@@ -34,7 +34,7 @@ contract PolygonZkEVMGlobalExitRoot is IPolygonZkEVMGlobalExitRoot {
 
     /**
      * @param _rollupAddress Rollup contract address
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(address _rollupAddress, address _bridgeAddress) {
         rollupAddress = _rollupAddress;

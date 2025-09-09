@@ -18,7 +18,7 @@ contract AgglayerManagerGER is
     Initializable,
     IVersion
 {
-    // PolygonZkEVMBridge address
+    // AgglayerBridge address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable bridgeAddress;
 
@@ -57,7 +57,7 @@ contract AgglayerManagerGER is
 
     /**
      * @param _rollupManager Rollup manager contract address
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(address _rollupManager, address _bridgeAddress) {
         rollupManager = _rollupManager;

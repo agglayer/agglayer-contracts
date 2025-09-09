@@ -96,7 +96,7 @@ describe('Polygon Global exit root v2', () => {
             calculateGlobalExitRoot(ethers.ZeroHash, newRootRollup),
         );
 
-        // Update root from the PolygonZkEVMBridge
+        // Update root from the AgglayerBridge
         const newRootBridge = ethers.hexlify(ethers.randomBytes(32));
         // Update Bridge Exit root
         const updateBridgeExitRoot = await polygonZkEVMGlobalExitRootV2.connect(bridge).updateExitRoot(newRootBridge);

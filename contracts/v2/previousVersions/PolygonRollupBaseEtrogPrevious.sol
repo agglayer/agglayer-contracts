@@ -18,7 +18,7 @@ import "../lib/PolygonConstantsBase.sol";
  * Any user can force some transaction and the sequencer will have a timeout to add them in the queue.
  * The sequenced state is deterministic and can be precalculated before it's actually verified by a zkProof.
  * The aggregators will be able to verify the sequenced state with zkProofs and therefore make available the withdrawals from L2 network.
- * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
+ * To enter and exit of the L2 network will be used a AgglayerBridge smart contract that will be deployed in both networks.
  */
 abstract contract PolygonRollupBaseEtrogPrevious is
     Initializable,

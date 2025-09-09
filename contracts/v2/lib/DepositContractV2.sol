@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable4/security/ReentrancyGuardUpgradeable
 import "./DepositContractBase.sol";
 
 /**
- * This contract will be used in the PolygonZkEVMBridge contract, it inherits the DepositContractBase and adds the logic
+ * This contract will be used in the AgglayerBridge contract, it inherits the DepositContractBase and adds the logic
  * to calculate the leaf of the tree
  */
 contract DepositContractV2 is ReentrancyGuardUpgradeable, DepositContractBase {

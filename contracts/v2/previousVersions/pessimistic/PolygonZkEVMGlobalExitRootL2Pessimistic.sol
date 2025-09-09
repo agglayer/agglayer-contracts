@@ -18,7 +18,7 @@ contract PolygonZkEVMGlobalExitRootL2Pessimistic is
     // Note this variable is updated only by the zkRom
     mapping(bytes32 => uint256) public globalExitRootMap;
 
-    // Rollup exit root will be updated for every PolygonZkEVMBridge call
+    // Rollup exit root will be updated for every AgglayerBridge call
     // Note this variable will be readed by the zkRom
     bytes32 public lastRollupExitRoot;
 
@@ -36,7 +36,7 @@ contract PolygonZkEVMGlobalExitRootL2Pessimistic is
     uint256[50] private __gap;
 
     /**
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(address _bridgeAddress) {
         bridgeAddress = _bridgeAddress;

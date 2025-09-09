@@ -44,7 +44,7 @@ contract AgglayerManagerEmptyMock is EmergencyManager {
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonZkEVM and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both PolygonZkEVM and AgglayerBridge contracts
      */
     function activateEmergencyState() external {
         // activate emergency state on this contract
@@ -52,7 +52,7 @@ contract AgglayerManagerEmptyMock is EmergencyManager {
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonZkEVM and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both PolygonZkEVM and AgglayerBridge contracts
      */
     function lastDeactivatedEmergencyStateTimestamp()
         external
@@ -62,7 +62,7 @@ contract AgglayerManagerEmptyMock is EmergencyManager {
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonZkEVM and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both PolygonZkEVM and AgglayerBridge contracts
      */
     function deactivateEmergencyState() external {
         // Deactivate emergency state on this contract

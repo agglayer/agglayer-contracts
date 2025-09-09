@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import "../../interfaces/IAgglayerManagerGER.sol";
-import "../../../interfaces/IPolygonZkEVMBridge.sol";
+import "../../../interfaces/IAgglayerBridge.sol";
 import "../../interfaces/IPolygonRollupBase.sol";
 import "../../../interfaces/IVerifierRollup.sol";
 import "../../../lib/EmergencyManager.sol";
@@ -237,7 +237,7 @@ contract PolygonRollupManagerPessimistic is
     IAgglayerManagerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
-    IPolygonZkEVMBridge public immutable bridgeAddress;
+    IAgglayerBridge public immutable bridgeAddress;
 
     // POL token address
     IERC20Upgradeable public immutable pol;
@@ -397,7 +397,7 @@ contract PolygonRollupManagerPessimistic is
     constructor(
         IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridge _bridgeAddress
+        IAgglayerBridge _bridgeAddress
     ) {
         globalExitRootManager = _globalExitRootManager;
         pol = _pol;
@@ -1108,7 +1108,7 @@ contract PolygonRollupManagerPessimistic is
     ////////////////////////
 
     /**
-     * @notice Function to activate emergency state, which also enables the emergency mode on both AgglayerManager and PolygonZkEVMBridge contracts
+     * @notice Function to activate emergency state, which also enables the emergency mode on both AgglayerManager and AgglayerBridge contracts
      * If not called by the owner must not have been aggregated in a _HALT_AGGREGATION_TIMEOUT period and an emergency state was not happened in the same period
      */
     function activateEmergencyState() external {
@@ -1128,7 +1128,7 @@ contract PolygonRollupManagerPessimistic is
     }
 
     /**
-     * @notice Function to deactivate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both AgglayerManager and AgglayerBridge contracts
      */
     function deactivateEmergencyState()
         external
@@ -1137,7 +1137,7 @@ contract PolygonRollupManagerPessimistic is
         // Set last deactivated emergency state
         lastDeactivatedEmergencyStateTimestamp = uint64(block.timestamp);
 
-        // Deactivate emergency state on PolygonZkEVMBridge
+        // Deactivate emergency state on AgglayerBridge
         bridgeAddress.deactivateEmergencyState();
 
         // Deactivate emergency state on this contract
@@ -1145,7 +1145,7 @@ contract PolygonRollupManagerPessimistic is
     }
 
     /**
-     * @notice Internal function to activate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
+     * @notice Internal function to activate emergency state on both AgglayerManager and AgglayerBridge contracts
      */
     function _activateEmergencyState() internal override {
         // Activate emergency state on PolygonZkEVM Bridge

@@ -8,7 +8,7 @@ import "../AgglayerManagerGER.sol";
 contract PolygonZkEVMGlobalExitRootV2Mock is AgglayerManagerGER {
     /**
      * @param _rollupManager Rollup manager contract address
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(
         address _rollupManager,

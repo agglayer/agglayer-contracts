@@ -14,7 +14,7 @@ contract PolygonRollupManagerNotUpgraded is AgglayerManager {
     constructor(
         IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridge _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         IAggLayerGateway _aggLayerGateway
     )
         AgglayerManager(

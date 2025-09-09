@@ -42,7 +42,7 @@ contract ClaimCompressor {
     // 32 bytes position
     uint256 internal constant _METADATA_OFSSET = 32 * 32 * 2 + 8 * 32 + 32;
 
-    // PolygonZkEVMBridge address
+    // AgglayerBridge address
     address private immutable _bridgeAddress;
 
     // Mainnet identifier
@@ -75,7 +75,7 @@ contract ClaimCompressor {
     }
 
     /**
-     * @param __bridgeAddress PolygonZkEVMBridge contract address
+     * @param __bridgeAddress AgglayerBridge contract address
      * @param __networkID Network ID
      */
     constructor(address __bridgeAddress, uint32 __networkID) {

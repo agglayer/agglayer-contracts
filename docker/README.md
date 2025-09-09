@@ -22,7 +22,7 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
 - `test`: Flag to point if is a testing environment, in such case, an account with balance will be created at the rollup and no timelock addresses will be used
 - `timelockAdminAddress`: address, Timelock owner address, able to send start an upgradeability process via timelock
 - `minDelayTimelock`: number, Minimum timelock delay,
-- `salt`: bytes32, Salt used in `PolygonZkEVMDeployer` to deploy deterministic contracts, such as the PolygonZkEVMBridge
+- `salt`: bytes32, Salt used in `PolygonZkEVMDeployer` to deploy deterministic contracts, such as the AgglayerBridge
 - `initialZkEVMDeployerOwner`: address, Initial owner of the `PolygonZkEVMDeployer`
 - `admin`: address, Admin address, can adjust RollupManager parameters or stop the emergency state
 - `trustedAggregator`: address, Trusted aggregator address

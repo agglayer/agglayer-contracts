@@ -111,7 +111,7 @@ describe('Polygon AgglayerManager with Polygon Pessimistic Consensus', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,

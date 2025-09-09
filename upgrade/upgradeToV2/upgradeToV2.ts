@@ -168,7 +168,7 @@ async function main() {
 
     // prapare upgrades
 
-    // Prepare Upgrade PolygonZkEVMBridge
+    // Prepare Upgrade AgglayerBridge
     const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
 
     const newBridgeImpl = await upgrades.prepareUpgrade(currentBridgeAddress, polygonZkEVMBridgeFactory, {
@@ -176,7 +176,7 @@ async function main() {
     });
 
     console.log('#######################\n');
-    console.log(`PolygonZkEVMBridge impl: ${newBridgeImpl}`);
+    console.log(`AgglayerBridge impl: ${newBridgeImpl}`);
 
     console.log('you can verify the new impl address with:');
     console.log(`npx hardhat verify ${newBridgeImpl} --network ${process.env.HARDHAT_NETWORK}`);

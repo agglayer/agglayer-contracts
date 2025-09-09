@@ -319,7 +319,7 @@ describe('AgglayerBridgeL2 Contract', () => {
     });
 
     it('should check the initialize function', async () => {
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         // eslint-disable-next-line @typescript-eslint/no-shadow
         const sovereignChainBridgeContract = await ethers.getContractFactory('AgglayerBridgeL2');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {

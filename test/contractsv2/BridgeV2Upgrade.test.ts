@@ -21,7 +21,7 @@ describe('BridgeV2 upgrade', () => {
         [deployer, rollupManager] = await ethers.getSigners();
 
         // deploy bridgeV2Pessimistic
-        const bridgePessimisticFactory = await ethers.getContractFactory('AgglayerBridgeV2Pessimistic');
+        const bridgePessimisticFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2Pessimistic');
         bridgeContract = (await upgrades.deployProxy(bridgePessimisticFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],

@@ -6,7 +6,7 @@ import "../../lib/DepositContractV2.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../interfaces/IBaseAgglayerGER.sol";
 import "../../../interfaces/IBridgeMessageReceiver.sol";
-import "./IAgglayerBridgeV2V1010.sol";
+import "./IPolygonZkEVMBridgeV2V1010.sol";
 import "../../../lib/EmergencyManager.sol";
 import "../../../lib/GlobalExitRootLib.sol";
 import "../../lib/BytecodeStorer.sol";
@@ -18,10 +18,10 @@ import {IProxyAdmin} from "../../interfaces/IProxyAdmin.sol";
  * PolygonZkEVMBridge that will be deployed on Ethereum and all Polygon rollups
  * Contract responsible to manage the token interactions with other networks
  */
-contract AgglayerBridgeV2V1010 is
+contract PolygonZkEVMBridgeV2V1010 is
     DepositContractV2,
     EmergencyManager,
-    IAgglayerBridgeV2V1010
+    IPolygonZkEVMBridgeV2V1010
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
 

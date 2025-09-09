@@ -202,7 +202,7 @@ describe('Polygon ZK-EVM Deployer', () => {
     });
     it('Test Bridge deployment', async () => {
         const bridgeFactory = await ethers.getContractFactory(
-            'PolygonZkEVMBridge',
+            'AgglayerBridge',
         );
 
         const salt = ethers.HashZero;

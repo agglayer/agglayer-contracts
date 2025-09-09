@@ -4,21 +4,21 @@ const { ethers } = require('hardhat');
 const zero32bytes = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 describe('Global Exit Root L2', () => {
-    let PolygonZkEVMBridge;
+    let AgglayerBridge;
     let polygonZkEVMGlobalExitRoot;
     let deployer;
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, PolygonZkEVMBridge] = await ethers.getSigners();
+        [deployer, AgglayerBridge] = await ethers.getSigners();
 
         // deploy global exit root manager
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootL2Mock', deployer);
-        polygonZkEVMGlobalExitRoot = await PolygonZkEVMGlobalExitRootFactory.deploy(PolygonZkEVMBridge.address);
+        polygonZkEVMGlobalExitRoot = await PolygonZkEVMGlobalExitRootFactory.deploy(AgglayerBridge.address);
     });
 
     it('should check the constructor parameters', async () => {
-        expect(await polygonZkEVMGlobalExitRoot.bridgeAddress()).to.be.equal(PolygonZkEVMBridge.address);
+        expect(await polygonZkEVMGlobalExitRoot.bridgeAddress()).to.be.equal(AgglayerBridge.address);
         expect(await polygonZkEVMGlobalExitRoot.lastRollupExitRoot()).to.be.equal(zero32bytes);
     });
 
@@ -29,7 +29,7 @@ describe('Global Exit Root L2', () => {
             .to.be.revertedWith('OnlyAllowedContracts');
 
         // Update root from the rollup
-        await polygonZkEVMGlobalExitRoot.connect(PolygonZkEVMBridge).updateExitRoot(newRootRollup);
+        await polygonZkEVMGlobalExitRoot.connect(AgglayerBridge).updateExitRoot(newRootRollup);
 
         expect(await polygonZkEVMGlobalExitRoot.lastRollupExitRoot()).to.be.equal(newRootRollup);
     });

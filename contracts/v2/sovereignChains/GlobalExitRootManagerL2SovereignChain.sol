@@ -105,7 +105,7 @@ contract GlobalExitRootManagerL2SovereignChain is
     );
 
     /**
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(
         address _bridgeAddress

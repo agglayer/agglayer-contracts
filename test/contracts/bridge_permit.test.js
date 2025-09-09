@@ -18,7 +18,7 @@ function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-describe('PolygonZkEVMBridge Contract Permit tests', () => {
+describe('AgglayerBridge Contract Permit tests', () => {
     let deployer;
     let rollup;
 
@@ -45,8 +45,8 @@ describe('PolygonZkEVMBridge Contract Permit tests', () => {
         // load signers
         [deployer, rollup] = await ethers.getSigners();
 
-        // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridge');
+        // deploy AgglayerBridge
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], { initializer: false });
 
         // deploy global exit root manager
@@ -67,7 +67,7 @@ describe('PolygonZkEVMBridge Contract Permit tests', () => {
         await tokenContract.mint(deployer.address, tokenInitialBalance);
     });
 
-    it('should PolygonZkEVMBridge and with permit eip-2612 compilant', async () => {
+    it('should AgglayerBridge and with permit eip-2612 compilant', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = tokenContract.address;
@@ -156,7 +156,7 @@ describe('PolygonZkEVMBridge Contract Permit tests', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge with permit DAI type contracts', async () => {
+    it('should AgglayerBridge with permit DAI type contracts', async () => {
         const { chainId } = await ethers.provider.getNetwork();
         const daiTokenFactory = await ethers.getContractFactory('Dai');
         const daiContract = await daiTokenFactory.deploy(
@@ -254,7 +254,7 @@ describe('PolygonZkEVMBridge Contract Permit tests', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge with permit UNI type contracts', async () => {
+    it('should AgglayerBridge with permit UNI type contracts', async () => {
         const uniTokenFactory = await ethers.getContractFactory('Uni');
         const uniContract = await uniTokenFactory.deploy(
             deployer.address,

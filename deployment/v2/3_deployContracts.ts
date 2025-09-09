@@ -202,7 +202,7 @@ async function main() {
         );
     }
 
-    // Deploy implementation PolygonZkEVMBridge
+    // Deploy implementation AgglayerBridge
     const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;
     const dataCallNull = null;
@@ -327,10 +327,10 @@ async function main() {
 
     if (isBridgeProxyDeployed) {
         console.log('#######################\n');
-        console.log('PolygonZkEVMBridge deployed to:', polygonZkEVMBridgeContract.target);
+        console.log('AgglayerBridge deployed to:', polygonZkEVMBridgeContract.target);
     } else {
         console.log('#######################\n');
-        console.log('PolygonZkEVMBridge was already deployed to:', polygonZkEVMBridgeContract.target);
+        console.log('AgglayerBridge was already deployed to:', polygonZkEVMBridgeContract.target);
 
         // If it was already deployed, check that the initialized calldata matches the actual deployment
         expect(precalculateGlobalExitRootAddress).to.be.equal(await polygonZkEVMBridgeContract.globalExitRootManager());
@@ -338,7 +338,7 @@ async function main() {
     }
 
     console.log('\n#######################');
-    console.log('#####    Checks PolygonZkEVMBridge   #####');
+    console.log('#####    Checks AgglayerBridge   #####');
     console.log('#######################');
     console.log('PolygonZkEVMGlobalExitRootAddress:', await polygonZkEVMBridgeContract.globalExitRootManager());
     console.log('networkID:', await polygonZkEVMBridgeContract.networkID());

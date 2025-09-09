@@ -3,7 +3,7 @@
 pragma solidity 0.8.20;
 
 import "./IBridgeL2SovereignChainsPessimistic.sol";
-import "./AgglayerBridgeV2Pessimistic.sol";
+import "./PolygonZkEVMBridgeV2Pessimistic.sol";
 
 /**
  * Sovereign chains bridge that will be deployed on all Sovereign chains
@@ -11,7 +11,7 @@ import "./AgglayerBridgeV2Pessimistic.sol";
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
 contract BridgeL2SovereignChainPessimistic is
-    AgglayerBridgeV2Pessimistic,
+    PolygonZkEVMBridgeV2Pessimistic,
     IBridgeL2SovereignChainsPessimistic
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -159,8 +159,8 @@ contract BridgeL2SovereignChainPessimistic is
     )
         external
         override(
-            IAgglayerBridgeV2Pessimistic,
-            AgglayerBridgeV2Pessimistic
+            IPolygonZkEVMBridgeV2Pessimistic,
+            PolygonZkEVMBridgeV2Pessimistic
         )
         initializer
     {
@@ -614,8 +614,8 @@ contract BridgeL2SovereignChainPessimistic is
         external
         pure
         override(
-            IAgglayerBridgeV2Pessimistic,
-            AgglayerBridgeV2Pessimistic
+            IPolygonZkEVMBridgeV2Pessimistic,
+            PolygonZkEVMBridgeV2Pessimistic
         )
     {
         revert EmergencyStateNotAllowed();
@@ -625,8 +625,8 @@ contract BridgeL2SovereignChainPessimistic is
         external
         pure
         override(
-            IAgglayerBridgeV2Pessimistic,
-            AgglayerBridgeV2Pessimistic
+            IPolygonZkEVMBridgeV2Pessimistic,
+            PolygonZkEVMBridgeV2Pessimistic
         )
     {
         revert EmergencyStateNotAllowed();

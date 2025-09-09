@@ -5,7 +5,7 @@ const {
     getLeafValue,
 } = require('@0xpolygonhermez/zkevm-commonjs').mtBridgeUtils;
 
-describe('PolygonZkEVMBridge Contract werid metadata', () => {
+describe('AgglayerBridge Contract werid metadata', () => {
     let deployer;
     let rollup;
 
@@ -28,8 +28,8 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         // load signers
         [deployer, rollup] = await ethers.getSigners();
 
-        // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridge');
+        // deploy AgglayerBridge
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], { initializer: false });
 
         // deploy global exit root manager
@@ -50,7 +50,7 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         await tokenContract.mint(deployer.address, tokenInitialBalance);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata', async () => {
+    it('should AgglayerBridge with weird token metadata', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = 'nameToken';
@@ -107,7 +107,7 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         expect(await polygonZkEVMBridgeContract.getDepositRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with reverts', async () => {
+    it('should AgglayerBridge with weird token metadata with reverts', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = 'nameToken';
@@ -173,7 +173,7 @@ describe('PolygonZkEVMBridge Contract werid metadata', () => {
         expect(await polygonZkEVMBridgeContract.getDepositRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with empty data', async () => {
+    it('should AgglayerBridge with weird token metadata with empty data', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = '';

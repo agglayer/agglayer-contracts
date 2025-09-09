@@ -21,7 +21,7 @@ function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolea
     return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
-describe('PolygonZkEVMBridge Gas tokens tests', () => {
+describe('AgglayerBridge Gas tokens tests', () => {
     upgrades.silenceWarnings();
 
     let polygonZkEVMBridgeContract: AgglayerBridgeV2;
@@ -55,7 +55,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         // load signers
         [deployer, rollupManager, acc1] = await ethers.getSigners();
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
@@ -116,7 +116,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
     });
 
     it('should check the initalized function', async () => {
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         const bridge = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
@@ -255,7 +255,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge message and verify merkle proof', async () => {
+    it('should AgglayerBridge message and verify merkle proof', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const originAddress = deployer.address;
@@ -1087,7 +1087,7 @@ describe('PolygonZkEVMBridge Gas tokens tests', () => {
         expect(computedGlobalExitRoot2).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge and sync the current root with events', async () => {
+    it('should AgglayerBridge and sync the current root with events', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // gasToken

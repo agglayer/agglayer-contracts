@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.20;
 import "../../../interfaces/IBaseAgglayerGER.sol";
-import "./IAgglayerBridgeV2V1010.sol";
+import "./IPolygonZkEVMBridgeV2V1010.sol";
 
-interface IBridgeL2SovereignChainsV1010 is IAgglayerBridgeV2V1010 {
+interface IBridgeL2SovereignChainsV1010 is IPolygonZkEVMBridgeV2V1010 {
     /**
      * @dev Thrown when the origin network is invalid
      */

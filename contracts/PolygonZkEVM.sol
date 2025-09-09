@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradea
 import "./interfaces/IVerifierRollup.sol";
 import "./interfaces/IPolygonZkEVMGlobalExitRoot.sol";
 import "@openzeppelin/contracts-upgradeable4/access/OwnableUpgradeable.sol";
-import "./interfaces/IPolygonZkEVMBridge.sol";
+import "./interfaces/IAgglayerBridge.sol";
 import "./lib/EmergencyManager.sol";
 import "./interfaces/IPolygonZkEVMErrors.sol";
 
@@ -15,7 +15,7 @@ import "./interfaces/IPolygonZkEVMErrors.sol";
  * Any user can force some transaction and the sequencer will have a timeout to add them in the queue.
  * The sequenced state is deterministic and can be precalculated before it's actually verified by a zkProof.
  * The aggregators will be able to verify the sequenced state with zkProofs and therefore make available the withdrawals from L2 network.
- * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
+ * To enter and exit of the L2 network will be used a AgglayerBridge smart contract that will be deployed in both networks.
  */
 contract PolygonZkEVM is
     OwnableUpgradeable,
@@ -154,7 +154,7 @@ contract PolygonZkEVM is
     IPolygonZkEVMGlobalExitRoot public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
-    IPolygonZkEVMBridge public immutable bridgeAddress;
+    IAgglayerBridge public immutable bridgeAddress;
 
     // L2 chain identifier
     uint64 public immutable chainID;
@@ -379,7 +379,7 @@ contract PolygonZkEVM is
         IPolygonZkEVMGlobalExitRoot _globalExitRootManager,
         IERC20Upgradeable _matic,
         IVerifierRollup _rollupVerifier,
-        IPolygonZkEVMBridge _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         uint64 _chainID,
         uint64 _forkID
     ) {
@@ -1521,7 +1521,7 @@ contract PolygonZkEVM is
     }
 
     /**
-     * @notice Function to activate emergency state, which also enables the emergency mode on both PolygonZkEVM and PolygonZkEVMBridge contracts
+     * @notice Function to activate emergency state, which also enables the emergency mode on both PolygonZkEVM and AgglayerBridge contracts
      * If not called by the owner must be provided a batcnNum that does not have been aggregated in a _HALT_AGGREGATION_TIMEOUT period
      * @param sequencedBatchNum Sequenced batch number that has not been aggreagated in _HALT_AGGREGATION_TIMEOUT
      */
@@ -1556,10 +1556,10 @@ contract PolygonZkEVM is
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonZkEVM and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both PolygonZkEVM and AgglayerBridge contracts
      */
     function deactivateEmergencyState() external onlyAdmin {
-        // Deactivate emergency state on PolygonZkEVMBridge
+        // Deactivate emergency state on AgglayerBridge
         bridgeAddress.deactivateEmergencyState();
 
         // Deactivate emergency state on this contract
@@ -1567,7 +1567,7 @@ contract PolygonZkEVM is
     }
 
     /**
-     * @notice Internal function to activate emergency state on both PolygonZkEVM and PolygonZkEVMBridge contracts
+     * @notice Internal function to activate emergency state on both PolygonZkEVM and AgglayerBridge contracts
      */
     function _activateEmergencyState() internal override {
         // Activate emergency state on PolygonZkEVM Bridge

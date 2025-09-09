@@ -155,7 +155,7 @@ async function main() {
         finalProxyAdminAddress = proxyAdminAddress;
     }
 
-    // Deploy implementation PolygonZkEVMBridge
+    // Deploy implementation AgglayerBridge
     const bridgeContractName = GENESIS_CONTRACT_NAMES.BRIDGE_V2;
     const polygonZkEVMBridgeFactory = await ethers.getContractFactory(bridgeContractName, deployer);
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;

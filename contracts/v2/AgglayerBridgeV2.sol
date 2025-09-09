@@ -17,7 +17,7 @@ import {IProxyAdmin} from "./interfaces/IProxyAdmin.sol";
 import {IVersion} from "./interfaces/IVersion.sol";
 
 /**
- * PolygonZkEVMBridge that will be deployed on Ethereum and all Polygon rollups
+ * AgglayerBridge that will be deployed on Ethereum and all Polygon rollups
  * Contract responsible to manage the token interactions with other networks
  */
 contract AgglayerBridgeV2 is

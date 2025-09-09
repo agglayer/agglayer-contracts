@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
-import "../PolygonZkEVMBridge.sol";
+import "../AgglayerBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/access/OwnableUpgradeable.sol";
 
 /**
- * PolygonZkEVMBridge that will be deployed on both networks Ethereum and Polygon zkEVM
+ * AgglayerBridge that will be deployed on both networks Ethereum and Polygon zkEVM
  * Contract responsible to manage the token interactions with other networks
  */
-contract PolygonZkEVMBridgeMock is PolygonZkEVMBridge, OwnableUpgradeable {
+contract PolygonZkEVMBridgeMock is AgglayerBridge, OwnableUpgradeable {
     uint256 public maxEtherBridge;
 
     /**
@@ -55,7 +55,7 @@ contract PolygonZkEVMBridgeMock is PolygonZkEVMBridge, OwnableUpgradeable {
     ) public payable override {
         require(
             msg.value <= maxEtherBridge,
-            "PolygonZkEVMBridge::bridgeAsset: Cannot bridge more than maxEtherBridge"
+            "AgglayerBridge::bridgeAsset: Cannot bridge more than maxEtherBridge"
         );
         super.bridgeAsset(
             destinationNetwork,

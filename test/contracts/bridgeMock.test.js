@@ -10,7 +10,7 @@ function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-describe('PolygonZkEVMBridge Mock Contract', () => {
+describe('AgglayerBridge Mock Contract', () => {
     let deployer;
     let rollup;
     let acc1;
@@ -41,7 +41,7 @@ describe('PolygonZkEVMBridge Mock Contract', () => {
         // deploy global exit root manager
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootMock');
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeMock');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], { initializer: false });
 
@@ -64,7 +64,7 @@ describe('PolygonZkEVMBridge Mock Contract', () => {
         expect(await polygonZkEVMBridgeContract.networkID()).to.be.equal(networkIDMainnet);
     });
 
-    it('should PolygonZkEVMBridge and verify merkle proof', async () => {
+    it('should AgglayerBridge and verify merkle proof', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = tokenContract.address;
@@ -130,7 +130,7 @@ describe('PolygonZkEVMBridge Mock Contract', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('shouldnt be able to PolygonZkEVMBridge more than 0.25e ehters', async () => {
+    it('shouldnt be able to AgglayerBridge more than 0.25e ehters', async () => {
         // Add a claim leaf to rollup exit tree
         const tokenAddress = ethers.ZeroAddress; // ether
         const amount = ethers.parseEther('10');
@@ -145,7 +145,7 @@ describe('PolygonZkEVMBridge Mock Contract', () => {
             true,
             '0x',
             { value: ethers.parseEther('10') },
-        )).to.be.revertedWith('PolygonZkEVMBridge::bridgeAsset: Cannot bridge more than maxEtherBridge');
+        )).to.be.revertedWith('AgglayerBridge::bridgeAsset: Cannot bridge more than maxEtherBridge');
 
         await polygonZkEVMBridgeContract.bridgeAsset(
             destinationNetwork,

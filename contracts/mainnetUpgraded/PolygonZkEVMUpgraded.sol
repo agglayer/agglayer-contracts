@@ -27,7 +27,7 @@ contract PolygonZkEVMUpgraded is PolygonZkEVM {
         IPolygonZkEVMGlobalExitRoot _globalExitRootManager,
         IERC20Upgradeable _matic,
         IVerifierRollup _rollupVerifier,
-        IPolygonZkEVMBridge _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         uint64 _chainID,
         uint64 _forkID,
         uint256 versionBeforeUpgrade

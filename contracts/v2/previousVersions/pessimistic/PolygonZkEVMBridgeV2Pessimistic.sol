@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20Metada
 import "../../../lib/TokenWrapped.sol";
 import "../../../interfaces/IBaseAgglayerGER.sol";
 import "../../../interfaces/IBridgeMessageReceiver.sol";
-import "./IAgglayerBridgeV2Pessimistic.sol";
+import "./IPolygonZkEVMBridgeV2Pessimistic.sol";
 import "../../../lib/EmergencyManager.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 
@@ -16,10 +16,10 @@ import "./GlobalExitRootLibPessimistic.sol";
  * PolygonZkEVMBridge that will be deployed on Ethereum and all Polygon rollups
  * Contract responsible to manage the token interactions with other networks
  */
-contract AgglayerBridgeV2Pessimistic is
+contract PolygonZkEVMBridgeV2Pessimistic is
     DepositContractV2,
     EmergencyManager,
-    IAgglayerBridgeV2Pessimistic
+    IPolygonZkEVMBridgeV2Pessimistic
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 

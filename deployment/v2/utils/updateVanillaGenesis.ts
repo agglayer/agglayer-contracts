@@ -15,8 +15,8 @@ import { checkParams } from '../../../src/utils';
 // Those genesis are already imported on different tooling and added as a metadata on-chain. Therefore, this util aims
 // to support them too
 const supportedGERManagers = ['AgglayerGERL2 implementation'];
-const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'AgglayerBridgeV2 implementation'];
-const supportedBridgeContractsProxy = ['AgglayerBridgeV2 proxy', 'PolygonZkEVMBridge proxy'];
+const supportedBridgeContracts = ['AgglayerBridge implementation', 'AgglayerBridgeV2 implementation'];
+const supportedBridgeContractsProxy = ['AgglayerBridgeV2 proxy', 'AgglayerBridge proxy'];
 
 function toPaddedHex32(val: string | number | bigint): string {
     return ethers.zeroPadValue(ethers.toBeHex(val), 32);

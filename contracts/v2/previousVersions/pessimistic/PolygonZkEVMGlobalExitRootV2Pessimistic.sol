@@ -16,7 +16,7 @@ contract PolygonZkEVMGlobalExitRootV2Pessimistic is
     DepositContractBasePessimistic,
     Initializable
 {
-    // PolygonZkEVMBridge address
+    // AgglayerBridge address
     address public immutable bridgeAddress;
 
     // Rollup manager contract address
@@ -50,7 +50,7 @@ contract PolygonZkEVMGlobalExitRootV2Pessimistic is
 
     /**
      * @param _rollupManager Rollup manager contract address
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(address _rollupManager, address _bridgeAddress) {
         rollupManager = _rollupManager;

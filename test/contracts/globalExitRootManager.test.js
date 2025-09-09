@@ -8,26 +8,26 @@ const zero32bytes = '0x000000000000000000000000000000000000000000000000000000000
 
 describe('Global Exit Root', () => {
     let rollup;
-    let PolygonZkEVMBridge;
+    let AgglayerBridge;
 
     let polygonZkEVMGlobalExitRoot;
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [, rollup, PolygonZkEVMBridge] = await ethers.getSigners();
+        [, rollup, AgglayerBridge] = await ethers.getSigners();
 
         // deploy global exit root manager
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot');
 
         polygonZkEVMGlobalExitRoot = await PolygonZkEVMGlobalExitRootFactory.deploy(
             rollup.address,
-            PolygonZkEVMBridge.address,
+            AgglayerBridge.address,
         );
         await polygonZkEVMGlobalExitRoot.deployed();
     });
 
     it('should check the constructor parameters', async () => {
         expect(await polygonZkEVMGlobalExitRoot.rollupAddress()).to.be.equal(rollup.address);
-        expect(await polygonZkEVMGlobalExitRoot.bridgeAddress()).to.be.equal(PolygonZkEVMBridge.address);
+        expect(await polygonZkEVMGlobalExitRoot.bridgeAddress()).to.be.equal(AgglayerBridge.address);
         expect(await polygonZkEVMGlobalExitRoot.lastRollupExitRoot()).to.be.equal(zero32bytes);
         expect(await polygonZkEVMGlobalExitRoot.lastMainnetExitRoot()).to.be.equal(zero32bytes);
     });
@@ -46,9 +46,9 @@ describe('Global Exit Root', () => {
         expect(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot())
             .to.be.equal(calculateGlobalExitRoot(zero32bytes, newRootRollup));
 
-        // Update root from the PolygonZkEVMBridge
+        // Update root from the AgglayerBridge
         const newRootBridge = ethers.hexlify(ethers.randomBytes(32));
-        await expect(polygonZkEVMGlobalExitRoot.connect(PolygonZkEVMBridge).updateExitRoot(newRootBridge))
+        await expect(polygonZkEVMGlobalExitRoot.connect(AgglayerBridge).updateExitRoot(newRootBridge))
             .to.emit(polygonZkEVMGlobalExitRoot, 'UpdateGlobalExitRoot')
             .withArgs(newRootBridge, newRootRollup);
 

@@ -106,7 +106,7 @@ describe('PolygonValidiumEtrog', () => {
             polTokenInitialBalance,
         );
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,

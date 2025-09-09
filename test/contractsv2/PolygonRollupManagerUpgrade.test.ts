@@ -175,7 +175,7 @@ describe('Polygon Rollup manager upgraded', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as any;
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,

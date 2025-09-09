@@ -271,7 +271,7 @@ describe('AgglayerBridgeL2 Contract Upgrade AL', () => {
     });
 
     it('should check the initialize function', async () => {
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         // eslint-disable-next-line @typescript-eslint/no-shadow
         const sovereignChainBridgeContract = await ethers.getContractFactory('AgglayerBridgeL2');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
@@ -333,7 +333,7 @@ describe('AgglayerBridgeL2 Contract Upgrade AL', () => {
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidSovereignWETHAddressParams');
     });
     it('should check the initialize function after upgrade', async () => {
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const sovereignChainBridgePessimisticContract = await ethers.getContractFactory(
             'BridgeL2SovereignChainPessimistic',
         );

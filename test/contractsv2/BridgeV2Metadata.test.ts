@@ -17,7 +17,7 @@ function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-describe('PolygonZkEVMBridge Contract', () => {
+describe('AgglayerBridge Contract', () => {
     upgrades.silenceWarnings();
 
     let polygonZkEVMBridgeContract: AgglayerBridgeV2;
@@ -46,7 +46,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         // load signers
         [deployer, rollupManager, acc1] = await ethers.getSigners();
 
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
@@ -83,7 +83,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         );
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata', async () => {
+    it('should AgglayerBridge with weird token metadata', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = 'nameToken';
@@ -158,7 +158,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(await polygonZkEVMBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with reverts', async () => {
+    it('should AgglayerBridge with weird token metadata with reverts', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = 'nameToken';
@@ -251,7 +251,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(await polygonZkEVMBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with empty data', async () => {
+    it('should AgglayerBridge with weird token metadata with empty data', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20WeirdMetadata');
 
         const nameWeird = '';
@@ -330,7 +330,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(await polygonZkEVMBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge with weird token metadata with invalid data', async () => {
+    it('should AgglayerBridge with weird token metadata with invalid data', async () => {
         const weirdErc20Metadata = await ethers.getContractFactory('ERC20InvalidMetadata');
 
         const nameWeird = '';
@@ -409,7 +409,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(await polygonZkEVMBridgeContract.getRoot()).to.be.equal(rootJSMainnet);
     });
 
-    it('should PolygonZkEVMBridge and with permit eip-2612 compilant', async () => {
+    it('should AgglayerBridge and with permit eip-2612 compilant', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = polTokenContract.target;
@@ -570,7 +570,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge with permit DAI type contracts', async () => {
+    it('should AgglayerBridge with permit DAI type contracts', async () => {
         const { chainId } = await ethers.provider.getNetwork();
         const daiTokenFactory = await ethers.getContractFactory('DaiMock');
         const daiContract = (await daiTokenFactory.deploy(chainId)) as any;
@@ -730,7 +730,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge with permit UNI type contracts', async () => {
+    it('should AgglayerBridge with permit UNI type contracts', async () => {
         const uniTokenFactory = await ethers.getContractFactory('Uni');
         const lastBlock = (await ethers.provider.getBlock('latest')) as any;
         const uniContract = (await uniTokenFactory.deploy(

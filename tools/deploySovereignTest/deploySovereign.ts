@@ -125,7 +125,7 @@ async function main() {
     // Load initialZkEVMDeployerOwner
 
     // deploy bridge
-    // deploy PolygonZkEVMBridge
+    // deploy AgglayerBridge
     const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
     const sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
         initializer: false,

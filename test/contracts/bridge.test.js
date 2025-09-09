@@ -10,7 +10,7 @@ function calculateGlobalExitRoot(mainnetExitRoot, rollupExitRoot) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
 }
 
-describe('PolygonZkEVMBridge Contract', () => {
+describe('AgglayerBridge Contract', () => {
     let deployer;
     let rollup;
     let acc1;
@@ -40,8 +40,8 @@ describe('PolygonZkEVMBridge Contract', () => {
         // load signers
         [deployer, rollup, acc1] = await ethers.getSigners();
 
-        // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridge');
+        // deploy AgglayerBridge
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], { initializer: false });
 
         // deploy global exit root manager
@@ -153,7 +153,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(computedGlobalExitRoot).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge message and verify merkle proof', async () => {
+    it('should AgglayerBridge message and verify merkle proof', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const originAddress = deployer.address;
@@ -686,7 +686,7 @@ describe('PolygonZkEVMBridge Contract', () => {
         expect(computedGlobalExitRoot2).to.be.equal(await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot());
     });
 
-    it('should PolygonZkEVMBridge and sync the current root with events', async () => {
+    it('should AgglayerBridge and sync the current root with events', async () => {
         const depositCount = await polygonZkEVMBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // Ether
@@ -1030,7 +1030,7 @@ describe('PolygonZkEVMBridge Contract', () => {
 
         const balanceDeployer = await ethers.provider.getBalance(deployer.address);
         /*
-         * Create a deposit to add ether to the PolygonZkEVMBridge
+         * Create a deposit to add ether to the AgglayerBridge
          * Check deposit amount ether asserts
          */
         await expect(polygonZkEVMBridgeContract.bridgeAsset(
@@ -1054,7 +1054,7 @@ describe('PolygonZkEVMBridge Contract', () => {
             { value: amount },
         )).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'DestinationNetworkInvalid');
 
-        // This is used just to pay ether to the PolygonZkEVMBridge smart contract and be able to claim it afterwards.
+        // This is used just to pay ether to the AgglayerBridge smart contract and be able to claim it afterwards.
         expect(await polygonZkEVMBridgeContract.bridgeAsset(
             networkIDRollup,
             destinationAddress,
@@ -1200,7 +1200,7 @@ describe('PolygonZkEVMBridge Contract', () => {
 
         const balanceDeployer = await ethers.provider.getBalance(deployer.address);
         /*
-         * Create a deposit to add ether to the PolygonZkEVMBridge
+         * Create a deposit to add ether to the AgglayerBridge
          * Check deposit amount ether asserts
          */
         await expect(polygonZkEVMBridgeContract.bridgeAsset(
@@ -1224,7 +1224,7 @@ describe('PolygonZkEVMBridge Contract', () => {
             { value: amount },
         )).to.be.revertedWithCustomError(polygonZkEVMBridgeContract, 'DestinationNetworkInvalid');
 
-        // This is used just to pay ether to the PolygonZkEVMBridge smart contract and be able to claim it afterwards.
+        // This is used just to pay ether to the AgglayerBridge smart contract and be able to claim it afterwards.
         expect(await polygonZkEVMBridgeContract.bridgeAsset(
             networkIDRollup,
             destinationAddress,

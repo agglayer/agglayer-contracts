@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.20;
 import "../../../interfaces/IBaseAgglayerGER.sol";
-import "./IAgglayerBridgeV2Pessimistic.sol";
+import "./IPolygonZkEVMBridgeV2Pessimistic.sol";
 
 interface IBridgeL2SovereignChainsPessimistic is
-    IAgglayerBridgeV2Pessimistic
+    IPolygonZkEVMBridgeV2Pessimistic
 {
     /**
      * @dev Thrown when try to set a zero address to a non valid zero address field

@@ -73,8 +73,8 @@ describe('Emergency mode test', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
-        // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridge');
+        // deploy AgglayerBridge
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], { initializer: false });
 
         // deploy PolygonZkEVMMock
@@ -187,7 +187,7 @@ describe('Emergency mode test', () => {
             ),
         ).to.be.revertedWith('OnlyNotEmergencyState');
 
-        // Check PolygonZkEVMBridge no PolygonZkEVMBridge is in emergency state also
+        // Check AgglayerBridge no AgglayerBridge is in emergency state also
         const tokenAddress = ethers.ZeroAddress;
         const amount = ethers.parseEther('10');
         const destinationNetwork = 1;

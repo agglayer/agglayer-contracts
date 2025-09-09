@@ -3,7 +3,7 @@
 pragma solidity 0.8.28;
 
 import "./IBridgeL2SovereignChainsV1010.sol";
-import "./AgglayerBridgeV2V1010.sol";
+import "./PolygonZkEVMBridgeV2V1010.sol";
 import "../../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
 
 /**
@@ -12,7 +12,7 @@ import "../../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
 contract BridgeL2SovereignChainV1010 is
-    AgglayerBridgeV2V1010,
+    PolygonZkEVMBridgeV2V1010,
     IBridgeL2SovereignChainsV1010
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
@@ -170,7 +170,7 @@ contract BridgeL2SovereignChainV1010 is
     /**
      * Disable initializers on the implementation following the best practices
      */
-    constructor() AgglayerBridgeV2V1010() {
+    constructor() PolygonZkEVMBridgeV2V1010() {
         _disableInitializers();
     }
 
@@ -363,7 +363,7 @@ contract BridgeL2SovereignChainV1010 is
         bytes memory //_gasTokenMetadata
     )
         external
-        override(IAgglayerBridgeV2V1010, AgglayerBridgeV2V1010)
+        override(IPolygonZkEVMBridgeV2V1010, PolygonZkEVMBridgeV2V1010)
         initializer
     {
         revert InvalidInitializeFunction();
@@ -372,7 +372,7 @@ contract BridgeL2SovereignChainV1010 is
     /**
      * @notice Override the function to prevent the usage, only allowed for L1 bridge, not sovereign chains
      */
-    function initialize() public pure override(AgglayerBridgeV2V1010) {
+    function initialize() public pure override(PolygonZkEVMBridgeV2V1010) {
         revert InvalidInitializeFunction();
     }
 
@@ -950,7 +950,7 @@ contract BridgeL2SovereignChainV1010 is
     // @note This function is not used in the current implementation. We overwrite it to improve deployed bytecode size
     function activateEmergencyState()
         external
-        override(IAgglayerBridgeV2V1010, AgglayerBridgeV2V1010)
+        override(IPolygonZkEVMBridgeV2V1010, PolygonZkEVMBridgeV2V1010)
         onlyEmergencyBridgePauser
     {
         _activateEmergencyState();
@@ -958,7 +958,7 @@ contract BridgeL2SovereignChainV1010 is
 
     function deactivateEmergencyState()
         external
-        override(IAgglayerBridgeV2V1010, AgglayerBridgeV2V1010)
+        override(IPolygonZkEVMBridgeV2V1010, PolygonZkEVMBridgeV2V1010)
         onlyEmergencyBridgeUnpauser
     {
         _deactivateEmergencyState();

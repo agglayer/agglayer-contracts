@@ -42,7 +42,7 @@ contract GlobalExitRootManagerL2SovereignChainPessimistic is
     event SetGlobalExitRootRemover(address indexed newGlobalExitRootRemover);
 
     /**
-     * @param _bridgeAddress PolygonZkEVMBridge contract address
+     * @param _bridgeAddress AgglayerBridge contract address
      */
     constructor(
         address _bridgeAddress

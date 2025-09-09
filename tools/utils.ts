@@ -5,7 +5,7 @@ import { getGitInfo } from '../src/utils';
 
 export const supportedBridgeContracts = [
     'AgglayerBridgeV2 proxy',
-    'PolygonZkEVMBridge proxy',
+    'AgglayerBridge proxy',
     'AgglayerBridgeL2 proxy',
 ];
 

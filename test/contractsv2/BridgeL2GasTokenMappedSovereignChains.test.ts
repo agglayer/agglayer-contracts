@@ -67,7 +67,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
 
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
-        // deploy PolygonZkEVMBridge
+        // deploy AgglayerBridge
         const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
@@ -361,7 +361,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
         ).to.be.equal(true);
     });
 
-    it('should PolygonZkEVMBridge message and verify merkle proof', async () => {
+    it('should AgglayerBridge message and verify merkle proof', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDRollup2;
         const originAddress = deployer.address;
@@ -1129,7 +1129,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
         ).to.be.equal(true);
     });
 
-    it('should PolygonZkEVMBridge and sync the current root with events', async () => {
+    it('should AgglayerBridge and sync the current root with events', async () => {
         const depositCount = await sovereignChainBridgeContract.depositCount();
         const originNetwork = networkIDMainnet;
         const tokenAddress = ethers.ZeroAddress; // gasToken

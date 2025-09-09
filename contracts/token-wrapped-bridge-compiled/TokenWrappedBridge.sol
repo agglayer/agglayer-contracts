@@ -40,7 +40,7 @@ contract TokenWrappedBridge is ERC20 {
     modifier onlyBridge() {
         require(
             msg.sender == bridgeAddress,
-            "TokenWrapped::onlyBridge: Not PolygonZkEVMBridge"
+            "TokenWrapped::onlyBridge: Not AgglayerBridge"
         );
         _;
     }
