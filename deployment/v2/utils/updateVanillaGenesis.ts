@@ -82,7 +82,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     batch.addRawTx(`0x${rawChangeL2BlockTx}`);
 
     // Create deploy bridge transaction
-    const sovereignBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+    const sovereignBridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2');
     // Get deploy transaction for bridge
     const deployBridgeData = await sovereignBridgeFactory.getDeployTransaction();
     const injectedTx = {

@@ -104,8 +104,8 @@ async function main() {
     outputJson.globalExitRootManagerL2SovereignChainAddress = gerManager.proxy;
     outputJson.globalExitRootManagerL2SovereignChainImplementation = gerManager.implementation;
 
-    // Step 5: Deploy BridgeL2SovereignChain with GER Manager address
-    logger.info('\n=== Step 5: Deploying BridgeL2SovereignChain ===');
+    // Step 5: Deploy AgglayerBridgeL2 with GER Manager address
+    logger.info('\n=== Step 5: Deploying AgglayerBridgeL2 ===');
     const sovereignBridge = await deployBridgeL2SovereignChain(
         gerManager.proxy, // Use actual GER Manager address
         proxyAdmin, // Use centralized ProxyAdmin
@@ -295,7 +295,7 @@ async function deployTimelock(deployer: any): Promise<any> {
 }
 
 /**
- * Deploy BridgeL2SovereignChain with proxy pattern using centralized ProxyAdmin
+ * Deploy AgglayerBridgeL2 with proxy pattern using centralized ProxyAdmin
  */
 async function deployBridgeL2SovereignChain(
     gerManagerAddress: string,
@@ -309,7 +309,7 @@ async function deployBridgeL2SovereignChain(
     bridgeLib: string;
     WETH: string;
 }> {
-    const BridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
+    const BridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2', deployer);
 
     // Calculate automatic parameters for outpost chain
     const gasTokenAddress = deriveGasTokenAddress(deployParameters.network.rollupID);
@@ -331,7 +331,7 @@ async function deployBridgeL2SovereignChain(
     const deployTx = bridgeImplementation.deploymentTransaction();
     // Wait for 5 confirmations for correct etherscan verification
     await deployTx?.wait(5);
-    logger.info(`✅ BridgeL2SovereignChain implementation deployed: ${bridgeImplementation.target}`);
+    logger.info(`✅ AgglayerBridgeL2 implementation deployed: ${bridgeImplementation.target}`);
 
     // Verify Bridge implementation on Etherscan
     await verifyContractEtherscan(
@@ -428,8 +428,8 @@ async function deployBridgeL2SovereignChain(
     const bridgeLib = await bridge.bridgeLib();
     const WETH = await bridge.WETHToken();
 
-    logger.info(`✅ BridgeL2SovereignChain implementation: ${bridgeImplementation.target}`);
-    logger.info(`✅ BridgeL2SovereignChain proxy (initialized): ${bridgeProxy.target}`);
+    logger.info(`✅ AgglayerBridgeL2 implementation: ${bridgeImplementation.target}`);
+    logger.info(`✅ AgglayerBridgeL2 proxy (initialized): ${bridgeProxy.target}`);
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
     await upgrades.forceImport(bridgeProxy.target as string, BridgeFactory, {
@@ -803,7 +803,7 @@ async function verifyBridgeContract(deployConfig: any, outputJson: any) {
 
     // Verify Bridge configuration
     const bridge = (await ethers.getContractAt(
-        'BridgeL2SovereignChain',
+        'AgglayerBridgeL2',
         outputJson.bridgeL2SovereignChainAddress,
     )) as any;
 

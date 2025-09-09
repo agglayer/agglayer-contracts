@@ -6,7 +6,7 @@ import fs = require('fs');
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import { GlobalExitRootManagerL2SovereignChain, BridgeL2SovereignChain } from '../../typechain-types';
+import { GlobalExitRootManagerL2SovereignChain, AgglayerBridgeL2 } from '../../typechain-types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const MerkleTreeBridge = MTBridge;
@@ -126,11 +126,11 @@ async function main() {
 
     // deploy bridge
     // deploy PolygonZkEVMBridge
-    const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+    const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
     const sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
         initializer: false,
         unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-    })) as unknown as BridgeL2SovereignChain;
+    })) as unknown as AgglayerBridgeL2;
 
     // deploy global exit root manager
     const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(

@@ -5,7 +5,7 @@ import path = require('path');
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-helpers';
-import { BridgeL2SovereignChain, PolygonZkEVMTimelock } from '../../typechain-types';
+import { AgglayerBridgeL2, PolygonZkEVMTimelock } from '../../typechain-types';
 
 import { logger } from '../../src/logger';
 import { checkParams } from '../../src/utils';
@@ -83,7 +83,7 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
 
         // Get contract
         const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChainV1010');
-        const sovereignBridgeContract = bridgeFactory.attach(bridgeL2SovereignChainAddress) as BridgeL2SovereignChain;
+        const sovereignBridgeContract = bridgeFactory.attach(bridgeL2SovereignChainAddress) as AgglayerBridgeL2;
 
         // Bridge prev params
         const version = await sovereignBridgeContract.BRIDGE_SOVEREIGN_VERSION();

@@ -132,7 +132,7 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // should have same runs than BridgeL2SovereignChain
+                        runs: 100, // should have same runs than AgglayerBridgeL2
                     },
                     evmVersion: 'shanghai',
                 },
@@ -147,7 +147,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 },
             },
-            'contracts/v2/sovereignChains/BridgeL2SovereignChain.sol': {
+            'contracts/v2/sovereignChains/AgglayerBridgeL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -228,7 +228,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 100,
                     },
-                    evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
+                    evmVersion: 'shanghai', // Same evm version than AgglayerBridgeL2
                 },
             },
             'contracts/v2/lib/TokenWrappedTransparentProxy.sol': {
@@ -238,7 +238,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
+                    evmVersion: 'shanghai', // Same evm version than AgglayerBridgeL2
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },

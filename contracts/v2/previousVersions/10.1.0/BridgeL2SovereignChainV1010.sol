@@ -863,7 +863,7 @@ contract BridgeL2SovereignChainV1010 is
 
     /**
      * @notice Mints tokens from wrapped token to proceed with the claim, if the token is not mintable it will be transferred
-     * note This function has been extracted to be able to override it by other contracts like BridgeL2SovereignChain
+     * note This function has been extracted to be able to override it by other contracts like AgglayerBridgeL2
      * @param tokenWrapped Proxied wrapped token to mint
      * @param destinationAddress Minted token receiver
      * @param amount Amount of tokens

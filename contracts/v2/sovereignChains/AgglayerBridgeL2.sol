@@ -11,7 +11,7 @@ import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
  * Contract responsible to manage the token interactions with other networks
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
-contract BridgeL2SovereignChain is
+contract AgglayerBridgeL2 is
     PolygonZkEVMBridgeV2,
     IBridgeL2SovereignChains
 {
