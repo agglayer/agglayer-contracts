@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../interfaces/IAgglayerManagerGER.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
@@ -30,7 +30,7 @@ abstract contract PolygonConsensusBase is
     IERC20Upgradeable public immutable pol;
 
     // Global Exit Root interface
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerManagerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
     IPolygonZkEVMBridgeV2 public immutable bridgeAddress;
@@ -117,7 +117,7 @@ abstract contract PolygonConsensusBase is
      * @param _rollupManager Global exit root manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         AgglayerManager _rollupManager

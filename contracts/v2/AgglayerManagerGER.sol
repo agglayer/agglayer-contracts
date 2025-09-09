@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "./interfaces/IAgglayerManagerGER.sol";
 import "./interfaces/IVersion.sol";
 import "./lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "../lib/GlobalExitRootLib.sol";
@@ -155,7 +155,7 @@ contract AgglayerManagerGER is
     function getRoot()
         public
         view
-        override(DepositContractBase, IPolygonZkEVMGlobalExitRootV2)
+        override(DepositContractBase, IAgglayerManagerGER)
         returns (bytes32)
     {
         return super.getRoot();

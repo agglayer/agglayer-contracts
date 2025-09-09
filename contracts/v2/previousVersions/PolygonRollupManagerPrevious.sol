@@ -4,7 +4,7 @@
 pragma solidity ^0.8.20;
 
 import "./IPolygonRollupManagerPrevious.sol";
-import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../interfaces/IAgglayerManagerGER.sol";
 import "../../interfaces/IPolygonZkEVMBridge.sol";
 import "../interfaces/IPolygonRollupBase.sol";
 import "../../interfaces/IVerifierRollup.sol";
@@ -159,7 +159,7 @@ contract PolygonRollupManagerPrevious is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Global Exit Root address
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerManagerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
     IPolygonZkEVMBridge public immutable bridgeAddress;
@@ -368,7 +368,7 @@ contract PolygonRollupManagerPrevious is
      * @param _bridgeAddress Bridge address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress
     ) {

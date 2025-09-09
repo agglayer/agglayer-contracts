@@ -51,7 +51,7 @@ contract PolygonZkEVMExistentEtrog is PolygonRollupBaseEtrog {
      * @param _rollupManager Global exit root manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerManagerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         AgglayerManager _rollupManager
