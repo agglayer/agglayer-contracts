@@ -61,7 +61,7 @@ async function verifyContractEtherscan(
     } catch (error) {
         if (error.name === 'ContractAlreadyVerifiedError') {
             logger.info(`✅ Contract ${implementationAddress} is already verified on Etherscan`);
-            return;
+            return true;
         }
         logger.error('❌ Error verifying the new implementation contract: ', error);
         logger.info('you can verify the new impl address with:');
@@ -72,7 +72,9 @@ async function verifyContractEtherscan(
             'Copy the following constructor arguments on: upgrade/arguments.js \n',
             JSON.stringify(constructorArguments),
         );
+        return false;
     }
+    return true;
 }
 
 /**

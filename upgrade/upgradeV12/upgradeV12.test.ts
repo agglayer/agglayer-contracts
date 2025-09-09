@@ -1,4 +1,4 @@
-/* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
+/* eslint-disable no-await-in-loop, @typescript-eslint/no-use-before-define, @typescript-eslint/no-unused-expressions, no-lonely-if */
 /* eslint-disable, no-inner-declarations, no-undef, import/no-unresolved */
 import { expect } from 'chai';
 import path = require('path');
@@ -17,10 +17,9 @@ import { logger } from '../../src/logger';
 import { checkParams } from '../../src/utils';
 
 import upgradeParams from './upgrade_parameters.json';
-// import upgradeOutput from './upgrade_output.json'; // This will be generated after running the upgrade script
+import upgradeOutput from './upgrade_output.json'; // This will be generated after running the upgrade script
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
 describe('Should shadow fork network, execute upgrade and validate Upgrade V12', () => {
     it('Should shadow fork network, execute upgrade and validate Upgrade V12', async () => {
         // Define expected versions for each contract after upgrade
@@ -31,9 +30,6 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
         const mandatoryParameters = ['rollupManagerAddress', 'initializeAgglayerGateway'];
         checkParams(upgradeParams, mandatoryParameters);
-
-        // Load upgrade output
-        const upgradeOutput = require('./upgrade_output.json');
 
         if (!['mainnet', 'sepolia'].includes(upgradeParams.forkParams.network)) {
             throw new Error('Invalid network');
@@ -86,27 +82,23 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         logger.info(`- AggLayer Gateway: ${aggLayerGatewayAddress}`);
 
         const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        const aggLayerGatewayContract = aggLayerGatewayFactory.attach(
-            aggLayerGatewayAddress,
-        ) as AggLayerGateway;
+        const aggLayerGatewayContract = aggLayerGatewayFactory.attach(aggLayerGatewayAddress) as AggLayerGateway;
 
         const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const bridgeContract = bridgeFactory.attach(
-            bridgeV2Address,
-        ) as PolygonZkEVMBridgeV2;
+        const bridgeContract = bridgeFactory.attach(bridgeV2Address) as PolygonZkEVMBridgeV2;
 
         const gerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
-        const gerContract = gerFactory.attach(
-            globalExitRootV2Address,
-        ) as PolygonZkEVMGlobalExitRootV2;
+        const gerContract = gerFactory.attach(globalExitRootV2Address) as PolygonZkEVMGlobalExitRootV2;
 
-        // Get admin address from rollup manager, should be a timelock and add balance
+        // Get admin address from rollup manager using binary search
         const adminRoleFilter = rollupManagerContract.filters.RoleGranted(ethers.ZeroHash);
-        const adminRoleEvents = await rollupManagerContract.queryFilter(adminRoleFilter, 0, 'latest');
-        if (adminRoleEvents.length === 0) {
-            throw new Error('No admin role granted');
+        const lastAdminEvent = await findLastEventBinarySearch(rollupManagerContract, adminRoleFilter);
+
+        if (!lastAdminEvent) {
+            throw new Error('No admin role granted for rollup manager');
         }
-        const adminRoleAddress = adminRoleEvents[0].args.account;
+
+        const adminRoleAddress = lastAdminEvent.args.account;
         logger.info(`Default Admin rollup manager role address: ${adminRoleAddress}`);
         // Expect upgrade param timelock address to equal admin role address
         expect(upgradeOutput.timelockContractAddress).to.be.equal(adminRoleAddress);
@@ -119,14 +111,20 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         const EXECUTOR_ROLE = ethers.id('EXECUTOR_ROLE');
         let proposerRoleAddress = (upgradeParams as any).timelockAdminAddress;
         if (typeof proposerRoleAddress === 'undefined') {
-            // Try retrieve timelock admin address from events
+            // Use binary search to efficiently find the last PROPOSER_ROLE granted event
             const proposerRoleFilter = timelockContract.filters.RoleGranted(PROPOSER_ROLE);
-            // Increase provider timeout for query filter call
-            const proposerRoleEvents = await timelockContract.queryFilter(proposerRoleFilter, 0, 'latest');
-            if (proposerRoleEvents.length === 0) {
-                throw new Error('No proposer role granted for timelock');
+            const lastEvent = await findLastEventBinarySearch(timelockContract, proposerRoleFilter);
+
+            if (!lastEvent) {
+                throw new Error(
+                    'Could not find any PROPOSER_ROLE events in recent blocks. Please provide timelockAdminAddress parameter manually.',
+                );
             }
-            proposerRoleAddress = proposerRoleEvents[0].args.account;
+
+            proposerRoleAddress = lastEvent.args.account;
+            logger.info(
+                `✓ Found last PROPOSER_ROLE event at block ${lastEvent.blockNumber} for address: ${proposerRoleAddress}`,
+            );
         }
         const hasProposerRole = await timelockContract.hasRole(PROPOSER_ROLE, proposerRoleAddress);
         const hasExecutorRole = await timelockContract.hasRole(EXECUTOR_ROLE, proposerRoleAddress);
@@ -253,7 +251,9 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         expect(aggchainMultisigHash).to.not.equal(ethers.ZeroHash);
         logger.info(`✓ AggLayer Gateway correctly initialized with multisig hash: ${aggchainMultisigHash}`);
 
-        logger.info(`✓ Checked AggLayer Gateway contract storage parameters, initialization params and new version: ${AGGLAYER_GATEWAY_VERSION}`);
+        logger.info(
+            `✓ Checked AggLayer Gateway contract storage parameters, initialization params and new version: ${AGGLAYER_GATEWAY_VERSION}`,
+        );
 
         // 3. Check bridge contract
         expect(await bridgeContract.version()).to.equal(BRIDGE_VERSION);
@@ -270,9 +270,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         expect(await bridgeContract.wrappedTokenBytecodeStorer()).to.equal(
             upgradeOutput.deployedContracts.wrappedTokenBytecodeStorer,
         );
-        expect(await bridgeContract.bridgeLib()).to.equal(
-            upgradeOutput.deployedContracts.bridgeLib,
-        );
+        expect(await bridgeContract.bridgeLib()).to.equal(upgradeOutput.deployedContracts.bridgeLib);
         logger.info(`✓ Checked bridge contract storage parameters and new version: ${BRIDGE_VERSION}`);
 
         // 4. Check Global Exit Root contract
@@ -282,16 +280,85 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         logger.info(`✓ Checked global exit root contract storage parameters and new version: ${GER_VERSION}`);
 
         // Validate that all contracts cannot be re-initialized
-        await expect(
-            rollupManagerContract.initialize(),
-        ).to.be.revertedWith('Initializable: contract is already initialized');
+        await expect(rollupManagerContract.initialize()).to.be.revertedWith(
+            'Initializable: contract is already initialized',
+        );
 
-        await expect(
-            bridgeContract['initialize()'](),
-        ).to.be.revertedWith('Initializable: contract is already initialized');
+        await expect(bridgeContract['initialize()']()).to.be.revertedWith(
+            'Initializable: contract is already initialized',
+        );
 
         logger.info(`✓ Verified contracts cannot be re-initialized`);
 
         logger.info('✅ Finished shadow fork upgrade test successfully! All 4 contracts upgraded and validated.');
     }).timeout(0);
 });
+
+/**
+ * Binary search to efficiently find the last event of a specific type
+ * @param contract The contract instance to search events on
+ * @param filter The event filter to search for
+ * @param chunkSize Initial chunk size for searching (default: 5000)
+ * @returns The last (most recent) event found, or null if none found
+ */
+async function findLastEventBinarySearch(contract: any, filter: any, chunkSize: number = 100000): Promise<any> {
+    const currentBlock = await ethers.provider.getBlockNumber();
+    const searchStart = 0; // Always search from genesis
+
+    logger.info(`Starting binary search for events from block ${searchStart} to ${currentBlock} (latest)`);
+
+    let failureCount = 0;
+    const MAX_FAILURES = 100;
+    let currentChunkSize = chunkSize;
+
+    // Search backwards in chunks
+    let currentEnd = currentBlock;
+
+    while (currentEnd >= searchStart) {
+        const currentStart = Math.max(searchStart, currentEnd - currentChunkSize);
+
+        try {
+            // logger.info(`Searching blocks ${currentStart} to ${currentEnd} (chunk size: ${currentChunkSize})...`);
+            const events = await contract.queryFilter(filter, currentStart, currentEnd);
+
+            if (events.length > 0) {
+                // Found events! Return the last (most recent) one immediately
+                const lastEvent = events[events.length - 1];
+                logger.info(
+                    `✓ Found ${events.length} events, returning most recent from block ${lastEvent.blockNumber}`,
+                );
+                return lastEvent;
+            }
+
+            // No events in this chunk but call was successful - increase chunk size for next iteration
+            currentChunkSize = Math.min(currentChunkSize * 2, 1000000); // Cap at 1M blocks
+            // logger.info(`✓ No events found but call successful, increasing chunk size to ${currentChunkSize}`);
+
+            // Move to previous chunk
+            currentEnd = currentStart - 1;
+        } catch (error: any) {
+            failureCount += 1;
+            logger.warn(
+                `Error querying blocks ${currentStart}-${currentEnd} (failure ${failureCount}/${MAX_FAILURES}): ${error.message}`,
+            );
+
+            // Check if we've hit the maximum failure limit
+            if (failureCount >= MAX_FAILURES) {
+                throw new Error(
+                    `Query failed ${MAX_FAILURES} times in a row. Network or RPC issues detected. Please provide timelockAdminAddress parameter manually or try a different RPC endpoint.`,
+                );
+            }
+
+            // If chunk is too big, try smaller chunks
+            if (currentChunkSize > 200000) {
+                currentChunkSize = Math.floor(currentChunkSize / 2);
+                logger.info(`Reducing chunk size to ${currentChunkSize} due to error`);
+            } else {
+                // Move to previous chunk with same size
+                currentEnd = currentStart - 1;
+            }
+        }
+    }
+
+    return null;
+}

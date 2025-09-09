@@ -7,13 +7,10 @@ import { utils } from 'ffjavascript';
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
-import {
-    PolygonRollupManager,
-    PolygonZkEVMBridgeV2,
-    AggLayerGateway,
-} from '../../typechain-types';
+import { PolygonRollupManager, PolygonZkEVMBridgeV2 } from '../../typechain-types';
 import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData } from '../utils';
-import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters, getGitInfo } from '../../src/utils';
+import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../src/utils';
+import { addInfoOutput } from '../../tools/utils';
 import * as upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -21,6 +18,33 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const pathOutputJson = path.join(__dirname, './upgrade_output.json');
 
 async function main() {
+    // Check for unsafe mode from parameters
+    const isUnsafeMode = (upgradeParameters as any).unsafeMode || false;
+    if (isUnsafeMode) {
+        logger.warn('⚠️  UNSAFE MODE ENABLED: criticalTooling checks disabled');
+    }
+
+    let outputJson = {};
+    // Add git info using addInfoOutput with criticalTooling flag
+    outputJson = addInfoOutput(outputJson, !isUnsafeMode);
+
+    // Initialize verification tracking
+    const verification: Record<string, any> = {};
+
+    // Helper function to track contract verification
+    async function trackVerification(contractName: string, address: string, constructorArgs: any[] = []) {
+        const verificationSuccess = await verifyContractEtherscan(address, constructorArgs);
+        if (verificationSuccess) {
+            verification[contractName] = 'OK';
+        } else {
+            verification[contractName] = {
+                status: 'FAILED',
+                address,
+                constructorArgs,
+            };
+        }
+    }
+
     /*
      * Check upgrade parameters
      * Check that every necessary parameter is fulfilled
@@ -33,12 +57,7 @@ async function main() {
     ];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
 
-    const {
-        rollupManagerAddress,
-        timelockDelay,
-        tagSCPreviousVersion,
-        initializeAgglayerGateway,
-    } = upgradeParameters;
+    const { rollupManagerAddress, timelockDelay, tagSCPreviousVersion, initializeAgglayerGateway } = upgradeParameters;
     const salt = (upgradeParameters as any).timelockSalt || ethers.ZeroHash;
 
     // Load provider
@@ -80,7 +99,7 @@ async function main() {
     }
 
     // Check signersToAdd array
-    const signersToAdd = initializeAgglayerGateway.signersToAdd;
+    const { signersToAdd } = initializeAgglayerGateway;
     if (!Array.isArray(signersToAdd)) {
         throw new Error('signersToAdd must be an array');
     }
@@ -120,14 +139,17 @@ async function main() {
     }
 
     // Check threshold constraints
-    const newThreshold = initializeAgglayerGateway.newThreshold;
+    const { newThreshold } = initializeAgglayerGateway;
     if (newThreshold > signersToAdd.length) {
-        throw new Error(`Threshold (${newThreshold}) cannot be greater than number of signers (${signersToAdd.length})`);
+        throw new Error(
+            `Threshold (${newThreshold}) cannot be greater than number of signers (${signersToAdd.length})`,
+        );
     }
     if (signersToAdd.length > 0 && newThreshold === 0) {
         throw new Error('Threshold cannot be zero when signers are present');
     }
-    if (signersToAdd.length > 255) { // MAX_AGGCHAIN_SIGNERS = 255
+    if (signersToAdd.length > 255) {
+        // MAX_AGGCHAIN_SIGNERS = 255
         throw new Error(`Number of signers (${signersToAdd.length}) exceeds maximum allowed (255)`);
     }
 
@@ -152,7 +174,7 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`Polygon rollup manager implementation deployed at: ${implRollupManager}`);
 
-    await verifyContractEtherscan(implRollupManager as string, [
+    await trackVerification('rollupManagerImplementation', implRollupManager as string, [
         globalExitRootV2Address,
         polAddress,
         bridgeV2Address,
@@ -170,7 +192,7 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`AggLayer Gateway implementation deployed at: ${implAggLayerGateway}`);
 
-    await verifyContractEtherscan(implAggLayerGateway as string, []);
+    await trackVerification('aggLayerGatewayImplementation', implAggLayerGateway as string, []);
 
     // 3. Upgrade Bridge V2
     logger.info('Preparing Bridge V2 upgrade...');
@@ -183,22 +205,22 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`Polygon bridge implementation deployed at: ${implBridge}`);
 
-    await verifyContractEtherscan(implBridge, []);
+    await trackVerification('bridgeImplementation', implBridge, []);
 
     // Verify bridge-related contracts
     const bridgeContract = bridgeFactory.attach(implBridge) as PolygonZkEVMBridgeV2;
     const bytecodeStorerAddress = await bridgeContract.wrappedTokenBytecodeStorer();
-    await verifyContractEtherscan(bytecodeStorerAddress, []);
+    await trackVerification('wrappedTokenBytecodeStorer', bytecodeStorerAddress, []);
     logger.info('#######################\n');
     logger.info(`wrappedTokenBytecodeStorer deployed at: ${bytecodeStorerAddress}`);
 
     const wrappedTokenBridgeImplementationAddress = await bridgeContract.getWrappedTokenBridgeImplementation();
-    await verifyContractEtherscan(wrappedTokenBridgeImplementationAddress, []);
+    await trackVerification('wrappedTokenBridgeImplementation', wrappedTokenBridgeImplementationAddress, []);
     logger.info('#######################\n');
     logger.info(`wrappedTokenBridge Implementation deployed at: ${wrappedTokenBridgeImplementationAddress}`);
 
     const bridgeLibAddress = await bridgeContract.bridgeLib();
-    await verifyContractEtherscan(bridgeLibAddress, []);
+    await trackVerification('bridgeLib', bridgeLibAddress, []);
     logger.info('#######################\n');
     logger.info(`BridgeLib deployed at: ${bridgeLibAddress}`);
 
@@ -218,7 +240,10 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`Polygon global exit root manager implementation deployed at: ${globalExitRootManagerImp}`);
 
-    await verifyContractEtherscan(globalExitRootManagerImp as string, [rollupManagerAddress, bridgeV2Address]);
+    await trackVerification('globalExitRootManagerImplementation', globalExitRootManagerImp as string, [
+        rollupManagerAddress,
+        bridgeV2Address,
+    ]);
 
     // Create timelock operations
     logger.info('Creating timelock operations...');
@@ -233,11 +258,14 @@ async function main() {
 
     // Prepare AggLayerGateway initialize call data
     const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
-    const initializeCallData = aggLayerGatewayFactory.interface.encodeFunctionData('initialize(address,(address,string)[],uint256)', [
-        initializeAgglayerGateway.multisigRole,
-        signersToAdd, // signersToAdd is already in SignerInfo format
-        initializeAgglayerGateway.newThreshold,
-    ]);
+    const initializeCallData = aggLayerGatewayFactory.interface.encodeFunctionData(
+        'initialize(address,(address,string)[],uint256)',
+        [
+            initializeAgglayerGateway.multisigRole,
+            signersToAdd, // signersToAdd is already in SignerInfo format
+            initializeAgglayerGateway.newThreshold,
+        ],
+    );
 
     const operationAggLayerGateway = genTimelockOperation(
         proxyAdmin.target,
@@ -269,9 +297,24 @@ async function main() {
 
     // Schedule operation
     const scheduleData = timelockContractFactory.interface.encodeFunctionData('scheduleBatch', [
-        [operationRollupManager.target, operationAggLayerGateway.target, operationBridge.target, operationGlobalExitRoot.target],
-        [operationRollupManager.value, operationAggLayerGateway.value, operationBridge.value, operationGlobalExitRoot.value],
-        [operationRollupManager.data, operationAggLayerGateway.data, operationBridge.data, operationGlobalExitRoot.data],
+        [
+            operationRollupManager.target,
+            operationAggLayerGateway.target,
+            operationBridge.target,
+            operationGlobalExitRoot.target,
+        ],
+        [
+            operationRollupManager.value,
+            operationAggLayerGateway.value,
+            operationBridge.value,
+            operationGlobalExitRoot.value,
+        ],
+        [
+            operationRollupManager.data,
+            operationAggLayerGateway.data,
+            operationBridge.data,
+            operationGlobalExitRoot.data,
+        ],
         ethers.ZeroHash, // predecessor
         salt, // salt
         timelockDelay,
@@ -279,9 +322,24 @@ async function main() {
 
     // Execute operation
     const executeData = timelockContractFactory.interface.encodeFunctionData('executeBatch', [
-        [operationRollupManager.target, operationAggLayerGateway.target, operationBridge.target, operationGlobalExitRoot.target],
-        [operationRollupManager.value, operationAggLayerGateway.value, operationBridge.value, operationGlobalExitRoot.value],
-        [operationRollupManager.data, operationAggLayerGateway.data, operationBridge.data, operationGlobalExitRoot.data],
+        [
+            operationRollupManager.target,
+            operationAggLayerGateway.target,
+            operationBridge.target,
+            operationGlobalExitRoot.target,
+        ],
+        [
+            operationRollupManager.value,
+            operationAggLayerGateway.value,
+            operationBridge.value,
+            operationGlobalExitRoot.value,
+        ],
+        [
+            operationRollupManager.data,
+            operationAggLayerGateway.data,
+            operationBridge.data,
+            operationGlobalExitRoot.data,
+        ],
         ethers.ZeroHash, // predecessor
         salt, // salt
     ]);
@@ -291,9 +349,8 @@ async function main() {
 
     // Get current block number, used in the shadow fork tests
     const blockNumber = await ethers.provider.getBlockNumber();
-    const outputJson = {
+    outputJson = {
         tagSCPreviousVersion,
-        gitInfo: getGitInfo(),
         scheduleData,
         executeData,
         timelockContractAddress: timelockAddress,
@@ -321,6 +378,9 @@ async function main() {
         wrappedTokenBridgeImplementation: wrappedTokenBridgeImplementationAddress,
         bridgeLib: bridgeLibAddress,
     };
+
+    // Add verification results
+    (outputJson as any).verification = verification;
 
     fs.writeFileSync(pathOutputJson, JSON.stringify(utils.stringifyBigInts(outputJson), null, 2));
     logger.info(`Output saved to: ${pathOutputJson}`);

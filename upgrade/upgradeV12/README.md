@@ -63,6 +63,7 @@ Update `upgrade_parameters.json` with the following values:
     "maxPriorityFeePerGas": "",
     "multiplierGas": "",
     "timelockAdminAddress": "0x..",
+    "unsafeMode": false,
     "initializeAgglayerGateway": {
         "multisigRole": "0x...",
         "signersToAdd": [
@@ -105,6 +106,7 @@ Update `upgrade_parameters.json` with the following values:
 - `maxPriorityFeePerGas`: Maximum priority fee per gas (optional, for EIP-1559 transactions)
 - `multiplierGas`: Gas multiplier with 3 decimals (e.g., "1500" for 1.5x)
 - `timelockAdminAddress`: Address with timelock admin privileges (auto-detected if not provided)
+- `unsafeMode`: Boolean flag to disable critical tooling checks (default: false, ⚠️ only for development/testing)
 
 #### Fork Parameters (for testing)
 
@@ -120,6 +122,32 @@ Run the upgrade script to deploy new implementations and generate timelock opera
 ```bash
 npx hardhat run ./upgrade/upgradeV12/upgradeV12.ts --network sepolia
 ```
+
+**Optional: Unsafe Mode**
+
+To disable critical tooling checks, set `"unsafeMode": true` in `upgrade_parameters.json`:
+
+```json
+{
+    "tagSCPreviousVersion": "v1.0.0",
+    "rollupManagerAddress": "0x...",
+    "timelockDelay": 3600,
+    "unsafeMode": true,
+    "..."
+}
+```
+
+**Verification Tracking**
+
+The script automatically tracks contract verification on Etherscan and includes results in the output JSON.
+
+⚠️ **Warning**: Setting `"unsafeMode": true` disables critical tooling checks including:
+
+- Git tag validation (ensures deployment matches tagged version)
+- Repository state verification
+- Critical deployment safeguards
+
+Only use `unsafeMode: true` for development/testing purposes. **Never use in production deployments.**
 
 This will:
 
@@ -340,6 +368,20 @@ After successful execution:
     "wrappedTokenBytecodeStorer": "0x...",
     "wrappedTokenBridgeImplementation": "0x...",
     "bridgeLib": "0x..."
+  },
+  "verification": {
+    "rollupManagerImplementation": "OK",
+    "aggLayerGatewayImplementation": "OK",
+    "bridgeImplementation": "OK",
+    "globalExitRootManagerImplementation": {
+      "status": "FAILED",
+      "address": "0x...",
+      "constructorArgs": ["0x...", "0x..."],
+      "error": "Contract verification failed"
+    },
+    "wrappedTokenBytecodeStorer": "OK",
+    "wrappedTokenBridgeImplementation": "OK",
+    "bridgeLib": "OK"
   }
 }
 ```
