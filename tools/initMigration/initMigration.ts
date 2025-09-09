@@ -53,9 +53,7 @@ async function main() {
 
     // Load Rollup manager
     const AgglayerManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
-    const rollupManagerContract = AgglayerManagerFactory.attach(
-        polygonRollupManagerAddress,
-    ) as AgglayerManager;
+    const rollupManagerContract = AgglayerManagerFactory.attach(polygonRollupManagerAddress) as AgglayerManager;
 
     const outputJson = {} as any;
 

@@ -1,11 +1,7 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import {
-    AgglayerBridgeV2Pessimistic,
-    AgglayerBridgeV2,
-    PolygonZkEVMGlobalExitRoot,
-} from '../../typechain-types';
+import { AgglayerBridgeV2Pessimistic, AgglayerBridgeV2, PolygonZkEVMGlobalExitRoot } from '../../typechain-types';
 
 describe('BridgeV2 upgrade', () => {
     let bridgeContract: AgglayerBridgeV2;

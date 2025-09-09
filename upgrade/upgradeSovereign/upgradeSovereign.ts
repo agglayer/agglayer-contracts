@@ -78,10 +78,7 @@ async function main() {
 
     // prepare upgrades
     // Upgrade to AgglayerManagerGERL2
-    const gerManagerL2SovereignChainFactory = await ethers.getContractFactory(
-        'AgglayerManagerGERL2',
-        deployer,
-    );
+    const gerManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerManagerGERL2', deployer);
     const gerManagerL2SovereignChainImplementation = await upgrades.prepareUpgrade(
         globalExitRootManagerL2SovereignChainAddress,
         gerManagerL2SovereignChainFactory,

@@ -802,10 +802,7 @@ async function verifyBridgeContract(deployConfig: any, outputJson: any) {
     logger.info(`✅ Bridge is initialized (version: ${initializerVersion})`);
 
     // Verify Bridge configuration
-    const bridge = (await ethers.getContractAt(
-        'AgglayerBridgeL2',
-        outputJson.bridgeL2SovereignChainAddress,
-    )) as any;
+    const bridge = (await ethers.getContractAt('AgglayerBridgeL2', outputJson.bridgeL2SovereignChainAddress)) as any;
 
     // Verify network ID
     const networkID = await bridge.networkID();

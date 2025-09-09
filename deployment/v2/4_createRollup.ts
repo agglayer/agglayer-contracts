@@ -257,9 +257,7 @@ async function main() {
 
     // Get bridge instance
     const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeV2', deployer);
-    const polygonZkEVMBridgeContract = bridgeFactory.attach(
-        deployOutput.polygonZkEVMBridgeAddress,
-    ) as AgglayerBridgeV2;
+    const polygonZkEVMBridgeContract = bridgeFactory.attach(deployOutput.polygonZkEVMBridgeAddress) as AgglayerBridgeV2;
     if (
         createRollupParameters.gasTokenAddress &&
         createRollupParameters.gasTokenAddress !== '' &&

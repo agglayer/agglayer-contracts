@@ -63,9 +63,7 @@ describe('Docker build tests Contract', () => {
 
     it('should check AgglayerBridgeV2', async () => {
         const AgglayerBridgeV2Factory = await ethers.getContractFactory('AgglayerBridgeV2');
-        const AgglayerBridgeV2Contract = AgglayerBridgeV2Factory.attach(
-            polygonZkEVMBridgeAddress,
-        ) as AgglayerBridgeV2;
+        const AgglayerBridgeV2Contract = AgglayerBridgeV2Factory.attach(polygonZkEVMBridgeAddress) as AgglayerBridgeV2;
         expect(AgglayerBridgeV2Contract.target).to.equal(polygonZkEVMBridgeAddress);
         expect(await AgglayerBridgeV2Contract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
         expect(await AgglayerBridgeV2Contract.polygonRollupManager()).to.equal(polygonRollupManagerAddress);

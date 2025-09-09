@@ -169,10 +169,7 @@ async function main() {
     /*
      *Deployment Global exit root manager
      */
-    const PolygonZkEVMGlobalExitRootL2Factory = await ethers.getContractFactory(
-        'AgglayerGERL2',
-        deployer,
-    );
+    const PolygonZkEVMGlobalExitRootL2Factory = await ethers.getContractFactory('AgglayerGERL2', deployer);
     let polygonZkEVMGlobalExitRootL2;
     for (let i = 0; i < attemptsDeployProxy; i++) {
         try {

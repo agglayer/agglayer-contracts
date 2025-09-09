@@ -62,9 +62,7 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
 
         const bridgeAddress = await rollupManagerPessimisticContract.bridgeAddress();
         const bridgePessimisticFactory = await ethers.getContractFactory('AgglayerBridgeV2Pessimistic');
-        const bridgePessimisticContract = bridgePessimisticFactory.attach(
-            bridgeAddress,
-        ) as AgglayerBridgeV2Pessimistic;
+        const bridgePessimisticContract = bridgePessimisticFactory.attach(bridgeAddress) as AgglayerBridgeV2Pessimistic;
 
         const globalExitRootManager = await rollupManagerPessimisticContract.globalExitRootManager();
         const gerPessimisticFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2Pessimistic');
@@ -162,9 +160,7 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
 
         // Check rollup manager contract
         const rollupMangerFactory = await ethers.getContractFactory('AgglayerManager');
-        const rollupManagerContract = rollupMangerFactory.attach(
-            upgradeParams.rollupManagerAddress,
-        ) as AgglayerManager;
+        const rollupManagerContract = rollupMangerFactory.attach(upgradeParams.rollupManagerAddress) as AgglayerManager;
         expect(await rollupManagerContract.ROLLUP_MANAGER_VERSION()).to.equal(AL_VERSION);
         expect(await rollupManagerContract.bridgeAddress()).to.equal(bridgeAddress);
         expect(await rollupManagerContract.calculateRewardPerBatch()).to.equal(calculateRewardPerBatch);
