@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 /**
  * Contract responsible for managing the exit roots for the Sovereign chains and global exit roots
  */
-contract GlobalExitRootManagerL2SovereignChain is
+contract AgglayerManagerGERL2 is
     AgglayerGERL2,
     IGlobalExitRootManagerL2SovereignChain,
     Initializable,

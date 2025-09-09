@@ -9,7 +9,7 @@ import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-
 import {
     PolygonZkEVMTimelock,
     GlobalExitRootManagerL2SovereignChainPessimistic,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerManagerGERL2,
     BridgeL2SovereignChainPessimistic,
     AgglayerBridgeL2,
 } from '../../../typechain-types';
@@ -125,15 +125,15 @@ async function main() {
     await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
     logger.info(`✓ Sent execute transaction`);
     const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-        'GlobalExitRootManagerL2SovereignChain',
+        'AgglayerManagerGERL2',
     );
     const gerManagerL2SovereignContract = GlobalExitRootManagerL2SovereignChainFactory.attach(
         globalExitRootManagerL2SovereignChainAddress,
-    ) as GlobalExitRootManagerL2SovereignChain;
+    ) as AgglayerManagerGERL2;
     expect(await gerManagerL2SovereignContract.globalExitRootUpdater()).to.equal(globalExitRootUpdater);
     expect(await gerManagerL2SovereignContract.globalExitRootRemover()).to.equal(globalExitRootRemover);
 
-    logger.info(`✓ Checked GlobalExitRootManagerL2SovereignChain contract storage parameters`);
+    logger.info(`✓ Checked AgglayerManagerGERL2 contract storage parameters`);
 
     // Check bridge params after upgrade
     const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2');

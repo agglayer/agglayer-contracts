@@ -52,7 +52,7 @@ if npm run lint; then
     cp artifacts/contracts/v2/periphery/ClaimCompressor.sol/ClaimCompressor.json compiled-contracts/
 
     ## al-v0.3.0
-    cp artifacts/contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol/GlobalExitRootManagerL2SovereignChain.json compiled-contracts/
+    cp artifacts/contracts/v2/sovereignChains/AgglayerManagerGERL2.sol/AgglayerManagerGERL2.json compiled-contracts/
     cp artifacts/contracts/v2/sovereignChains/AgglayerBridgeL2.sol/AgglayerBridgeL2.json compiled-contracts/
     cp artifacts/contracts/v2/AggLayerGateway.sol/AggLayerGateway.json compiled-contracts/
     cp artifacts/contracts/v2/lib/AggchainBase.sol/AggchainBase.json compiled-contracts/

@@ -6,7 +6,7 @@ import {IGlobalExitRootManagerL2SovereignChain} from "./IGlobalExitRootManagerL2
 
 /**
  * @title IAggOracleCommittee
- * @notice Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
+ * @notice Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the AgglayerManagerGERL2.
  */
 interface IAggOracleCommittee {
     // Custom errors

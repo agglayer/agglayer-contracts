@@ -10,7 +10,7 @@ The script deploys the following contracts using standard OpenZeppelin Upgrades:
 2. **TimelockController** - OpenZeppelin's standard timelock contract that owns the ProxyAdmin
 3. **AggOracleCommittee** - _(Optional)_ Oracle committee for managing global exit root updates
 4. **AgglayerBridgeL2** - Bridge contract for outpost chain (with proxy)
-5. **GlobalExitRootManagerL2SovereignChain** - Global exit root manager (with proxy)
+5. **AgglayerManagerGERL2** - Global exit root manager (with proxy)
 
 ### Bridge Internal Contracts
 
@@ -49,7 +49,7 @@ All contracts are deployed using OpenZeppelin's upgrades framework:
 - ✅ **ProxyAdmin**: Deployed with TimelockController as initial owner
 - ✅ **AggOracleCommittee**: _(Optional)_ Deployed if `useAggOracleCommittee` is true
 - ✅ **AgglayerBridgeL2**: Deployed with manual proxy deployment and separate initialization
-- ✅ **GlobalExitRootManagerL2SovereignChain**: Deployed with atomic proxy initialization
+- ✅ **AgglayerManagerGERL2**: Deployed with atomic proxy initialization
 
 ### AggOracleCommittee Integration
 
@@ -243,8 +243,8 @@ Rollup ID: 1001
 === Step 3: Pre-calculating Bridge proxy address ===
 📍 Pre-calculated Bridge proxy address: 0xPreCalculatedAddress...
 
-=== Step 4: Deploying GlobalExitRootManagerL2SovereignChain ===
-✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): 0xGERManagerAddress...
+=== Step 4: Deploying AgglayerManagerGERL2 ===
+✅ AgglayerManagerGERL2 proxy (initialized): 0xGERManagerAddress...
 
 === Step 5: Deploying AgglayerBridgeL2 ===
 🧮 Derived gas token address from rollupID 1001: 0x000003e9000003e9000003e9000003e9000003e9
@@ -263,7 +263,7 @@ Rollup ID: 1001
 3. ✅ Deploy ProxyAdmin contract with Timelock as owner
 4. ✅ Deploy AggOracleCommittee _(if enabled)_ and use it as globalExitRootUpdater
 5. ✅ Pre-calculate Bridge proxy address using nonce prediction
-6. ✅ Deploy GlobalExitRootManagerL2SovereignChain with appropriate globalExitRootUpdater
+6. ✅ Deploy AgglayerManagerGERL2 with appropriate globalExitRootUpdater
 7. ✅ Deploy AgglayerBridgeL2 with actual GER Manager address
 8. ✅ Verify actual Bridge address matches pre-calculated address
 9. ✅ Run verification tests (including AggOracleCommittee if deployed)
@@ -367,7 +367,7 @@ Use AggOracleCommittee when you want:
 
 1. **Oracle Members** call `proposeGlobalExitRoot(bytes32 ger)` to vote for a GER
 2. **Quorum Reached**: When enough members vote for the same GER, it's automatically consolidated
-3. **GER Consolidation**: The GER is sent to the GlobalExitRootManagerL2SovereignChain
+3. **GER Consolidation**: The GER is sent to the AgglayerManagerGERL2
 4. **Owner Management**: Contract owner can add/remove members and change quorum
 
 ### Configuration Examples

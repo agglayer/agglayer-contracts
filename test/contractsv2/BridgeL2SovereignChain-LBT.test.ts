@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import {
     ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerManagerGERL2,
     AgglayerBridgeL2,
     BridgeL2SovereignChainV1010,
 } from '../../typechain-types';
@@ -13,7 +13,7 @@ describe('AgglayerBridgeL2: LBT & upgrade', () => {
 
     let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
-    let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
+    let sovereignChainGlobalExitRootContract: AgglayerManagerGERL2;
 
     let deployer: any;
     let rollupManager: any;
@@ -49,7 +49,7 @@ describe('AgglayerBridgeL2: LBT & upgrade', () => {
 
         // deploy global exit root manager
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'GlobalExitRootManagerL2SovereignChain',
+            'AgglayerManagerGERL2',
         );
         sovereignChainGlobalExitRootContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainFactory,
@@ -59,7 +59,7 @@ describe('AgglayerBridgeL2: LBT & upgrade', () => {
                 constructorArgs: [sovereignChainBridgeContract.target], // Constructor arguments
                 unsafeAllow: ['constructor', 'state-variable-immutable'],
             },
-        )) as unknown as GlobalExitRootManagerL2SovereignChain;
+        )) as unknown as AgglayerManagerGERL2;
 
         // cannot initialize bridgeV2 initializer from Sovereign bridge
         await expect(

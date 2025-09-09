@@ -1,6 +1,6 @@
-# Upgrade GlobalExitRootManagerL2SovereignChain
+# Upgrade AgglayerManagerGERL2
 
-Script to create schedule and execute transaction for upgrading GlobalExitRootManagerL2SovereignChain and AgglayerBridgeL2
+Script to create schedule and execute transaction for upgrading AgglayerManagerGERL2 and AgglayerBridgeL2
 
 ## Setup
 

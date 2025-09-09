@@ -8,7 +8,7 @@ import {IAggOracleCommittee} from "../interfaces/IAggOracleCommittee.sol";
 
 /**
  * @title AggOracleCommittee
- * @notice Contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
+ * @notice Contract responsible for managing the insertion of GERs into the AgglayerManagerGERL2.
  */
 contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
     /**

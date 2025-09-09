@@ -3,7 +3,7 @@ import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerManagerGERL2,
     AgglayerBridgeL2,
     BridgeLib,
 } from '../../typechain-types';
@@ -23,7 +23,7 @@ describe('SovereignBridge Contract', () => {
 
     let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
-    let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
+    let sovereignChainGlobalExitRootContract: AgglayerManagerGERL2;
     let bridgeLibContract: BridgeLib;
 
     let deployer: any;
@@ -57,7 +57,7 @@ describe('SovereignBridge Contract', () => {
 
         // deploy global exit root manager
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'GlobalExitRootManagerL2SovereignChain',
+            'AgglayerManagerGERL2',
         );
         sovereignChainGlobalExitRootContract = await GlobalExitRootManagerL2SovereignChainFactory.deploy(
             sovereignChainBridgeContract.target,
