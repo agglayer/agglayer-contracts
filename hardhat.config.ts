@@ -167,7 +167,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol': {
+            'contracts/v2/sovereignChains/AgglayerGERL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 
 import "./IBridgeL2SovereignChainsV1010.sol";
 import "./PolygonZkEVMBridgeV2V1010.sol";
-import "../../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import "../../interfaces/IAgglayerGERL2.sol";
 
 /**
  * Sovereign chains bridge that will be deployed on all Sovereign chains
@@ -400,7 +400,7 @@ contract BridgeL2SovereignChainV1010 is
     modifier onlyGlobalExitRootRemover() {
         // Only allowed to be called by GlobalExitRootRemover
         if (
-            IGlobalExitRootManagerL2SovereignChain(
+            IAgglayerGERL2(
                 address(globalExitRootManager)
             ).globalExitRootRemover() != msg.sender
         ) {

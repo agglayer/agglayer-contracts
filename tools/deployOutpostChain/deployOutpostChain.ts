@@ -93,8 +93,8 @@ async function main() {
     logger.info(`👤 Deployer address: ${deployer.address}`);
     logger.info(`🔢 Current nonce: ${currentNonce}`);
 
-    // Step 4: Deploy GlobalExitRootManagerL2SovereignChain with pre-calculated Bridge address
-    logger.info('\n=== Step 4: Deploying GlobalExitRootManagerL2SovereignChain ===');
+    // Step 4: Deploy AgglayerGERL2 with pre-calculated Bridge address
+    logger.info('\n=== Step 4: Deploying AgglayerGERL2 ===');
     const gerManager = await deployGlobalExitRootManagerL2SovereignChain(
         precalculatedBridgeAddress, // Use pre-calculated Bridge address
         proxyAdmin, // Pass the centralized ProxyAdmin
@@ -448,7 +448,7 @@ async function deployBridgeL2SovereignChain(
 }
 
 /**
- * Deploy GlobalExitRootManagerL2SovereignChain with proxy pattern using prepareUpgrade and centralized ProxyAdmin
+ * Deploy AgglayerGERL2 with proxy pattern using prepareUpgrade and centralized ProxyAdmin
  */
 async function deployGlobalExitRootManagerL2SovereignChain(
     bridgeProxyAddress: string,
@@ -456,7 +456,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     deployer: any,
     globalExitRootUpdater: string,
 ): Promise<{ proxy: string; implementation: string }> {
-    const GERManagerFactory = await ethers.getContractFactory('GlobalExitRootManagerL2SovereignChain', deployer);
+    const GERManagerFactory = await ethers.getContractFactory('AgglayerGERL2', deployer);
 
     // Step 1: Deploy implementation using prepareUpgrade approach
     logger.info('📍 Step 1: Deploying GER Manager implementation...');
@@ -464,7 +464,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     const deployTx = gerImplementation.deploymentTransaction();
     // Wait for 5 confirmations for correct etherscan verification
     await deployTx?.wait(5);
-    logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation deployed: ${gerImplementation.target}`);
+    logger.info(`✅ AgglayerGERL2 implementation deployed: ${gerImplementation.target}`);
 
     // Verify GER Manager implementation on Etherscan
     await verifyContractEtherscan(
@@ -509,8 +509,8 @@ async function deployGlobalExitRootManagerL2SovereignChain(
         '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
     );
 
-    logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation: ${gerImplementation.target}`);
-    logger.info(`✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): ${gerProxy.target}`);
+    logger.info(`✅ AgglayerGERL2 implementation: ${gerImplementation.target}`);
+    logger.info(`✅ AgglayerGERL2 proxy (initialized): ${gerProxy.target}`);
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
     await upgrades.forceImport(gerProxy.target as string, GERManagerFactory, {
@@ -1018,7 +1018,7 @@ async function verifyGERManagerContract(deployConfig: any, outputJson: any) {
 
     // Verify GER Manager configuration
     const gerManager = (await ethers.getContractAt(
-        'GlobalExitRootManagerL2SovereignChain',
+        'AgglayerGERL2',
         outputJson.globalExitRootManagerL2SovereignChainAddress,
     )) as any;
 
