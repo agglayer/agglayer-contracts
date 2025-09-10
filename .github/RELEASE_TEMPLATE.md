@@ -5,7 +5,7 @@
 * `AgglayerBridge`: v1.0.0
 * `AgglayerGER`: v1.0.0
 * `AggLayerGateway`: v1.0.0
-* `BridgeL2SovereignChain`: v1.0.0
+* `AgglayerBridgeL2`: v1.0.0
 * `GlobalExitRootManagerL2SovereignChain`: v1.0.0
 * `AggchainFEP`: v1.0.0
 * `AggchainECDSA`: v1.0.0
