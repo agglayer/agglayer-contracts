@@ -97,6 +97,8 @@ A new folder will be created with the following name `deployments/${network}_$(d
     - `emergencyBridgePauser`: emergency bridge pauser address, can stop the bridge, recommended to be a multisig
     - `emergencyBridgeUnpauser`: emergency bridge unpauser address, can unpause the bridge, recommended to be a multisig
 - `aggchainParams`: Only mandatory if consensusContract is AggchainECDSA or AggchainFEP
+    - `aggchainManager`: Address that manages all the functionalities related to the aggchain
+    - `aggchainManagerPvtKey`: (Optional) Private key for the aggchainManager account. If provided, will be used to sign transactions. If empty, will use deployer.
     - `initParams`: Only mandatory if consensusContract is AggchainFEP
         - `l2BlockTime`: The time between L2 blocks in seconds
         - `rollupConfigHash`: The hash of the chain's rollup configuration

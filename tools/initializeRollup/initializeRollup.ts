@@ -106,7 +106,7 @@ async function main() {
                         null,
                         ((feeData.maxFeePerGas as bigint) * BigInt(initializeRollupParameters.multiplierGas)) / 1000n,
                         ((feeData.maxPriorityFeePerGas as bigint) * BigInt(initializeRollupParameters.multiplierGas)) /
-                        1000n,
+                            1000n,
                     );
                 }
                 currentProvider.getFeeData = overrideFeeData;
@@ -161,7 +161,9 @@ async function main() {
         // Contract needs v0 initialization (first-time initialization)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
             if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
-                throw new Error(`Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`);
+                throw new Error(
+                    `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
+                );
             }
             // Initialize ECDSA Multisig with direct parameters
             initializeTx = await aggchainContract.initialize.populateTransaction(
@@ -176,7 +178,9 @@ async function main() {
             );
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
             if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
-                throw new Error(`Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`);
+                throw new Error(
+                    `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
+                );
             }
             // Initialize FEP with direct parameters
             initializeTx = await aggchainContract.initialize.populateTransaction(
@@ -199,14 +203,18 @@ async function main() {
     } else if (initializedValue === 1) {
         // Contract needs v1 initialization (migration from pessimistic consensus)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            if (initializeRollupParameters.type != transactionTypes.MULTISIG) {
-                throw new Error(`Aggchain ${consensusContractName} can only be initialized from multisig because the function is only callable from rollupManager, son only calldata can be generated`);
+            if (initializeRollupParameters.type !== transactionTypes.MULTISIG) {
+                throw new Error(
+                    `Aggchain ${consensusContractName} can only be initialized from multisig because the function is only callable from rollupManager, son only calldata can be generated`,
+                );
             }
             // Migrate from pessimistic consensus to ECDSA Multisig
             initializeTx = await aggchainContract.migrateFromLegacyConsensus.populateTransaction();
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
             if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
-                throw new Error(`Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`);
+                throw new Error(
+                    `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
+                );
             }
             // Initialize FEP from pessimistic consensus with direct parameters
             initializeTx = await aggchainContract.initializeFromLegacyConsensus.populateTransaction(
@@ -224,14 +232,16 @@ async function main() {
         }
     } else if (initializedValue === 2 && consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
         if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
-            throw new Error(`Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`);
+            throw new Error(
+                `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
+            );
         }
         // Initialize FEP from ECDSA Multisig
         initializeTx = await aggchainContract.initializeFromECDSAMultisig.populateTransaction(
             aggchainParams.initParams,
             aggchainParams.useDefaultVkeys,
             aggchainParams.initOwnedAggchainVKey,
-            aggchainParams.initAggchainVKeySelector
+            aggchainParams.initAggchainVKeySelector,
         );
     } else {
         throw new Error(`Unexpected value in _initialized storage slot: ${initializedValue}`);
@@ -312,8 +322,7 @@ async function main() {
     } else {
         logger.info('Initializing rollup....');
         // Create new rollup
-        const txInitAggChain = await deployer.
-            sendTransaction(initializeTx);
+        const txInitAggChain = await deployer.sendTransaction(initializeTx);
         await txInitAggChain.wait();
 
         (await txInitAggChain.wait()) as any;
