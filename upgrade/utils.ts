@@ -61,7 +61,7 @@ async function verifyContractEtherscan(
     } catch (error) {
         if (error.name === 'ContractAlreadyVerifiedError') {
             logger.info(`✅ Contract ${implementationAddress} is already verified on Etherscan`);
-            return;
+            return true;
         }
         logger.error('❌ Error verifying the new implementation contract: ', error);
         logger.info('you can verify the new impl address with:');
@@ -72,6 +72,48 @@ async function verifyContractEtherscan(
             'Copy the following constructor arguments on: upgrade/arguments.js \n',
             JSON.stringify(constructorArguments),
         );
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Track contract verification and return result object
+ * @param contractName Name of the contract for tracking purposes
+ * @param address Contract address to verify
+ * @param constructorArgs Constructor arguments for verification
+ * @param waitTimeSeconds Wait time before verification (default: 20)
+ * @param contractPath Optional contract path for verification
+ * @returns Verification result object: "OK" if successful, or object with failure details
+ */
+async function trackVerification(
+    contractName: string,
+    address: string,
+    constructorArgs: any[] = [],
+    waitTimeSeconds: number = 20,
+    contractPath: any = undefined,
+): Promise<string | object> {
+    try {
+        const success = await verifyContractEtherscan(address, constructorArgs, waitTimeSeconds, contractPath);
+        if (success) {
+            logger.info(`✓ ${contractName} verified successfully`);
+            return 'OK';
+        }
+        logger.warn(`⚠️ ${contractName} verification failed`);
+        return {
+            status: 'FAILED',
+            address,
+            constructorArgs,
+            error: 'Verification failed',
+        };
+    } catch (error: any) {
+        logger.warn(`⚠️ ${contractName} verification failed: ${error.message}`);
+        return {
+            status: 'FAILED',
+            address,
+            constructorArgs,
+            error: error.message,
+        };
     }
 }
 
@@ -140,4 +182,4 @@ Object.defineProperty(BigInt.prototype, 'toJSON', {
     },
 });
 
-export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData };
+export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, trackVerification };
