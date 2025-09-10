@@ -5,7 +5,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChain,
-    BridgeL2SovereignChain,
+    AgglayerBridgeL2,
     TokenWrapped,
 } from '../../typechain-types';
 import { claimBeforeBridge, computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
@@ -28,7 +28,7 @@ function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolea
 describe('SovereignChainBridge Gas tokens tests', () => {
     upgrades.silenceWarnings();
 
-    let sovereignChainBridgeContract: BridgeL2SovereignChain;
+    let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
     let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
 
@@ -67,11 +67,11 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
         // deploy PolygonZkEVMBridge
-        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as BridgeL2SovereignChain;
+        })) as unknown as AgglayerBridgeL2;
 
         // deploy global exit root manager
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(

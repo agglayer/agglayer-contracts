@@ -45,7 +45,7 @@ async function main() {
     // Force import hardhat manifest
     logger.info('Force import hardhat manifest');
     // As this contract is deployed in the genesis of a L2 network, no open zeppelin network file is created, we need to force import it
-    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2', deployer);
     await upgrades.forceImport(bridgeL2SovereignChainAddress, bridgeFactory, {
         constructorArgs: [],
         kind: 'transparent',
@@ -68,7 +68,7 @@ async function main() {
     // take params delay, or minimum timelock dela
     const timelockDelay = upgradeParameters.timelockDelay || (await timelockContract.getMinDelay());
 
-    // Upgrade BridgeL2SovereignChain
+    // Upgrade AgglayerBridgeL2
     const impBridge = await upgrades.prepareUpgrade(bridgeL2SovereignChainAddress, bridgeFactory, {
         unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         redeployImplementation: 'always',

@@ -6,7 +6,7 @@ import { getGitInfo } from '../src/utils';
 export const supportedBridgeContracts = [
     'AgglayerBridge proxy',
     'PolygonZkEVMBridge proxy',
-    'BridgeL2SovereignChain proxy',
+    'AgglayerBridgeL2 proxy',
 ];
 
 export function genOperation(target, value, data, predecessor, salt) {

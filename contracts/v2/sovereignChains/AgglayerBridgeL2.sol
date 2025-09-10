@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import "../interfaces/IBridgeL2SovereignChains.sol";
+import "../interfaces/IAgglayerBridgeL2.sol";
 import "../AgglayerBridge.sol";
 import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
 
@@ -11,9 +11,9 @@ import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
  * Contract responsible to manage the token interactions with other networks
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
-contract BridgeL2SovereignChain is
+contract AgglayerBridgeL2 is
     AgglayerBridge,
-    IBridgeL2SovereignChains
+    IAgglayerBridgeL2
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
     // address used to permission the initialization of the contract
@@ -1081,7 +1081,7 @@ contract BridgeL2SovereignChain is
 
     /**
      * @notice Mints tokens from wrapped token to proceed with the claim, if the token is not mintable it will be transferred
-     * note This function has been extracted to be able to override it by other contracts like BridgeL2SovereignChain
+     * note This function has been extracted to be able to override it by other contracts like AgglayerBridgeL2
      * @param tokenWrapped Proxied wrapped token to mint
      * @param destinationAddress Minted token receiver
      * @param amount Amount of tokens

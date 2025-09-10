@@ -1,6 +1,6 @@
 # Upgrade GlobalExitRootManagerL2SovereignChain
 
-Script to create schedule and execute transaction for upgrading GlobalExitRootManagerL2SovereignChain and BridgeL2SovereignChain
+Script to create schedule and execute transaction for upgrading GlobalExitRootManagerL2SovereignChain and AgglayerBridgeL2
 
 ## Setup
 
