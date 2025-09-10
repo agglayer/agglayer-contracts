@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradea
 import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 import "../interfaces/IPolygonRollupBase.sol";
 import "../interfaces/IPolygonZkEVMBridgeV2.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
@@ -203,7 +203,7 @@ abstract contract PolygonRollupBaseEtrog is
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager
+        AgglayerManager _rollupManager
     )
         PolygonConsensusBase(
             _globalExitRootManager,

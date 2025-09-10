@@ -6,7 +6,7 @@ import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 import "./IPolygonRollupBasePrevious.sol";
 import "../interfaces/IPolygonZkEVMBridgeV2.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
@@ -146,7 +146,7 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     IPolygonZkEVMBridgeV2 public immutable bridgeAddress;
 
     // Rollup manager
-    PolygonRollupManager public immutable rollupManager;
+    AgglayerManager public immutable rollupManager;
 
     // Address that will be able to adjust contract parameters
     address public admin;
@@ -277,7 +277,7 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager
+        AgglayerManager _rollupManager
     ) {
         globalExitRootManager = _globalExitRootManager;
         pol = _pol;

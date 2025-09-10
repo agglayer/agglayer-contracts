@@ -96,7 +96,7 @@ abstract contract AggchainBasePrevious is
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager,
+        AgglayerManager _rollupManager,
         IAggLayerGatewayPrevious _aggLayerGateway
     )
         PolygonConsensusBase(

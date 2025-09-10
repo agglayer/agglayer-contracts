@@ -59,7 +59,7 @@ async function main() {
     const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock');
 
     // Load Rollup manager
-    const PolgonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
+    const PolgonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
 
     const operation = genOperation(
         polygonRollupManagerAddress,

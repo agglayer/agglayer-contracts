@@ -1,7 +1,7 @@
 > This template is not meant to be automatically generated in GitHub, but it is useful to have it easily accessible when we create a release.
 
 ## Contracts Versions
-* ⚠️ `PolygonRollupManager`: ~~v0.0.0~~ -> v1.0.0
+* ⚠️ `AgglayerManager`: ~~v0.0.0~~ -> v1.0.0
 * `PolygonZkEVMBridgeV2`: v1.0.0
 * `PolygonZkEVMGlobalExitRootV2`: v1.0.0
 * `AggLayerGateway`: v1.0.0

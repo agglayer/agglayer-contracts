@@ -1,6 +1,6 @@
 # Upgrade RollupManager al-v0.3.1
 
-Script to create schedule and execute transaction for upgrading PolygonRollupManager, globalExitRootManager and BridgeV2
+Script to create schedule and execute transaction for upgrading AgglayerManager, globalExitRootManager and BridgeV2
 
 ## Setup
 

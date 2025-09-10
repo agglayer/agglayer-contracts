@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 import "../interfaces/IPolygonRollupBase.sol";
 import "../../lib/EmergencyManager.sol";
 
 /**
- * PolygonRollupManager used only to test conensus contracts
+ * AgglayerManager used only to test conensus contracts
  */
-contract PolygonRollupManagerEmptyMock is EmergencyManager {
+contract AgglayerManagerEmptyMock is EmergencyManager {
     uint256 currentSequenceBatches;
 
     bool acceptSequenceBatches = true;

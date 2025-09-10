@@ -9,7 +9,7 @@ const NEW_TAG = process.argv[3];
 const repoUrl = 'https://github.com/agglayer/agglayer-contracts';
 
 const contracts = [
-    'contracts/v2/PolygonRollupManager.sol',
+    'contracts/v2/AgglayerManager.sol',
     'contracts/v2/PolygonZkEVMBridgeV2.sol',
     'contracts/v2/PolygonZkEVMGlobalExitRootV2.sol',
     'contracts/v2/AggLayerGateway.sol',
