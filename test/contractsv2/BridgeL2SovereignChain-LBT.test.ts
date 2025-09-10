@@ -1,11 +1,6 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import {
-    ERC20PermitMock,
-    AgglayerGERL2,
-    AgglayerBridgeL2,
-    BridgeL2SovereignChainV1010,
-} from '../../typechain-types';
+import { ERC20PermitMock, AgglayerGERL2, AgglayerBridgeL2, BridgeL2SovereignChainV1010 } from '../../typechain-types';
 import { claimBeforeBridge, createClaimAndAddGER } from './helpers/helpers-sovereign-bridge';
 
 describe('AgglayerBridgeL2: LBT & upgrade', () => {
@@ -48,9 +43,7 @@ describe('AgglayerBridgeL2: LBT & upgrade', () => {
         })) as unknown as AgglayerBridgeL2;
 
         // deploy global exit root manager
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'AgglayerGERL2',
-        );
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
         sovereignChainGlobalExitRootContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainFactory,
             [deployer.address, deployer.address], // Initializer params

@@ -124,9 +124,7 @@ async function main() {
     };
     await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
     logger.info(`✓ Sent execute transaction`);
-    const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-        'AgglayerGERL2',
-    );
+    const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
     const gerManagerL2SovereignContract = GlobalExitRootManagerL2SovereignChainFactory.attach(
         globalExitRootManagerL2SovereignChainAddress,
     ) as AgglayerGERL2;

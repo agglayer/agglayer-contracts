@@ -7,9 +7,7 @@ import "../../interfaces/IBaseLegacyAgglayerGER.sol";
  * @title IAgglayerGERL2
  * @notice Interface for the AgglayerGERL2 contract that manages global exit roots on L2
  */
-interface IAgglayerGERL2 is
-    IBaseLegacyAgglayerGER
-{
+interface IAgglayerGERL2 is IBaseLegacyAgglayerGER {
     // Functions
 
     /**

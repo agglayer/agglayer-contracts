@@ -11,9 +11,7 @@ contract LegacyAgglayerGERL2Mock is LegacyAgglayerGERL2 {
     /**
      * @param _bridgeAddress PolygonZkEVM Bridge contract address
      */
-    constructor(
-        address _bridgeAddress
-    ) LegacyAgglayerGERL2(_bridgeAddress) {}
+    constructor(address _bridgeAddress) LegacyAgglayerGERL2(_bridgeAddress) {}
 
     /**
      * @notice Set globalExitRoot
