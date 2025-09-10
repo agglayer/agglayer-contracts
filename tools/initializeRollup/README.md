@@ -59,9 +59,28 @@ cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRol
             - `rangeVkeyCommitment`: String. Range verification key commitment.
         - `useDefaultVkeys`: Boolean. Whether to use default verification keys from AggLayerGateway.
         - `useDefaultSigners`: Boolean. Whether to use default signers from AggLayerGateway.
-        - `initOwnedAggchainVKey`: String.
-        - `initAggchainVKeySelector`: String.
-        - `vKeyManager`: Address.
+        - `signers`: Array of SignerInfo objects for multisig functionality (required if useDefaultSigners is false). Each object must have:
+            - `addr`: Signer address (cannot be zero address)
+            - `url`: Signer URL (must be non-empty string)
+        - `threshold`: Number. Minimum number of signatures required for multisig operations (required if useDefaultSigners is false).
+        - `initOwnedAggchainVKey`: String. Owned verification key for the aggchain.
+        - `initAggchainVKeySelector`: String. Selector for the aggchain verification key.
+        - `vKeyManager`: Address. Manager address for verification keys.
+
+**Example SignerInfo Structure:**
+
+```json
+"signers": [
+    {
+        "addr": "0x1234567890123456789012345678901234567890",
+        "url": "https://signer1.example.com"
+    },
+    {
+        "addr": "0x2345678901234567890123456789012345678901",
+        "url": "https://signer2.example.com"
+    }
+]
+```
 
 - Run tool:
 
