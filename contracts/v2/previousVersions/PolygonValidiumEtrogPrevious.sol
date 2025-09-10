@@ -63,7 +63,7 @@ contract PolygonValidiumEtrogPrevious is
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager
     )
         PolygonRollupBaseEtrogPrevious(

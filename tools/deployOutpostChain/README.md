@@ -16,7 +16,7 @@ The script deploys the following contracts using standard OpenZeppelin Upgrades:
 
 The Bridge deployment involves 4 internal contracts that are automatically deployed:
 
-**During Bridge Implementation Constructor (PolygonZkEVMBridgeV2):**
+**During Bridge Implementation Constructor (AgglayerBridge):**
 
 - **WrappedTokenBytecodeStorer** - Stores the bytecode for wrapped token deployments (reduces bridge contract size)
 - **WrappedTokenBridgeImplementation** - Implementation contract used as template for all wrapped tokens deployed via proxy pattern

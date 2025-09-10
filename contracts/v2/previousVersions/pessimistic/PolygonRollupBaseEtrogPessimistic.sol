@@ -7,7 +7,7 @@ import "../../../interfaces/IPolygonZkEVMErrors.sol";
 import "../../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "./PolygonRollupManagerPessimistic.sol";
 import "../../interfaces/IPolygonRollupBase.sol";
-import "../../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "../../interfaces/IAgglayerBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "../../lib/PolygonConstantsBase.sol";
 import "./PolygonConsensusBasePessimistic.sol";
@@ -202,7 +202,7 @@ abstract contract PolygonRollupBaseEtrogPessimistic is
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         PolygonRollupManagerPessimistic _rollupManager
     )
         PolygonConsensusBasePessimistic(
@@ -755,7 +755,7 @@ abstract contract PolygonRollupBaseEtrogPessimistic is
         bytes memory _gasTokenMetadata
     ) public view returns (bytes memory) {
         bytes memory initializeBrigeData = abi.encodeCall(
-            IPolygonZkEVMBridgeV2.initialize,
+            IAgglayerBridge.initialize,
             (
                 networkID,
                 _gasTokenAddress,

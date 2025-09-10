@@ -5,7 +5,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts4/proxy/ERC1967/ERC1967Proxy.sol";
-import {IPolygonZkEVMBridgeV2} from "../interfaces/IPolygonZkEVMBridgeV2.sol";
+import {IAgglayerBridge} from "../interfaces/IAgglayerBridge.sol";
 
 /// @dev TransparentProxy contract used as proxy for upgradeable tokens. This version of OZ has been chosen because is not storing
 /// the admin as immutable so the init code is not altered and it can be deployed with a deterministic address agnostic to the admin address value. Not using the
@@ -44,14 +44,14 @@ contract TokenWrappedTransparentProxy is ERC1967Proxy {
     constructor()
         payable
         ERC1967Proxy(
-            IPolygonZkEVMBridgeV2(msg.sender)
+            IAgglayerBridge(msg.sender)
                 .getWrappedTokenBridgeImplementation(),
             new bytes(0)
         )
     {
         // Get bridge interface to retrieve proxied tokens manager role
         _changeAdmin(
-            IPolygonZkEVMBridgeV2(msg.sender).getProxiedTokensManager()
+            IAgglayerBridge(msg.sender).getProxiedTokensManager()
         );
     }
 

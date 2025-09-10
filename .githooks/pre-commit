@@ -37,7 +37,7 @@ if npm run lint; then
 
     ## V2 General
     cp artifacts/contracts/v2/AgglayerManager.sol/AgglayerManager.json compiled-contracts/
-    cp artifacts/contracts/v2/PolygonZkEVMBridgeV2.sol/PolygonZkEVMBridgeV2.json compiled-contracts/
+    cp artifacts/contracts/v2/AgglayerBridge.sol/AgglayerBridge.json compiled-contracts/
     cp artifacts/contracts/v2/AgglayerGER.sol/AgglayerGER.json compiled-contracts/
     cp artifacts/contracts/v2/AgglayerGER.sol/AgglayerGER.json compiled-contracts/
 
