@@ -2,11 +2,11 @@
 
 pragma solidity 0.8.28;
 
-import {IGlobalExitRootManagerL2SovereignChain} from "./IGlobalExitRootManagerL2SovereignChain.sol";
+import {IAgglayerGERL2} from "./IAgglayerGERL2.sol";
 
 /**
  * @title IAggOracleCommittee
- * @notice Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
+ * @notice Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the AgglayerGERL2.
  */
 interface IAggOracleCommittee {
     // Custom errors
@@ -166,7 +166,7 @@ interface IAggOracleCommittee {
     function globalExitRootManagerL2Sovereign()
         external
         view
-        returns (IGlobalExitRootManagerL2SovereignChain);
+        returns (IAgglayerGERL2);
 
     /// @notice Array of oracle members
     function aggOracleMembers(uint256 index) external view returns (address);

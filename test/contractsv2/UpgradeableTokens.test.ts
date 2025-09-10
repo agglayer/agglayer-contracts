@@ -4,7 +4,7 @@ import { ethers, upgrades } from 'hardhat';
 import { takeSnapshot } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerGERL2,
     AgglayerBridgeL2,
     BridgeL2SovereignChainPessimistic,
     TokenWrappedBridgeUpgradeable,
@@ -25,7 +25,7 @@ describe('Upgradeable Tokens', () => {
     let gasTokenBridgeContract: any;
     let polTokenContract: ERC20PermitMock;
     let polTokenContractUpgradeable: ERC20PermitMock;
-    let sovereignGERContract: GlobalExitRootManagerL2SovereignChain;
+    let sovereignGERContract: AgglayerGERL2;
 
     const networkIDMainnet = 0;
     const networkIDRollup = 1;
@@ -71,7 +71,7 @@ describe('Upgradeable Tokens', () => {
         })) as unknown as AgglayerBridgeL2;
 
         // deploy global exit root manager
-        const sovGERFactory = await ethers.getContractFactory('GlobalExitRootManagerL2SovereignChain');
+        const sovGERFactory = await ethers.getContractFactory('AgglayerGERL2');
         sovereignGERContract = (await upgrades.deployProxy(
             sovGERFactory,
             [deployer.address, deployer.address], // Initializer params
@@ -80,7 +80,7 @@ describe('Upgradeable Tokens', () => {
                 constructorArgs: [sovereignBridgeContract.target], // Constructor arguments
                 unsafeAllow: ['constructor', 'state-variable-immutable'],
             },
-        )) as unknown as GlobalExitRootManagerL2SovereignChain;
+        )) as unknown as AgglayerGERL2;
 
         await sovereignBridgeContract.initialize(
             networkIDRollup,

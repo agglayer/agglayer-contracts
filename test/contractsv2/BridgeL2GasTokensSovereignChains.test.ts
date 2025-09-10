@@ -4,7 +4,7 @@ import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerGERL2,
     AgglayerBridgeL2,
     TokenWrapped,
 } from '../../typechain-types';
@@ -30,7 +30,7 @@ describe('SovereignChainBridge Gas tokens tests', () => {
 
     let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
-    let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
+    let sovereignChainGlobalExitRootContract: AgglayerGERL2;
 
     let deployer: any;
     let rollupManager: any;
@@ -75,7 +75,7 @@ describe('SovereignChainBridge Gas tokens tests', () => {
 
         // deploy global exit root manager
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'GlobalExitRootManagerL2SovereignChain',
+            'AgglayerGERL2',
         );
         sovereignChainGlobalExitRootContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainFactory,
@@ -85,7 +85,7 @@ describe('SovereignChainBridge Gas tokens tests', () => {
                 constructorArgs: [sovereignChainBridgeContract.target], // Constructor arguments
                 unsafeAllow: ['constructor', 'state-variable-immutable'],
             },
-        )) as unknown as GlobalExitRootManagerL2SovereignChain;
+        )) as unknown as AgglayerGERL2;
 
         // deploy token
         const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');

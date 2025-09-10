@@ -1,6 +1,6 @@
 # Deploy AggOracleCommittee
 
-This tool allows deploying an AggOracleCommittee contract, which is responsible for managing the insertion of Global Exit Roots (GERs) into the GlobalExitRootManagerL2SovereignChain through a decentralized oracle committee mechanism.
+This tool allows deploying an AggOracleCommittee contract, which is responsible for managing the insertion of Global Exit Roots (GERs) into the AgglayerGERL2 through a decentralized oracle committee mechanism.
 
 ## Overview
 
@@ -32,7 +32,7 @@ cp tools/deployAggOracleCommittee/deploy_parameters.json.example tools/deployAgg
 
 ### Required Parameters:
 
-- `globalExitRootManagerL2SovereignAddress`: Address of the GlobalExitRootManagerL2SovereignChain contract that will receive the consolidated GERs
+- `globalExitRootManagerL2SovereignAddress`: Address of the AgglayerGERL2 contract that will receive the consolidated GERs
 - `ownerAddress`: Address that will own the AggOracleCommittee contract (typically a timelock contract)
 - `aggOracleMembers`: Array of addresses that will act as initial oracle members
 - `quorum`: Number of oracle members that must agree on a GER for it to be consolidated (must be <= aggOracleMembers.length and > 0)

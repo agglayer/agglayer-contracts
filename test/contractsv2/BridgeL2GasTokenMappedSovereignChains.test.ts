@@ -4,7 +4,7 @@ import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
 import {
     ERC20PermitMock,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerGERL2,
     AgglayerBridgeL2,
     TokenWrapped,
 } from '../../typechain-types';
@@ -31,7 +31,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
 
     let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
-    let sovereignChainGlobalExitRoot: GlobalExitRootManagerL2SovereignChain;
+    let sovereignChainGlobalExitRoot: AgglayerGERL2;
 
     let deployer: any;
     let rollupManager: any;
@@ -76,7 +76,7 @@ describe('SovereignChainBridge Gas tokens mapped tests', () => {
 
         // deploy global exit root manager
         const SovereignChainGlobalExitRootFactory = await ethers.getContractFactory(
-            'GlobalExitRootManagerL2SovereignChain',
+            'AgglayerGERL2',
         );
         sovereignChainGlobalExitRoot = await SovereignChainGlobalExitRootFactory.deploy(
             sovereignChainBridgeContract.target,
