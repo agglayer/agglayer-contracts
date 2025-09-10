@@ -6,7 +6,7 @@ import { setCode } from '@nomicfoundation/hardhat-network-helpers';
 import {
     AggLayerGateway,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
+    AgglayerManagerMock,
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     AggchainECDSAMultisig,
@@ -46,7 +46,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let rollupManagerContract: AgglayerManagerMock;
     let aggLayerGatewayContract: AggLayerGateway;
     let aggchainECDSAImplementationContract: AggchainECDSAMultisig;
     let verifierContract: VerifierRollupHelperMock;
@@ -349,7 +349,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         })) as any;
 
-        // deploy PolygonRollupManager previous (pessimistic)
+        // deploy AgglayerManager previous (pessimistic)
         const PolygonRollupManagerPreviousFactory = await ethers.getContractFactory('PolygonRollupManagerPessimistic');
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerPreviousFactory, [], {
             initializer: false,
@@ -359,7 +359,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
                 polygonZkEVMBridgeContract.target,
             ],
             unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as PolygonRollupManagerMock;
+        })) as unknown as AgglayerManagerMock;
 
         await rollupManagerContract.waitForDeployment();
         // Initialize rollup manager with pessimistic
@@ -367,7 +367,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             .to.emit(rollupManagerContract, 'UpdateRollupManagerVersion')
             .withArgs('pessimistic');
         // Upgrade rollup manager to v3
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
         rollupManagerContract = (await upgrades.upgradeProxy(
             rollupManagerContract.target,
             PolygonRollupManagerFactory,

@@ -20,7 +20,7 @@ if npm run lint; then
     cp artifacts/contracts/mocks/PolygonZkEVMGlobalExitRootMock.sol/PolygonZkEVMGlobalExitRootMock.json compiled-contracts/
     cp artifacts/contracts/mocks/PolygonZkEVMMock.sol/PolygonZkEVMMock.json compiled-contracts/
     cp artifacts/contracts/mocks/VerifierRollupHelperMock.sol/VerifierRollupHelperMock.json compiled-contracts/
-    cp artifacts/contracts/v2/mocks/PolygonRollupManagerMock.sol/PolygonRollupManagerMock.json compiled-contracts/
+    cp artifacts/contracts/v2/mocks/AgglayerManagerMock.sol/AgglayerManagerMock.json compiled-contracts/
 
     ## Verifiers
     cp artifacts/contracts/verifiers/FflonkVerifier_10.sol/FflonkVerifier_10.json compiled-contracts/FflonkVerifier.json
@@ -36,7 +36,7 @@ if npm run lint; then
     cp artifacts/@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json compiled-contracts/
 
     ## V2 General
-    cp artifacts/contracts/v2/PolygonRollupManager.sol/PolygonRollupManager.json compiled-contracts/
+    cp artifacts/contracts/v2/AgglayerManager.sol/AgglayerManager.json compiled-contracts/
     cp artifacts/contracts/v2/PolygonZkEVMBridgeV2.sol/PolygonZkEVMBridgeV2.json compiled-contracts/
     cp artifacts/contracts/v2/PolygonZkEVMGlobalExitRootV2.sol/PolygonZkEVMGlobalExitRootV2.json compiled-contracts/
     cp artifacts/contracts/v2/PolygonZkEVMGlobalExitRootV2.sol/PolygonZkEVMGlobalExitRootV2.json compiled-contracts/

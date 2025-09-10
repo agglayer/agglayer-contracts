@@ -5,7 +5,7 @@ import fs = require('fs');
 
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
-import { PolygonRollupManager } from '../../typechain-types';
+import { AgglayerManager } from '../../typechain-types';
 import { transactionTypes, genOperation } from '../utils';
 import initMigrationParams from './initMigration.json';
 import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
@@ -52,10 +52,10 @@ async function main() {
     const { type, polygonRollupManagerAddress, rollupID, newRollupTypeID, upgradeData } = initMigrationParams;
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
     const rollupManagerContract = PolygonRollupManagerFactory.attach(
         polygonRollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     const outputJson = {} as any;
 

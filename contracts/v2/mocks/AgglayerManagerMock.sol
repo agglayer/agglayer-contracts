@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 
 /**
- * PolygonRollupManager mock
+ * AgglayerManager mock
  */
-contract PolygonRollupManagerMock is PolygonRollupManager {
+contract AgglayerManagerMock is AgglayerManager {
     /**
      * @param _globalExitRootManager Global exit root manager address
      * @param _pol MATIC token address
@@ -17,7 +17,7 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
         IPolygonZkEVMBridge _bridgeAddress,
         IAggLayerGateway _aggLayerGateway
     )
-        PolygonRollupManager(
+        AgglayerManager(
             _globalExitRootManager,
             _pol,
             _bridgeAddress,

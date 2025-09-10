@@ -34,8 +34,8 @@ describe('Aggchain Metadata Simple Tests', () => {
         // Deploy AggLayerGateway
         const aggLayerGateway = await ethers.deployContract('AggLayerGateway', []);
 
-        // Deploy PolygonRollupManagerMock
-        const rollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        // Deploy AgglayerManagerMock
+        const rollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
         rollupManagerContract = await rollupManagerFactory.deploy(
             globalExitRootManager.target,
             pol.target,
