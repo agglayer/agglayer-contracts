@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "./interfaces/IAgglayerGER.sol";
 import "../interfaces/IPolygonZkEVMBridge.sol";
 import "./interfaces/IPolygonRollupBase.sol";
 import "../interfaces/IVerifierRollup.sol";
@@ -251,7 +251,7 @@ contract AgglayerManager is
 
     // Global Exit Root address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -468,7 +468,7 @@ contract AgglayerManager is
      * @param _aggLayerGateway Polygon Verifier Gateway address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress,
         IAggLayerGateway _aggLayerGateway

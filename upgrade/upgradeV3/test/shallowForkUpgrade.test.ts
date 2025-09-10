@@ -11,7 +11,7 @@ import {
     PolygonRollupManagerPessimistic,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMBridgeV2Pessimistic,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerGER,
     PolygonZkEVMGlobalExitRootV2Pessimistic,
 } from '../../typechain-types';
 
@@ -204,8 +204,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Checked bridge contract storage parameters`);
 
         // Check ger contract
-        const gerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
-        const gerContract = gerFactory.attach(globalExitRootManager) as PolygonZkEVMGlobalExitRootV2;
+        const gerFactory = await ethers.getContractFactory('AgglayerGER');
+        const gerContract = gerFactory.attach(globalExitRootManager) as AgglayerGER;
         expect(await gerContract.GER_VERSION()).to.equal(AL_VERSION);
         expect(await gerContract.bridgeAddress()).to.equal(gerBridgeAddress);
         expect(await gerContract.rollupManager()).to.equal(gerRollupManger);

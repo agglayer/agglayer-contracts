@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
-import { AgglayerManager, PolygonZkEVMGlobalExitRootV2, AggchainFEP } from '../typechain-types';
+import { AgglayerManager, AgglayerGER, AggchainFEP } from '../typechain-types';
 
 import { computeRandomBytes } from '../src/pessimistic-utils';
 import { encodeAggchainDataFEP } from '../src/utils-aggchain-FEP';
@@ -38,10 +38,10 @@ describe('Docker verifyProof test', () => {
 
         expect(rollupManagerContract.target).to.equal(dockerDeploymentOutput.polygonRollupManagerAddress);
 
-        const PolygonZkEVMGlobalExitRootV2Factory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootV2Factory = await ethers.getContractFactory('AgglayerGER');
         const polygonZkEVMGlobalExitRoot = PolygonZkEVMGlobalExitRootV2Factory.attach(
             dockerDeploymentOutput.polygonZkEVMGlobalExitRootAddress,
-        ) as PolygonZkEVMGlobalExitRootV2;
+        ) as AgglayerGER;
 
         expect(polygonZkEVMGlobalExitRoot.target).to.equal(dockerDeploymentOutput.polygonZkEVMGlobalExitRootAddress);
 

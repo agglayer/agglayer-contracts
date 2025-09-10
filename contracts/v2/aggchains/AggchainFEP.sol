@@ -292,7 +292,7 @@ contract AggchainFEP is AggchainBase {
     /// @param _rollupManager Global exit root manager address
     /// @param _aggLayerGateway agglayer gateway address
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         AgglayerManager _rollupManager,

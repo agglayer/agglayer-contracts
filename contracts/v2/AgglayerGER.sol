@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "./interfaces/IAgglayerGER.sol";
 import "./interfaces/IVersion.sol";
 import "./lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "../lib/GlobalExitRootLib.sol";
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 /**
  * Contract responsible for managing the exit roots across multiple networks
  */
-contract PolygonZkEVMGlobalExitRootV2 is
+contract AgglayerGER is
     PolygonZkEVMGlobalExitRootBaseStorage,
     DepositContractBase,
     Initializable,
@@ -155,7 +155,7 @@ contract PolygonZkEVMGlobalExitRootV2 is
     function getRoot()
         public
         view
-        override(DepositContractBase, IPolygonZkEVMGlobalExitRootV2)
+        override(DepositContractBase, IAgglayerGER)
         returns (bytes32)
     {
         return super.getRoot();
