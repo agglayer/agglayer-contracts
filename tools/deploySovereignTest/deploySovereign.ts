@@ -6,7 +6,7 @@ import fs = require('fs');
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import { GlobalExitRootManagerL2SovereignChain, AgglayerBridgeL2 } from '../../typechain-types';
+import { AgglayerGERL2, AgglayerBridgeL2 } from '../../typechain-types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const MerkleTreeBridge = MTBridge;
@@ -134,7 +134,7 @@ async function main() {
 
     // deploy global exit root manager
     const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-        'GlobalExitRootManagerL2SovereignChain',
+        'AgglayerGERL2',
     );
     const sovereignChainGlobalExitRootContract = (await upgrades.deployProxy(
         GlobalExitRootManagerL2SovereignChainFactory,
@@ -144,7 +144,7 @@ async function main() {
             constructorArgs: [sovereignChainBridgeContract.target], // Constructor arguments
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         },
-    )) as unknown as GlobalExitRootManagerL2SovereignChain;
+    )) as unknown as AgglayerGERL2;
 
     console.log('#######################\n');
     console.log(`Sovereign bridge L2: ${sovereignChainGlobalExitRootContract.target}`);

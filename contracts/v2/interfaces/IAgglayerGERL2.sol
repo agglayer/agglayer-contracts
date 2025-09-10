@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import "../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 
 /**
- * @title IGlobalExitRootManagerL2SovereignChain
- * @notice Interface for the GlobalExitRootManagerL2SovereignChain contract that manages global exit roots on L2
+ * @title IAgglayerGERL2
+ * @notice Interface for the AgglayerGERL2 contract that manages global exit roots on L2
  */
-interface IGlobalExitRootManagerL2SovereignChain is
+interface IAgglayerGERL2 is
     IBasePolygonZkEVMGlobalExitRoot
 {
     // Functions
