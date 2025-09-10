@@ -8,7 +8,7 @@ if npm run lint; then
 
     ## copy contracts ABI to be exposed
     ## V1 contracts
-    cp artifacts/contracts/PolygonZkEVMGlobalExitRootL2.sol/PolygonZkEVMGlobalExitRootL2.json compiled-contracts/
+    cp artifacts/contracts/LegacyAgglayerGERL2.sol/LegacyAgglayerGERL2.json compiled-contracts/
     cp artifacts/contracts/lib/TokenWrapped.sol/TokenWrapped.json compiled-contracts/
     cp artifacts/contracts/deployment/PolygonZkEVMDeployer.sol/PolygonZkEVMDeployer.json compiled-contracts/
     cp artifacts/contracts/PolygonZkEVMTimelock.sol/PolygonZkEVMTimelock.json compiled-contracts/
@@ -16,7 +16,7 @@ if npm run lint; then
     ## Mocks
     cp artifacts/contracts/mocks/PolygonZkEVMBridgeMock.sol/PolygonZkEVMBridgeMock.json compiled-contracts/
     cp artifacts/contracts/mocks/ERC20PermitMock.sol/ERC20PermitMock.json compiled-contracts/
-    cp artifacts/contracts/mocks/PolygonZkEVMGlobalExitRootL2Mock.sol/PolygonZkEVMGlobalExitRootL2Mock.json compiled-contracts/
+    cp artifacts/contracts/mocks/LegacyAgglayerGERL2Mock.sol/LegacyAgglayerGERL2Mock.json compiled-contracts/
     cp artifacts/contracts/mocks/PolygonZkEVMGlobalExitRootMock.sol/PolygonZkEVMGlobalExitRootMock.json compiled-contracts/
     cp artifacts/contracts/mocks/PolygonZkEVMMock.sol/PolygonZkEVMMock.json compiled-contracts/
     cp artifacts/contracts/mocks/VerifierRollupHelperMock.sol/VerifierRollupHelperMock.json compiled-contracts/
