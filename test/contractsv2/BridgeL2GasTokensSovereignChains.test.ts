@@ -2,12 +2,7 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers';
-import {
-    ERC20PermitMock,
-    AgglayerGERL2,
-    AgglayerBridgeL2,
-    TokenWrapped,
-} from '../../typechain-types';
+import { ERC20PermitMock, AgglayerGERL2, AgglayerBridgeL2, TokenWrapped } from '../../typechain-types';
 import { claimBeforeBridge, computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 
 const MerkleTreeBridge = MTBridge;
@@ -74,9 +69,7 @@ describe('SovereignChainBridge Gas tokens tests', () => {
         })) as unknown as AgglayerBridgeL2;
 
         // deploy global exit root manager
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'AgglayerGERL2',
-        );
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
         sovereignChainGlobalExitRootContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainFactory,
             [deployer.address, deployer.address], // Initializer params

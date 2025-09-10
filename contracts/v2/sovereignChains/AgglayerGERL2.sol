@@ -107,9 +107,7 @@ contract AgglayerGERL2 is
     /**
      * @param _bridgeAddress PolygonZkEVMBridge contract address
      */
-    constructor(
-        address _bridgeAddress
-    ) LegacyAgglayerGERL2(_bridgeAddress) {
+    constructor(address _bridgeAddress) LegacyAgglayerGERL2(_bridgeAddress) {
         _disableInitializers();
     }
 

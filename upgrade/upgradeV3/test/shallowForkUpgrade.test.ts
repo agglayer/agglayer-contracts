@@ -162,9 +162,7 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
 
         // Check rollup manager contract
         const rollupMangerFactory = await ethers.getContractFactory('AgglayerManager');
-        const rollupManagerContract = rollupMangerFactory.attach(
-            upgradeParams.rollupManagerAddress,
-        ) as AgglayerManager;
+        const rollupManagerContract = rollupMangerFactory.attach(upgradeParams.rollupManagerAddress) as AgglayerManager;
         expect(await rollupManagerContract.ROLLUP_MANAGER_VERSION()).to.equal(AL_VERSION);
         expect(await rollupManagerContract.bridgeAddress()).to.equal(bridgeAddress);
         expect(await rollupManagerContract.calculateRewardPerBatch()).to.equal(calculateRewardPerBatch);
