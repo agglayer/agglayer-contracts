@@ -27,9 +27,7 @@ describe('AggOracleCommittee tests', () => {
             await ethers.getSigners();
 
         // deploy global exit root manager
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'AgglayerGERL2',
-        );
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
         globalExitRootManagerContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainFactory,
             [deployer.address, deployer.address], // Initializer params

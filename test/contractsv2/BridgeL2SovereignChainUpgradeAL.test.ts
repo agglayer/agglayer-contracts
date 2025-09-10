@@ -86,9 +86,7 @@ describe('AgglayerBridgeL2 Contract Upgrade AL', () => {
         )) as unknown as AgglayerGERL2;
 
         // Upgrade to AgglayerGERL2
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'AgglayerGERL2',
-        );
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
         sovereignChainGlobalExitRootContract = (await upgrades.upgradeProxy(
             sovereignChainGlobalExitRootPessimisticContract.target,
             GlobalExitRootManagerL2SovereignChainFactory,

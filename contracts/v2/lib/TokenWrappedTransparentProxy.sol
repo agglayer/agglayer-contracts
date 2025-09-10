@@ -44,15 +44,12 @@ contract TokenWrappedTransparentProxy is ERC1967Proxy {
     constructor()
         payable
         ERC1967Proxy(
-            IAgglayerBridge(msg.sender)
-                .getWrappedTokenBridgeImplementation(),
+            IAgglayerBridge(msg.sender).getWrappedTokenBridgeImplementation(),
             new bytes(0)
         )
     {
         // Get bridge interface to retrieve proxied tokens manager role
-        _changeAdmin(
-            IAgglayerBridge(msg.sender).getProxiedTokensManager()
-        );
+        _changeAdmin(IAgglayerBridge(msg.sender).getProxiedTokensManager());
     }
 
     /**

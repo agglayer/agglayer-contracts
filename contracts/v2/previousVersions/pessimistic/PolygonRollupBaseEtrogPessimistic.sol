@@ -126,11 +126,8 @@ abstract contract PolygonRollupBaseEtrogPessimistic is
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
 
     // Global Exit Root address L2
-    IBaseLegacyAgglayerGER
-        public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBaseLegacyAgglayerGER(
-            0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
-        );
+    IBaseLegacyAgglayerGER public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
+        IBaseLegacyAgglayerGER(0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA);
 
     // Timestamp range that's given to the sequencer as a safety measure to avoid reverts if the transaction is mined to quickly
     uint256 public constant TIMESTAMP_RANGE = 36;

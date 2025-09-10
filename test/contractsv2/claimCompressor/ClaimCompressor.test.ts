@@ -3,12 +3,7 @@ import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { takeSnapshot } from '@nomicfoundation/hardhat-network-helpers';
 import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import {
-    PolygonZkEVMGlobalExitRoot,
-    AgglayerBridge,
-    ClaimCompressor,
-    BridgeReceiverMock,
-} from '../../typechain-types';
+import { PolygonZkEVMGlobalExitRoot, AgglayerBridge, ClaimCompressor, BridgeReceiverMock } from '../../typechain-types';
 
 const MerkleTreeBridge = MTBridge;
 const { getLeafValue } = mtBridgeUtils;

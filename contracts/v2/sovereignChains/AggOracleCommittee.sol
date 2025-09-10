@@ -30,8 +30,7 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
 
     // Global exit root manager L2
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAgglayerGERL2
-        public immutable globalExitRootManagerL2Sovereign;
+    IAgglayerGERL2 public immutable globalExitRootManagerL2Sovereign;
 
     // This array is used only to easily get the current oracle members' information
     address[] public aggOracleMembers;

@@ -400,9 +400,8 @@ contract BridgeL2SovereignChainV1010 is
     modifier onlyGlobalExitRootRemover() {
         // Only allowed to be called by GlobalExitRootRemover
         if (
-            IAgglayerGERL2(
-                address(globalExitRootManager)
-            ).globalExitRootRemover() != msg.sender
+            IAgglayerGERL2(address(globalExitRootManager))
+                .globalExitRootRemover() != msg.sender
         ) {
             revert OnlyGlobalExitRootRemover();
         }

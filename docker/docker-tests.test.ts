@@ -2,13 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
-import {
-    AgglayerManager,
-    AgglayerGER,
-    AgglayerBridge,
-    AggchainFEP,
-    AggLayerGateway,
-} from '../typechain-types';
+import { AgglayerManager, AgglayerGER, AgglayerBridge, AggchainFEP, AggLayerGateway } from '../typechain-types';
 
 const deployOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
 const {

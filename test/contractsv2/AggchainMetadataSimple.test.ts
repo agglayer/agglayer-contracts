@@ -23,10 +23,7 @@ describe('Aggchain Metadata Simple Tests', () => {
         ]);
 
         // Deploy global exit root manager
-        const globalExitRootManager = await ethers.deployContract('AgglayerGER', [
-            deployer.address,
-            deployer.address,
-        ]);
+        const globalExitRootManager = await ethers.deployContract('AgglayerGER', [deployer.address, deployer.address]);
 
         // Deploy bridge mock
         const mockBridge = '0x0000000000000000000000000000000000000002';
