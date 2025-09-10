@@ -157,7 +157,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/PolygonZkEVMGlobalExitRootL2.sol': {
+            'contracts/LegacyAgglayerGERL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
