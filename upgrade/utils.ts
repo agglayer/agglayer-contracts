@@ -78,6 +78,46 @@ async function verifyContractEtherscan(
 }
 
 /**
+ * Track contract verification and return result object
+ * @param contractName Name of the contract for tracking purposes
+ * @param address Contract address to verify
+ * @param constructorArgs Constructor arguments for verification
+ * @param waitTimeSeconds Wait time before verification (default: 20)
+ * @param contractPath Optional contract path for verification
+ * @returns Verification result object: "OK" if successful, or object with failure details
+ */
+async function trackVerification(
+    contractName: string,
+    address: string,
+    constructorArgs: any[] = [],
+    waitTimeSeconds: number = 20,
+    contractPath: any = undefined,
+): Promise<string | object> {
+    try {
+        const success = await verifyContractEtherscan(address, constructorArgs, waitTimeSeconds, contractPath);
+        if (success) {
+            logger.info(`✓ ${contractName} verified successfully`);
+            return 'OK';
+        }
+        logger.warn(`⚠️ ${contractName} verification failed`);
+        return {
+            status: 'FAILED',
+            address,
+            constructorArgs,
+            error: 'Verification failed',
+        };
+    } catch (error: any) {
+        logger.warn(`⚠️ ${contractName} verification failed: ${error.message}`);
+        return {
+            status: 'FAILED',
+            address,
+            constructorArgs,
+            error: error.message,
+        };
+    }
+}
+
+/**
  * Decode the data of a schedule transaction to a timelock contract for better readability
  * @param scheduleData The data of the schedule transaction
  * @param proxyAdmin The proxy admin contract
@@ -142,4 +182,4 @@ Object.defineProperty(BigInt.prototype, 'toJSON', {
     },
 });
 
-export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData };
+export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, trackVerification };

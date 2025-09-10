@@ -38,6 +38,9 @@ export const GENESIS_CONTRACT_NAMES = {
     BRIDGE_LIB: `BridgeLib`,
     AGG_ORACLE_PROXY: 'AggOracleCommittee proxy',
     AGG_ORACLE_IMPL: 'AggOracleCommittee implementation',
+    ROLLUP_MANAGER_IMPLEMENTATION: 'PolygonRollupManager implementation',
+    AGGLAYER_GATEWAY_IMPLEMENTATION: 'AggLayerGateway implementation',
+    GER_IMPLEMENTATION: 'PolygonZkEVMGlobalExitRootV2 implementation',
 };
 /// //////////////////////////////
 /// // Functions for Aggchain ////

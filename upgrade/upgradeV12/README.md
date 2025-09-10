@@ -370,18 +370,18 @@ After successful execution:
     "bridgeLib": "0x..."
   },
   "verification": {
-    "rollupManagerImplementation": "OK",
-    "aggLayerGatewayImplementation": "OK",
-    "bridgeImplementation": "OK",
-    "globalExitRootManagerImplementation": {
+    "PolygonRollupManager implementation": "OK",
+    "AggLayerGateway implementation": "OK",
+    "PolygonZkEVMBridgeV2": "OK",
+    "PolygonZkEVMGlobalExitRootV2 implementation": {
       "status": "FAILED",
       "address": "0x...",
       "constructorArgs": ["0x...", "0x..."],
       "error": "Contract verification failed"
     },
-    "wrappedTokenBytecodeStorer": "OK",
-    "wrappedTokenBridgeImplementation": "OK",
-    "bridgeLib": "OK"
+    "BytecodeStorer": "OK",
+    "TokenWrapped implementation": "OK",
+    "BridgeLib": "OK"
   }
 }
 ```

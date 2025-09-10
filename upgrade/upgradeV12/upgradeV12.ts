@@ -8,9 +8,10 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
 import { PolygonRollupManager, PolygonZkEVMBridgeV2 } from '../../typechain-types';
-import { genTimelockOperation, verifyContractEtherscan, decodeScheduleData } from '../utils';
+import { genTimelockOperation, decodeScheduleData, trackVerification } from '../utils';
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../src/utils';
 import { addInfoOutput } from '../../tools/utils';
+import { GENESIS_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import * as upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -30,20 +31,6 @@ async function main() {
 
     // Initialize verification tracking
     const verification: Record<string, any> = {};
-
-    // Helper function to track contract verification
-    async function trackVerification(contractName: string, address: string, constructorArgs: any[] = []) {
-        const verificationSuccess = await verifyContractEtherscan(address, constructorArgs);
-        if (verificationSuccess) {
-            verification[contractName] = 'OK';
-        } else {
-            verification[contractName] = {
-                status: 'FAILED',
-                address,
-                constructorArgs,
-            };
-        }
-    }
 
     /*
      * Check upgrade parameters
@@ -174,12 +161,11 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`Polygon rollup manager implementation deployed at: ${implRollupManager}`);
 
-    await trackVerification('rollupManagerImplementation', implRollupManager as string, [
-        globalExitRootV2Address,
-        polAddress,
-        bridgeV2Address,
-        aggLayerGatewayAddress,
-    ]);
+    verification[GENESIS_CONTRACT_NAMES.ROLLUP_MANAGER_IMPLEMENTATION] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.ROLLUP_MANAGER_IMPLEMENTATION,
+        implRollupManager as string,
+        [globalExitRootV2Address, polAddress, bridgeV2Address, aggLayerGatewayAddress],
+    );
 
     // 2. Upgrade AggLayer Gateway
     logger.info('Preparing AggLayer Gateway upgrade...');
@@ -192,7 +178,11 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`AggLayer Gateway implementation deployed at: ${implAggLayerGateway}`);
 
-    await trackVerification('aggLayerGatewayImplementation', implAggLayerGateway as string, []);
+    verification[GENESIS_CONTRACT_NAMES.AGGLAYER_GATEWAY_IMPLEMENTATION] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.AGGLAYER_GATEWAY_IMPLEMENTATION,
+        implAggLayerGateway as string,
+        [],
+    );
 
     // 3. Upgrade Bridge V2
     logger.info('Preparing Bridge V2 upgrade...');
@@ -205,22 +195,38 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`Polygon bridge implementation deployed at: ${implBridge}`);
 
-    await trackVerification('bridgeImplementation', implBridge, []);
+    verification[GENESIS_CONTRACT_NAMES.BRIDGE_V2] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.BRIDGE_V2,
+        implBridge,
+        [],
+    );
 
     // Verify bridge-related contracts
     const bridgeContract = bridgeFactory.attach(implBridge) as PolygonZkEVMBridgeV2;
     const bytecodeStorerAddress = await bridgeContract.wrappedTokenBytecodeStorer();
-    await trackVerification('wrappedTokenBytecodeStorer', bytecodeStorerAddress, []);
+    verification[GENESIS_CONTRACT_NAMES.BYTECODE_STORER] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.BYTECODE_STORER,
+        bytecodeStorerAddress,
+        [],
+    );
     logger.info('#######################\n');
     logger.info(`wrappedTokenBytecodeStorer deployed at: ${bytecodeStorerAddress}`);
 
     const wrappedTokenBridgeImplementationAddress = await bridgeContract.getWrappedTokenBridgeImplementation();
-    await trackVerification('wrappedTokenBridgeImplementation', wrappedTokenBridgeImplementationAddress, []);
+    verification[GENESIS_CONTRACT_NAMES.TOKEN_WRAPPED_IMPLEMENTATION] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.TOKEN_WRAPPED_IMPLEMENTATION,
+        wrappedTokenBridgeImplementationAddress,
+        [],
+    );
     logger.info('#######################\n');
     logger.info(`wrappedTokenBridge Implementation deployed at: ${wrappedTokenBridgeImplementationAddress}`);
 
     const bridgeLibAddress = await bridgeContract.bridgeLib();
-    await trackVerification('bridgeLib', bridgeLibAddress, []);
+    verification[GENESIS_CONTRACT_NAMES.BRIDGE_LIB] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.BRIDGE_LIB,
+        bridgeLibAddress,
+        [],
+    );
     logger.info('#######################\n');
     logger.info(`BridgeLib deployed at: ${bridgeLibAddress}`);
 
@@ -240,10 +246,11 @@ async function main() {
     logger.info('#######################\n');
     logger.info(`Polygon global exit root manager implementation deployed at: ${globalExitRootManagerImp}`);
 
-    await trackVerification('globalExitRootManagerImplementation', globalExitRootManagerImp as string, [
-        rollupManagerAddress,
-        bridgeV2Address,
-    ]);
+    verification[GENESIS_CONTRACT_NAMES.GER_IMPLEMENTATION] = await trackVerification(
+        GENESIS_CONTRACT_NAMES.GER_IMPLEMENTATION,
+        globalExitRootManagerImp as string,
+        [rollupManagerAddress, bridgeV2Address],
+    );
 
     // Create timelock operations
     logger.info('Creating timelock operations...');
