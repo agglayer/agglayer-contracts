@@ -96,7 +96,7 @@ const config: HardhatUserConfig = {
         ],
         overrides: {
             // Set all contracts on L2 to use 'evmVersion: Shangai' to be compatible with clients not supporting Cancun opcodes
-            'contracts/v2/utils/ClaimCompressor.sol': {
+            'contracts/periphery/ClaimCompressor.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -127,7 +127,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/v2/AgglayerBridge.sol': {
+            'contracts/AgglayerBridge.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -137,7 +137,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 },
             },
-            'contracts/v2/lib/BytecodeStorer.sol': {
+            'contracts/lib/BytecodeStorer.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -147,7 +147,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 },
             },
-            'contracts/v2/sovereignChains/AgglayerBridgeL2.sol': {
+            'contracts/sovereignChains/AgglayerBridgeL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -167,7 +167,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/v2/sovereignChains/AgglayerGERL2.sol': {
+            'contracts/sovereignChains/AgglayerGERL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -178,7 +178,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/AgglayerManager.sol': {
+            'contracts/AgglayerManager.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -189,7 +189,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/newDeployments/AgglayerManagerNotUpgraded.sol': {
+            'contracts/newDeployments/AgglayerManagerNotUpgraded.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -200,7 +200,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/mocks/AgglayerManagerMock.sol': {
+            'contracts/mocks/AgglayerManagerMock.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -211,7 +211,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // Should have the same optimizations than the RollupManager to verify
-            'contracts/v2/lib/PolygonTransparentProxy.sol': {
+            'contracts/lib/PolygonTransparentProxy.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -221,7 +221,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'cancun',
                 }, // try yul optimizer
             },
-            'contracts/v2/lib/TokenWrappedBridgeUpgradeable.sol': {
+            'contracts/lib/TokenWrappedBridgeUpgradeable.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -231,7 +231,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai', // Same evm version than AgglayerBridgeL2
                 },
             },
-            'contracts/v2/lib/TokenWrappedTransparentProxy.sol': {
+            'contracts/lib/TokenWrappedTransparentProxy.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -242,7 +242,7 @@ const config: HardhatUserConfig = {
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },
-            'contracts/v2/lib/bridgeLib.sol': {
+            'contracts/lib/bridgeLib.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -252,7 +252,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai', // Same evm version than AgglayerBridge
                 }, // try yul optimizer
             },
-            'contracts/v2/aggchains/AggchainFEP.sol': {
+            'contracts/aggchains/AggchainFEP.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
