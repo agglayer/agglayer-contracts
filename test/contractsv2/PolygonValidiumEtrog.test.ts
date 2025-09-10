@@ -7,7 +7,7 @@ import {
     ERC20PermitMock,
     AgglayerManagerMock,
     AgglayerGER,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     PolygonValidiumEtrog,
     PolygonRollupBaseEtrog,
     TokenWrapped,
@@ -58,7 +58,7 @@ describe('PolygonValidiumEtrog', () => {
     let admin: any;
     let beneficiary: any;
 
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridge;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
@@ -107,7 +107,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
@@ -515,7 +515,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -727,7 +727,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -1097,7 +1097,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -1167,7 +1167,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -1343,7 +1343,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -1459,7 +1459,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -1564,7 +1564,7 @@ describe('PolygonValidiumEtrog', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [

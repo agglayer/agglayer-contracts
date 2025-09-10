@@ -508,7 +508,7 @@ contract BridgeL2SovereignChainPessimistic is
 
     /**
      * @notice Function to call token permit method of extended ERC20
-     * @dev function overridden from PolygonZkEVMBridgeV2 to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
+     * @dev function overridden from AgglayerBridge to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
      + @param token ERC20 token address
      * @param amount Quantity that is expected to be allowed
      * @param permitData Raw data of the call `permit` of the token

@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
-import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, PolygonZkEVMBridgeV2, BridgeLib } from '../../typechain-types';
+import { ERC20PermitMock, PolygonZkEVMGlobalExitRoot, AgglayerBridge, BridgeLib } from '../../typechain-types';
 import {
     createPermitSignature,
     ifacePermit,
@@ -20,7 +20,7 @@ function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
 describe('PolygonZkEVMBridge Contract', () => {
     upgrades.silenceWarnings();
 
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridge;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRoot;
     let bridgeLibContract: BridgeLib;
@@ -47,11 +47,11 @@ describe('PolygonZkEVMBridge Contract', () => {
         [deployer, rollupManager, acc1] = await ethers.getSigners();
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as PolygonZkEVMBridgeV2;
+        })) as unknown as AgglayerBridge;
 
         // deploy global exit root manager
         const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot');

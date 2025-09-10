@@ -25,7 +25,7 @@ export const GENESIS_CONTRACT_NAMES = {
     SOVEREIGN_BRIDGE_IMPLEMENTATION: 'BridgeL2SovereignChain implementation',
     SOVEREIGN_BRIDGE_PROXY: 'BridgeL2SovereignChain proxy',
     BYTECODE_STORER: 'BytecodeStorer',
-    BRIDGE_V2: 'PolygonZkEVMBridgeV2',
+    BRIDGE_V2: 'AgglayerBridge',
     GER_L2_SOVEREIGN: 'GlobalExitRootManagerL2SovereignChain',
     GER_L2_SOVEREIGN_IMPLEMENTATION: 'GlobalExitRootManagerL2SovereignChain implementation',
     GER_L2_SOVEREIGN_PROXY: 'GlobalExitRootManagerL2SovereignChain proxy',

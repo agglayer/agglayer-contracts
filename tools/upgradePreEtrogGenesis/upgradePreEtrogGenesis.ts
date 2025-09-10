@@ -122,7 +122,7 @@ async function main() {
     );
 
     // Deploy implementation PolygonZkEVMBridge
-    const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge', deployer);
     const deployTransactionBridge = (await polygonZkEVMBridgeFactory.getDeployTransaction()).data;
     // Mandatory to override the gasLimit since the estimation with create are mess up D:
     const overrideGasLimit = BigInt(10500000);

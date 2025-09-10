@@ -11,7 +11,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable5/proxy/utils/In
 import {ITokenWrappedBridgeUpgradeable, IERC20Metadata, IERC20Permit} from "../interfaces/ITokenWrappedBridgeUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable5/token/ERC20/ERC20Upgradeable.sol";
 
-// This contract contains the solidity code that compiles into the BASE_INIT_BYTECODE_WRAPPED_TOKEN_UPGRADEABLE constant on the PolygonZkEVMBridgeV2
+// This contract contains the solidity code that compiles into the BASE_INIT_BYTECODE_WRAPPED_TOKEN_UPGRADEABLE constant on the AgglayerBridge
 // This contract should remain untouched, even if it's not used directly as dependency. The main use is to verify on block explorers
 // and check the implementation.
 contract TokenWrappedBridgeUpgradeable is

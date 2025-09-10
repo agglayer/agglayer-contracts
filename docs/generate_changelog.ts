@@ -10,7 +10,7 @@ const repoUrl = 'https://github.com/agglayer/agglayer-contracts';
 
 const contracts = [
     'contracts/v2/AgglayerManager.sol',
-    'contracts/v2/PolygonZkEVMBridgeV2.sol',
+    'contracts/v2/AgglayerBridge.sol',
     'contracts/v2/AgglayerGER.sol',
     'contracts/v2/AggLayerGateway.sol',
     'contracts/v2/sovereignChains/BridgeL2SovereignChain.sol',

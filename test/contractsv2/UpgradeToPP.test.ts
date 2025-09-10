@@ -8,7 +8,7 @@ import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     ERC20PermitMock,
     VerifierRollupHelperMock,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     AgglayerGER,
     AgglayerManagerMock,
     PolygonValidiumEtrog,
@@ -34,7 +34,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     let polTokenContract: ERC20PermitMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
     let verifierContract: VerifierRollupHelperMock;
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridge;
     let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
     let aggchainECDSAContract: AggchainECDSAMultisig;
@@ -116,7 +116,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         });
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],

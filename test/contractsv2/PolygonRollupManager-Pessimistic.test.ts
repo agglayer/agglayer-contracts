@@ -8,7 +8,7 @@ import {
     ERC20PermitMock,
     AgglayerManagerMock,
     AgglayerGER,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     Address,
     PolygonPessimisticConsensus,
 } from '../../typechain-types';
@@ -31,7 +31,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let beneficiary: any;
 
     let verifierContract: VerifierRollupHelperMock;
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridge;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
@@ -120,7 +120,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         });
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],

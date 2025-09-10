@@ -42,7 +42,7 @@ contract BridgeL2SovereignChainV1010 is
     // Map to store wrappedAddresses that are not mintable
     mapping(bytes32 tokenInfoHash => uint256 amount) public localBalanceTree;
 
-    /// @dev Deprecated in favor of _initializerVersion at PolygonZkEVMBridgeV2
+    /// @dev Deprecated in favor of _initializerVersion at AgglayerBridge
     /// @custom:oz-renamed-from _initializerVersion
     uint8 private _initializerVersionLegacy;
 
