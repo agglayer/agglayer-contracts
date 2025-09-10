@@ -8,7 +8,7 @@ import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
     AgglayerManagerMock,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerGER,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMEtrog,
     PolygonRollupBaseEtrog,
@@ -73,7 +73,7 @@ describe('Polygon Rollup Manager', () => {
     let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
+    let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
 
     const polTokenName = 'POL Token';
@@ -164,7 +164,7 @@ describe('Polygon Rollup Manager', () => {
         firstDeployment = false;
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerGER');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
             unsafeAllow: ['constructor', 'state-variable-immutable'],

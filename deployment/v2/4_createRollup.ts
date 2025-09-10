@@ -204,10 +204,10 @@ async function main() {
     ) as AgglayerManager;
 
     // Load global exit root manager
-    const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    const globalExitRootManagerFactory = await ethers.getContractFactory('AgglayerGER', deployer);
     const globalExitRootManagerContract = globalExitRootManagerFactory.attach(
         deployOutput.polygonZkEVMGlobalExitRootAddress,
-    ) as PolygonZkEVMGlobalExitRootV2;
+    ) as AgglayerGER;
 
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
     if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) === false) {

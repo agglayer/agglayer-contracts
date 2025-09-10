@@ -190,8 +190,8 @@ async function main() {
     );
 
     // prepare upgrade global exit root
-    // Prepare Upgrade  PolygonZkEVMGlobalExitRootV2
-    const polygonGlobalExitRootV2 = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    // Prepare Upgrade  AgglayerGER
+    const polygonGlobalExitRootV2 = await ethers.getContractFactory('AgglayerGER', deployer);
 
     const newGlobalExitRoortImpl = await upgrades.prepareUpgrade(
         currentGlobalExitRootAddress,

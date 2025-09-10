@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../../interfaces/IAgglayerGER.sol";
 import "../../../interfaces/IPolygonZkEVMErrors.sol";
 import "../../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "./PolygonRollupManagerPessimistic.sol";
@@ -200,7 +200,7 @@ abstract contract PolygonRollupBaseEtrogPessimistic is
      * @param _rollupManager Global exit root manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         PolygonRollupManagerPessimistic _rollupManager
