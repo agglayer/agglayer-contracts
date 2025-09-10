@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity 0.8.28;
-import "./interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
+import "./interfaces/IBaseLegacyAgglayerGER.sol";
 
 /**
  * Contract responsible for managing the exit roots for the L2 and global exit roots
  * The special zkRom variables will be accessed and updated directly by the zkRom
  */
-contract LegacyAgglayerGERL2 is IBasePolygonZkEVMGlobalExitRoot {
+contract LegacyAgglayerGERL2 is IBaseLegacyAgglayerGER {
     /////////////////////////////
     // Special zkRom variables
     ////////////////////////////

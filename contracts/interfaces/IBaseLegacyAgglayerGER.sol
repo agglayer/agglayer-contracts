@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.20;
 
-interface IBasePolygonZkEVMGlobalExitRoot {
+interface IBaseLegacyAgglayerGER {
     /**
      * @dev Thrown when the caller is not the allowed contracts
      */
