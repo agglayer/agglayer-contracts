@@ -5,7 +5,7 @@ import { ethers, upgrades } from 'hardhat';
 import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     ERC20PermitMock,
-    PolygonRollupManagerMock,
+    AgglayerManagerMock,
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     PolygonValidiumEtrog,
@@ -61,7 +61,7 @@ describe('PolygonValidiumEtrog', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let rollupManagerContract: AgglayerManagerMock;
     let PolygonZKEVMV2Contract: PolygonValidiumEtrog;
     let PolygonDataCommitee: PolygonDataCommittee;
 
@@ -114,7 +114,7 @@ describe('PolygonValidiumEtrog', () => {
         });
 
         // deploy rollup manager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerEmptyMock');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerEmptyMock');
         rollupManagerContract = await PolygonRollupManagerFactory.deploy();
         await rollupManagerContract.waitForDeployment();
 

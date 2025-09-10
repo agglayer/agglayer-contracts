@@ -3,7 +3,7 @@ import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     AggchainFEP,
@@ -39,10 +39,10 @@ describe('Docker build tests Contract', () => {
     });
 
     it('should check RollupManager', async () => {
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
         const rollupManagerContract = PolygonRollupManagerFactory.attach(
             polygonRollupManagerAddress,
-        ) as PolygonRollupManager;
+        ) as AgglayerManager;
         expect(rollupManagerContract.target).to.equal(polygonRollupManagerAddress);
         expect(await rollupManagerContract.bridgeAddress()).to.equal(polygonZkEVMBridgeAddress);
         expect(await rollupManagerContract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);

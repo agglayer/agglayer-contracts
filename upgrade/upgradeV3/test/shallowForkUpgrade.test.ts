@@ -6,7 +6,7 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-helpers';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMTimelock,
     PolygonRollupManagerPessimistic,
     PolygonZkEVMBridgeV2,
@@ -161,10 +161,10 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Sent execute transaction`);
 
         // Check rollup manager contract
-        const rollupMangerFactory = await ethers.getContractFactory('PolygonRollupManager');
+        const rollupMangerFactory = await ethers.getContractFactory('AgglayerManager');
         const rollupManagerContract = rollupMangerFactory.attach(
             upgradeParams.rollupManagerAddress,
-        ) as PolygonRollupManager;
+        ) as AgglayerManager;
         expect(await rollupManagerContract.ROLLUP_MANAGER_VERSION()).to.equal(AL_VERSION);
         expect(await rollupManagerContract.bridgeAddress()).to.equal(bridgeAddress);
         expect(await rollupManagerContract.calculateRewardPerBatch()).to.equal(calculateRewardPerBatch);

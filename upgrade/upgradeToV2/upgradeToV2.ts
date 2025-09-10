@@ -270,7 +270,7 @@ async function main() {
     ]);
 
     // Upgrade to rollup manager previous polygonZKEVM
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
     const implRollupManager = await upgrades.prepareUpgrade(currentPolygonZkEVMAddress, PolygonRollupManagerFactory, {
         constructorArgs: [currentGlobalExitRootAddress, polTokenAddress, currentBridgeAddress],
         unsafeAllow: ['constructor', 'state-variable-immutable'],

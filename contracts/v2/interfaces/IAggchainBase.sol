@@ -166,7 +166,7 @@ interface IAggchainBase is
     ) external view returns (bytes32);
 
     /**
-     * @notice Callback from the PolygonRollupManager after successful pessimistic proof verification
+     * @notice Callback from the AgglayerManager after successful pessimistic proof verification
      * @dev Each implementation handles state updates differently
      * @param aggchainData Custom chain data containing state update information
      */

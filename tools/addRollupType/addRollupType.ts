@@ -9,7 +9,7 @@ import { supportedBridgeContracts, transactionTypes, genOperation } from '../uti
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import { ConsensusContracts, VerifierType } from '../../src/pessimistic-utils';
 import addRollupTypeParameters from './add_rollup_type.json';
-import { PolygonRollupManager } from '../../typechain-types';
+import { AgglayerManager } from '../../typechain-types';
 import {
     checkParams,
     getDeployerFromParameters,
@@ -98,10 +98,10 @@ async function main() {
     }
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
     const rollupManagerContract = PolygonRollupManagerFactory.attach(
         polygonRollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     // get data from rollupManagerContract
     const polygonZkEVMBridgeAddress = await rollupManagerContract.bridgeAddress();
@@ -138,7 +138,7 @@ async function main() {
 
         if (polygonZkEVMBridgeAddress.toLowerCase() !== genesisBridgeAddress.toLowerCase()) {
             throw new Error(
-                `'${bridgeContractName}' root in the 'genesis.json' does not match 'bridgeAddress' in the 'PolygonRollupManager'`,
+                `'${bridgeContractName}' root in the 'genesis.json' does not match 'bridgeAddress' in the 'AgglayerManager'`,
             );
         }
     }

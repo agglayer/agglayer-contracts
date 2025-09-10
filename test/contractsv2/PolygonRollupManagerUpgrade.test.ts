@@ -7,7 +7,7 @@ import { processorUtils, MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-
 import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
+    AgglayerManagerMock,
     PolygonZkEVMGlobalExitRootV2,
     PolygonZkEVMBridgeV2,
     PolygonZkEVMEtrog,
@@ -81,7 +81,7 @@ describe('Polygon Rollup manager upgraded', () => {
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let rollupManagerContract: AgglayerManagerMock;
 
     const latestVersionRollupManager = 'v1.0.0';
     const polTokenName = 'POL Token';
@@ -206,7 +206,7 @@ describe('Polygon Rollup manager upgraded', () => {
         const PolygonRollupManagerFactoryPessimistic = await ethers.getContractFactory(
             'PolygonRollupManagerPessimistic',
         );
-        const PolygonRollupManagerFactoryCurrent = await ethers.getContractFactory('PolygonRollupManagerMock');
+        const PolygonRollupManagerFactoryCurrent = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = PolygonRollupManagerFactoryCurrent.attach(polygonZkEVMContract.target) as any;
         await polygonZkEVMContract.initialize(

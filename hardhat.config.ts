@@ -178,7 +178,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/PolygonRollupManager.sol': {
+            'contracts/v2/AgglayerManager.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -200,7 +200,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/mocks/PolygonRollupManagerMock.sol': {
+            'contracts/v2/mocks/AgglayerManagerMock.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {

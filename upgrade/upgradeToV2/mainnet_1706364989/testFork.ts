@@ -6,7 +6,7 @@ import path = require('path');
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { time, reset, setBalance, setStorageAt } from '@nomicfoundation/hardhat-network-helpers';
-import { PolygonRollupManager, PolygonZkEVMTimelock } from '../../../typechain-types';
+import { AgglayerManager, PolygonZkEVMTimelock } from '../../../typechain-types';
 
 import deployParameters from './deploy_parameters_mainnet.json';
 import deployOutputParameters from './deploy_output_mainnet.json';
@@ -64,10 +64,10 @@ async function main() {
 
     await (await multisigSigner.sendTransaction(txUpgrade)).wait();
 
-    const RollupMangerFactory = await ethers.getContractFactory('PolygonRollupManager');
+    const RollupMangerFactory = await ethers.getContractFactory('AgglayerManager');
     const rollupManager = (await RollupMangerFactory.attach(
         deployOutputParameters.polygonZkEVMAddress,
-    )) as PolygonRollupManager;
+    )) as AgglayerManager;
 
     expect(await rollupManager.rollupCount()).to.be.equal(1);
 
