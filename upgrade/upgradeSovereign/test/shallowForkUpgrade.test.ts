@@ -11,7 +11,7 @@ import {
     GlobalExitRootManagerL2SovereignChainPessimistic,
     GlobalExitRootManagerL2SovereignChain,
     BridgeL2SovereignChainPessimistic,
-    BridgeL2SovereignChain,
+    AgglayerBridgeL2,
 } from '../../../typechain-types';
 
 import { logger } from '../../../src/logger';
@@ -136,8 +136,8 @@ async function main() {
     logger.info(`✓ Checked GlobalExitRootManagerL2SovereignChain contract storage parameters`);
 
     // Check bridge params after upgrade
-    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
-    const bridgeContract = bridgeFactory.attach(bridgeAddress) as BridgeL2SovereignChain;
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2');
+    const bridgeContract = bridgeFactory.attach(bridgeAddress) as AgglayerBridgeL2;
     expect(await bridgeContract.BRIDGE_SOVEREIGN_VERSION()).to.equal(AL_VERSION);
     expect(await bridgeContract.globalExitRootManager()).to.equal(bridgeGlobalExitRootManager);
     expect(await bridgeContract.lastUpdatedDepositCount()).to.equal(bridgeLastUpdatedDepositCount);
@@ -149,7 +149,7 @@ async function main() {
     expect(await bridgeContract.emergencyBridgePauser()).to.equal(upgradeParams.emergencyBridgePauserAddress);
     expect(await bridgeContract.emergencyBridgeUnpauser()).to.equal(upgradeParams.emergencyBridgeUnpauserAddress);
 
-    logger.info(`✓ Checked BridgeL2SovereignChain contract storage parameters`);
+    logger.info(`✓ Checked AgglayerBridgeL2 contract storage parameters`);
     logger.info('Finished shallow fork upgrade');
 }
 

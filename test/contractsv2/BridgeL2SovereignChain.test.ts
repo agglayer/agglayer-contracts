@@ -7,7 +7,7 @@ import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChain,
-    BridgeL2SovereignChain,
+    AgglayerBridgeL2,
     TokenWrapped,
 } from '../../typechain-types';
 import { computeWrappedTokenProxyAddress, claimBeforeBridge } from './helpers/helpers-sovereign-bridge';
@@ -37,10 +37,10 @@ function newClaimedGlobalIndexValue(globalIndex: any, leafValue: any) {
     return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [valueToStorageBytes(globalIndex), leafValue]);
 }
 
-describe('BridgeL2SovereignChain Contract', () => {
+describe('AgglayerBridgeL2 Contract', () => {
     upgrades.silenceWarnings();
 
-    let sovereignChainBridgeContract: BridgeL2SovereignChain;
+    let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
     let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
 
@@ -74,12 +74,12 @@ describe('BridgeL2SovereignChain Contract', () => {
         globalExitRootRemover = deployer;
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
-        // deploy BridgeL2SovereignChain
-        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        // deploy AgglayerBridgeL2
+        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as BridgeL2SovereignChain;
+        })) as unknown as AgglayerBridgeL2;
 
         // deploy global exit root manager
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
@@ -321,7 +321,7 @@ describe('BridgeL2SovereignChain Contract', () => {
     it('should check the initialize function', async () => {
         // deploy PolygonZkEVMBridge
         // eslint-disable-next-line @typescript-eslint/no-shadow
-        const sovereignChainBridgeContract = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const sovereignChainBridgeContract = await ethers.getContractFactory('AgglayerBridgeL2');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],

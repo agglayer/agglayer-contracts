@@ -124,8 +124,8 @@ async function main() {
         salt, // salt
     );
 
-    // Upgrade BridgeL2SovereignChain
-    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
+    // Upgrade AgglayerBridgeL2
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2', deployer);
     await upgrades.forceImport(bridgeAddress, bridgeFactory, {
         constructorArgs: [],
         kind: 'transparent',

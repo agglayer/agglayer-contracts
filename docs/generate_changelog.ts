@@ -13,7 +13,7 @@ const contracts = [
     'contracts/v2/AgglayerBridge.sol',
     'contracts/v2/AgglayerGER.sol',
     'contracts/v2/AggLayerGateway.sol',
-    'contracts/v2/sovereignChains/BridgeL2SovereignChain.sol',
+    'contracts/v2/sovereignChains/AgglayerBridgeL2.sol',
     'contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol',
     'contracts/v2/aggchains/AggchainECDSAMultisig.sol',
     'contracts/v2/aggchains/AggchainFEP.sol',
