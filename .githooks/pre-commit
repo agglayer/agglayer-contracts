@@ -38,8 +38,8 @@ if npm run lint; then
     ## V2 General
     cp artifacts/contracts/v2/AgglayerManager.sol/AgglayerManager.json compiled-contracts/
     cp artifacts/contracts/v2/PolygonZkEVMBridgeV2.sol/PolygonZkEVMBridgeV2.json compiled-contracts/
-    cp artifacts/contracts/v2/PolygonZkEVMGlobalExitRootV2.sol/PolygonZkEVMGlobalExitRootV2.json compiled-contracts/
-    cp artifacts/contracts/v2/PolygonZkEVMGlobalExitRootV2.sol/PolygonZkEVMGlobalExitRootV2.json compiled-contracts/
+    cp artifacts/contracts/v2/AgglayerGER.sol/AgglayerGER.json compiled-contracts/
+    cp artifacts/contracts/v2/AgglayerGER.sol/AgglayerGER.json compiled-contracts/
 
     ## V2 Consensus
     cp artifacts/contracts/v2/consensus/zkEVM/PolygonZkEVMEtrog.sol/PolygonZkEVMEtrog.json compiled-contracts/

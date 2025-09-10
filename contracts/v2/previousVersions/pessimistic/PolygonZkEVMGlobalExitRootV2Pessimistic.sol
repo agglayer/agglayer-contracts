@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.20;
 
-import "../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../../interfaces/IAgglayerGER.sol";
 import "../../lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 import "./DepositContractBasePessimistic.sol";
@@ -149,7 +149,7 @@ contract PolygonZkEVMGlobalExitRootV2Pessimistic is
     function getRoot()
         public
         view
-        override(DepositContractBasePessimistic, IPolygonZkEVMGlobalExitRootV2)
+        override(DepositContractBasePessimistic, IAgglayerGER)
         returns (bytes32)
     {
         return super.getRoot();

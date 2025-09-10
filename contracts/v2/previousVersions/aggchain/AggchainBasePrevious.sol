@@ -93,7 +93,7 @@ abstract contract AggchainBasePrevious is
      * @param _aggLayerGateway AggLayerGateway address.
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridgeV2 _bridgeAddress,
         AgglayerManager _rollupManager,

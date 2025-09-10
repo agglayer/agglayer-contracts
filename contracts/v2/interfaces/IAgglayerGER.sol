@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 import "../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 
-interface IPolygonZkEVMGlobalExitRootV2 is IBasePolygonZkEVMGlobalExitRoot {
+interface IAgglayerGER is IBasePolygonZkEVMGlobalExitRoot {
     function getLastGlobalExitRoot() external view returns (bytes32);
 
     function getRoot() external view returns (bytes32);

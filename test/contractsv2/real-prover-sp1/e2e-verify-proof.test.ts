@@ -5,7 +5,7 @@ import {
     SP1VerifierPlonk,
     ERC20PermitMock,
     AgglayerManagerMock,
-    PolygonZkEVMGlobalExitRootV2Mock,
+    AgglayerGERMock,
     PolygonZkEVMBridgeV2,
     PolygonPessimisticConsensus,
 } from '../../../typechain-types';
@@ -25,7 +25,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
     let verifierContract: SP1VerifierPlonk;
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2Mock;
+    let polygonZkEVMGlobalExitRoot: AgglayerGERMock;
     let rollupManagerContract: AgglayerManagerMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
 
@@ -105,7 +105,7 @@ describe('Polygon Rollup Manager with Polygon Pessimistic Consensus', () => {
         firstDeployment = false;
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2Mock');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerGERMock');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
             unsafeAllow: ['constructor', 'state-variable-immutable'],

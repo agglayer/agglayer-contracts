@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import {
     AgglayerManager,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerGER,
     PolygonZkEVMBridgeV2,
     AggchainFEP,
     AggLayerGateway,
@@ -50,10 +50,10 @@ describe('Docker build tests Contract', () => {
     });
 
     it('should check GlobalExitRootV2', async () => {
-        const PolygonZkEVMGlobalExitRootV2Factory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootV2Factory = await ethers.getContractFactory('AgglayerGER');
         const PolygonZkEVMGlobalExitRootV2Contract = PolygonZkEVMGlobalExitRootV2Factory.attach(
             polygonZkEVMGlobalExitRootAddress,
-        ) as PolygonZkEVMGlobalExitRootV2;
+        ) as AgglayerGER;
         expect(PolygonZkEVMGlobalExitRootV2Contract.target).to.equal(polygonZkEVMGlobalExitRootAddress);
         expect(await PolygonZkEVMGlobalExitRootV2Contract.bridgeAddress()).to.equal(polygonZkEVMBridgeAddress);
         expect(await PolygonZkEVMGlobalExitRootV2Contract.rollupManager()).to.equal(polygonRollupManagerAddress);

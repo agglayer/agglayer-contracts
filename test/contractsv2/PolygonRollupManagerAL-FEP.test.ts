@@ -6,7 +6,7 @@ import {
     AggLayerGateway,
     ERC20PermitMock,
     AgglayerManagerMock,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerGER,
     PolygonZkEVMBridgeV2,
     AggchainFEP,
     VerifierRollupHelperMock,
@@ -43,7 +43,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
     // CONTRACTS
     let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
+    let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
     let aggLayerGatewayContract: AggLayerGateway;
     let aggchainFEPImplementationContract: AggchainFEP;
@@ -268,7 +268,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             nonce: currentDeployerNonce + 3,
         });
         // deploy globalExitRootV2
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerGER');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
