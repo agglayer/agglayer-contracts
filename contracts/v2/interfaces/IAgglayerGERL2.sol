@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
-import "../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
+import "../../interfaces/IBaseLegacyAgglayerGER.sol";
 
 /**
  * @title IAgglayerGERL2
  * @notice Interface for the AgglayerGERL2 contract that manages global exit roots on L2
  */
 interface IAgglayerGERL2 is
-    IBasePolygonZkEVMGlobalExitRoot
+    IBaseLegacyAgglayerGER
 {
     // Functions
 

@@ -281,7 +281,7 @@ contract AgglayerBridgeL2 is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        IBaseLegacyAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata,
         address _bridgeManager,
@@ -382,7 +382,7 @@ contract AgglayerBridgeL2 is
         uint32, // _networkID
         address, //_gasTokenAddress
         uint32, //_gasTokenNetwork
-        IBasePolygonZkEVMGlobalExitRoot, //_globalExitRootManager
+        IBaseLegacyAgglayerGER, //_globalExitRootManager
         address, //_polygonRollupManager
         bytes memory //_gasTokenMetadata
     )
