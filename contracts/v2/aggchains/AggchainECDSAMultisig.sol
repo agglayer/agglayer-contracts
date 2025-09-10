@@ -63,7 +63,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager,
         IAggLayerGateway _aggLayerGateway
     )

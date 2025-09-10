@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 import "../../interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 
-interface IPolygonZkEVMBridgeV2 {
+interface IAgglayerBridge {
     /**
      * @dev Thrown when the destination network is invalid
      */

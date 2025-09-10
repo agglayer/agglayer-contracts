@@ -248,7 +248,7 @@ contract AggchainFEPPrevious is AggchainBasePrevious {
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager,
         IAggLayerGatewayPrevious _aggLayerGateway
     )

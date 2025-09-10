@@ -356,10 +356,10 @@ async function deployBridgeL2SovereignChain(
      * 3. The TokenWrappedTransparentProxy constructor calls back to the Bridge proxy:
      *
      *    constructor() ERC1967Proxy(
-     *        IPolygonZkEVMBridgeV2(msg.sender).getWrappedTokenBridgeImplementation(), // ← CALLBACK
+     *        IAgglayerBridge(msg.sender).getWrappedTokenBridgeImplementation(), // ← CALLBACK
      *        new bytes(0)
      *    ) {
-     *        _changeAdmin(IPolygonZkEVMBridgeV2(msg.sender).getProxiedTokensManager()); // ← CALLBACK
+     *        _changeAdmin(IAgglayerBridge(msg.sender).getProxiedTokensManager()); // ← CALLBACK
      *    }
      *
      * 4. ❌ These callbacks FAIL during atomic deployment because:

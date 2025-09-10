@@ -9,7 +9,7 @@ import {
     AgglayerManager,
     PolygonZkEVMTimelock,
     PolygonRollupManagerPessimistic,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     PolygonZkEVMBridgeV2Pessimistic,
     AgglayerGER,
     PolygonZkEVMGlobalExitRootV2Pessimistic,
@@ -185,8 +185,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Checked rollup manager contract storage parameters and new version`);
 
         // Check bridge contract
-        const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const bridgeContract = bridgeFactory.attach(bridgeAddress) as PolygonZkEVMBridgeV2;
+        const bridgeFactory = await ethers.getContractFactory('AgglayerBridge');
+        const bridgeContract = bridgeFactory.attach(bridgeAddress) as AgglayerBridge;
         expect(await bridgeContract.BRIDGE_VERSION()).to.equal(AL_VERSION);
         expect(await bridgeContract.globalExitRootManager()).to.equal(bridgeGlobalExitRootManager);
         expect(await bridgeContract.lastUpdatedDepositCount()).to.equal(bridgeLastUpdatedDepositCount);

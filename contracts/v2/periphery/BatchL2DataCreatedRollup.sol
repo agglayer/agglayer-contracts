@@ -45,7 +45,7 @@ contract BatchL2DataCreatedRollup {
         bytes memory _gasTokenMetadata
     ) public view returns (bytes memory) {
         bytes memory initializeBrigeData = abi.encodeCall(
-            IPolygonZkEVMBridgeV2.initialize,
+            IAgglayerBridge.initialize,
             (
                 networkID,
                 _gasTokenAddress,

@@ -8,7 +8,7 @@ import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "../interfaces/IPolygonConsensusBase.sol";
 import "../interfaces/IPolygonRollupBase.sol";
-import "../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "../interfaces/IAgglayerBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "./PolygonConstantsBase.sol";
 import "../AgglayerManager.sol";
@@ -33,7 +33,7 @@ abstract contract PolygonConsensusBase is
     IAgglayerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
-    IPolygonZkEVMBridgeV2 public immutable bridgeAddress;
+    IAgglayerBridge public immutable bridgeAddress;
 
     // Rollup manager
     AgglayerManager public immutable rollupManager;
@@ -119,7 +119,7 @@ abstract contract PolygonConsensusBase is
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
+        IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager
     ) {
         globalExitRootManager = _globalExitRootManager;

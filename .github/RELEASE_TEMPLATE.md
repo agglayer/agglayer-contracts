@@ -2,7 +2,7 @@
 
 ## Contracts Versions
 * ⚠️ `AgglayerManager`: ~~v0.0.0~~ -> v1.0.0
-* `PolygonZkEVMBridgeV2`: v1.0.0
+* `AgglayerBridge`: v1.0.0
 * `AgglayerGER`: v1.0.0
 * `AggLayerGateway`: v1.0.0
 * `BridgeL2SovereignChain`: v1.0.0

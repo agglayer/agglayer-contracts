@@ -5,7 +5,7 @@ import path from 'path';
 import {
     AgglayerManager,
     AgglayerGER,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     AggchainFEP,
     AggLayerGateway,
 } from '../typechain-types';
@@ -63,11 +63,11 @@ describe('Docker build tests Contract', () => {
         );
     });
 
-    it('should check PolygonZkEVMBridgeV2', async () => {
-        const PolygonZkEVMBridgeV2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+    it('should check AgglayerBridge', async () => {
+        const PolygonZkEVMBridgeV2Factory = await ethers.getContractFactory('AgglayerBridge');
         const PolygonZkEVMBridgeV2Contract = PolygonZkEVMBridgeV2Factory.attach(
             polygonZkEVMBridgeAddress,
-        ) as PolygonZkEVMBridgeV2;
+        ) as AgglayerBridge;
         expect(PolygonZkEVMBridgeV2Contract.target).to.equal(polygonZkEVMBridgeAddress);
         expect(await PolygonZkEVMBridgeV2Contract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
         expect(await PolygonZkEVMBridgeV2Contract.polygonRollupManager()).to.equal(polygonRollupManagerAddress);

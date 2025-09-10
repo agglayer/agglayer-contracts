@@ -3,7 +3,7 @@
 pragma solidity 0.8.28;
 
 import "../interfaces/IBridgeL2SovereignChains.sol";
-import "../PolygonZkEVMBridgeV2.sol";
+import "../AgglayerBridge.sol";
 import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
 
 /**
@@ -12,7 +12,7 @@ import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
 contract BridgeL2SovereignChain is
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     IBridgeL2SovereignChains
 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
@@ -56,7 +56,7 @@ contract BridgeL2SovereignChain is
     // Local balance tree mapping
     mapping(bytes32 tokenInfoHash => uint256 amount) public localBalanceTree;
 
-    /// @dev Deprecated in favor of _initializerVersion at PolygonZkEVMBridgeV2
+    /// @dev Deprecated in favor of _initializerVersion at AgglayerBridge
     /// @custom:oz-renamed-from _initializerVersion
     uint8 private _initializerVersionLegacy;
 
@@ -255,7 +255,7 @@ contract BridgeL2SovereignChain is
      * Disable initializers on the implementation following the best practices
      * @dev the deployer is set to the contract creator and will be the only allowed to initialize the contract in a 2 steps process
      */
-    constructor() PolygonZkEVMBridgeV2() {
+    constructor() AgglayerBridge() {
         deployer = msg.sender;
         _disableInitializers();
     }
@@ -387,7 +387,7 @@ contract BridgeL2SovereignChain is
         bytes memory //_gasTokenMetadata
     )
         external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
+        override(IAgglayerBridge, AgglayerBridge)
         initializer
     {
         revert InvalidInitializeFunction();
@@ -396,7 +396,7 @@ contract BridgeL2SovereignChain is
     /**
      * @notice Override the function to prevent the usage, only allowed for L1 bridge, not sovereign chains
      */
-    function initialize() public pure override(PolygonZkEVMBridgeV2) {
+    function initialize() public pure override(AgglayerBridge) {
         revert InvalidInitializeFunction();
     }
 
@@ -1169,7 +1169,7 @@ contract BridgeL2SovereignChain is
     // @note This function is not used in the current implementation. We overwrite it to improve deployed bytecode size
     function activateEmergencyState()
         external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
+        override(IAgglayerBridge, AgglayerBridge)
         onlyEmergencyBridgePauser
     {
         _activateEmergencyState();
@@ -1177,7 +1177,7 @@ contract BridgeL2SovereignChain is
 
     function deactivateEmergencyState()
         external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
+        override(IAgglayerBridge, AgglayerBridge)
         onlyEmergencyBridgeUnpauser
     {
         _deactivateEmergencyState();
@@ -1218,7 +1218,7 @@ contract BridgeL2SovereignChain is
         address destinationAddress,
         uint256 amount,
         bytes calldata metadata
-    ) public override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2) {
+    ) public override(IAgglayerBridge, AgglayerBridge) {
         // Call parent implementation with all inherited security modifiers:
         // - ifNotEmergencyState: Only allows claims when emergency state is inactive
         // - nonReentrant: Prevents reentrancy attacks during token operations

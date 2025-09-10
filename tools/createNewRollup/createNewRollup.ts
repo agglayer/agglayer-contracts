@@ -20,7 +20,7 @@ import { logger } from '../../src/logger';
 import {
     AgglayerManager,
     PolygonZkEVMEtrog,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
 } from '../../typechain-types';
@@ -425,9 +425,9 @@ async function main() {
     let gasTokenMetadata;
 
     // Get bridge instance
-    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridge', deployer);
     const bridgeContractAddress = await rollupManagerContract.bridgeAddress();
-    const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as PolygonZkEVMBridgeV2;
+    const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as AgglayerBridge;
     if (
         ethers.isAddress(createRollupParameters.gasTokenAddress) &&
         createRollupParameters.gasTokenAddress !== ethers.ZeroAddress
