@@ -1,21 +1,31 @@
 
-## [v12.1.0-rc.2] - 2025-08-29
+## [v12.1.0-rc.3] - 2025-09-12
 
 ### 🚨 Breaking Changes
-- contracts/v2/PolygonRollupManager.sol: al-v0.3.1 -> v1.0.0
-- contracts/v2/PolygonZkEVMBridgeV2.sol: al-v0.3.1 -> v1.1.0
-- contracts/v2/PolygonZkEVMGlobalExitRootV2.sol: al-v0.3.0 -> v1.0.0
-- contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol: al-v0.3.0 -> v1.0.0
-- contracts/v2/sovereignChains/BridgeL2SovereignChain.sol: v10.1.2 -> v1.1.0
-- New tooling package (v12.1.0-rc.2)
+- New tooling package (v12.1.0-rc.3)
+- Rename & Reorg: contracts/v2/PolygonRollupManager.sol -> contracts/AgglayerManager.sol: v1.0.0
+- Rename & Reorg: contracts/v2/PolygonZkEVMBridgeV2.sol -> contracts/AgglayerBridge.sol: v1.1.0
+- Rename & Reorg: contracts/v2/PolygonZkEVMGlobalExitRootV2.sol -> contracts/AgglayerGER.sol: v1.0.0
+- Reorg: contracts/v2/AggLayerGateway.sol -> contracts/AggLayerGateway.sol: v1.1.0
+- Rename & Reorg: contracts/v2/sovereignChains/BridgeL2SovereignChain.sol -> contracts/sovereignChains/AgglayerBridgeL2.sol: v1.1.0
+- Rename & Reorg: contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol -> contracts/sovereignChains/AgglayerGERL2.sol: v1.0.0
+- Reorg: contracts/v2/sovereignChains/AggOracleCommittee.sol -> contracts/sovereignChains/AggOracleCommittee.sol: v1.0.0
 
 ### ✨ New Features
-- ➕ New! contracts/v2/AggLayerGateway.sol: v1.1.0
-- ➕ New! contracts/v2/aggchains/AggchainECDSAMultisig.sol: v1.0.0
-- ➕ New! contracts/v2/aggchains/AggchainFEP.sol: v3.0.0 // Op L2OO Semantic version
-- ➕ New! contracts/v2/sovereignChains/AggOracleCommittee.sol: v1.0.0
+- ➕ New! contracts/aggchains/AggchainECDSAMultisig.sol: v1.0.0
+- ➕ New! contracts/aggchains/AggchainFEP.sol: v3.0.0 // Op L2OO Semantic version
+- ➕ New! contracts/sovereignChains/AggOracleCommittee.sol: v1.0.0
 
 ### 📜 Changelog (PRs)
+[PR #504](https://github.com/agglayer/agglayer-contracts/pull/504) - [v0.3.5 phase III]:newConsensusType-outpostsL2
+[PR #520](https://github.com/agglayer/agglayer-contracts/pull/520) - small docs fixes
+[PR #519](https://github.com/agglayer/agglayer-contracts/pull/519) - Fix found informationals
+[PR #517](https://github.com/agglayer/agglayer-contracts/pull/517) - internal audit fixes and PR comments
+[PR #518](https://github.com/agglayer/agglayer-contracts/pull/518) - trigger tests on feature/outposts branch
+[PR #516](https://github.com/agglayer/agglayer-contracts/pull/516) - update changelog
+[PR #507](https://github.com/agglayer/agglayer-contracts/pull/507) - add critical tooling tag check
+[PR #515](https://github.com/agglayer/agglayer-contracts/pull/515) - Rebase multisig PR with outposts current work
+[PR #511](https://github.com/agglayer/agglayer-contracts/pull/511) - Audit remediations
 [PR #506](https://github.com/agglayer/agglayer-contracts/pull/506) - L2OO v3
 [PR #509](https://github.com/agglayer/agglayer-contracts/pull/509) - Add IVersion interface
 [PR #499](https://github.com/agglayer/agglayer-contracts/pull/499) - agg oracle comittee
