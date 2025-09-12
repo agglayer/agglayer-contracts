@@ -46,7 +46,10 @@ abstract contract AggchainBase is
     /// @custom:oz-renamed-from useDefaultGateway
     bool public useDefaultVkeys;
 
-    // Flag to enable/disable the use of the default signers from the gateway
+    // Flag to enable or disable the use of default signers from the gateway.
+    // Introduced in this version of the contract. This variable is packed into
+    // the same storage slot as `useDefaultVkeys`, so there is no risk of storage
+    // layout collision with previous versions.
     bool public useDefaultSigners;
 
     /// @notice Address that manages all the functionalities related to the aggchain
@@ -748,7 +751,7 @@ abstract contract AggchainBase is
             revert SignerURLCannotBeEmpty();
         }
 
-        if (isSigner(_signer)) {
+        if (bytes(signerToURLs[_signer]).length > 0) {
             revert SignerAlreadyExists();
         }
 
