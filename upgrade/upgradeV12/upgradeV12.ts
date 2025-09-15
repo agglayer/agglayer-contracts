@@ -7,7 +7,7 @@ import { utils } from 'ffjavascript';
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
-import { PolygonRollupManager, PolygonZkEVMBridgeV2 } from '../../typechain-types';
+import { AgglayerManager, AgglayerBridge } from '../../typechain-types';
 import { genTimelockOperation, decodeScheduleData, trackVerification } from '../utils';
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../src/utils';
 import { addInfoOutput } from '../../tools/utils';
@@ -58,8 +58,8 @@ async function main() {
     const proxyAdmin = await upgrades.admin.getInstance();
 
     // Load onchain parameters from rollupManager contract
-    const rollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
-    const rollupManagerContract = rollupManagerFactory.attach(rollupManagerAddress) as PolygonRollupManager;
+    const rollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
+    const rollupManagerContract = rollupManagerFactory.attach(rollupManagerAddress) as AgglayerManager;
 
     const globalExitRootV2Address = await rollupManagerContract.globalExitRootManager();
     const polAddress = await rollupManagerContract.pol();
@@ -151,7 +151,7 @@ async function main() {
 
     // 1. Upgrade Rollup Manager
     logger.info('Preparing Rollup Manager upgrade...');
-    const newRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
+    const newRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
 
     const implRollupManager = await upgrades.prepareUpgrade(rollupManagerAddress, newRollupManagerFactory, {
         constructorArgs: [globalExitRootV2Address, polAddress, bridgeV2Address, aggLayerGatewayAddress],
@@ -186,7 +186,7 @@ async function main() {
 
     // 3. Upgrade Bridge V2
     logger.info('Preparing Bridge V2 upgrade...');
-    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridge', deployer);
 
     const implBridge = (await upgrades.prepareUpgrade(bridgeV2Address, bridgeFactory, {
         unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
@@ -202,7 +202,7 @@ async function main() {
     );
 
     // Verify bridge-related contracts
-    const bridgeContract = bridgeFactory.attach(implBridge) as PolygonZkEVMBridgeV2;
+    const bridgeContract = bridgeFactory.attach(implBridge) as AgglayerBridge;
     const bytecodeStorerAddress = await bridgeContract.wrappedTokenBytecodeStorer();
     verification[GENESIS_CONTRACT_NAMES.BYTECODE_STORER] = await trackVerification(
         GENESIS_CONTRACT_NAMES.BYTECODE_STORER,
@@ -232,7 +232,7 @@ async function main() {
 
     // 4. Upgrade Global Exit Root V2
     logger.info('Preparing Global Exit Root V2 upgrade...');
-    const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    const globalExitRootManagerFactory = await ethers.getContractFactory('AgglayerGER', deployer);
 
     const globalExitRootManagerImp = await upgrades.prepareUpgrade(
         globalExitRootV2Address,

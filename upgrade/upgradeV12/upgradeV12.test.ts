@@ -6,10 +6,10 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-helpers';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMTimelock,
-    PolygonZkEVMBridgeV2,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerBridge,
+    AgglayerGER,
     AggLayerGateway,
 } from '../../typechain-types';
 
@@ -58,10 +58,10 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         logger.info('Shadow fork Succeed!');
 
         // Get contracts before upgrade
-        const rollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
+        const rollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
         const rollupManagerContract = rollupManagerFactory.attach(
             upgradeParams.rollupManagerAddress,
-        ) as PolygonRollupManager;
+        ) as AgglayerManager;
 
         // Get addresses from rollupManager contract
         const bridgeV2Address = await rollupManagerContract.bridgeAddress();
@@ -84,11 +84,11 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
         const aggLayerGatewayContract = aggLayerGatewayFactory.attach(aggLayerGatewayAddress) as AggLayerGateway;
 
-        const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const bridgeContract = bridgeFactory.attach(bridgeV2Address) as PolygonZkEVMBridgeV2;
+        const bridgeFactory = await ethers.getContractFactory('AgglayerBridge');
+        const bridgeContract = bridgeFactory.attach(bridgeV2Address) as AgglayerBridge;
 
-        const gerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
-        const gerContract = gerFactory.attach(globalExitRootV2Address) as PolygonZkEVMGlobalExitRootV2;
+        const gerFactory = await ethers.getContractFactory('AgglayerGER');
+        const gerContract = gerFactory.attach(globalExitRootV2Address) as AgglayerGER;
 
         // Get admin address from rollup manager using binary search
         const adminRoleFilter = rollupManagerContract.filters.RoleGranted(ethers.ZeroHash);
