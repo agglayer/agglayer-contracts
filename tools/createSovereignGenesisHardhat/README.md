@@ -1,3 +1,6 @@
+
+> ⚠️ **Warning:** This code has not been audited yet.
+
 # Create sovereign genesis
 Script to generate the genesis file for a rollup with `SovereignContracts`. This genesis is aimed to be used for chains that are run with vanilla clients.
 This script should be run after the rollup is created, so its `rollupID` and the bridge initialization parameters are known.

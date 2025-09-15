@@ -165,6 +165,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     const sovereignChainBridgeContract = (await ethers.getContractAt(
         GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE,
         bridgeDeploymentResult.proxy,
+        deployer,
     )) as unknown as BridgeL2SovereignChain;
 
     // Get addresses from bridge deployment
@@ -173,6 +174,7 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
     const tokenWrappedAddress = (
         await sovereignChainBridgeContract.getWrappedTokenBridgeImplementation()
     ).toLocaleLowerCase();
+    const bridgeLibAddress = (await sovereignChainBridgeContract.bridgeLib()).toLowerCase();
 
     // deploy GlobalExitRootManagerL2SovereignChain
     const gerDeploymentResult = await deployGlobalExitRootManagerL2SovereignChain(
@@ -841,6 +843,24 @@ export async function createGenesisHardhat(_genesisBase: any, initializeParams: 
         expect(wethGenesisImplementationAddress.slice(26).toLocaleLowerCase()).to.equal(
             tokenWrappedAddress.toLocaleLowerCase().slice(2),
         );
+    }
+
+    /// /////////////////////////
+    /// BRIDGE LIB  /////////////
+    /// /////////////////////////
+    logger.info('Updating BytecodeStorer in genesis file...');
+    const bridgeLib = _genesisBase.genesis.find(function (obj) {
+        return obj.contractName === GENESIS_CONTRACT_NAMES.BRIDGE_LIB;
+    });
+
+    genesisInfo.push({
+        contractName: GENESIS_CONTRACT_NAMES.BRIDGE_LIB,
+        genesisObject: bridgeLib,
+        address: bridgeLibAddress,
+    });
+
+    if (bridgeLib) {
+        expect(bridgeLib.bytecode).to.equal(await ethers.provider.getCode(bridgeLibAddress));
     }
 
     // If useAggOracleCommittee is true, we add AggOracleCommittee implementation and proxy to the genesis

@@ -28,6 +28,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const dateStr = new Date().toISOString();
 
 async function main() {
+    logger.warn('This code has not been audited yet.');
     logger.info('Start create-sovereign-genesis tool');
 
     /// //////////////////////////
