@@ -2,10 +2,10 @@
 
 Script for upgrading four critical contracts in the Polygon ecosystem:
 
-1. **PolygonRollupManager** - Core rollup management contract
+1. **AgglayerManager** - Core rollup management contract
 2. **AggLayerGateway** - AggLayer gateway contract for cross-chain operations
-3. **PolygonZkEVMBridgeV2** - Bridge contract for asset transfers
-4. **PolygonZkEVMGlobalExitRootV2** - Global exit root manager
+3. **AgglayerBridge** - Bridge contract for asset transfers
+4. **AgglayerGER** - Global exit root manager
 
 ## Overview
 
@@ -90,7 +90,7 @@ Update `upgrade_parameters.json` with the following values:
 #### Mandatory Parameters
 
 - `tagSCPreviousVersion`: GitHub tag of the previous smart contracts version (for documentation)
-- `rollupManagerAddress`: Address of the PolygonRollupManager proxy contract to upgrade (other contract addresses will be automatically obtained from this contract)
+- `rollupManagerAddress`: Address of the AgglayerManager proxy contract to upgrade (other contract addresses will be automatically obtained from this contract)
 - `timelockDelay`: Delay in seconds between schedule and execution (minimum 3600 seconds recommended)
 - `initializeAgglayerGateway`: Parameters for AggLayerGateway initialization:
     - `multisigRole`: Address to grant multisig role permissions (cannot be zero address)
@@ -153,10 +153,10 @@ This will:
 
 **Deploy and verify new implementations:**
 
-- PolygonRollupManager implementation
+- AgglayerManager implementation
 - AggLayerGateway implementation
-- PolygonZkEVMBridgeV2 implementation
-- PolygonZkEVMGlobalExitRootV2 implementation
+- AgglayerBridge implementation
+- AgglayerGER implementation
 - Bridge auxiliary contracts (BytecodeStorer, TokenWrapper, BridgeLib)
 
 **Validate AggLayerGateway initialization parameters:**
@@ -234,7 +234,7 @@ The test performs:
 
 ## Contract Upgrade Details
 
-### 1. PolygonRollupManager
+### 1. AgglayerManager
 
 - **Function:** Core rollup management and sequencing
 - **Upgrade Type:** `upgrade` (simple proxy upgrade, no re-initialization)
@@ -247,14 +247,14 @@ The test performs:
 - **Initialize Parameters:** multisigRole, signersToAdd, newThreshold
 - **Key Validations:** Gateway version
 
-### 3. PolygonZkEVMBridgeV2
+### 3. AgglayerBridge
 
 - **Function:** Asset bridging and token management
 - **Upgrade Type:** `upgrade` (simple proxy upgrade, no re-initialization)
 - **Key Validations:** Bridge version, token implementations, gas token settings, deposit counts
 - **Auxiliary Contracts:** BytecodeStorer, TokenWrapper, BridgeLib
 
-### 4. PolygonZkEVMGlobalExitRootV2
+### 4. AgglayerGER
 
 - **Function:** Global state root management for cross-chain operations
 - **Upgrade Type:** `upgrade` (simple proxy upgrade, no re-initialization)
@@ -370,10 +370,10 @@ After successful execution:
     "bridgeLib": "0x..."
   },
   "verification": {
-    "PolygonRollupManager implementation": "OK",
+    "AgglayerManager implementation": "OK",
     "AggLayerGateway implementation": "OK",
-    "PolygonZkEVMBridgeV2": "OK",
-    "PolygonZkEVMGlobalExitRootV2 implementation": {
+    "AgglayerBridge": "OK",
+    "AgglayerGER implementation": {
       "status": "FAILED",
       "address": "0x...",
       "constructorArgs": ["0x...", "0x..."],
