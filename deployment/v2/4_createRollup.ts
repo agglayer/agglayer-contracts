@@ -18,7 +18,7 @@ import {
     AgglayerBridge,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
-    AggLayerGateway,
+    AgglayerGateway,
 } from '../../typechain-types';
 import createRollupParameters from './create_rollup_parameters.json';
 import deployOutput from './deploy_output.json';
@@ -451,10 +451,10 @@ async function main() {
         }
 
         // Load aggLayerGateway
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
         const aggLayerGateway = (await aggLayerGatewayFactory.attach(
             deployOutput.aggLayerGatewayAddress,
-        )) as AggLayerGateway;
+        )) as AgglayerGateway;
 
         // sanity check on the aggchainType
         const aggchainTypeParam = utilsAggchain.getAggchainTypeFromSelector(
@@ -473,7 +473,7 @@ async function main() {
         );
 
         console.log('#######################\n');
-        console.log(`New Default Aggchain VKey AggLayerGateway: ${deployOutput.aggLayerGatewayAddress}`);
+        console.log(`New Default Aggchain VKey AgglayerGateway: ${deployOutput.aggLayerGatewayAddress}`);
         console.log(`consensusContract: ${consensusContract}`);
         console.log(`defaultAggchainVKeySelector: ${createRollupParameters.aggchainParams.initAggchainVKeySelector}`);
         console.log(`newAggchainVKey: ${createRollupParameters.aggchainParams.initOwnedAggchainVKey}`);

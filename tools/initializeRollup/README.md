@@ -57,8 +57,8 @@ cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRol
             - `optimisticModeManager`: Address. Address of the optimistic mode manager.
             - `aggregationVkey`: String. Aggregation verification key.
             - `rangeVkeyCommitment`: String. Range verification key commitment.
-        - `useDefaultVkeys`: Boolean. Whether to use default verification keys from AggLayerGateway.
-        - `useDefaultSigners`: Boolean. Whether to use default signers from AggLayerGateway.
+        - `useDefaultVkeys`: Boolean. Whether to use default verification keys from AgglayerGateway.
+        - `useDefaultSigners`: Boolean. Whether to use default signers from AgglayerGateway.
         - `signers`: Array of SignerInfo objects for multisig functionality (required if useDefaultSigners is false). Each object must have:
             - `addr`: Signer address (cannot be zero address)
             - `url`: Signer URL (must be non-empty string)

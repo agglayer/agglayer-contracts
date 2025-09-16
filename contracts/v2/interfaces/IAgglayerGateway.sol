@@ -5,7 +5,7 @@ import "./IAggchainSigners.sol";
 
 // based on: https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 
-interface IAggLayerGatewayEvents {
+interface IAgglayerGatewayEvents {
     /// @notice Emitted when a verifier route is added.
     /// @param selector The verifier selector that was added.
     /// @param verifier The address of the verifier contract.
@@ -52,7 +52,7 @@ interface IAggLayerGatewayEvents {
 }
 
 /// @dev Extended error events from https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface IAggLayerGatewayErrors {
+interface IAgglayerGatewayErrors {
     /// @notice Thrown when the verifier route is not found.
     /// @param selector The verifier selector that was specified.
     error RouteNotFound(bytes4 selector);
@@ -123,12 +123,12 @@ interface IAggLayerGatewayErrors {
     error SignerDoesNotExist();
 }
 
-/// @title IAggLayerGateway
-/// @notice This contract is the interface for the AggLayerGateway.
+/// @title IAgglayerGateway
+/// @notice This contract is the interface for the AgglayerGateway.
 /// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
-interface IAggLayerGateway is
-    IAggLayerGatewayEvents,
-    IAggLayerGatewayErrors,
+interface IAgglayerGateway is
+    IAgglayerGatewayEvents,
+    IAgglayerGatewayErrors,
     IAggchainSigners
 {
     /**

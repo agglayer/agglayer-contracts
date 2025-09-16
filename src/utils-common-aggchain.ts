@@ -39,7 +39,7 @@ export const GENESIS_CONTRACT_NAMES = {
     AGG_ORACLE_PROXY: 'AggOracleCommittee proxy',
     AGG_ORACLE_IMPL: 'AggOracleCommittee implementation',
     ROLLUP_MANAGER_IMPLEMENTATION: 'AgglayerManager implementation',
-    AGGLAYER_GATEWAY_IMPLEMENTATION: 'AggLayerGateway implementation',
+    AGGLAYER_GATEWAY_IMPLEMENTATION: 'AgglayerGateway implementation',
     GER_IMPLEMENTATION: 'AgglayerGER implementation',
 };
 /// //////////////////////////////

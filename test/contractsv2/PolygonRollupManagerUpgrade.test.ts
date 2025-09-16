@@ -16,7 +16,7 @@ import {
     Address,
     PolygonZkEVM,
     PolygonZkEVMExistentEtrog,
-    AggLayerGateway,
+    AgglayerGateway,
 } from '../../typechain-types';
 import { computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
@@ -321,12 +321,12 @@ describe('Polygon Rollup manager upgraded', () => {
             unsafeSkipStorageCheck: true,
         });
 
-        // deploy AggLayerGateway
-        const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        const aggLayerGatewayContract = (await upgrades.deployProxy(AggLayerGatewayFactory, [], {
+        // deploy AgglayerGateway
+        const AgglayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
+        const aggLayerGatewayContract = (await upgrades.deployProxy(AgglayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor'],
-        })) as unknown as AggLayerGateway;
+        })) as unknown as AgglayerGateway;
 
         // upgrade pessimistic to ALv3
         await upgrades.upgradeProxy(polygonZkEVMContract.target, PolygonRollupManagerFactoryCurrent, {

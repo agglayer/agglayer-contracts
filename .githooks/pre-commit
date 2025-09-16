@@ -54,7 +54,7 @@ if npm run lint; then
     ## al-v0.3.0
     cp artifacts/contracts/v2/sovereignChains/AgglayerGERL2.sol/AgglayerGERL2.json compiled-contracts/
     cp artifacts/contracts/v2/sovereignChains/AgglayerBridgeL2.sol/AgglayerBridgeL2.json compiled-contracts/
-    cp artifacts/contracts/v2/AggLayerGateway.sol/AggLayerGateway.json compiled-contracts/
+    cp artifacts/contracts/v2/AgglayerGateway.sol/AgglayerGateway.json compiled-contracts/
     cp artifacts/contracts/v2/lib/AggchainBase.sol/AggchainBase.json compiled-contracts/
     cp artifacts/contracts/v2/aggchains/AggchainECDSA.sol/AggchainECDSA.json compiled-contracts/
     cp artifacts/contracts/v2/aggchains/AggchainFEP.sol/AggchainFEP.json compiled-contracts/

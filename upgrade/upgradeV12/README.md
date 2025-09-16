@@ -3,7 +3,7 @@
 Script for upgrading four critical contracts in the Polygon ecosystem:
 
 1. **AgglayerManager** - Core rollup management contract
-2. **AggLayerGateway** - AggLayer gateway contract for cross-chain operations
+2. **AgglayerGateway** - AggLayer gateway contract for cross-chain operations
 3. **AgglayerBridge** - Bridge contract for asset transfers
 4. **AgglayerGER** - Global exit root manager
 
@@ -92,7 +92,7 @@ Update `upgrade_parameters.json` with the following values:
 - `tagSCPreviousVersion`: GitHub tag of the previous smart contracts version (for documentation)
 - `rollupManagerAddress`: Address of the AgglayerManager proxy contract to upgrade (other contract addresses will be automatically obtained from this contract)
 - `timelockDelay`: Delay in seconds between schedule and execution (minimum 3600 seconds recommended)
-- `initializeAgglayerGateway`: Parameters for AggLayerGateway initialization:
+- `initializeAgglayerGateway`: Parameters for AgglayerGateway initialization:
     - `multisigRole`: Address to grant multisig role permissions (cannot be zero address)
     - `signersToAdd`: Array of SignerInfo objects with `addr` (address) and `url` (string) properties (must be valid addresses, no duplicates, non-empty URLs, max 255 signers)
     - `newThreshold`: Minimum number of signatures required for multisig operations (must be ≤ number of signers, > 0 if signers present)
@@ -154,12 +154,12 @@ This will:
 **Deploy and verify new implementations:**
 
 - AgglayerManager implementation
-- AggLayerGateway implementation
+- AgglayerGateway implementation
 - AgglayerBridge implementation
 - AgglayerGER implementation
 - Bridge auxiliary contracts (BytecodeStorer, TokenWrapper, BridgeLib)
 
-**Validate AggLayerGateway initialization parameters:**
+**Validate AgglayerGateway initialization parameters:**
 
 - Ensures multisigRole is not zero address
 - Validates all SignerInfo objects have valid structure (addr + url properties)
@@ -240,7 +240,7 @@ The test performs:
 - **Upgrade Type:** `upgrade` (simple proxy upgrade, no re-initialization)
 - **Key Validations:** Batch fees, emergency state, rollup counts, aggregation timestamps
 
-### 2. AggLayerGateway
+### 2. AgglayerGateway
 
 - **Function:** Cross-chain communication and AggLayer integration
 - **Upgrade Type:** `upgradeAndCall` with re-initialization (reinitializer(2))
@@ -371,7 +371,7 @@ After successful execution:
   },
   "verification": {
     "AgglayerManager implementation": "OK",
-    "AggLayerGateway implementation": "OK",
+    "AgglayerGateway implementation": "OK",
     "AgglayerBridge": "OK",
     "AgglayerGER implementation": {
       "status": "FAILED",

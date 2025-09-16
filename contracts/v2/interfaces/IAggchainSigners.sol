@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 /**
  * @title IAggchainSigners
  * @notice Interface for multisig signer management functionality
- * @dev This interface is implemented by both AggchainBase contracts and AggLayerGateway,
+ * @dev This interface is implemented by both AggchainBase contracts and AgglayerGateway,
  *      providing a unified way to manage signers for consensus verification.
  *      Implementations may use local storage or delegate to a gateway contract.
  */

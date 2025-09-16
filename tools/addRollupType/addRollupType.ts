@@ -201,7 +201,7 @@ async function main() {
                 // Retrieve ALGateway from rollupManagerContract
                 aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
             }
-            logger.info(`AggLayerGateway address: ${aggLayerGatewayAddress}`);
+            logger.info(`AgglayerGateway address: ${aggLayerGatewayAddress}`);
             polygonConsensusContract = await polygonConsensusFactory.deploy(
                 polygonZkEVMGlobalExitRootAddress,
                 polTokenAddress,

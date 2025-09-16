@@ -4,7 +4,7 @@ import { ethers, upgrades } from 'hardhat';
 import { setCode } from '@nomicfoundation/hardhat-network-helpers';
 
 import {
-    AggLayerGateway,
+    AgglayerGateway,
     ERC20PermitMock,
     AgglayerManagerMock,
     AgglayerGER,
@@ -45,7 +45,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
-    let aggLayerGatewayContract: AggLayerGateway;
+    let aggLayerGatewayContract: AgglayerGateway;
     let aggchainECDSAMultisigImplementationContract: AggchainECDSAMultisig;
     let verifierContract: VerifierRollupHelperMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
@@ -215,7 +215,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         });
 
         // Deploy aggLayerGateway and initialize it
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
         aggLayerGatewayContract = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer'],
@@ -375,7 +375,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidConstructorInputs');
 
-        // Should revert with error InvalidAggLayerGatewayAddress
+        // Should revert with error InvalidAgglayerGatewayAddress
         const aggchainECDSAMultisigFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
         await expect(
             aggchainECDSAMultisigFactory.deploy(

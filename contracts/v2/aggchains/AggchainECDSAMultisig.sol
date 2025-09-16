@@ -58,14 +58,14 @@ contract AggchainECDSAMultisig is AggchainBase {
      * @param _pol POL token contract address.
      * @param _bridgeAddress Bridge contract address.
      * @param _rollupManager Rollup manager contract address.
-     * @param _aggLayerGateway AggLayerGateway contract address.
+     * @param _aggLayerGateway AgglayerGateway contract address.
      */
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     )
         AggchainBase(
             _globalExitRootManager,

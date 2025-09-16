@@ -3,14 +3,14 @@ import path = require('path');
 import fs = require('fs');
 
 import params from './parameters.json';
-import { AggLayerGateway } from '../../../typechain-types';
+import { AgglayerGateway } from '../../../typechain-types';
 import { transactionTypes, genOperation } from '../../utils';
 import { decodeScheduleData } from '../../../upgrade/utils';
 import { logger } from '../../../src/logger';
 import { checkParams } from '../../../src/utils';
 
 async function main() {
-    logger.info('Starting tool to freeze vkey route to AggLayerGateway contract');
+    logger.info('Starting tool to freeze vkey route to AgglayerGateway contract');
 
     /// //////////////////////////
     ///        CONSTANTS      ///
@@ -104,11 +104,11 @@ async function main() {
     logger.info(`Using with: ${deployer.address}`);
 
     // --network <input>
-    logger.info('Load AggLayerGateway contract');
-    const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
-    const aggLayerGateway = (await AggLayerGatewayFactory.attach(aggLayerGatewayAddress)) as AggLayerGateway;
+    logger.info('Load AgglayerGateway contract');
+    const AgglayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
+    const aggLayerGateway = (await AgglayerGatewayFactory.attach(aggLayerGatewayAddress)) as AgglayerGateway;
 
-    logger.info(`AggLayerGateway address: ${aggLayerGateway.target}`);
+    logger.info(`AgglayerGateway address: ${aggLayerGateway.target}`);
 
     if (type === transactionTypes.TIMELOCK) {
         logger.info('Creating timelock tx to freeze pessimistic vkey route...');
@@ -118,7 +118,7 @@ async function main() {
         const operation = genOperation(
             aggLayerGatewayAddress,
             0, // value
-            AggLayerGatewayFactory.interface.encodeFunctionData('freezePessimisticVKeyRoute', [
+            AgglayerGatewayFactory.interface.encodeFunctionData('freezePessimisticVKeyRoute', [
                 pessimisticVKeySelector,
             ]),
             predecessor, // predecessor
@@ -146,10 +146,10 @@ async function main() {
         outputJson.scheduleData = scheduleData;
         outputJson.executeData = executeData;
         // Decode the scheduleData for better readability
-        outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, AggLayerGatewayFactory);
+        outputJson.decodedScheduleData = await decodeScheduleData(scheduleData, AgglayerGatewayFactory);
     } else if (type === transactionTypes.MULTISIG) {
         logger.info('Creating calldata to freeze pessimistic vkey route from multisig...');
-        const txAddDefaultAggchainVKey = AggLayerGatewayFactory.interface.encodeFunctionData(
+        const txAddDefaultAggchainVKey = AgglayerGatewayFactory.interface.encodeFunctionData(
             'freezePessimisticVKeyRoute',
             [pessimisticVKeySelector],
         );

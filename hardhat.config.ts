@@ -189,7 +189,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/newDeployments/PolygonRollupManagerNotUpgraded.sol': {
+            'contracts/v2/newDeployments/AgglayerManagerNotUpgraded.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {

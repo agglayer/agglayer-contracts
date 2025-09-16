@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "./PolygonConsensusBase.sol";
-import "../interfaces/IAggLayerGateway.sol";
+import "../interfaces/IAgglayerGateway.sol";
 import "../interfaces/IAggchainBase.sol";
 import "../interfaces/IVersion.sol";
 
@@ -26,8 +26,8 @@ abstract contract AggchainBase is
     // Maximum number of aggchain signers supported
     uint256 public constant MAX_AGGCHAIN_SIGNERS = 255;
 
-    // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
-    IAggLayerGateway public immutable aggLayerGateway;
+    // AgglayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
+    IAgglayerGateway public immutable aggLayerGateway;
 
     ////////////////////////////////////////////////////////////
     //                       Variables                        //
@@ -128,14 +128,14 @@ abstract contract AggchainBase is
      * @param _pol POL token address.
      * @param _bridgeAddress Bridge address.
      * @param _rollupManager Rollup manager address.
-     * @param _aggLayerGateway AggLayerGateway address.
+     * @param _aggLayerGateway AgglayerGateway address.
      */
     constructor(
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     )
         PolygonConsensusBase(
             _globalExitRootManager,
@@ -591,7 +591,7 @@ abstract contract AggchainBase is
                 revert AggchainVKeyNotFound();
             }
         } else {
-            // Retrieve aggchain key from AggLayerGateway
+            // Retrieve aggchain key from AgglayerGateway
             aggchainVKey = aggLayerGateway.getDefaultAggchainVKey(
                 aggchainVKeySelector
             );

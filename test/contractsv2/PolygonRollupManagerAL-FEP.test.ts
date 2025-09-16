@@ -3,7 +3,7 @@ import { ethers, upgrades } from 'hardhat';
 import { setCode } from '@nomicfoundation/hardhat-network-helpers';
 
 import {
-    AggLayerGateway,
+    AgglayerGateway,
     ERC20PermitMock,
     AgglayerManagerMock,
     AgglayerGER,
@@ -45,7 +45,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: AgglayerGER;
     let rollupManagerContract: AgglayerManagerMock;
-    let aggLayerGatewayContract: AggLayerGateway;
+    let aggLayerGatewayContract: AgglayerGateway;
     let aggchainFEPImplementationContract: AggchainFEP;
     let verifierContract: VerifierRollupHelperMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
@@ -224,7 +224,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         });
 
         // Deploy aggLayerGateway and initialize it
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
         aggLayerGatewayContract = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer'],
@@ -384,7 +384,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidConstructorInputs');
 
-        // Should revert with error InvalidAggLayerGatewayAddress
+        // Should revert with error InvalidAgglayerGatewayAddress
         const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
         await expect(
             aggchainFEPFactory.deploy(

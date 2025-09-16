@@ -187,7 +187,7 @@ oz-upgrades-unsafe-allow: state-variable-immutable
 
 
 ```solidity
-IAggLayerGateway public immutable aggLayerGateway;
+IAgglayerGateway public immutable aggLayerGateway;
 ```
 
 
@@ -323,7 +323,7 @@ constructor(
     IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
     IERC20Upgradeable _pol,
     IPolygonZkEVMBridge _bridgeAddress,
-    IAggLayerGateway _aggLayerGateway
+    IAgglayerGateway _aggLayerGateway
 );
 ```
 **Parameters**
@@ -333,7 +333,7 @@ constructor(
 |`_globalExitRootManager`|`IPolygonZkEVMGlobalExitRootV2`|Global exit root manager address|
 |`_pol`|`IERC20Upgradeable`|POL token address|
 |`_bridgeAddress`|`IPolygonZkEVMBridge`|Bridge address|
-|`_aggLayerGateway`|`IAggLayerGateway`|Polygon Verifier Gateway address|
+|`_aggLayerGateway`|`IAgglayerGateway`|Polygon Verifier Gateway address|
 
 
 ### initialize

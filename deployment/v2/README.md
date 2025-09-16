@@ -67,12 +67,12 @@ A new folder will be created with the following name `deployments/${network}_$(d
 - `emergencyCouncilAddress`: address, Emergency council address
 - `polTokenAddress`: address, POL token address, only if deploy on testnet can be left blank and will fulfilled by the scripts.
 - `zkEVMDeployerAddress`: address, Address of the `PolygonZkEVMDeployer`. Can be left blank, will be fulfilled automatically with the `deploy:deployer:ZkEVM:goerli` script.
-- `ppVKey`: pessimistic program verification key (AggLayerGateway)
-- `ppVKeySelector`: The 4 bytes selector to add to the pessimistic verification keys (AggLayerGateway)
-- `realVerifier`: bool, Indicates whether deploy a real verifier or not (AggLayerGateway)
-- `multisigRoleAddress`: address, The address that can manage multisig signers and threshold (AggLayerGateway) - optional, defaults to admin
-- `signersToAdd`: array, Array of signer objects with addr and url properties (AggLayerGateway) - optional, defaults to []
-- `newThreshold`: uint256, Threshold for multisig operations (AggLayerGateway) - optional, defaults to 0
+- `ppVKey`: pessimistic program verification key (AgglayerGateway)
+- `ppVKeySelector`: The 4 bytes selector to add to the pessimistic verification keys (AgglayerGateway)
+- `realVerifier`: bool, Indicates whether deploy a real verifier or not (AgglayerGateway)
+- `multisigRoleAddress`: address, The address that can manage multisig signers and threshold (AgglayerGateway) - optional, defaults to admin
+- `signersToAdd`: array, Array of signer objects with addr and url properties (AgglayerGateway) - optional, defaults to []
+- `newThreshold`: uint256, Threshold for multisig operations (AgglayerGateway) - optional, defaults to 0
 
 ## create_rollup_parameters.json
 
@@ -103,8 +103,8 @@ A new folder will be created with the following name `deployments/${network}_$(d
         - `l2BlockTime`: The time between L2 blocks in seconds
         - `rollupConfigHash`: The hash of the chain's rollup configuration
         - `startingOutputRoot`: Init output root
-    - `useDefaultVkeys`: Whether to use default verification keys from AggLayerGateway
-    - `useDefaultSigners`: Whether to use default signers from AggLayerGateway
+    - `useDefaultVkeys`: Whether to use default verification keys from AgglayerGateway
+    - `useDefaultSigners`: Whether to use default signers from AgglayerGateway
         - `startingBlockNumber`: The number of the first L2 block
         - `startingTimestamp`: The timestamp of the first L2 block
         - `submissionInterval`: The minimum interval in L2 blocks at which checkpoints must be submitted

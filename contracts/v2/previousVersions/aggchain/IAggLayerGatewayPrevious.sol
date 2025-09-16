@@ -94,8 +94,8 @@ interface IAggLayerGatewayErrorsPrevious {
     error InvalidProofBytesLength();
 }
 
-/// @title IAggLayerGateway
-/// @notice This contract is the interface for the AggLayerGateway.
+/// @title IAgglayerGateway
+/// @notice This contract is the interface for the AgglayerGateway.
 /// @notice Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/ISP1VerifierGateway.sol
 interface IAggLayerGatewayPrevious is
     IAggLayerGatewayEventsPrevious,
