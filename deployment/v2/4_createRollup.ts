@@ -491,10 +491,43 @@ async function main() {
         // initialize aggchain with direct parameters
         const aggchainContract = await PolygonconsensusFactory.attach(newZKEVMAddress);
 
+        // Get aggchainManager address and create signer for initialization
+        const aggchainManagerAddress = createRollupParameters.aggchainParams.aggchainManager;
+        const { aggchainManagerPvtKey } = createRollupParameters.aggchainParams;
+        console.log(`Using aggchainManager address: ${aggchainManagerAddress}`);
+
+        let aggchainManagerSigner;
+
+        if (aggchainManagerPvtKey && aggchainManagerPvtKey.trim() !== '') {
+            // Use provided private key for aggchainManager
+            console.log('Using provided aggchainManagerPvtKey...');
+            aggchainManagerSigner = new ethers.Wallet(aggchainManagerPvtKey, ethers.provider);
+
+            // Verify that the private key matches the expected address
+            if (aggchainManagerSigner.address.toLowerCase() !== aggchainManagerAddress.toLowerCase()) {
+                throw new Error(
+                    `Private key address (${aggchainManagerSigner.address}) does not match aggchainManager address (${aggchainManagerAddress})`,
+                );
+            }
+
+            console.log(`✓ AggchainManager private key verified for address: ${aggchainManagerAddress}`);
+        } else {
+            if (deployer.address.toLowerCase() !== aggchainManagerAddress.toLowerCase()) {
+                throw new Error(
+                    `Deployer (${deployer.address}) is not the aggchainManager (${aggchainManagerAddress}). Either provide aggchainManagerPvtKey or ensure the deployer is the aggchainManager.`,
+                );
+            }
+            aggchainManagerSigner = deployer;
+            console.log('Using deployer as aggchainManager');
+        }
+
+        // Connect contract with aggchainManager signer
+        const aggchainContractWithManager = aggchainContract.connect(aggchainManagerSigner);
+
         let txInitAggChain;
         if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP) {
-            // Initialize FEP contract with direct parameters
-            txInitAggChain = await aggchainContract.initialize(
+            // Initialize FEP contract with direct parameters using aggchainManager
+            txInitAggChain = await aggchainContractWithManager.initialize(
                 aggchainInitParams.initParams,
                 aggchainInitParams.signers,
                 aggchainInitParams.threshold,
@@ -509,8 +542,8 @@ async function main() {
                 aggchainInitParams.networkName,
             );
         } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            // Initialize ECDSA Multisig contract with direct parameters
-            txInitAggChain = await aggchainContract.initialize(
+            // Initialize ECDSA Multisig contract with direct parameters using aggchainManager
+            txInitAggChain = await aggchainContractWithManager.initialize(
                 aggchainInitParams.adminZkEVM,
                 aggchainInitParams.trustedSequencer,
                 aggchainInitParams.gasTokenAddress,
