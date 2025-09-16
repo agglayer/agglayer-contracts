@@ -8,6 +8,7 @@ import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
 import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import { logger } from '../../src/logger';
+import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
 // NOTE: Direct initialization is now used instead of encoded bytes
 // The deprecated encoding functions have been removed
 import { PolygonRollupManager } from '../../typechain-types';
@@ -38,6 +39,7 @@ async function main() {
         'gasTokenAddress',
         'type',
     ];
+
     // check create rollup type
     switch (initializeRollupParameters.type) {
         case transactionTypes.EOA:
@@ -50,14 +52,7 @@ async function main() {
             throw new Error(`Invalid type ${initializeRollupParameters.type}`);
     }
 
-    mandatoryDeploymentParameters.forEach((parameterName) => {
-        if (
-            initializeRollupParameters[parameterName] === undefined ||
-            initializeRollupParameters[parameterName] === ''
-        ) {
-            throw new Error(`Missing parameter: ${parameterName}`);
-        }
-    });
+    checkParams(initializeRollupParameters, mandatoryDeploymentParameters);
 
     const {
         trustedSequencerURL,
@@ -67,6 +62,9 @@ async function main() {
         rollupAdminAddress,
         consensusContractName,
         aggchainParams,
+        gasTokenAddress,
+        rollupManagerAddress,
+        type,
     } = initializeRollupParameters;
 
     // Check supported consensus is correct
@@ -81,57 +79,15 @@ async function main() {
     }
 
     // Load provider
-    let currentProvider = ethers.provider;
-    if (initializeRollupParameters.multiplierGas || initializeRollupParameters.maxFeePerGas) {
-        if (process.env.HARDHAT_NETWORK !== 'hardhat') {
-            currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            ) as any;
-            if (initializeRollupParameters.maxPriorityFeePerGas && initializeRollupParameters.maxFeePerGas) {
-                logger.info(
-                    `Hardcoded gas used: MaxPriority${initializeRollupParameters.maxPriorityFeePerGas} gwei, MaxFee${initializeRollupParameters.maxFeePerGas} gwei`,
-                );
-                const FEE_DATA = new ethers.FeeData(
-                    null,
-                    ethers.parseUnits(initializeRollupParameters.maxFeePerGas, 'gwei'),
-                    ethers.parseUnits(initializeRollupParameters.maxPriorityFeePerGas, 'gwei'),
-                );
-
-                currentProvider.getFeeData = async () => FEE_DATA;
-            } else {
-                logger.info('Multiplier gas used: ', initializeRollupParameters.multiplierGas);
-                async function overrideFeeData() {
-                    const feeData = await ethers.provider.getFeeData();
-                    return new ethers.FeeData(
-                        null,
-                        ((feeData.maxFeePerGas as bigint) * BigInt(initializeRollupParameters.multiplierGas)) / 1000n,
-                        ((feeData.maxPriorityFeePerGas as bigint) * BigInt(initializeRollupParameters.multiplierGas)) /
-                            1000n,
-                    );
-                }
-                currentProvider.getFeeData = overrideFeeData;
-            }
-        }
-    }
+    const currentProvider = getProviderAdjustingMultiplierGas(initializeRollupParameters, ethers);
 
     // Load deployer
-    let deployer;
-    if (initializeRollupParameters.deployerPvtKey) {
-        deployer = new ethers.Wallet(initializeRollupParameters.deployerPvtKey, currentProvider);
-    } else if (process.env.MNEMONIC) {
-        deployer = ethers.HDNodeWallet.fromMnemonic(
-            ethers.Mnemonic.fromPhrase(process.env.MNEMONIC),
-            "m/44'/60'/0'/0/0",
-        ).connect(currentProvider);
-    } else {
-        [deployer] = await ethers.getSigners();
-    }
+    const deployer = await getDeployerFromParameters(currentProvider, initializeRollupParameters, ethers);
+    logger.info(`Using deployer: ${deployer.address}`);
 
     // Load Rollup manager
     const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
-    const rollupManagerContract = PolygonRollupManagerFactory.attach(
-        initializeRollupParameters.rollupManagerAddress,
-    ) as PolygonRollupManager;
+    const rollupManagerContract = PolygonRollupManagerFactory.attach(rollupManagerAddress) as PolygonRollupManager;
 
     const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
 
@@ -160,16 +116,21 @@ async function main() {
     if (initializedValue === 0) {
         // Contract needs v0 initialization (first-time initialization)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
+            if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
                 throw new Error(
                     `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
                 );
             }
+
+            // check mandatory aggchainParams
+            const mandatoryAggchainParams = ['useDefaultSigners', 'signers', 'threshold'];
+            checkParams(aggchainParams, mandatoryAggchainParams);
+
             // Initialize ECDSA Multisig with direct parameters
             initializeTx = await aggchainContract.initialize.populateTransaction(
                 rollupAdminAddress,
                 trustedSequencer,
-                initializeRollupParameters.gasTokenAddress,
+                gasTokenAddress,
                 trustedSequencerURL,
                 networkName,
                 aggchainParams.useDefaultSigners,
@@ -177,11 +138,24 @@ async function main() {
                 aggchainParams.threshold,
             );
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-            if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
+            if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
                 throw new Error(
                     `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
                 );
             }
+
+            // check mandatory params in aggchainParams
+            const mandatoryAggchainParams = [
+                'initParams',
+                'signers',
+                'threshold',
+                'useDefaultVkeys',
+                'useDefaultSigners',
+                'initOwnedAggchainVKey',
+                'initAggchainVKeySelector',
+            ];
+            checkParams(aggchainParams, mandatoryAggchainParams);
+
             // Initialize FEP with direct parameters
             initializeTx = await aggchainContract.initialize.populateTransaction(
                 aggchainParams.initParams,
@@ -193,7 +167,7 @@ async function main() {
                 aggchainParams.initAggchainVKeySelector,
                 rollupAdminAddress,
                 trustedSequencer,
-                initializeRollupParameters.gasTokenAddress,
+                gasTokenAddress,
                 trustedSequencerURL,
                 networkName,
             );
@@ -203,19 +177,33 @@ async function main() {
     } else if (initializedValue === 1) {
         // Contract needs v1 initialization (migration from pessimistic consensus)
         if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
-            if (initializeRollupParameters.type !== transactionTypes.MULTISIG) {
+            if (type !== transactionTypes.MULTISIG) {
                 throw new Error(
-                    `Aggchain ${consensusContractName} can only be initialized from multisig because the function is only callable from rollupManager, son only calldata can be generated`,
+                    `Aggchain ${consensusContractName} can only be initialized from multisig because the function is only callable from rollupManager, so only calldata can be generated`,
                 );
             }
             // Migrate from pessimistic consensus to ECDSA Multisig
             initializeTx = await aggchainContract.migrateFromLegacyConsensus.populateTransaction();
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-            if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
+            if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
                 throw new Error(
                     `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
                 );
             }
+
+            // check mandatory params in aggchainParams
+            const mandatoryAggchainParams = [
+                'initParams',
+                'signers',
+                'threshold',
+                'useDefaultVkeys',
+                'useDefaultSigners',
+                'initOwnedAggchainVKey',
+                'initAggchainVKeySelector',
+                'vKeyManager',
+            ];
+            checkParams(aggchainParams, mandatoryAggchainParams);
+
             // Initialize FEP from pessimistic consensus with direct parameters
             initializeTx = await aggchainContract.initializeFromLegacyConsensus.populateTransaction(
                 aggchainParams.initParams,
@@ -231,11 +219,21 @@ async function main() {
             throw new Error(`Aggchain ${consensusContractName} not supported`);
         }
     } else if (initializedValue === 2 && consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-        if (initializeRollupParameters.type === transactionTypes.EOA && deployer.address !== aggchainManager) {
+        if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
             throw new Error(
                 `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
             );
         }
+
+        // check mandatory params in aggchainParams
+        const mandatoryAggchainParams = [
+            'initParams',
+            'useDefaultVkeys',
+            'initOwnedAggchainVKey',
+            'initAggchainVKeySelector',
+        ];
+        checkParams(aggchainParams, mandatoryAggchainParams);
+
         // Initialize FEP from ECDSA Multisig
         initializeTx = await aggchainContract.initializeFromECDSAMultisig.populateTransaction(
             aggchainParams.initParams,
@@ -250,13 +248,13 @@ async function main() {
     // Store the initialization transaction data for later use
     const initializeAggchainTxData = initializeTx.data;
 
-    if (initializeRollupParameters.type === transactionTypes.TIMELOCK) {
+    if (type === transactionTypes.TIMELOCK) {
         logger.info('Creating timelock txs for initialization...');
         const salt = initializeRollupParameters.timelockSalt || ethers.ZeroHash;
         const predecessor = ethers.ZeroHash;
         const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
         const operation = genOperation(
-            initializeRollupParameters.rollupManagerAddress,
+            rollupManagerAddress,
             0, // value
             initializeAggchainTxData,
             predecessor, // predecessor
@@ -313,7 +311,7 @@ async function main() {
         fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
         logger.info('Finished script, output saved at: ', destPath);
         process.exit(0);
-    } else if (initializeRollupParameters.type === transactionTypes.MULTISIG) {
+    } else if (type === transactionTypes.MULTISIG) {
         logger.info('Creating calldata for initialization from multisig...');
         outputJson.txInitializeAggchain = initializeAggchainTxData;
         fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
