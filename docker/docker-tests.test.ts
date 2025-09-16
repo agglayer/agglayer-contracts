@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
-import { AgglayerManager, AgglayerGER, AgglayerBridge, AggchainFEP, AggLayerGateway } from '../typechain-types';
+import { AgglayerManager, AgglayerGER, AgglayerBridge, AggchainFEP, AgglayerGateway } from '../typechain-types';
 
 const deployOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
 const {
@@ -78,19 +78,19 @@ describe('Docker build tests Contract', () => {
         ).to.be.revertedWith('Initializable: contract is already initialized');
     });
 
-    it('should check AggLayerGateway', async () => {
-        const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        const AggLayerGatewayContract = AggLayerGatewayFactory.attach(aggLayerGatewayAddress) as AggLayerGateway;
-        expect(AggLayerGatewayContract.target).to.equal(aggLayerGatewayAddress);
+    it('should check AgglayerGateway', async () => {
+        const AgglayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
+        const AgglayerGatewayContract = AgglayerGatewayFactory.attach(aggLayerGatewayAddress) as AgglayerGateway;
+        expect(AgglayerGatewayContract.target).to.equal(aggLayerGatewayAddress);
         const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
         const AGGCHAIN_DEFAULT_VKEY_ROLE = ethers.id('AGGCHAIN_DEFAULT_VKEY_ROLE');
         const AL_ADD_PP_ROUTE_ROLE = ethers.id('AL_ADD_PP_ROUTE_ROLE');
         const AL_FREEZE_PP_ROUTE_ROLE = ethers.id('AL_FREEZE_PP_ROUTE_ROLE');
         const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
-        expect(await AggLayerGatewayContract.hasRole(DEFAULT_ADMIN_ROLE, admin)).to.be.equal(true);
-        expect(await AggLayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, admin)).to.be.equal(true);
-        expect(await AggLayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, admin)).to.be.equal(true);
-        expect(await AggLayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, admin)).to.be.equal(true);
-        expect(await AggLayerGatewayContract.hasRole(AL_MULTISIG_ROLE, admin)).to.be.equal(true);
+        expect(await AgglayerGatewayContract.hasRole(DEFAULT_ADMIN_ROLE, admin)).to.be.equal(true);
+        expect(await AgglayerGatewayContract.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, admin)).to.be.equal(true);
+        expect(await AgglayerGatewayContract.hasRole(AL_ADD_PP_ROUTE_ROLE, admin)).to.be.equal(true);
+        expect(await AgglayerGatewayContract.hasRole(AL_FREEZE_PP_ROUTE_ROLE, admin)).to.be.equal(true);
+        expect(await AgglayerGatewayContract.hasRole(AL_MULTISIG_ROLE, admin)).to.be.equal(true);
     });
 });

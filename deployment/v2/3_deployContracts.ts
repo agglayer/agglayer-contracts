@@ -8,7 +8,7 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 
 import {
-    AggLayerGateway,
+    AgglayerGateway,
     AgglayerBridge,
     PolygonZkEVMDeployer,
     AgglayerGER,
@@ -406,10 +406,10 @@ async function main() {
     const finalTimelockAddress = deployParameters.test ? deployer.address : timelockContract.target;
 
     /*
-     * Deployment AggLayerGateway
+     * Deployment AgglayerGateway
      */
     let aggLayerGatewayContract;
-    const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
+    const AgglayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
 
     // deploy Verifier
     let verifierName;
@@ -438,7 +438,7 @@ async function main() {
         for (let i = 0; i < attemptsDeployProxy; i++) {
             try {
                 aggLayerGatewayContract = await upgrades.deployProxy(
-                    AggLayerGatewayFactory,
+                    AgglayerGatewayFactory,
                     [
                         // defaultAdmin: The address of the default admin. Can grant role to addresses.
                         finalTimelockAddress,
@@ -487,7 +487,7 @@ async function main() {
         console.log('aggLayerGatewayContract deployed to:', aggLayerGatewayContract?.target);
 
         console.log('#######################\n');
-        console.log(`New Pessimistic VKey Route AggLayerGateway`);
+        console.log(`New Pessimistic VKey Route AgglayerGateway`);
         console.log(`pessimisticVKeySelector: ${ppVKeySelector}`);
         console.log(`verifier: ${verifierContract.target}`);
         console.log(`pessimisticVKey: ${ppVKey}`);
@@ -499,15 +499,15 @@ async function main() {
         fs.writeFileSync(pathOngoingDeploymentJson, JSON.stringify(ongoingDeployment, null, 1));
     } else {
         // Expect the precalculate address matches de onogin deployment
-        aggLayerGatewayContract = AggLayerGatewayFactory.attach(
+        aggLayerGatewayContract = AgglayerGatewayFactory.attach(
             ongoingDeployment.aggLayerGatewayContract,
-        ) as AggLayerGateway;
+        ) as AgglayerGateway;
 
         console.log('#######################\n');
         console.log('aggLayerGatewayContract already deployed on: ', ongoingDeployment.aggLayerGatewayContract);
 
         console.log('#######################\n');
-        console.log(`Pessimistic VKey Route AggLayerGateway: ${ongoingDeployment.aggLayerGatewayContract}`);
+        console.log(`Pessimistic VKey Route AgglayerGateway: ${ongoingDeployment.aggLayerGatewayContract}`);
         console.log(
             `pessimisticVKeySelector: ${ongoingDeployment.pessimisticVKeyRouteALGateway.pessimisticVKeySelector}`,
         );
@@ -518,7 +518,7 @@ async function main() {
         // Import OZ manifest the deployed contracts, its enough to import just the proyx, the rest are imported automatically (admin/impl)
         await upgrades.forceImport(
             ongoingDeployment.aggLayerGatewayContract,
-            AggLayerGatewayFactory,
+            AgglayerGatewayFactory,
             'transparent' as any,
         );
     }
@@ -540,7 +540,7 @@ async function main() {
     console.log('timelockContract:', finalTimelockAddress);
     console.log('emergencyCouncilAddress:', emergencyCouncilAddress);
 
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerNotUpgraded', deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerNotUpgraded', deployer);
 
     let polygonRollupManagerContract: any;
     let deploymentBlockNumber;

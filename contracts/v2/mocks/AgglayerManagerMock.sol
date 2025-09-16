@@ -15,7 +15,7 @@ contract AgglayerManagerMock is AgglayerManager {
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     )
         AgglayerManager(
             _globalExitRootManager,

@@ -296,7 +296,7 @@ contract AggchainFEP is AggchainBase {
         IERC20Upgradeable _pol,
         IAgglayerBridge _bridgeAddress,
         AgglayerManager _rollupManager,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     )
         AggchainBase(
             _globalExitRootManager,

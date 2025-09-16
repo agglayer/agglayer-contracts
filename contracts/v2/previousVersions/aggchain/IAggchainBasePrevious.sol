@@ -83,8 +83,8 @@ interface IAggchainBaseErrorsPrevious {
     error OnlyPendingVKeyManager();
     /// @notice Thrown when trying to retrieve an aggchain verification key from the mapping that doesn't exists.
     error AggchainVKeyNotFound();
-    /// @notice Thrown when trying to deploy the aggchain with a zero address as the AggLayerGateway
-    error InvalidAggLayerGatewayAddress();
+    /// @notice Thrown when trying to deploy the aggchain with a zero address as the AgglayerGateway
+    error InvalidAgglayerGatewayAddress();
     /// @notice Thrown when trying to set the aggchain manager to zero address.
     error AggchainManagerCannotBeZero();
     /// @notice Thrown when the caller is not the aggchain manager

@@ -9,7 +9,7 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters, getGitInfo } from '../../src/utils';
 import { verifyContractEtherscan } from '../../upgrade/utils';
-import { AggLayerGateway } from '../../typechain-types';
+import { AgglayerGateway } from '../../typechain-types';
 import deployParameters from './deploy_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -51,9 +51,9 @@ async function main() {
     const proxyOwnerAddress = await proxyAdmin.owner();
 
     /*
-     * Deployment of AggLayerGateway
+     * Deployment of AgglayerGateway
      */
-    const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
+    const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
     const aggLayerGatewayContract = await upgrades.deployProxy(
         aggLayerGatewayFactory,
         [
@@ -85,7 +85,7 @@ async function main() {
     await verifyContractEtherscan(aggLayerGatewayContract.target as string, []);
 
     // Check deployment
-    const aggLayerGateway = aggLayerGatewayFactory.attach(aggLayerGatewayContract.target) as AggLayerGateway;
+    const aggLayerGateway = aggLayerGatewayFactory.attach(aggLayerGatewayContract.target) as AgglayerGateway;
     // Check already initialized
     await expect(
         aggLayerGateway.initialize(
@@ -140,7 +140,7 @@ async function main() {
     };
 
     fs.writeFileSync(pathOutput, JSON.stringify(outputJson, null, 1));
-    console.log('Finished deploying AggLayerGateway');
+    console.log('Finished deploying AgglayerGateway');
     console.log('Output saved to: ', pathOutput);
     console.log('#######################\n');
 }

@@ -23,7 +23,7 @@ abstract contract AggchainBasePrevious is
     // Naming has been kept as CONSENSUS_TYPE for consistency with the previous consensus type (PolygonPessimisticConsensus.sol)
     uint32 public constant CONSENSUS_TYPE = 1;
 
-    // AggLayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
+    // AgglayerGateway address, used in case the flag `useDefaultGateway` is set to true, the aggchains keys are managed by the gateway
     IAggLayerGatewayPrevious public immutable aggLayerGateway;
 
     ////////////////////////////////////////////////////////////
@@ -90,7 +90,7 @@ abstract contract AggchainBasePrevious is
      * @param _pol POL token address.
      * @param _bridgeAddress Bridge address.
      * @param _rollupManager Rollup manager address.
-     * @param _aggLayerGateway AggLayerGateway address.
+     * @param _aggLayerGateway AgglayerGateway address.
      */
     constructor(
         IAgglayerGER _globalExitRootManager,
@@ -377,7 +377,7 @@ abstract contract AggchainBasePrevious is
                 revert AggchainVKeyNotFound();
             }
         } else {
-            // Retrieve aggchain key from AggLayerGateway
+            // Retrieve aggchain key from AgglayerGateway
             aggchainVKey = aggLayerGateway.getDefaultAggchainVKey(
                 aggchainVKeySelector
             );

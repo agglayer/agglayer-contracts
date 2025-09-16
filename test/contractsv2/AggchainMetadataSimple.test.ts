@@ -28,8 +28,8 @@ describe('Aggchain Metadata Simple Tests', () => {
         // Deploy bridge mock
         const mockBridge = '0x0000000000000000000000000000000000000002';
 
-        // Deploy AggLayerGateway
-        const aggLayerGateway = await ethers.deployContract('AggLayerGateway', []);
+        // Deploy AgglayerGateway
+        const aggLayerGateway = await ethers.deployContract('AgglayerGateway', []);
 
         // Deploy AgglayerManagerMock
         const rollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');

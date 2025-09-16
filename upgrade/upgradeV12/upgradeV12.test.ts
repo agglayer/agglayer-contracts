@@ -10,7 +10,7 @@ import {
     PolygonZkEVMTimelock,
     AgglayerBridge,
     AgglayerGER,
-    AggLayerGateway,
+    AgglayerGateway,
 } from '../../typechain-types';
 
 import { logger } from '../../src/logger';
@@ -81,8 +81,8 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         logger.info(`- Global Exit Root V2: ${globalExitRootV2Address}`);
         logger.info(`- AggLayer Gateway: ${aggLayerGatewayAddress}`);
 
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        const aggLayerGatewayContract = aggLayerGatewayFactory.attach(aggLayerGatewayAddress) as AggLayerGateway;
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
+        const aggLayerGatewayContract = aggLayerGatewayFactory.attach(aggLayerGatewayAddress) as AgglayerGateway;
 
         const bridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         const bridgeContract = bridgeFactory.attach(bridgeV2Address) as AgglayerBridge;

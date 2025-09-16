@@ -1,14 +1,14 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { AggLayerGateway, SP1VerifierPlonk } from '../../typechain-types';
+import { AgglayerGateway, SP1VerifierPlonk } from '../../typechain-types';
 import input from './real-prover-sp1/test-inputs/input.json';
 import { computeSignersHash } from '../../src/utils-common-aggchain';
 
-describe('AggLayerGateway tests', () => {
+describe('AgglayerGateway tests', () => {
     upgrades.silenceWarnings();
 
-    let aggLayerGatewayContract: AggLayerGateway;
+    let aggLayerGatewayContract: AgglayerGateway;
     let verifierContract: SP1VerifierPlonk;
 
     let deployer: any;
@@ -35,12 +35,12 @@ describe('AggLayerGateway tests', () => {
         // load signers
         [deployer, defaultAdmin, aggLayerAdmin, aggchainVKey, addPPRoute, freezePPRoute] = await ethers.getSigners();
 
-        // deploy AggLayerGateway
-        const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        aggLayerGatewayContract = (await upgrades.deployProxy(AggLayerGatewayFactory, [], {
+        // deploy AgglayerGateway
+        const AgglayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
+        aggLayerGatewayContract = (await upgrades.deployProxy(AgglayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor'],
-        })) as unknown as AggLayerGateway;
+        })) as unknown as AgglayerGateway;
 
         // deploy verifier contract
         const SP1VerifierPlonkFactory = await ethers.getContractFactory('SP1VerifierPlonk');
@@ -120,7 +120,7 @@ describe('AggLayerGateway tests', () => {
             ),
         ).to.revertedWithCustomError(aggLayerGatewayContract, 'InvalidZeroAddress');
 
-        // initialize AggLayerGateway
+        // initialize AgglayerGateway
         await expect(
             aggLayerGatewayContract.initialize(
                 defaultAdmin.address,
@@ -155,7 +155,7 @@ describe('AggLayerGateway tests', () => {
     });
 
     it("should check error 'contract is already initialized'", async () => {
-        // initialize AggLayerGateway again should fail
+        // initialize AgglayerGateway again should fail
         await expect(
             aggLayerGatewayContract.initialize(
                 defaultAdmin.address,
@@ -706,7 +706,7 @@ describe('AggLayerGateway tests', () => {
 
     it('should test the second initialize function', async () => {
         // Deploy a fresh contract for testing the second initialize function
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
         const freshGateway = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor'],
@@ -763,7 +763,7 @@ describe('AggLayerGateway tests', () => {
     it('should test getAggchainMultisigHash edge case', async () => {
         // Test the edge case when aggchainMultisigHash is not set (line 595)
         // Deploy a fresh contract
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
         const edgeCaseGateway = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor'],
@@ -810,7 +810,7 @@ describe('AggLayerGateway tests', () => {
     });
 
     it('should upgrade from previous version to new version', async () => {
-        // Deploy the previous version of AggLayerGateway
+        // Deploy the previous version of AgglayerGateway
         const aggLayerGatewayPreviousFactory = await ethers.getContractFactory('AggLayerGatewayPrevious');
         const aggLayerGatewayPrevious = await upgrades.deployProxy(aggLayerGatewayPreviousFactory, [], {
             initializer: false,
@@ -848,8 +848,8 @@ describe('AggLayerGateway tests', () => {
             .connect(aggchainVKey)
             .addDefaultAggchainVKey('0x12340005', ethers.id('test_default_vkey'));
 
-        // Get the new AggLayerGateway factory
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        // Get the new AgglayerGateway factory
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
 
         // Prepare signers for the upgrade
         const signersList = await ethers.getSigners();
@@ -873,59 +873,59 @@ describe('AggLayerGateway tests', () => {
         });
 
         // Cast to the new interface
-        const upgradedAggLayerGateway = upgradedContract as unknown as AggLayerGateway;
+        const upgradedAgglayerGateway = upgradedContract as unknown as AgglayerGateway;
 
         // Verify that previous state is preserved
         // Check roles are preserved
-        expect(await upgradedAggLayerGateway.hasRole(DEFAULT_ADMIN_ROLE, defaultAdmin.address)).to.be.equal(true);
-        expect(await upgradedAggLayerGateway.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggchainVKey.address)).to.be.equal(
+        expect(await upgradedAgglayerGateway.hasRole(DEFAULT_ADMIN_ROLE, defaultAdmin.address)).to.be.equal(true);
+        expect(await upgradedAgglayerGateway.hasRole(AGGCHAIN_DEFAULT_VKEY_ROLE, aggchainVKey.address)).to.be.equal(
             true,
         );
-        expect(await upgradedAggLayerGateway.hasRole(AL_ADD_PP_ROUTE_ROLE, addPPRoute.address)).to.be.equal(true);
-        expect(await upgradedAggLayerGateway.hasRole(AL_FREEZE_PP_ROUTE_ROLE, freezePPRoute.address)).to.be.equal(true);
+        expect(await upgradedAgglayerGateway.hasRole(AL_ADD_PP_ROUTE_ROLE, addPPRoute.address)).to.be.equal(true);
+        expect(await upgradedAgglayerGateway.hasRole(AL_FREEZE_PP_ROUTE_ROLE, freezePPRoute.address)).to.be.equal(true);
 
         // Check pessimistic route is preserved
-        const upgradedRoute = await upgradedAggLayerGateway.pessimisticVKeyRoutes(initPPVKeySelector);
+        const upgradedRoute = await upgradedAgglayerGateway.pessimisticVKeyRoutes(initPPVKeySelector);
         expect(upgradedRoute.verifier).to.be.equal(verifierContract.target);
         expect(upgradedRoute.pessimisticVKey).to.be.equal(initPPVkey);
         expect(upgradedRoute.frozen).to.be.equal(false);
 
         // Check default aggchain vkey is preserved
-        expect(await upgradedAggLayerGateway.defaultAggchainVKeys('0x12340005')).to.be.equal(
+        expect(await upgradedAgglayerGateway.defaultAggchainVKeys('0x12340005')).to.be.equal(
             ethers.id('test_default_vkey'),
         );
 
         // Verify new functionality - multisig was added
-        expect(await upgradedAggLayerGateway.getAggchainSignersCount()).to.equal(3);
-        expect(await upgradedAggLayerGateway.threshold()).to.equal(threshold);
-        const actualSigners = await upgradedAggLayerGateway.getAggchainSigners();
+        expect(await upgradedAgglayerGateway.getAggchainSignersCount()).to.equal(3);
+        expect(await upgradedAgglayerGateway.threshold()).to.equal(threshold);
+        const actualSigners = await upgradedAgglayerGateway.getAggchainSigners();
         expect(actualSigners).to.deep.equal([signer1.address, signer2.address, signer3.address]);
 
         // Test that new multisig role can update signers
-        await upgradedAggLayerGateway.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);
+        await upgradedAgglayerGateway.connect(defaultAdmin).grantRole(AL_MULTISIG_ROLE, aggLayerAdmin.address);
 
         const signer4 = signersList[9];
         await expect(
-            upgradedAggLayerGateway
+            upgradedAgglayerGateway
                 .connect(aggLayerAdmin)
                 .updateSignersAndThreshold([], [{ addr: signer4.address, url: 'http://signer4' }], 3),
-        ).to.emit(upgradedAggLayerGateway, 'SignersAndThresholdUpdated');
+        ).to.emit(upgradedAgglayerGateway, 'SignersAndThresholdUpdated');
 
-        expect(await upgradedAggLayerGateway.getAggchainSignersCount()).to.equal(4);
-        expect(await upgradedAggLayerGateway.threshold()).to.equal(3);
+        expect(await upgradedAgglayerGateway.getAggchainSignersCount()).to.equal(4);
+        expect(await upgradedAgglayerGateway.threshold()).to.equal(3);
 
         // Verify the new version string
-        expect(await upgradedAggLayerGateway.version()).to.equal('v1.1.0');
+        expect(await upgradedAgglayerGateway.version()).to.equal('v1.1.0');
 
         // Test that previous version functionality still works
         // Add another pessimistic route
         await expect(
-            upgradedAggLayerGateway
+            upgradedAgglayerGateway
                 .connect(addPPRoute)
                 .addPessimisticVKeyRoute('0x00000099', verifierContract.target, ethers.id('new_pp_vkey')),
-        ).to.emit(upgradedAggLayerGateway, 'RouteAdded');
+        ).to.emit(upgradedAgglayerGateway, 'RouteAdded');
 
-        const newRoute = await upgradedAggLayerGateway.pessimisticVKeyRoutes('0x00000099');
+        const newRoute = await upgradedAgglayerGateway.pessimisticVKeyRoutes('0x00000099');
         expect(newRoute.verifier).to.be.equal(verifierContract.target);
         expect(newRoute.pessimisticVKey).to.be.equal(ethers.id('new_pp_vkey'));
     });

@@ -77,8 +77,8 @@ async function main() {
     expect(await upgrades.erc1967.getAdminAddress(bridgeV2Address as string)).to.be.equal(proxyAdmin.target);
     expect(await upgrades.erc1967.getAdminAddress(globalExitRootV2Address as string)).to.be.equal(proxyAdmin.target);
 
-    // Validate AggLayerGateway initialization parameters
-    logger.info('Validating AggLayerGateway initialization parameters...');
+    // Validate AgglayerGateway initialization parameters
+    logger.info('Validating AgglayerGateway initialization parameters...');
 
     // Check multisigRole is not zero address
     if (initializeAgglayerGateway.multisigRole === ethers.ZeroAddress) {
@@ -169,18 +169,18 @@ async function main() {
 
     // 2. Upgrade AggLayer Gateway
     logger.info('Preparing AggLayer Gateway upgrade...');
-    const aggLayerGatewayUpgradeFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
+    const aggLayerGatewayUpgradeFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
 
-    const implAggLayerGateway = await upgrades.prepareUpgrade(aggLayerGatewayAddress, aggLayerGatewayUpgradeFactory, {
+    const implAgglayerGateway = await upgrades.prepareUpgrade(aggLayerGatewayAddress, aggLayerGatewayUpgradeFactory, {
         unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
     });
 
     logger.info('#######################\n');
-    logger.info(`AggLayer Gateway implementation deployed at: ${implAggLayerGateway}`);
+    logger.info(`AggLayer Gateway implementation deployed at: ${implAgglayerGateway}`);
 
     verification[GENESIS_CONTRACT_NAMES.AGGLAYER_GATEWAY_IMPLEMENTATION] = await trackVerification(
         GENESIS_CONTRACT_NAMES.AGGLAYER_GATEWAY_IMPLEMENTATION,
-        implAggLayerGateway as string,
+        implAgglayerGateway as string,
         [],
     );
 
@@ -263,8 +263,8 @@ async function main() {
         salt, // salt
     );
 
-    // Prepare AggLayerGateway initialize call data
-    const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway', deployer);
+    // Prepare AgglayerGateway initialize call data
+    const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
     const initializeCallData = aggLayerGatewayFactory.interface.encodeFunctionData(
         'initialize(address,(address,string)[],uint256)',
         [
@@ -274,12 +274,12 @@ async function main() {
         ],
     );
 
-    const operationAggLayerGateway = genTimelockOperation(
+    const operationAgglayerGateway = genTimelockOperation(
         proxyAdmin.target,
         0, // value
         proxyAdmin.interface.encodeFunctionData('upgradeAndCall', [
             aggLayerGatewayAddress,
-            implAggLayerGateway,
+            implAgglayerGateway,
             initializeCallData,
         ]), // data
         ethers.ZeroHash, // predecessor
@@ -306,19 +306,19 @@ async function main() {
     const scheduleData = timelockContractFactory.interface.encodeFunctionData('scheduleBatch', [
         [
             operationRollupManager.target,
-            operationAggLayerGateway.target,
+            operationAgglayerGateway.target,
             operationBridge.target,
             operationGlobalExitRoot.target,
         ],
         [
             operationRollupManager.value,
-            operationAggLayerGateway.value,
+            operationAgglayerGateway.value,
             operationBridge.value,
             operationGlobalExitRoot.value,
         ],
         [
             operationRollupManager.data,
-            operationAggLayerGateway.data,
+            operationAgglayerGateway.data,
             operationBridge.data,
             operationGlobalExitRoot.data,
         ],
@@ -331,19 +331,19 @@ async function main() {
     const executeData = timelockContractFactory.interface.encodeFunctionData('executeBatch', [
         [
             operationRollupManager.target,
-            operationAggLayerGateway.target,
+            operationAgglayerGateway.target,
             operationBridge.target,
             operationGlobalExitRoot.target,
         ],
         [
             operationRollupManager.value,
-            operationAggLayerGateway.value,
+            operationAgglayerGateway.value,
             operationBridge.value,
             operationGlobalExitRoot.value,
         ],
         [
             operationRollupManager.data,
-            operationAggLayerGateway.data,
+            operationAgglayerGateway.data,
             operationBridge.data,
             operationGlobalExitRoot.data,
         ],
@@ -378,7 +378,7 @@ async function main() {
 
     (outputJson as any).deployedContracts = {
         rollupManagerImplementation: implRollupManager,
-        aggLayerGatewayImplementation: implAggLayerGateway,
+        aggLayerGatewayImplementation: implAgglayerGateway,
         bridgeImplementation: implBridge,
         globalExitRootManagerImplementation: globalExitRootManagerImp,
         wrappedTokenBytecodeStorer: bytecodeStorerAddress,

@@ -5,7 +5,7 @@ import "../AgglayerManager.sol";
 /**
  * AgglayerManager Test
  */
-contract PolygonRollupManagerNotUpgraded is AgglayerManager {
+contract AgglayerManagerNotUpgraded is AgglayerManager {
     /**
      * @param _globalExitRootManager Global exit root manager address
      * @param _pol MATIC token address
@@ -15,7 +15,7 @@ contract PolygonRollupManagerNotUpgraded is AgglayerManager {
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     )
         AgglayerManager(
             _globalExitRootManager,

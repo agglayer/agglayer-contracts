@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 import {ISP1Verifier} from "./interfaces/ISP1Verifier.sol";
-import {IAggLayerGateway} from "./interfaces/IAggLayerGateway.sol";
+import {IAgglayerGateway} from "./interfaces/IAgglayerGateway.sol";
 import {IVersion} from "./interfaces/IVersion.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable5/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/AccessControlUpgradeable.sol";
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
 /**
- * @title AggLayerGateway
+ * @title AgglayerGateway
  * @notice Contract to handle the verification keys for the pessimistic proof.
  * It supports adding and freezing PP verification keys and verifying the PP.
  * Also maintains the default verification keys of aggchains
  */
-contract AggLayerGateway is
+contract AgglayerGateway is
     Initializable,
     AccessControlUpgradeable,
-    IAggLayerGateway,
+    IAgglayerGateway,
     IVersion
 {
     ////////////////////////////////////////////////////////////
@@ -42,7 +42,7 @@ contract AggLayerGateway is
     // @dev value 0x0c3038a1ecdf82843b70709289ff1703351ad391e3e27df7f6fa7d913601e15e
     bytes32 internal constant AL_MULTISIG_ROLE = keccak256("AL_MULTISIG_ROLE");
 
-    // Current AggLayerGateway version
+    // Current AgglayerGateway version
     string public constant AGGLAYER_GATEWAY_VERSION = "v1.1.0";
 
     // Maximum number of aggchain signers supported
@@ -115,7 +115,7 @@ contract AggLayerGateway is
     //                  Initialization                        //
     ////////////////////////////////////////////////////////////
     /**
-     * @notice  Initializer function to set up the AggLayerGateway contract.
+     * @notice  Initializer function to set up the AgglayerGateway contract.
      * @param defaultAdmin The address of the default admin. Can grant role to addresses.
      * @dev This address is the highest privileged address so it's recommended to use a timelock
      * @param aggchainDefaultVKeyRole The address that can manage the aggchain verification keys.
@@ -204,7 +204,7 @@ contract AggLayerGateway is
     }
 
     ////////////////////////////////////////////////////////////
-    //        Functions: AggLayerGateway (pessimistic)        //
+    //        Functions: AgglayerGateway (pessimistic)        //
     ////////////////////////////////////////////////////////////
     /**
      * @notice Function to verify the pessimistic proof.
