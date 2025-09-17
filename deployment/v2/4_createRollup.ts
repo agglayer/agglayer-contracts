@@ -663,7 +663,10 @@ async function main() {
             outputJson.WETHImplementationAddress = wethImpObject.address;
         }
     } else {
-        if (consensusContract === 'PolygonPessimisticConsensus' || consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
+        if (
+            consensusContract === 'PolygonPessimisticConsensus' ||
+            consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA
+        ) {
             // Add the first batch of the created rollup
             const newZKEVMContract = (await PolygonconsensusFactory.attach(
                 newZKEVMAddress,
