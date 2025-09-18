@@ -312,7 +312,7 @@ const config: HardhatUserConfig = {
         sepolia: {
             url: process.env.SEPOLIA_PROVIDER
                 ? process.env.SEPOLIA_PROVIDER
-                : `https://sepolia.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
+                : `https://sepolia.gateway.tenderly.co/sZIvuygdUhl8KCmMcEmRb`,
             accounts: {
                 mnemonic: process.env.MNEMONIC || DEFAULT_MNEMONIC,
                 path: "m/44'/60'/0'/0",
