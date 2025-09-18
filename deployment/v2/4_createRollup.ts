@@ -91,8 +91,8 @@ async function main() {
         throw new Error(`Consensus contract not supported, supported contracts are: ${supportedConsensus}`);
     }
 
-    // if consensusContract is Aggchain, check isVanillaClient === true
-    if (arraySupportedAggchains.includes(consensusContract) && !isVanillaClient) {
+    // if consensusContract is AggchainFEP, check isVanillaClient === true
+    if (utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP === consensusContract && !isVanillaClient) {
         throw new Error(`Consensus contract ${consensusContract} requires isVanillaClient === true`);
     } else if (arraySupportedAggchains.includes(consensusContract) && programVKey !== ethers.ZeroHash) {
         throw new Error(`Consensus contract ${consensusContract} requires programVKey === bytes32(0)`);
@@ -663,7 +663,10 @@ async function main() {
             outputJson.WETHImplementationAddress = wethImpObject.address;
         }
     } else {
-        if (consensusContract === 'PolygonPessimisticConsensus') {
+        if (
+            consensusContract === 'PolygonPessimisticConsensus' ||
+            consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA
+        ) {
             // Add the first batch of the created rollup
             const newZKEVMContract = (await PolygonconsensusFactory.attach(
                 newZKEVMAddress,
