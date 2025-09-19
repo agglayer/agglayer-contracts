@@ -8,7 +8,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable5/acc
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
 /**
- * @title AgglayerGateway
+ * @title AggLayerGatewayPrevious
  * @notice Contract to handle the verification keys for the pessimistic proof.
  * It supports adding and freezing PP verification keys and verifying the PP.
  * Also maintains the default verification keys of aggchains

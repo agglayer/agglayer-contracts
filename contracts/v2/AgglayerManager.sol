@@ -16,7 +16,7 @@ import "./lib/LegacyZKEVMStateVariables.sol";
 import "./lib/PolygonConstantsBase.sol";
 import "./interfaces/IPolygonPessimisticConsensus.sol";
 import "./interfaces/ISP1Verifier.sol";
-import "./interfaces/IPolygonRollupManager.sol";
+import "./interfaces/IAgglayerManager.sol";
 import "./interfaces/IAggchainBase.sol";
 import "./interfaces/IAgglayerGateway.sol";
 import "./interfaces/IVersion.sol";
@@ -33,7 +33,7 @@ contract AgglayerManager is
     EmergencyManager,
     LegacyZKEVMStateVariables,
     PolygonConstantsBase,
-    IPolygonRollupManager,
+    IAgglayerManager,
     ReentrancyGuardTransient,
     IVersion
 {
