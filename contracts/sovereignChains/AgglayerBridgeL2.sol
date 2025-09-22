@@ -703,6 +703,10 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
      * @notice Move the LET backward to a previous state with a lower deposit count
      * @dev Permissioned function by the GlobalExitRootRemover role
      * @dev Validates that the new tree state is a valid subtree of the current tree
+     * @dev Security Note: The `newFrontier` parameter is technically derivable from `newDepositCount` and `proof`,
+     *      but is intentionally required as a dual verification mechanism. This forces callers to demonstrate
+     *      complete understanding of the Merkle tree structure and acts as a safeguard against incorrect
+     *      proof construction. The redundancy provides security-by-design for this critical emergency function.
      * @param newDepositCount The new deposit count (must be less than current)
      * @param newFrontier The frontier of the subtree at newDepositCount
      * @param nextLeaf The leaf that comes immediately after the last leaf of the subset.
