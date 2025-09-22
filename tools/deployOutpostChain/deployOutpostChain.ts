@@ -129,11 +129,14 @@ async function main() {
 
     // Step 6: Run basic verification
     logger.info('\n=== Step 6: Running verification ===');
-    await runBasicVerification(deployParameters, outputJson);
+    const verificationResults = await runBasicVerification(deployParameters, outputJson);
 
     // Step 7: Generate final output
     logger.info('\n=== Step 7: Generating deployment output ===');
     const finalOutput = generateFinalOutput(outputJson, deployParameters, globalExitRootUpdater);
+
+    // Add verification results to final output for reference
+    finalOutput.verificationResults = verificationResults;
 
     const now = new Date();
     const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -141,6 +144,15 @@ async function main() {
     const outputPath = path.join(__dirname, `deploy_output_${currentDate}_${currentTime}.json`);
     fs.writeFileSync(outputPath, JSON.stringify(finalOutput, null, 2));
     logger.info(`✅ Deployment output saved to: ${outputPath}`);
+
+    // Final summary
+    const failedVerifications = verificationResults.filter((r) => !r.success);
+    if (failedVerifications.length > 0) {
+        logger.warn(`\n⚠️  Deployment completed with ${failedVerifications.length} verification warning(s).`);
+        logger.warn('Please review the verification results in the output file and take appropriate action.');
+    } else {
+        logger.info('\n🎉 Deployment completed successfully with all verifications passed!');
+    }
 }
 
 /**
@@ -641,37 +653,114 @@ function generateFinalOutput(outputJson: any, deployParams: any, actualGlobalExi
     };
 }
 
+// =============================================================================
+// VERIFICATION SYSTEM WITH ERROR RESILIENCE
+// =============================================================================
+// This verification system is designed to continue execution even if individual
+// verification steps fail. Each verification function is wrapped in a try-catch
+// block to prevent script termination, ensuring that deployment output is always
+// generated regardless of verification failures. This addresses audit findings
+// regarding script termination on verification errors.
+// =============================================================================
+
+// Verification result interface
+interface VerificationResult {
+    component: string;
+    success: boolean;
+    error?: string;
+    details?: string[];
+}
+
 /**
  * Run comprehensive verification tests on deployed contracts
  * Organized by contract for better maintainability and specificity
+ * Returns verification results instead of throwing errors to ensure script continuity
  */
-async function runBasicVerification(deployConfig: any, outputJson: any) {
+async function runBasicVerification(deployConfig: any, outputJson: any): Promise<VerificationResult[]> {
     logger.info('🧪 Running comprehensive deployment verification...');
+    const results: VerificationResult[] = [];
 
     // Step 1: Verify ProxyAdmin Contract
-    await verifyProxyAdminContract(deployConfig, outputJson);
+    const proxyAdminResult = await safeVerify('ProxyAdmin', () => verifyProxyAdminContract(outputJson));
+    results.push(proxyAdminResult);
 
     // Step 2: Verify Timelock Contract
-    await verifyTimelockContract(deployConfig, outputJson);
+    const timelockResult = await safeVerify('Timelock', () => verifyTimelockContract(deployConfig, outputJson));
+    results.push(timelockResult);
 
     // Step 3: Verify AggOracleCommittee Contract (if deployed)
     if (deployConfig.aggOracleCommittee?.useAggOracleCommittee === true) {
-        await verifyAggOracleCommitteeContract(deployConfig, outputJson);
+        const oracleResult = await safeVerify('AggOracleCommittee', () =>
+            verifyAggOracleCommitteeContract(deployConfig, outputJson),
+        );
+        results.push(oracleResult);
     }
 
     // Step 4: Verify Bridge Contract
-    await verifyBridgeContract(deployConfig, outputJson);
+    const bridgeResult = await safeVerify('Bridge', () => verifyBridgeContract(deployConfig, outputJson));
+    results.push(bridgeResult);
 
     // Step 5: Verify GER Manager Contract
-    await verifyGERManagerContract(deployConfig, outputJson);
+    const gerResult = await safeVerify('GER Manager', () => verifyGERManagerContract(deployConfig, outputJson));
+    results.push(gerResult);
 
-    logger.info('✅ Comprehensive verification passed successfully!');
+    // Log verification summary
+    logVerificationSummary(results);
+
+    return results;
+}
+
+/**
+ * Safely execute a verification function with error handling
+ */
+async function safeVerify(component: string, verifyFn: () => Promise<void>): Promise<VerificationResult> {
+    try {
+        await verifyFn();
+        logger.info(`✅ ${component} verification passed`);
+        return {
+            component,
+            success: true,
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn(`⚠️  ${component} verification failed: ${errorMessage}`);
+        return {
+            component,
+            success: false,
+            error: errorMessage,
+        };
+    }
+}
+
+/**
+ * Log a comprehensive verification summary
+ */
+function logVerificationSummary(results: VerificationResult[]) {
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.length - successCount;
+
+    logger.info('\n📋 Verification Summary:');
+    logger.info(`✅ Passed: ${successCount}/${results.length}`);
+
+    if (failureCount > 0) {
+        logger.warn(`❌ Failed: ${failureCount}/${results.length}`);
+        logger.warn('\nFailed verifications:');
+        results
+            .filter((r) => !r.success)
+            .forEach((result) => {
+                logger.warn(`  - ${result.component}: ${result.error}`);
+            });
+        logger.warn('\n⚠️  Some verification checks failed, but deployment output has been generated.');
+        logger.warn('Please review the failed checks and take appropriate action.');
+    } else {
+        logger.info('✅ All comprehensive verification checks passed successfully!');
+    }
 }
 
 /**
  * Verify ProxyAdmin contract - address format, bytecode, ownership
  */
-async function verifyProxyAdminContract(deployConfig: any, outputJson: any) {
+async function verifyProxyAdminContract(outputJson: any) {
     logger.info('🔍 Verifying ProxyAdmin contract...');
 
     // Verify address format and bytecode existence
