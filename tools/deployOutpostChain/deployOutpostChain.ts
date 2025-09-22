@@ -634,7 +634,7 @@ function generateFinalOutput(outputJson: any, deployParams: any, actualGlobalExi
             rollupID: deployParams.network.rollupID,
             networkName: deployParams.network.networkName,
             gasTokenAddress: deriveGasTokenAddress(deployParams.network.rollupID),
-            gasTokenNetwork: deployParams.network.chainID,
+            gasTokenNetwork: deployParams.network.rollupID,
         },
         contracts: outputJson,
         configuration,
