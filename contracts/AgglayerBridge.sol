@@ -194,8 +194,8 @@ contract AgglayerBridge is
             new TokenWrappedBridgeUpgradeable()
         );
 
-        // Deploy the BridgeLib library
-        /// @dev this contract is used to store the bytecode of the BridgeLib library, previously stored in the bridge contract but moved to a separate contract to reduce the bytecode size.
+        // Deploy the BridgeLib contract
+        /// @dev this contract is used to store the bytecode of the BridgeLib, previously stored in the bridge contract but moved to a separate contract to reduce the bytecode size.
         bridgeLib = new BridgeLib();
 
         // Disable initializers on the implementation following the best practices
@@ -1250,7 +1250,7 @@ contract AgglayerBridge is
         return wrappedTokenBridgeImplementation;
     }
 
-    // Helpers to safely get the metadata from a token are now in BridgeLib library
+    // Helpers to safely get the metadata from a token are now in BridgeLib contract.
 
     ////////////////////////////////
     ////    View functions    /////
