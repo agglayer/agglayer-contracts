@@ -12,9 +12,9 @@ import {
     PolygonRollupBaseEtrog,
     TokenWrapped,
     Address,
+    PolygonDataCommittee,
 } from '../../typechain-types';
 import { computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
-import { PolygonDataCommittee } from '../../typechain-types/contracts/v2/consensus/dataComittee';
 
 type BatchDataStructEtrog = PolygonRollupBaseEtrog.BatchDataStruct;
 type ValidiumBatchData = PolygonValidiumEtrog.ValidiumBatchDataStruct;

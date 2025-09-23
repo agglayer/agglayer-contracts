@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
-import "../PolygonZkEVMBridge.sol";
+import "../previousVersions/PolygonZkEVMBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/access/OwnableUpgradeable.sol";
 
 /**
