@@ -598,18 +598,15 @@ contract AggchainFEP is AggchainBase {
 
     /// @dev Validates the provided aggchain data and returns the computed aggchain parameters and vkey
     ///
-    ///     aggchain_hash:
-    ///     Field:           | CONSENSUS_TYPE | aggchain_vkey  | aggchain_params  |
-    ///     length (bits):   | 32             | 256            | 256              |
-    ///
     ///     aggchain_params:
     ///     Field:           | l2PreRoot         | claimRoot          | claimBlockNum      | rollupConfigHash     | optimisticMode  | trustedSequencer | rangeVkeyCommitment | aggregationVkey |
     ///     length (bits):   | 256               | 256                | 256                | 256                  | 8               | 160              | 256                 | 256             |
     ///
-    /// @param aggchainData custom bytes provided by the chain
+    /// @param aggchainData custom bytes provided by the chain and it is encode it as ABI solidity format
     ///     aggchainData:
-    ///     Field:           | _aggchainVKeySelector | _outputRoot  | _l2BlockNumber |
-    ///     length (bits):   | 32                    | 256          | 256            |
+    ///     Field:                  | _aggchainVKeySelector | _outputRoot  | _l2BlockNumber |
+    ///     length (bits):          | 32                    | 256          | 256            |
+    ///     ABI encoding (bits):    | 256                   | 256          | 256            |
     ///
     /// aggchainData._aggchainVKeySelector First 4 bytes of the aggchain vkey selector
     /// aggchainData._outputRoot Proposed new output root

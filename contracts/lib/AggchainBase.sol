@@ -284,6 +284,11 @@ abstract contract AggchainBase is
 
     /**
      * @notice Callback while pessimistic proof is being verified from the rollup manager
+     *
+     *     aggchain_hash:
+     *     Field:           | CONSENSUS_TYPE | aggchain_vkey  | aggchain_params  | multisig_hash |
+     *     length (bits):   | 32             | 256            | 256              | 256           |
+     *
      * @dev Returns the aggchain hash for a given aggchain data
      * @param aggchainData Custom bytes provided by the chain containing the aggchain data
      * @return aggchainHash resulting aggchain hash

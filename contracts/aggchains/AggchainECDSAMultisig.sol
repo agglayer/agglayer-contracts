@@ -179,14 +179,19 @@ contract AggchainECDSAMultisig is AggchainBase {
     ////////////////////////////////////////////////////////////
     //                    Functions: pure                    //
     ////////////////////////////////////////////////////////////
-    /**
-     * @notice Validates the provided aggchain data and returns the computed aggchain parameters and vkey
-     * @dev For ECDSA multisig, no data is needed as verification is done through signatures
-     * @param aggchainData Must be empty for ECDSA multisig implementation
-     * @return aggchainVKey Always returns bytes32(0) as ECDSA doesn't use verification keys
-     * @return aggchainParams Always returns bytes32(0) as parameters are included directly in hash
-     * @inheritdoc AggchainBase
-     */
+
+    /// @notice Validates the provided aggchain data and returns the computed aggchain parameters and vkey
+    /// @dev For ECDSA multisig, no data is needed as verification is done through signatures
+    ///
+    ///     aggchain_vkey: set to zero to skip verification in the PP
+    ///     aggchain_params: set to zero to skip verification in the PP
+    ///
+    /// @param aggchainData Must be empty for ECDSA multisig implementation
+    /// @return aggchainVKey Always returns bytes32(0) as ECDSA doesn't use verification keys
+    /// @return aggchainParams Always returns bytes32(0) as ECDSA doesn't use verification
+    /// @param aggchainData custom bytes provided by the chain and encode it as ABI solidity format
+    /// @inheritdoc AggchainBase
+    ///
     function getVKeyAndAggchainParams(
         bytes memory aggchainData
     ) public pure override returns (bytes32, bytes32) {
