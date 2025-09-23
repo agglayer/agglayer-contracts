@@ -197,7 +197,7 @@ async function main() {
         nonce: wrappedTokenImplementationInfo.nonce.toString(),
         address: wrappedTokenImplementationAddress,
         bytecode: wrappedTokenImplementationInfo.bytecode,
-        storage: wrappedTokenImplementationInfo.storage, // call `_disableInitializers();` in the constructor
+        storage: wrappedTokenImplementationInfo.storage, // preserve initialization state from _disableInitializers() call in constructor
     });
 
     // Retrieve bridgeLib contract to add it to the genesis
