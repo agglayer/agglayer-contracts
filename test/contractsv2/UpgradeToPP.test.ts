@@ -13,10 +13,10 @@ import {
     AgglayerManagerMock,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
+    AggchainECDSAMultisig,
 } from '../../typechain-types';
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
-import { AggchainECDSAMultisig } from '../../typechain-types/contracts/aggchains';
 
 const MerkleTreeBridge = MTBridge;
 const { getLeafValue } = mtBridgeUtils;
