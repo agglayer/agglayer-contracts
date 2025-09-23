@@ -182,20 +182,36 @@ async function main() {
         address: wrappedTokenBytecodeStorer,
         bytecode: bytecodeStorerInfo.bytecode,
     });
+
     if (isMainnet === false) {
         finalBridgeImplAddress = bridgeImplementationAddress;
     }
+
     // Retrieve wrappedTokenBridgeImplementation contract to add it to the genesis, necessary for token wrapped deployments from the bridge
     const wrappedTokenImplementationAddress = await bridgeContract.getWrappedTokenBridgeImplementation();
 
     const wrappedTokenImplementationInfo = await getAddressInfo(wrappedTokenImplementationAddress as string);
     genesis.push({
-        contractName: `TokenWrapped Implementation`,
+        contractName: GENESIS_CONTRACT_NAMES.TOKEN_WRAPPED_IMPLEMENTATION,
         balance: '0',
         nonce: wrappedTokenImplementationInfo.nonce.toString(),
         address: wrappedTokenImplementationAddress,
         bytecode: wrappedTokenImplementationInfo.bytecode,
+        storage: wrappedTokenImplementationInfo.storage, // call `_disableInitializers();` in the constructor
     });
+
+    // Retrieve bridgeLib contract to add it to the genesis
+    const bridgeLibAddress = await bridgeContract.bridgeLib();
+
+    const bridgeLibInfo = await getAddressInfo(bridgeLibAddress as string);
+    genesis.push({
+        contractName: GENESIS_CONTRACT_NAMES.BRIDGE_LIB,
+        balance: '0',
+        nonce: bridgeLibInfo.nonce.toString(),
+        address: bridgeLibAddress,
+        bytecode: bridgeLibInfo.bytecode,
+    });
+
     // Do not initialize the bridge!
 
     /*
@@ -293,7 +309,7 @@ async function main() {
     // ZKEVMDeployer
     const zkEVMDeployerInfo = await getAddressInfo(zkEVMDeployerContract.target);
     genesis.push({
-        contractName: 'PolygonZkEVMDeployer',
+        contractName: GENESIS_CONTRACT_NAMES.POLYGON_DEPLOYER,
         balance: '0',
         nonce: zkEVMDeployerInfo.nonce.toString(),
         address: finalZkEVMDeployerAddress,
@@ -304,7 +320,7 @@ async function main() {
     // Proxy Admin
     const proxyAdminInfo = await getAddressInfo(proxyAdminAddress as string);
     genesis.push({
-        contractName: 'ProxyAdmin',
+        contractName: GENESIS_CONTRACT_NAMES.PROXY_ADMIN,
         balance: '0',
         nonce: proxyAdminInfo.nonce.toString(),
         address: finalProxyAdminAddress,
@@ -419,7 +435,7 @@ async function main() {
     }
 
     genesis.push({
-        contractName: 'PolygonZkEVMTimelock',
+        contractName: GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK,
         balance: '0',
         nonce: timelockInfo.nonce.toString(),
         address: finalTimelockContractAddress,
