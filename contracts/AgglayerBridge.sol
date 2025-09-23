@@ -929,7 +929,7 @@ contract AgglayerBridge is
                 )
             );
 
-        // check that this global exit root exist
+        // check that this global exit root exists
         if (blockHashGlobalExitRoot == 0) {
             revert GlobalExitRootInvalid();
         }
