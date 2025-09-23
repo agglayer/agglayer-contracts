@@ -3,12 +3,12 @@
 pragma solidity 0.8.28;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/OwnableUpgradeable.sol";
-import {IGlobalExitRootManagerL2SovereignChain} from "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import {IAgglayerGERL2} from "../interfaces/IAgglayerGERL2.sol";
 import {IAggOracleCommittee} from "../interfaces/IAggOracleCommittee.sol";
 
 /**
  * @title AggOracleCommittee
- * @notice Contract responsible for managing the insertion of GERs into the GlobalExitRootManagerL2SovereignChain.
+ * @notice Contract responsible for managing the insertion of GERs into the AgglayerGERL2.
  */
 contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
     /**
@@ -30,8 +30,7 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
 
     // Global exit root manager L2
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IGlobalExitRootManagerL2SovereignChain
-        public immutable globalExitRootManagerL2Sovereign;
+    IAgglayerGERL2 public immutable globalExitRootManagerL2Sovereign;
 
     // This array is used only to easily get the current oracle members' information
     address[] public aggOracleMembers;
@@ -48,7 +47,7 @@ contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
     /**
      * @notice Disables initializers on the implementation, following best practices.
      */
-    constructor(IGlobalExitRootManagerL2SovereignChain globalExitRootManager) {
+    constructor(IAgglayerGERL2 globalExitRootManager) {
         require(
             address(globalExitRootManager) != address(0),
             GlobalExitRootManagerCannotBeZero()

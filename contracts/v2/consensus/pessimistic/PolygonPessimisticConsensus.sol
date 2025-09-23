@@ -24,10 +24,10 @@ contract PolygonPessimisticConsensus is
      * @param _rollupManager Rollup manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager
+        IAgglayerBridge _bridgeAddress,
+        AgglayerManager _rollupManager
     )
         PolygonConsensusBase(
             _globalExitRootManager,

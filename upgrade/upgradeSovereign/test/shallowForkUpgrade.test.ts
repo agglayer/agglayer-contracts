@@ -9,9 +9,9 @@ import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-
 import {
     PolygonZkEVMTimelock,
     GlobalExitRootManagerL2SovereignChainPessimistic,
-    GlobalExitRootManagerL2SovereignChain,
+    AgglayerGERL2,
     BridgeL2SovereignChainPessimistic,
-    BridgeL2SovereignChain,
+    AgglayerBridgeL2,
 } from '../../../typechain-types';
 
 import { logger } from '../../../src/logger';
@@ -124,20 +124,18 @@ async function main() {
     };
     await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
     logger.info(`✓ Sent execute transaction`);
-    const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-        'GlobalExitRootManagerL2SovereignChain',
-    );
+    const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
     const gerManagerL2SovereignContract = GlobalExitRootManagerL2SovereignChainFactory.attach(
         globalExitRootManagerL2SovereignChainAddress,
-    ) as GlobalExitRootManagerL2SovereignChain;
+    ) as AgglayerGERL2;
     expect(await gerManagerL2SovereignContract.globalExitRootUpdater()).to.equal(globalExitRootUpdater);
     expect(await gerManagerL2SovereignContract.globalExitRootRemover()).to.equal(globalExitRootRemover);
 
-    logger.info(`✓ Checked GlobalExitRootManagerL2SovereignChain contract storage parameters`);
+    logger.info(`✓ Checked AgglayerGERL2 contract storage parameters`);
 
     // Check bridge params after upgrade
-    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
-    const bridgeContract = bridgeFactory.attach(bridgeAddress) as BridgeL2SovereignChain;
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2');
+    const bridgeContract = bridgeFactory.attach(bridgeAddress) as AgglayerBridgeL2;
     expect(await bridgeContract.BRIDGE_SOVEREIGN_VERSION()).to.equal(AL_VERSION);
     expect(await bridgeContract.globalExitRootManager()).to.equal(bridgeGlobalExitRootManager);
     expect(await bridgeContract.lastUpdatedDepositCount()).to.equal(bridgeLastUpdatedDepositCount);
@@ -149,7 +147,7 @@ async function main() {
     expect(await bridgeContract.emergencyBridgePauser()).to.equal(upgradeParams.emergencyBridgePauserAddress);
     expect(await bridgeContract.emergencyBridgeUnpauser()).to.equal(upgradeParams.emergencyBridgeUnpauserAddress);
 
-    logger.info(`✓ Checked BridgeL2SovereignChain contract storage parameters`);
+    logger.info(`✓ Checked AgglayerBridgeL2 contract storage parameters`);
     logger.info('Finished shallow fork upgrade');
 }
 

@@ -2,16 +2,16 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../interfaces/IAgglayerGER.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "../interfaces/IPolygonConsensusBase.sol";
 import "../interfaces/IPolygonRollupBase.sol";
-import "../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "../interfaces/IAgglayerBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "./PolygonConstantsBase.sol";
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 
 /**
  * Contract responsible for managing the states and the updates of L2 network.
@@ -30,13 +30,13 @@ abstract contract PolygonConsensusBase is
     IERC20Upgradeable public immutable pol;
 
     // Global Exit Root interface
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
-    IPolygonZkEVMBridgeV2 public immutable bridgeAddress;
+    IAgglayerBridge public immutable bridgeAddress;
 
     // Rollup manager
-    PolygonRollupManager public immutable rollupManager;
+    AgglayerManager public immutable rollupManager;
 
     // Address that will be able to adjust contract parameters
     address public admin;
@@ -117,10 +117,10 @@ abstract contract PolygonConsensusBase is
      * @param _rollupManager Global exit root manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager
+        IAgglayerBridge _bridgeAddress,
+        AgglayerManager _rollupManager
     ) {
         globalExitRootManager = _globalExitRootManager;
         pol = _pol;

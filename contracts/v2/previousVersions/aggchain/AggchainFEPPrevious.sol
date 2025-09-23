@@ -246,10 +246,10 @@ contract AggchainFEPPrevious is AggchainBasePrevious {
     /// @param _rollupManager Global exit root manager address
     /// @param _aggLayerGateway agglayer gateway address
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager,
+        IAgglayerBridge _bridgeAddress,
+        AgglayerManager _rollupManager,
         IAggLayerGatewayPrevious _aggLayerGateway
     )
         AggchainBasePrevious(

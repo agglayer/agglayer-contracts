@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "./interfaces/IAgglayerGER.sol";
 import "../interfaces/IPolygonZkEVMBridge.sol";
 import "./interfaces/IPolygonRollupBase.sol";
 import "../interfaces/IVerifierRollup.sol";
@@ -16,9 +16,9 @@ import "./lib/LegacyZKEVMStateVariables.sol";
 import "./lib/PolygonConstantsBase.sol";
 import "./interfaces/IPolygonPessimisticConsensus.sol";
 import "./interfaces/ISP1Verifier.sol";
-import "./interfaces/IPolygonRollupManager.sol";
+import "./interfaces/IAgglayerManager.sol";
 import "./interfaces/IAggchainBase.sol";
-import "./interfaces/IAggLayerGateway.sol";
+import "./interfaces/IAgglayerGateway.sol";
 import "./interfaces/IVersion.sol";
 import "./lib/Hashes.sol";
 
@@ -28,12 +28,12 @@ import "./lib/Hashes.sol";
  * The logic for sequence batches is moved to the `consensus` contracts, while the verification of all of
  * them will be done in this one. In this way, the proof aggregation of the rollups will be easier on a close future.
  */
-contract PolygonRollupManager is
+contract AgglayerManager is
     PolygonAccessControlUpgradeable,
     EmergencyManager,
     LegacyZKEVMStateVariables,
     PolygonConstantsBase,
-    IPolygonRollupManager,
+    IAgglayerManager,
     ReentrancyGuardTransient,
     IVersion
 {
@@ -251,7 +251,7 @@ contract PolygonRollupManager is
 
     // Global Exit Root address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -263,7 +263,7 @@ contract PolygonRollupManager is
 
     // Polygon Verifier Gateway address
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAggLayerGateway public immutable aggLayerGateway;
+    IAgglayerGateway public immutable aggLayerGateway;
 
     // Number of rollup types added, every new type will be assigned sequentially a new ID
     uint32 public rollupTypeCount;
@@ -468,10 +468,10 @@ contract PolygonRollupManager is
      * @param _aggLayerGateway Polygon Verifier Gateway address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     ) {
         // Check non zero inputs
         if (
@@ -1437,7 +1437,7 @@ contract PolygonRollupManager is
     ////////////////////////
 
     /**
-     * @notice Function to activate emergency state, which also enables the emergency mode on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Function to activate emergency state, which also enables the emergency mode on both AgglayerManager and PolygonZkEVMBridge contracts
      * If not called by the owner must not have been aggregated in a _HALT_AGGREGATION_TIMEOUT period and an emergency state was not happened in the same period
      */
     function activateEmergencyState() external {
@@ -1457,7 +1457,7 @@ contract PolygonRollupManager is
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
      */
     function deactivateEmergencyState()
         external
@@ -1474,7 +1474,7 @@ contract PolygonRollupManager is
     }
 
     /**
-     * @notice Internal function to activate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Internal function to activate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
      */
     function _activateEmergencyState() internal override {
         // Activate emergency state on PolygonZkEVM Bridge

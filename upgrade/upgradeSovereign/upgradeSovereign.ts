@@ -77,11 +77,8 @@ async function main() {
     const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
 
     // prepare upgrades
-    // Upgrade to GlobalExitRootManagerL2SovereignChain
-    const gerManagerL2SovereignChainFactory = await ethers.getContractFactory(
-        'GlobalExitRootManagerL2SovereignChain',
-        deployer,
-    );
+    // Upgrade to AgglayerGERL2
+    const gerManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2', deployer);
     const gerManagerL2SovereignChainImplementation = await upgrades.prepareUpgrade(
         globalExitRootManagerL2SovereignChainAddress,
         gerManagerL2SovereignChainFactory,
@@ -124,8 +121,8 @@ async function main() {
         salt, // salt
     );
 
-    // Upgrade BridgeL2SovereignChain
-    const bridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
+    // Upgrade AgglayerBridgeL2
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2', deployer);
     await upgrades.forceImport(bridgeAddress, bridgeFactory, {
         constructorArgs: [],
         kind: 'transparent',

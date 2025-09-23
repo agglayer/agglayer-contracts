@@ -57,10 +57,10 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
      * @param _rollupManager Global exit root manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager
+        IAgglayerBridge _bridgeAddress,
+        AgglayerManager _rollupManager
     )
         PolygonRollupBaseEtrog(
             _globalExitRootManager,

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 
 import "./IBridgeL2SovereignChainsV1010.sol";
 import "./PolygonZkEVMBridgeV2V1010.sol";
-import "../../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import "../../interfaces/IAgglayerGERL2.sol";
 
 /**
  * Sovereign chains bridge that will be deployed on all Sovereign chains
@@ -42,7 +42,7 @@ contract BridgeL2SovereignChainV1010 is
     // Map to store wrappedAddresses that are not mintable
     mapping(bytes32 tokenInfoHash => uint256 amount) public localBalanceTree;
 
-    /// @dev Deprecated in favor of _initializerVersion at PolygonZkEVMBridgeV2
+    /// @dev Deprecated in favor of _initializerVersion at AgglayerBridge
     /// @custom:oz-renamed-from _initializerVersion
     uint8 private _initializerVersionLegacy;
 
@@ -195,7 +195,7 @@ contract BridgeL2SovereignChainV1010 is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        IBaseLegacyAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata,
         address _bridgeManager,
@@ -358,7 +358,7 @@ contract BridgeL2SovereignChainV1010 is
         uint32, // _networkID
         address, //_gasTokenAddress
         uint32, //_gasTokenNetwork
-        IBasePolygonZkEVMGlobalExitRoot, //_globalExitRootManager
+        IBaseLegacyAgglayerGER, //_globalExitRootManager
         address, //_polygonRollupManager
         bytes memory //_gasTokenMetadata
     )
@@ -400,9 +400,8 @@ contract BridgeL2SovereignChainV1010 is
     modifier onlyGlobalExitRootRemover() {
         // Only allowed to be called by GlobalExitRootRemover
         if (
-            IGlobalExitRootManagerL2SovereignChain(
-                address(globalExitRootManager)
-            ).globalExitRootRemover() != msg.sender
+            IAgglayerGERL2(address(globalExitRootManager))
+                .globalExitRootRemover() != msg.sender
         ) {
             revert OnlyGlobalExitRootRemover();
         }
@@ -863,7 +862,7 @@ contract BridgeL2SovereignChainV1010 is
 
     /**
      * @notice Mints tokens from wrapped token to proceed with the claim, if the token is not mintable it will be transferred
-     * note This function has been extracted to be able to override it by other contracts like BridgeL2SovereignChain
+     * note This function has been extracted to be able to override it by other contracts like AgglayerBridgeL2
      * @param tokenWrapped Proxied wrapped token to mint
      * @param destinationAddress Minted token receiver
      * @param amount Amount of tokens

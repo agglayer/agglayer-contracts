@@ -6,12 +6,12 @@ import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-helpers';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMTimelock,
     PolygonRollupManagerPessimistic,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     PolygonZkEVMBridgeV2Pessimistic,
-    PolygonZkEVMGlobalExitRootV2,
+    AgglayerGER,
     PolygonZkEVMGlobalExitRootV2Pessimistic,
 } from '../../typechain-types';
 
@@ -161,10 +161,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Sent execute transaction`);
 
         // Check rollup manager contract
-        const rollupMangerFactory = await ethers.getContractFactory('PolygonRollupManager');
-        const rollupManagerContract = rollupMangerFactory.attach(
-            upgradeParams.rollupManagerAddress,
-        ) as PolygonRollupManager;
+        const rollupMangerFactory = await ethers.getContractFactory('AgglayerManager');
+        const rollupManagerContract = rollupMangerFactory.attach(upgradeParams.rollupManagerAddress) as AgglayerManager;
         expect(await rollupManagerContract.ROLLUP_MANAGER_VERSION()).to.equal(AL_VERSION);
         expect(await rollupManagerContract.bridgeAddress()).to.equal(bridgeAddress);
         expect(await rollupManagerContract.calculateRewardPerBatch()).to.equal(calculateRewardPerBatch);
@@ -185,8 +183,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Checked rollup manager contract storage parameters and new version`);
 
         // Check bridge contract
-        const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
-        const bridgeContract = bridgeFactory.attach(bridgeAddress) as PolygonZkEVMBridgeV2;
+        const bridgeFactory = await ethers.getContractFactory('AgglayerBridge');
+        const bridgeContract = bridgeFactory.attach(bridgeAddress) as AgglayerBridge;
         expect(await bridgeContract.BRIDGE_VERSION()).to.equal(AL_VERSION);
         expect(await bridgeContract.globalExitRootManager()).to.equal(bridgeGlobalExitRootManager);
         expect(await bridgeContract.lastUpdatedDepositCount()).to.equal(bridgeLastUpdatedDepositCount);
@@ -204,8 +202,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Checked bridge contract storage parameters`);
 
         // Check ger contract
-        const gerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
-        const gerContract = gerFactory.attach(globalExitRootManager) as PolygonZkEVMGlobalExitRootV2;
+        const gerFactory = await ethers.getContractFactory('AgglayerGER');
+        const gerContract = gerFactory.attach(globalExitRootManager) as AgglayerGER;
         expect(await gerContract.GER_VERSION()).to.equal(AL_VERSION);
         expect(await gerContract.bridgeAddress()).to.equal(gerBridgeAddress);
         expect(await gerContract.rollupManager()).to.equal(gerRollupManger);

@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.20;
 
-import "../../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
-import "../../lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
+import "../../interfaces/IAgglayerGER.sol";
+import "../../lib/LegacyAgglayerGERBaseStorage.sol";
 import "./GlobalExitRootLibPessimistic.sol";
 import "./DepositContractBasePessimistic.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
  * Contract responsible for managing the exit roots across multiple networks
  */
 contract PolygonZkEVMGlobalExitRootV2Pessimistic is
-    PolygonZkEVMGlobalExitRootBaseStorage,
+    LegacyAgglayerGERBaseStorage,
     DepositContractBasePessimistic,
     Initializable
 {
@@ -149,7 +149,7 @@ contract PolygonZkEVMGlobalExitRootV2Pessimistic is
     function getRoot()
         public
         view
-        override(DepositContractBasePessimistic, IPolygonZkEVMGlobalExitRootV2)
+        override(DepositContractBasePessimistic, IAgglayerGER)
         returns (bytes32)
     {
         return super.getRoot();

@@ -7,9 +7,9 @@ import { processorUtils, contractUtils, MTBridge, mtBridgeUtils, utils } from '@
 import {
     VerifierRollupHelperMock,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
-    PolygonZkEVMGlobalExitRootV2,
-    PolygonZkEVMBridgeV2,
+    AgglayerManagerMock,
+    AgglayerGER,
+    AgglayerBridge,
     PolygonZkEVMEtrog,
     PolygonRollupBaseEtrog,
     TokenWrapped,
@@ -71,10 +71,10 @@ describe('Polygon Rollup Manager', () => {
     let beneficiary: any;
 
     let verifierContract: VerifierRollupHelperMock;
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridge;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
+    let polygonZkEVMGlobalExitRoot: AgglayerGER;
+    let rollupManagerContract: AgglayerManagerMock;
 
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
@@ -141,9 +141,9 @@ describe('Polygon Rollup Manager', () => {
             firstDeployment = false;
         }
 
-        // deploy AggLayerGateway
-        const AggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
-        const aggLayerGatewayContract = await upgrades.deployProxy(AggLayerGatewayFactory, [], {
+        // deploy AgglayerGateway
+        const AgglayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
+        const aggLayerGatewayContract = await upgrades.deployProxy(AgglayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor'],
         });
@@ -164,21 +164,21 @@ describe('Polygon Rollup Manager', () => {
         firstDeployment = false;
 
         // deploy globalExitRoot
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerGER');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, precalculateBridgeAddress],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
         // deploy PolygonZkEVMBridge
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
-        // deploy PolygonRollupManager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        // deploy AgglayerManager
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
@@ -189,7 +189,7 @@ describe('Polygon Rollup Manager', () => {
                 aggLayerGatewayContract.target,
             ],
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'state-variable-immutable'],
-        })) as unknown as PolygonRollupManagerMock;
+        })) as unknown as AgglayerManagerMock;
 
         await rollupManagerContract.waitForDeployment();
 
@@ -523,7 +523,7 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -1474,7 +1474,7 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -2056,7 +2056,7 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [
@@ -2735,7 +2735,7 @@ describe('Polygon Rollup Manager', () => {
         );
 
         // Check transaction
-        const bridgeL2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeL2Factory = await ethers.getContractFactory('AgglayerBridge');
         const encodedData = bridgeL2Factory.interface.encodeFunctionData(
             'initialize(uint32,address,uint32,address,address,bytes)',
             [

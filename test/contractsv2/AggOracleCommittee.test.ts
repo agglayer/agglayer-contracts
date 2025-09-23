@@ -1,13 +1,13 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import { AggOracleCommittee, GlobalExitRootManagerL2SovereignChain } from '../../typechain-types';
+import { AggOracleCommittee, AgglayerGERL2 } from '../../typechain-types';
 
 describe('AggOracleCommittee tests', () => {
     upgrades.silenceWarnings();
 
     let aggOracleCommitteeContract: AggOracleCommittee;
-    let globalExitRootManagerContract: GlobalExitRootManagerL2SovereignChain;
+    let globalExitRootManagerContract: AgglayerGERL2;
 
     let deployer: any;
     let owner: any;
@@ -27,9 +27,7 @@ describe('AggOracleCommittee tests', () => {
             await ethers.getSigners();
 
         // deploy global exit root manager
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'GlobalExitRootManagerL2SovereignChain',
-        );
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
         globalExitRootManagerContract = (await upgrades.deployProxy(
             GlobalExitRootManagerL2SovereignChainFactory,
             [deployer.address, deployer.address], // Initializer params
@@ -38,7 +36,7 @@ describe('AggOracleCommittee tests', () => {
                 constructorArgs: [bridge.address], // Constructor arguments
                 unsafeAllow: ['constructor', 'state-variable-immutable'],
             },
-        )) as unknown as GlobalExitRootManagerL2SovereignChain;
+        )) as unknown as AgglayerGERL2;
 
         // deploy AggOracleCommittee
         const AggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee');

@@ -127,12 +127,12 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/v2/PolygonZkEVMBridgeV2.sol': {
+            'contracts/v2/AgglayerBridge.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // should have same runs than BridgeL2SovereignChain
+                        runs: 100, // should have same runs than AgglayerBridgeL2
                     },
                     evmVersion: 'shanghai',
                 },
@@ -147,17 +147,17 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 },
             },
-            'contracts/v2/sovereignChains/BridgeL2SovereignChain.sol': {
+            'contracts/v2/sovereignChains/AgglayerBridgeL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // should have same runs than PolygonZkEVMBridgeV2
+                        runs: 100, // should have same runs than AgglayerBridge
                     },
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/PolygonZkEVMGlobalExitRootL2.sol': {
+            'contracts/LegacyAgglayerGERL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -167,7 +167,7 @@ const config: HardhatUserConfig = {
                     evmVersion: 'shanghai',
                 }, // try yul optimizer
             },
-            'contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol': {
+            'contracts/v2/sovereignChains/AgglayerGERL2.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -178,7 +178,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/PolygonRollupManager.sol': {
+            'contracts/v2/AgglayerManager.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -189,7 +189,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/newDeployments/PolygonRollupManagerNotUpgraded.sol': {
+            'contracts/v2/newDeployments/AgglayerManagerNotUpgraded.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -200,7 +200,7 @@ const config: HardhatUserConfig = {
                 }, // try yul optimizer
             },
             // low runs to avoid bytecode max size
-            'contracts/v2/mocks/PolygonRollupManagerMock.sol': {
+            'contracts/v2/mocks/AgglayerManagerMock.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
@@ -228,7 +228,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 100,
                     },
-                    evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
+                    evmVersion: 'shanghai', // Same evm version than AgglayerBridgeL2
                 },
             },
             'contracts/v2/lib/TokenWrappedTransparentProxy.sol': {
@@ -238,7 +238,7 @@ const config: HardhatUserConfig = {
                         enabled: true,
                         runs: 999999,
                     },
-                    evmVersion: 'shanghai', // Same evm version than BridgeL2SovereignChain
+                    evmVersion: 'shanghai', // Same evm version than AgglayerBridgeL2
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },
@@ -247,9 +247,9 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 100, // should have same runs than PolygonZkEVMBridgeV2
+                        runs: 100, // should have same runs than AgglayerBridge
                     },
-                    evmVersion: 'shanghai', // Same evm version than PolygonZkEVMBridgeV2
+                    evmVersion: 'shanghai', // Same evm version than AgglayerBridge
                 }, // try yul optimizer
             },
             'contracts/v2/aggchains/AggchainFEP.sol': {

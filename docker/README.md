@@ -31,11 +31,11 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
 - `emergencyCouncilAddress`: address, Emergency council address
 - `polTokenAddress`: address, POL token address, only if deploy on testnet can be left blank and will fulfilled by the scripts.
 - `zkEVMDeployerAddress`: address, Address of the `PolygonZkEVMDeployer`. Can be left blank, will be fulfilled automatically with the `deploy:deployer:ZkEVM:goerli` script
-- `ppVKey`: pessimistic program verification key (AggLayerGateway)
-- `ppVKeySelector`: The 4 bytes selector to add to the pessimistic verification keys (AggLayerGateway)
-- `multisigRoleAddress`: address, The address that can manage multisig signers and threshold (AggLayerGateway)
-- `signersToAdd`: array, Array of signer objects with addr and url properties (AggLayerGateway) - optional, defaults to []
-- `newThreshold`: uint256, Threshold for multisig operations (AggLayerGateway) - optional, defaults to 0
+- `ppVKey`: pessimistic program verification key (AgglayerGateway)
+- `ppVKeySelector`: The 4 bytes selector to add to the pessimistic verification keys (AgglayerGateway)
+- `multisigRoleAddress`: address, The address that can manage multisig signers and threshold (AgglayerGateway)
+- `signersToAdd`: array, Array of signer objects with addr and url properties (AgglayerGateway) - optional, defaults to []
+- `newThreshold`: uint256, Threshold for multisig operations (AgglayerGateway) - optional, defaults to 0
 - `deployerPvtKey`: string, pvtKey of the deployer, overrides the address in `MNEMONIC` of `.env` if exist
 - `maxFeePerGas`: string, Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it
 - `maxPriorityFeePerGas`: string, Set `maxPriorityFeePerGas`, must define as well `maxFeePerGas` to use it
@@ -71,8 +71,8 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
         - `optimisticModeManager`: Address that can trigger the optimistic mode
         - `aggregationVkey`: The verification key of the aggregation SP1 program.
         - `rangeVkeyCommitment`: The 32 byte commitment to the BabyBear representation of the verification key of the range SP1 program.
-    - `useDefaultVkeys`: bool, flag to use default verification keys from AggLayerGateway
-    - `useDefaultSigners`: bool, flag to use default signers from AggLayerGateway
+    - `useDefaultVkeys`: bool, flag to use default verification keys from AgglayerGateway
+    - `useDefaultSigners`: bool, flag to use default signers from AgglayerGateway
     - `ownedAggchainVKey`: bytes32, Initial owned aggchain verification key
     - `aggchainVKeySelector`: bytes2, Initial aggchain selector
     - `vKeyManager`: address, Initial vKeyManager

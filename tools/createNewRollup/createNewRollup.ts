@@ -18,9 +18,9 @@ import createRollupParameters from './create_new_rollup.json';
 import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis';
 import { logger } from '../../src/logger';
 import {
-    PolygonRollupManager,
+    AgglayerManager,
     PolygonZkEVMEtrog,
-    PolygonZkEVMBridgeV2,
+    AgglayerBridge,
     PolygonValidiumEtrog,
     PolygonPessimisticConsensus,
 } from '../../typechain-types';
@@ -151,17 +151,17 @@ async function main() {
     }
 
     // Load Rollup manager
-    const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager', deployer);
+    const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
     const rollupManagerContract = PolygonRollupManagerFactory.attach(
         createRollupParameters.rollupManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     // Load global exit root manager
-    const globalExitRootManagerFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2', deployer);
+    const globalExitRootManagerFactory = await ethers.getContractFactory('AgglayerGER', deployer);
     const globalExitRootManagerAddress = await rollupManagerContract.globalExitRootManager();
     const globalExitRootManagerContract = globalExitRootManagerFactory.attach(
         globalExitRootManagerAddress,
-    ) as PolygonRollupManager;
+    ) as AgglayerManager;
 
     // Check if the deployer has right to deploy new rollups from rollupManager contract
     const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
@@ -425,9 +425,9 @@ async function main() {
     let gasTokenMetadata;
 
     // Get bridge instance
-    const bridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2', deployer);
+    const bridgeFactory = await ethers.getContractFactory('AgglayerBridge', deployer);
     const bridgeContractAddress = await rollupManagerContract.bridgeAddress();
-    const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as PolygonZkEVMBridgeV2;
+    const rollupBridgeContract = bridgeFactory.attach(bridgeContractAddress) as AgglayerBridge;
     if (
         ethers.isAddress(createRollupParameters.gasTokenAddress) &&
         createRollupParameters.gasTokenAddress !== ethers.ZeroAddress

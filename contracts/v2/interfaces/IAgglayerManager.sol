@@ -6,7 +6,7 @@ import "../../interfaces/IVerifierRollup.sol";
 import "./IPolygonRollupBase.sol";
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts5/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-interface IPolygonRollupManager {
+interface IAgglayerManager {
     /**
      * @dev Thrown when sender is not the PolygonZkEVM address
      */

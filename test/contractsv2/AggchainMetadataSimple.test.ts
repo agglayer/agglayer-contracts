@@ -23,19 +23,16 @@ describe('Aggchain Metadata Simple Tests', () => {
         ]);
 
         // Deploy global exit root manager
-        const globalExitRootManager = await ethers.deployContract('PolygonZkEVMGlobalExitRootV2', [
-            deployer.address,
-            deployer.address,
-        ]);
+        const globalExitRootManager = await ethers.deployContract('AgglayerGER', [deployer.address, deployer.address]);
 
         // Deploy bridge mock
         const mockBridge = '0x0000000000000000000000000000000000000002';
 
-        // Deploy AggLayerGateway
-        const aggLayerGateway = await ethers.deployContract('AggLayerGateway', []);
+        // Deploy AgglayerGateway
+        const aggLayerGateway = await ethers.deployContract('AgglayerGateway', []);
 
-        // Deploy PolygonRollupManagerMock
-        const rollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        // Deploy AgglayerManagerMock
+        const rollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
         rollupManagerContract = await rollupManagerFactory.deploy(
             globalExitRootManager.target,
             pol.target,

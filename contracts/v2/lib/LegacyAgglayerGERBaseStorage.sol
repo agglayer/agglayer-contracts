@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity ^0.8.20;
-import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../interfaces/IAgglayerGER.sol";
 
 /**
- * Since the current contract of PolygonZkEVMGlobalExitRoot will be upgraded to a PolygonZkEVMGlobalExitRootV2, and it will implement
+ * Since the current contract of PolygonZkEVMGlobalExitRoot will be upgraded to a AgglayerGER, and it will implement
  * the DepositContractBase, this base is needed to preserve the previous storage slots
  */
-abstract contract PolygonZkEVMGlobalExitRootBaseStorage is
-    IPolygonZkEVMGlobalExitRootV2
-{
+abstract contract LegacyAgglayerGERBaseStorage is IAgglayerGER {
     // Rollup root, contains all exit roots of all rollups
     bytes32 public lastRollupExitRoot;
 

@@ -23,11 +23,8 @@ contract BatchL2DataCreatedRollup {
     bytes32 public constant SIGNATURE_INITIALIZE_TX_S =
         0x000000000000000000000000000000000000000000000000000000005ca1ab1e;
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
-    IBasePolygonZkEVMGlobalExitRoot
-        public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBasePolygonZkEVMGlobalExitRoot(
-            0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
-        );
+    IBaseLegacyAgglayerGER public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
+        IBaseLegacyAgglayerGER(0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA);
 
     /**
      * @notice Generate Initialize transaction for hte bridge on L2
@@ -45,7 +42,7 @@ contract BatchL2DataCreatedRollup {
         bytes memory _gasTokenMetadata
     ) public view returns (bytes memory) {
         bytes memory initializeBrigeData = abi.encodeCall(
-            IPolygonZkEVMBridgeV2.initialize,
+            IAgglayerBridge.initialize,
             (
                 networkID,
                 _gasTokenAddress,

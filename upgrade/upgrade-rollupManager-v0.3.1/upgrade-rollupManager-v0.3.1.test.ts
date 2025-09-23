@@ -5,7 +5,7 @@ import path = require('path');
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { time, reset, setBalance, mine } from '@nomicfoundation/hardhat-network-helpers';
-import { PolygonRollupManager, PolygonZkEVMTimelock } from '../../typechain-types';
+import { AgglayerManager, PolygonZkEVMTimelock } from '../../typechain-types';
 
 import { logger } from '../../src/logger';
 import { checkParams } from '../../src/utils';
@@ -83,8 +83,8 @@ describe('Should shallow fork network, execute upgrade and validate Upgrade', ()
         logger.info(`✓ Funded proposer account ${proposerRoleAddress}`);
 
         // Get contract
-        const rollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
-        const rollupManagerContract = rollupManagerFactory.attach(rollupManagerAddress) as PolygonRollupManager;
+        const rollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
+        const rollupManagerContract = rollupManagerFactory.attach(rollupManagerAddress) as AgglayerManager;
 
         // Bridge prev params
         const version = await rollupManagerContract.ROLLUP_MANAGER_VERSION();

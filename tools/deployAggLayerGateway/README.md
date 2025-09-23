@@ -1,4 +1,4 @@
-# Deploy AggLayerGateway
+# Deploy AgglayerGateway
 
 Script to deploy aggLayerGateway contract
 
@@ -21,7 +21,7 @@ Fill `.env` with your `ETHERSCAN_API_KEY` and `DEPLOYER_PRIVATE_KEY`
 - Copy configuration files:
 
 ```
-cp ./tools/deployAggLayerGateway/deploy_parameters.json.example ./tools/deployAggLayerGateway/deploy_parameters.json
+cp ./tools/deployAgglayerGateway/deploy_parameters.json.example ./tools/deployAgglayerGateway/deploy_parameters.json
 ```
 
 - Fill configuration file
@@ -46,7 +46,7 @@ cp ./tools/deployAggLayerGateway/deploy_parameters.json.example ./tools/deployAg
 - Run tool:
 
 ```
-npx hardhat run ./tools/deployAggLayerGateway/deployAggLayerGateway.ts --network sepolia
+npx hardhat run ./tools/deployAgglayerGateway/deployAgglayerGateway.ts --network sepolia
 ```
 
 - OutputFile: `deploy_output.json`

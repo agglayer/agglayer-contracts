@@ -2,19 +2,16 @@
 
 pragma solidity 0.8.28;
 
-import "../interfaces/IBridgeL2SovereignChains.sol";
-import "../PolygonZkEVMBridgeV2.sol";
-import "../interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import "../interfaces/IAgglayerBridgeL2.sol";
+import "../AgglayerBridge.sol";
+import "../interfaces/IAgglayerGERL2.sol";
 
 /**
  * Sovereign chains bridge that will be deployed on all Sovereign chains
  * Contract responsible to manage the token interactions with other networks
  * This contract is not meant to replace the current zkEVM bridge contract, but deployed on sovereign networks
  */
-contract BridgeL2SovereignChain is
-    PolygonZkEVMBridgeV2,
-    IBridgeL2SovereignChains
-{
+contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
     using SafeERC20 for ITokenWrappedBridgeUpgradeable;
     // address used to permission the initialization of the contract
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -56,7 +53,7 @@ contract BridgeL2SovereignChain is
     // Local balance tree mapping
     mapping(bytes32 tokenInfoHash => uint256 amount) public localBalanceTree;
 
-    /// @dev Deprecated in favor of _initializerVersion at PolygonZkEVMBridgeV2
+    /// @dev Deprecated in favor of _initializerVersion at AgglayerBridge
     /// @custom:oz-renamed-from _initializerVersion
     uint8 private _initializerVersionLegacy;
 
@@ -255,7 +252,7 @@ contract BridgeL2SovereignChain is
      * Disable initializers on the implementation following the best practices
      * @dev the deployer is set to the contract creator and will be the only allowed to initialize the contract in a 2 steps process
      */
-    constructor() PolygonZkEVMBridgeV2() {
+    constructor() AgglayerBridge() {
         deployer = msg.sender;
         _disableInitializers();
     }
@@ -281,7 +278,7 @@ contract BridgeL2SovereignChain is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        IBaseLegacyAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata,
         address _bridgeManager,
@@ -382,21 +379,17 @@ contract BridgeL2SovereignChain is
         uint32, // _networkID
         address, //_gasTokenAddress
         uint32, //_gasTokenNetwork
-        IBasePolygonZkEVMGlobalExitRoot, //_globalExitRootManager
+        IBaseLegacyAgglayerGER, //_globalExitRootManager
         address, //_polygonRollupManager
         bytes memory //_gasTokenMetadata
-    )
-        external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
-        initializer
-    {
+    ) external override(IAgglayerBridge, AgglayerBridge) initializer {
         revert InvalidInitializeFunction();
     }
 
     /**
      * @notice Override the function to prevent the usage, only allowed for L1 bridge, not sovereign chains
      */
-    function initialize() public pure override(PolygonZkEVMBridgeV2) {
+    function initialize() public pure override(AgglayerBridge) {
         revert InvalidInitializeFunction();
     }
 
@@ -424,9 +417,8 @@ contract BridgeL2SovereignChain is
     modifier onlyGlobalExitRootRemover() {
         // Only allowed to be called by GlobalExitRootRemover
         if (
-            IGlobalExitRootManagerL2SovereignChain(
-                address(globalExitRootManager)
-            ).globalExitRootRemover() != msg.sender
+            IAgglayerGERL2(address(globalExitRootManager))
+                .globalExitRootRemover() != msg.sender
         ) {
             revert OnlyGlobalExitRootRemover();
         }
@@ -1081,7 +1073,7 @@ contract BridgeL2SovereignChain is
 
     /**
      * @notice Mints tokens from wrapped token to proceed with the claim, if the token is not mintable it will be transferred
-     * note This function has been extracted to be able to override it by other contracts like BridgeL2SovereignChain
+     * note This function has been extracted to be able to override it by other contracts like AgglayerBridgeL2
      * @param tokenWrapped Proxied wrapped token to mint
      * @param destinationAddress Minted token receiver
      * @param amount Amount of tokens
@@ -1169,7 +1161,7 @@ contract BridgeL2SovereignChain is
     // @note This function is not used in the current implementation. We overwrite it to improve deployed bytecode size
     function activateEmergencyState()
         external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
+        override(IAgglayerBridge, AgglayerBridge)
         onlyEmergencyBridgePauser
     {
         _activateEmergencyState();
@@ -1177,7 +1169,7 @@ contract BridgeL2SovereignChain is
 
     function deactivateEmergencyState()
         external
-        override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2)
+        override(IAgglayerBridge, AgglayerBridge)
         onlyEmergencyBridgeUnpauser
     {
         _deactivateEmergencyState();
@@ -1218,7 +1210,7 @@ contract BridgeL2SovereignChain is
         address destinationAddress,
         uint256 amount,
         bytes calldata metadata
-    ) public override(IPolygonZkEVMBridgeV2, PolygonZkEVMBridgeV2) {
+    ) public override(IAgglayerBridge, AgglayerBridge) {
         // Call parent implementation with all inherited security modifiers:
         // - ifNotEmergencyState: Only allows claims when emergency state is inactive
         // - nonReentrant: Prevents reentrancy attacks during token operations

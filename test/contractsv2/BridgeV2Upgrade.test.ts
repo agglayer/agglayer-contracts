@@ -1,14 +1,10 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
-import {
-    PolygonZkEVMBridgeV2Pessimistic,
-    PolygonZkEVMBridgeV2,
-    PolygonZkEVMGlobalExitRoot,
-} from '../../typechain-types';
+import { PolygonZkEVMBridgeV2Pessimistic, AgglayerBridge, PolygonZkEVMGlobalExitRoot } from '../../typechain-types';
 
 describe('BridgeV2 upgrade', () => {
-    let bridgeContract: PolygonZkEVMBridgeV2;
+    let bridgeContract: AgglayerBridge;
     let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRoot;
 
     let deployer: any;
@@ -44,7 +40,7 @@ describe('BridgeV2 upgrade', () => {
             '0x',
         );
 
-        const bridgeV2Factory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        const bridgeV2Factory = await ethers.getContractFactory('AgglayerBridge');
 
         // Upgrade and initialize bridgeV2
         bridgeContract = (await upgrades.upgradeProxy(bridgeContract.target, bridgeV2Factory, {
@@ -53,7 +49,7 @@ describe('BridgeV2 upgrade', () => {
                 fn: 'initialize()',
                 args: [],
             },
-        })) as unknown as PolygonZkEVMBridgeV2;
+        })) as unknown as AgglayerBridge;
     });
 
     it('Should check params after upgrade from pessimistic to bridgeV2', async () => {

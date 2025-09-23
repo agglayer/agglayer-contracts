@@ -4,11 +4,11 @@ import { ethers, upgrades } from 'hardhat';
 import { setCode } from '@nomicfoundation/hardhat-network-helpers';
 
 import {
-    AggLayerGateway,
+    AgglayerGateway,
     ERC20PermitMock,
-    PolygonRollupManagerMock,
-    PolygonZkEVMGlobalExitRootV2,
-    PolygonZkEVMBridgeV2,
+    AgglayerManagerMock,
+    AgglayerGER,
+    AgglayerBridge,
     AggchainECDSAMultisig,
     VerifierRollupHelperMock,
     PolygonPessimisticConsensus,
@@ -41,11 +41,11 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
     let freezePPRoute: any;
 
     // CONTRACTS
-    let polygonZkEVMBridgeContract: PolygonZkEVMBridgeV2;
+    let polygonZkEVMBridgeContract: AgglayerBridge;
     let polTokenContract: ERC20PermitMock;
-    let polygonZkEVMGlobalExitRoot: PolygonZkEVMGlobalExitRootV2;
-    let rollupManagerContract: PolygonRollupManagerMock;
-    let aggLayerGatewayContract: AggLayerGateway;
+    let polygonZkEVMGlobalExitRoot: AgglayerGER;
+    let rollupManagerContract: AgglayerManagerMock;
+    let aggLayerGatewayContract: AgglayerGateway;
     let aggchainECDSAMultisigImplementationContract: AggchainECDSAMultisig;
     let verifierContract: VerifierRollupHelperMock;
     let PolygonPPConsensusContract: PolygonPessimisticConsensus;
@@ -207,15 +207,15 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             POL_INITIAL_BALANCE,
         );
 
-        // deploy PolygonZkEVMBridgeV2, it's no initialized yet because rollupManager and globalExitRootManager addresses are not set yet (not deployed)
-        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('PolygonZkEVMBridgeV2');
+        // deploy AgglayerBridge, it's no initialized yet because rollupManager and globalExitRootManager addresses are not set yet (not deployed)
+        const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         });
 
         // Deploy aggLayerGateway and initialize it
-        const aggLayerGatewayFactory = await ethers.getContractFactory('AggLayerGateway');
+        const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway');
         aggLayerGatewayContract = await upgrades.deployProxy(aggLayerGatewayFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer'],
@@ -260,14 +260,14 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             nonce: currentDeployerNonce + 3,
         });
         // deploy globalExitRootV2
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootV2');
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('AgglayerGER');
         polygonZkEVMGlobalExitRoot = await upgrades.deployProxy(PolygonZkEVMGlobalExitRootFactory, [], {
             constructorArgs: [precalculateRollupManagerAddress, polygonZkEVMBridgeContract.target],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
 
-        // deploy PolygonRollupManager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        // deploy AgglayerManager
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
 
         rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
             initializer: false,
@@ -278,7 +278,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
                 aggLayerGatewayContract.target,
             ],
             unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as PolygonRollupManagerMock;
+        })) as unknown as AgglayerManagerMock;
 
         await rollupManagerContract.waitForDeployment();
         // Initialize Mock
@@ -341,7 +341,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
         ).to.be.revertedWithCustomError(aggLayerGatewayContract, 'InvalidInitialization');
 
         // Check non zero constructor parameters for rollupManager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManagerMock');
+        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
         await expect(
             PolygonRollupManagerFactory.deploy(
                 polygonZkEVMGlobalExitRoot.target,
@@ -375,7 +375,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidConstructorInputs');
 
-        // Should revert with error InvalidAggLayerGatewayAddress
+        // Should revert with error InvalidAgglayerGatewayAddress
         const aggchainECDSAMultisigFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
         await expect(
             aggchainECDSAMultisigFactory.deploy(

@@ -14,9 +14,9 @@ import { checkParams } from '../../../src/utils';
 // Genesis files have been created previously and so they have old naming, as it shown in the links above
 // Those genesis are already imported on different tooling and added as a metadata on-chain. Therefore, this util aims
 // to support them too
-const supportedGERManagers = ['PolygonZkEVMGlobalExitRootL2 implementation'];
-const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'PolygonZkEVMBridgeV2 implementation'];
-const supportedBridgeContractsProxy = ['PolygonZkEVMBridgeV2 proxy', 'PolygonZkEVMBridge proxy'];
+const supportedGERManagers = ['LegacyAgglayerGERL2 implementation'];
+const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'AgglayerBridge implementation'];
+const supportedBridgeContractsProxy = ['AgglayerBridge proxy', 'PolygonZkEVMBridge proxy'];
 
 function toPaddedHex32(val: string | number | bigint): string {
     return ethers.zeroPadValue(ethers.toBeHex(val), 32);
@@ -82,7 +82,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     batch.addRawTx(`0x${rawChangeL2BlockTx}`);
 
     // Create deploy bridge transaction
-    const sovereignBridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+    const sovereignBridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2');
     // Get deploy transaction for bridge
     const deployBridgeData = await sovereignBridgeFactory.getDeployTransaction();
     const injectedTx = {

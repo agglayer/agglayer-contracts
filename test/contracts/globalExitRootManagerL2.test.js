@@ -13,7 +13,7 @@ describe('Global Exit Root L2', () => {
         [deployer, PolygonZkEVMBridge] = await ethers.getSigners();
 
         // deploy global exit root manager
-        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRootL2Mock', deployer);
+        const PolygonZkEVMGlobalExitRootFactory = await ethers.getContractFactory('LegacyAgglayerGERL2Mock', deployer);
         polygonZkEVMGlobalExitRoot = await PolygonZkEVMGlobalExitRootFactory.deploy(PolygonZkEVMBridge.address);
     });
 

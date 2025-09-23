@@ -2,13 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../interfaces/IAgglayerGER.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 import "./IPolygonRollupBasePrevious.sol";
-import "../interfaces/IPolygonZkEVMBridgeV2.sol";
+import "../interfaces/IAgglayerBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "../lib/PolygonConstantsBase.sol";
 
@@ -127,11 +127,8 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     bytes1 public constant INITIALIZE_TX_EFFECTIVE_PERCENTAGE = 0xFF;
 
     // Global Exit Root address L2
-    IBasePolygonZkEVMGlobalExitRoot
-        public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
-        IBasePolygonZkEVMGlobalExitRoot(
-            0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA
-        );
+    IBaseLegacyAgglayerGER public constant GLOBAL_EXIT_ROOT_MANAGER_L2 =
+        IBaseLegacyAgglayerGER(0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA);
 
     // Timestamp range that's given to the sequencer as a safety measure to avoid reverts if the transaction is mined to quickly
     uint256 public constant TIMESTAMP_RANGE = 36;
@@ -140,13 +137,13 @@ abstract contract PolygonRollupBaseEtrogPrevious is
     IERC20Upgradeable public immutable pol;
 
     // Global Exit Root interface
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
-    IPolygonZkEVMBridgeV2 public immutable bridgeAddress;
+    IAgglayerBridge public immutable bridgeAddress;
 
     // Rollup manager
-    PolygonRollupManager public immutable rollupManager;
+    AgglayerManager public immutable rollupManager;
 
     // Address that will be able to adjust contract parameters
     address public admin;
@@ -274,10 +271,10 @@ abstract contract PolygonRollupBaseEtrogPrevious is
      * @param _rollupManager Global exit root manager address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridgeV2 _bridgeAddress,
-        PolygonRollupManager _rollupManager
+        IAgglayerBridge _bridgeAddress,
+        AgglayerManager _rollupManager
     ) {
         globalExitRootManager = _globalExitRootManager;
         pol = _pol;
@@ -864,7 +861,7 @@ abstract contract PolygonRollupBaseEtrogPrevious is
         bytes memory _gasTokenMetadata
     ) public view returns (bytes memory) {
         bytes memory initializeBrigeData = abi.encodeCall(
-            IPolygonZkEVMBridgeV2.initialize,
+            IAgglayerBridge.initialize,
             (
                 networkID,
                 _gasTokenAddress,

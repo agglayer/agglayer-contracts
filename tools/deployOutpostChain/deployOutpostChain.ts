@@ -93,8 +93,8 @@ async function main() {
     logger.info(`👤 Deployer address: ${deployer.address}`);
     logger.info(`🔢 Current nonce: ${currentNonce}`);
 
-    // Step 4: Deploy GlobalExitRootManagerL2SovereignChain with pre-calculated Bridge address
-    logger.info('\n=== Step 4: Deploying GlobalExitRootManagerL2SovereignChain ===');
+    // Step 4: Deploy AgglayerGERL2 with pre-calculated Bridge address
+    logger.info('\n=== Step 4: Deploying AgglayerGERL2 ===');
     const gerManager = await deployGlobalExitRootManagerL2SovereignChain(
         precalculatedBridgeAddress, // Use pre-calculated Bridge address
         proxyAdmin, // Pass the centralized ProxyAdmin
@@ -104,8 +104,8 @@ async function main() {
     outputJson.globalExitRootManagerL2SovereignChainAddress = gerManager.proxy;
     outputJson.globalExitRootManagerL2SovereignChainImplementation = gerManager.implementation;
 
-    // Step 5: Deploy BridgeL2SovereignChain with GER Manager address
-    logger.info('\n=== Step 5: Deploying BridgeL2SovereignChain ===');
+    // Step 5: Deploy AgglayerBridgeL2 with GER Manager address
+    logger.info('\n=== Step 5: Deploying AgglayerBridgeL2 ===');
     const sovereignBridge = await deployBridgeL2SovereignChain(
         gerManager.proxy, // Use actual GER Manager address
         proxyAdmin, // Use centralized ProxyAdmin
@@ -295,7 +295,7 @@ async function deployTimelock(deployer: any): Promise<any> {
 }
 
 /**
- * Deploy BridgeL2SovereignChain with proxy pattern using centralized ProxyAdmin
+ * Deploy AgglayerBridgeL2 with proxy pattern using centralized ProxyAdmin
  */
 async function deployBridgeL2SovereignChain(
     gerManagerAddress: string,
@@ -309,7 +309,7 @@ async function deployBridgeL2SovereignChain(
     bridgeLib: string;
     WETH: string;
 }> {
-    const BridgeFactory = await ethers.getContractFactory('BridgeL2SovereignChain', deployer);
+    const BridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2', deployer);
 
     // Calculate automatic parameters for outpost chain
     const gasTokenAddress = deriveGasTokenAddress(deployParameters.network.rollupID);
@@ -331,7 +331,7 @@ async function deployBridgeL2SovereignChain(
     const deployTx = bridgeImplementation.deploymentTransaction();
     // Wait for 5 confirmations for correct etherscan verification
     await deployTx?.wait(5);
-    logger.info(`✅ BridgeL2SovereignChain implementation deployed: ${bridgeImplementation.target}`);
+    logger.info(`✅ AgglayerBridgeL2 implementation deployed: ${bridgeImplementation.target}`);
 
     // Verify Bridge implementation on Etherscan
     await verifyContractEtherscan(
@@ -356,10 +356,10 @@ async function deployBridgeL2SovereignChain(
      * 3. The TokenWrappedTransparentProxy constructor calls back to the Bridge proxy:
      *
      *    constructor() ERC1967Proxy(
-     *        IPolygonZkEVMBridgeV2(msg.sender).getWrappedTokenBridgeImplementation(), // ← CALLBACK
+     *        IAgglayerBridge(msg.sender).getWrappedTokenBridgeImplementation(), // ← CALLBACK
      *        new bytes(0)
      *    ) {
-     *        _changeAdmin(IPolygonZkEVMBridgeV2(msg.sender).getProxiedTokensManager()); // ← CALLBACK
+     *        _changeAdmin(IAgglayerBridge(msg.sender).getProxiedTokensManager()); // ← CALLBACK
      *    }
      *
      * 4. ❌ These callbacks FAIL during atomic deployment because:
@@ -428,8 +428,8 @@ async function deployBridgeL2SovereignChain(
     const bridgeLib = await bridge.bridgeLib();
     const WETH = await bridge.WETHToken();
 
-    logger.info(`✅ BridgeL2SovereignChain implementation: ${bridgeImplementation.target}`);
-    logger.info(`✅ BridgeL2SovereignChain proxy (initialized): ${bridgeProxy.target}`);
+    logger.info(`✅ AgglayerBridgeL2 implementation: ${bridgeImplementation.target}`);
+    logger.info(`✅ AgglayerBridgeL2 proxy (initialized): ${bridgeProxy.target}`);
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
     await upgrades.forceImport(bridgeProxy.target as string, BridgeFactory, {
@@ -448,7 +448,7 @@ async function deployBridgeL2SovereignChain(
 }
 
 /**
- * Deploy GlobalExitRootManagerL2SovereignChain with proxy pattern using prepareUpgrade and centralized ProxyAdmin
+ * Deploy AgglayerGERL2 with proxy pattern using prepareUpgrade and centralized ProxyAdmin
  */
 async function deployGlobalExitRootManagerL2SovereignChain(
     bridgeProxyAddress: string,
@@ -456,7 +456,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     deployer: any,
     globalExitRootUpdater: string,
 ): Promise<{ proxy: string; implementation: string }> {
-    const GERManagerFactory = await ethers.getContractFactory('GlobalExitRootManagerL2SovereignChain', deployer);
+    const GERManagerFactory = await ethers.getContractFactory('AgglayerGERL2', deployer);
 
     // Step 1: Deploy implementation using prepareUpgrade approach
     logger.info('📍 Step 1: Deploying GER Manager implementation...');
@@ -464,7 +464,7 @@ async function deployGlobalExitRootManagerL2SovereignChain(
     const deployTx = gerImplementation.deploymentTransaction();
     // Wait for 5 confirmations for correct etherscan verification
     await deployTx?.wait(5);
-    logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation deployed: ${gerImplementation.target}`);
+    logger.info(`✅ AgglayerGERL2 implementation deployed: ${gerImplementation.target}`);
 
     // Verify GER Manager implementation on Etherscan
     await verifyContractEtherscan(
@@ -509,8 +509,8 @@ async function deployGlobalExitRootManagerL2SovereignChain(
         '@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy',
     );
 
-    logger.info(`✅ GlobalExitRootManagerL2SovereignChain implementation: ${gerImplementation.target}`);
-    logger.info(`✅ GlobalExitRootManagerL2SovereignChain proxy (initialized): ${gerProxy.target}`);
+    logger.info(`✅ AgglayerGERL2 implementation: ${gerImplementation.target}`);
+    logger.info(`✅ AgglayerGERL2 proxy (initialized): ${gerProxy.target}`);
 
     // Import proxy into Hardhat Upgrades manifest for future upgrade compatibility
     await upgrades.forceImport(gerProxy.target as string, GERManagerFactory, {
@@ -802,10 +802,7 @@ async function verifyBridgeContract(deployConfig: any, outputJson: any) {
     logger.info(`✅ Bridge is initialized (version: ${initializerVersion})`);
 
     // Verify Bridge configuration
-    const bridge = (await ethers.getContractAt(
-        'BridgeL2SovereignChain',
-        outputJson.bridgeL2SovereignChainAddress,
-    )) as any;
+    const bridge = (await ethers.getContractAt('AgglayerBridgeL2', outputJson.bridgeL2SovereignChainAddress)) as any;
 
     // Verify network ID
     const networkID = await bridge.networkID();
@@ -1018,7 +1015,7 @@ async function verifyGERManagerContract(deployConfig: any, outputJson: any) {
 
     // Verify GER Manager configuration
     const gerManager = (await ethers.getContractAt(
-        'GlobalExitRootManagerL2SovereignChain',
+        'AgglayerGERL2',
         outputJson.globalExitRootManagerL2SovereignChainAddress,
     )) as any;
 

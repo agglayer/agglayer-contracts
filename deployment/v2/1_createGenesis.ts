@@ -171,7 +171,7 @@ async function main() {
     );
 
     // Retrieve wrappedTokenBytecodeStorer contract to add it to the genesis, necessary for token wrapped deployments from the bridge
-    const bridgeContract = polygonZkEVMBridgeFactory.attach(bridgeImplementationAddress) as PolygonZkEVMBridgeV2;
+    const bridgeContract = polygonZkEVMBridgeFactory.attach(bridgeImplementationAddress) as AgglayerBridge;
     const wrappedTokenBytecodeStorer = await bridgeContract.wrappedTokenBytecodeStorer();
 
     const bytecodeStorerInfo = await getAddressInfo(wrappedTokenBytecodeStorer as string);

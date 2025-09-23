@@ -1,6 +1,6 @@
-# Upgrade BridgeL2SovereignChain
+# Upgrade AgglayerBridgeL2
 
-Script to create schedule and execute transaction for upgrading BridgeL2SovereignChain to version 10.1.2
+Script to create schedule and execute transaction for upgrading AgglayerBridgeL2 to version 10.1.2
 
 ## Setup
 

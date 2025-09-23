@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0
 
 pragma solidity 0.8.28;
-import "../../PolygonZkEVMGlobalExitRootL2.sol";
+import "../../LegacyAgglayerGERL2.sol";
 import "../lib/Hashes.sol";
-import "../../v2/interfaces/IGlobalExitRootManagerL2SovereignChain.sol";
+import "../../v2/interfaces/IAgglayerGERL2.sol";
 import "../../v2/interfaces/IVersion.sol";
 import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
  * Contract responsible for managing the exit roots for the Sovereign chains and global exit roots
  */
-contract GlobalExitRootManagerL2SovereignChain is
-    PolygonZkEVMGlobalExitRootL2,
-    IGlobalExitRootManagerL2SovereignChain,
+contract AgglayerGERL2 is
+    LegacyAgglayerGERL2,
+    IAgglayerGERL2,
     Initializable,
     IVersion
 {
@@ -107,9 +107,7 @@ contract GlobalExitRootManagerL2SovereignChain is
     /**
      * @param _bridgeAddress PolygonZkEVMBridge contract address
      */
-    constructor(
-        address _bridgeAddress
-    ) PolygonZkEVMGlobalExitRootL2(_bridgeAddress) {
+    constructor(address _bridgeAddress) LegacyAgglayerGERL2(_bridgeAddress) {
         _disableInitializers();
     }
 

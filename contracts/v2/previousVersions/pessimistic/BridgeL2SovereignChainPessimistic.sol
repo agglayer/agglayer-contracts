@@ -90,7 +90,7 @@ contract BridgeL2SovereignChainPessimistic is
         uint32 _networkID,
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
-        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        IBaseLegacyAgglayerGER _globalExitRootManager,
         address _polygonRollupManager,
         bytes memory _gasTokenMetadata,
         address _bridgeManager,
@@ -153,7 +153,7 @@ contract BridgeL2SovereignChainPessimistic is
         uint32, // _networkID
         address, //_gasTokenAddress
         uint32, //_gasTokenNetwork
-        IBasePolygonZkEVMGlobalExitRoot, //_globalExitRootManager
+        IBaseLegacyAgglayerGER, //_globalExitRootManager
         address, //_polygonRollupManager
         bytes memory //_gasTokenMetadata
     )
@@ -422,7 +422,7 @@ contract BridgeL2SovereignChainPessimistic is
 
     /**
      * @notice Mints tokens from wrapped token to proceed with the claim, if the token is not mintable it will be transferred
-     * note This function has been extracted to be able to override it by other contracts like BridgeL2SovereignChain
+     * note This function has been extracted to be able to override it by other contracts like AgglayerBridgeL2
      * @param tokenWrapped Wrapped token to mint
      * @param destinationAddress Minted token receiver
      * @param amount Amount of tokens
@@ -508,7 +508,7 @@ contract BridgeL2SovereignChainPessimistic is
 
     /**
      * @notice Function to call token permit method of extended ERC20
-     * @dev function overridden from PolygonZkEVMBridgeV2 to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
+     * @dev function overridden from AgglayerBridge to improve a bit the performance and bytecode not checking unnecessary conditions for sovereign chains context
      + @param token ERC20 token address
      * @param amount Quantity that is expected to be allowed
      * @param permitData Raw data of the call `permit` of the token

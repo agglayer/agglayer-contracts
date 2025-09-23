@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
-import "../PolygonRollupManager.sol";
+import "../AgglayerManager.sol";
 
 /**
- * PolygonRollupManager Test
+ * AgglayerManager mock
  */
-contract PolygonRollupManagerNotUpgraded is PolygonRollupManager {
+contract AgglayerManagerMock is AgglayerManager {
     /**
      * @param _globalExitRootManager Global exit root manager address
      * @param _pol MATIC token address
      * @param _bridgeAddress Bridge address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress,
-        IAggLayerGateway _aggLayerGateway
+        IAgglayerGateway _aggLayerGateway
     )
-        PolygonRollupManager(
+        AgglayerManager(
             _globalExitRootManager,
             _pol,
             _bridgeAddress,
@@ -25,14 +25,21 @@ contract PolygonRollupManagerNotUpgraded is PolygonRollupManager {
         )
     {}
 
-    function initialize(
+    function initializeMock(
         address trustedAggregator,
+        // uint64 _pendingStateTimeout,
+        // uint64 _trustedAggregatorTimeout,
         address admin,
         address timelock,
         address emergencyCouncil
-    ) external reinitializer(5) {
+    ) external reinitializer(4) {
+        //pendingStateTimeout = _pendingStateTimeout;
+        //trustedAggregatorTimeout = _trustedAggregatorTimeout;
+
         // Constant deployment variables
         _batchFee = 0.1 ether; // 0.1 Matic
+        //verifyBatchTimeTarget = 30 minutes;
+        //multiplierBatchFee = 1002;
 
         // Initialize OZ contracts
         __AccessControl_init();
@@ -65,5 +72,36 @@ contract PolygonRollupManagerNotUpgraded is PolygonRollupManager {
         _setRoleAdmin(_EMERGENCY_COUNCIL_ROLE, _EMERGENCY_COUNCIL_ADMIN);
         _setupRole(_EMERGENCY_COUNCIL_ROLE, emergencyCouncil);
         _setupRole(_EMERGENCY_COUNCIL_ADMIN, emergencyCouncil);
+
+        // Since it's mock, use admin for everything
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
+    }
+
+    function prepareMockCalculateRoot(bytes32[] memory localExitRoots) public {
+        rollupCount = uint32(localExitRoots.length);
+
+        // Add local Exit roots;
+        for (uint256 i = 0; i < localExitRoots.length; i++) {
+            _rollupIDToRollupData[uint32(i + 1)]
+                .lastLocalExitRoot = localExitRoots[i];
+        }
+    }
+
+    function exposed_checkStateRootInsidePrime(
+        uint256 newStateRoot
+    ) public pure returns (bool) {
+        return _checkStateRootInsidePrime(newStateRoot);
+    }
+
+    function setRollupData(
+        uint32 rollupID,
+        bytes32 lastLocalExitRoot,
+        bytes32 lastPessimisticRoot
+    ) external {
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+        rollup.lastLocalExitRoot = lastLocalExitRoot;
+        rollup.lastPessimisticRoot = lastPessimisticRoot;
     }
 }

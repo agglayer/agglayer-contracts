@@ -4,7 +4,7 @@
 pragma solidity ^0.8.20;
 
 import "./IPolygonRollupManagerPrevious.sol";
-import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
+import "../interfaces/IAgglayerGER.sol";
 import "../../interfaces/IPolygonZkEVMBridge.sol";
 import "../interfaces/IPolygonRollupBase.sol";
 import "../../interfaces/IVerifierRollup.sol";
@@ -159,7 +159,7 @@ contract PolygonRollupManagerPrevious is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Global Exit Root address
-    IPolygonZkEVMGlobalExitRootV2 public immutable globalExitRootManager;
+    IAgglayerGER public immutable globalExitRootManager;
 
     // PolygonZkEVM Bridge Address
     IPolygonZkEVMBridge public immutable bridgeAddress;
@@ -368,7 +368,7 @@ contract PolygonRollupManagerPrevious is
      * @param _bridgeAddress Bridge address
      */
     constructor(
-        IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
+        IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IPolygonZkEVMBridge _bridgeAddress
     ) {
@@ -1525,7 +1525,7 @@ contract PolygonRollupManagerPrevious is
     ////////////////////////
 
     /**
-     * @notice Function to activate emergency state, which also enables the emergency mode on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Function to activate emergency state, which also enables the emergency mode on both AgglayerManager and PolygonZkEVMBridge contracts
      * If not called by the owner must not have been aggregated in a _HALT_AGGREGATION_TIMEOUT period and an emergency state was not happened in the same period
      */
     function activateEmergencyState() external {
@@ -1545,7 +1545,7 @@ contract PolygonRollupManagerPrevious is
     }
 
     /**
-     * @notice Function to deactivate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Function to deactivate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
      */
     function deactivateEmergencyState()
         external
@@ -1562,7 +1562,7 @@ contract PolygonRollupManagerPrevious is
     }
 
     /**
-     * @notice Internal function to activate emergency state on both PolygonRollupManager and PolygonZkEVMBridge contracts
+     * @notice Internal function to activate emergency state on both AgglayerManager and PolygonZkEVMBridge contracts
      */
     function _activateEmergencyState() internal override {
         // Activate emergency state on PolygonZkEVM Bridge

@@ -4,8 +4,8 @@ import { MTBridge, mtBridgeUtils } from '@0xpolygonhermez/zkevm-commonjs';
 import {
     ERC20PermitMock,
     GlobalExitRootManagerL2SovereignChainPessimistic,
-    GlobalExitRootManagerL2SovereignChain,
-    BridgeL2SovereignChain,
+    AgglayerGERL2,
+    AgglayerBridgeL2,
     TokenWrapped,
 } from '../../typechain-types';
 import { claimBeforeBridge, computeWrappedTokenProxyAddress } from './helpers/helpers-sovereign-bridge';
@@ -26,12 +26,12 @@ function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolea
     return BigInt(indexLocal) + BigInt(indexRollup) * 2n ** 32n;
 }
 
-describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
+describe('AgglayerBridgeL2 Contract Upgrade AL', () => {
     upgrades.silenceWarnings();
 
-    let sovereignChainBridgeContract: BridgeL2SovereignChain;
+    let sovereignChainBridgeContract: AgglayerBridgeL2;
     let polTokenContract: ERC20PermitMock;
-    let sovereignChainGlobalExitRootContract: GlobalExitRootManagerL2SovereignChain;
+    let sovereignChainGlobalExitRootContract: AgglayerGERL2;
     let sovereignChainGlobalExitRootPessimisticContract: GlobalExitRootManagerL2SovereignChainPessimistic;
 
     let deployer: any;
@@ -64,12 +64,12 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
         globalExitRootRemover = deployer;
         // Set trusted sequencer as coinbase for sovereign chains
         await ethers.provider.send('hardhat_setCoinbase', [deployer.address]);
-        // deploy BridgeL2SovereignChain
-        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('BridgeL2SovereignChain');
+        // deploy AgglayerBridgeL2
+        const BridgeL2SovereignChainFactory = await ethers.getContractFactory('AgglayerBridgeL2');
         sovereignChainBridgeContract = (await upgrades.deployProxy(BridgeL2SovereignChainFactory, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as BridgeL2SovereignChain;
+        })) as unknown as AgglayerBridgeL2;
 
         // deploy global exit root manager pessimistic
         const GlobalExitRootManagerL2SovereignChainPessimisticFactory = await ethers.getContractFactory(
@@ -83,12 +83,10 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
                 constructorArgs: [sovereignChainBridgeContract.target], // Constructor arguments
                 unsafeAllow: ['constructor', 'state-variable-immutable'],
             },
-        )) as unknown as GlobalExitRootManagerL2SovereignChain;
+        )) as unknown as AgglayerGERL2;
 
-        // Upgrade to GlobalExitRootManagerL2SovereignChain
-        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory(
-            'GlobalExitRootManagerL2SovereignChain',
-        );
+        // Upgrade to AgglayerGERL2
+        const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
         sovereignChainGlobalExitRootContract = (await upgrades.upgradeProxy(
             sovereignChainGlobalExitRootPessimisticContract.target,
             GlobalExitRootManagerL2SovereignChainFactory,
@@ -96,7 +94,7 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
                 constructorArgs: [sovereignChainBridgeContract.target],
                 unsafeAllow: ['constructor'],
             },
-        )) as unknown as GlobalExitRootManagerL2SovereignChain;
+        )) as unknown as AgglayerGERL2;
 
         // cannot initialize bridgeV2 initializer from Sovereign bridge
         await expect(
@@ -273,7 +271,7 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
     it('should check the initialize function', async () => {
         // deploy PolygonZkEVMBridge
         // eslint-disable-next-line @typescript-eslint/no-shadow
-        const sovereignChainBridgeContract = await ethers.getContractFactory('BridgeL2SovereignChain');
+        const sovereignChainBridgeContract = await ethers.getContractFactory('AgglayerBridgeL2');
         const bridge = await upgrades.deployProxy(sovereignChainBridgeContract, [], {
             initializer: false,
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
@@ -359,7 +357,7 @@ describe('BridgeL2SovereignChain Contract Upgrade AL', () => {
         bridge = (await upgrades.upgradeProxy(bridge.target, sovereignChainBridgeContractFactory, {
             constructorArgs: [],
             unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
-        })) as unknown as BridgeL2SovereignChain;
+        })) as unknown as AgglayerBridgeL2;
 
         // try wrong initializer
         await expect(

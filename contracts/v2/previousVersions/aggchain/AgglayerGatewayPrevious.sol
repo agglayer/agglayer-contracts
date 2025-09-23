@@ -8,7 +8,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable5/acc
 // Based on https://github.com/succinctlabs/sp1-contracts/blob/main/contracts/src/SP1VerifierGateway.sol
 
 /**
- * @title AggLayerGateway
+ * @title AggLayerGatewayPrevious
  * @notice Contract to handle the verification keys for the pessimistic proof.
  * It supports adding and freezing PP verification keys and verifying the PP.
  * Also maintains the default verification keys of aggchains
@@ -38,7 +38,7 @@ contract AggLayerGatewayPrevious is
     bytes32 internal constant AL_FREEZE_PP_ROUTE_ROLE =
         keccak256("AL_FREEZE_PP_ROUTE_ROLE");
 
-    // Current AggLayerGateway version
+    // Current AgglayerGateway version
     string public constant AGGLAYER_GATEWAY_VERSION = "v1.0.0";
 
     ////////////////////////////////////////////////////////////
@@ -114,7 +114,7 @@ contract AggLayerGatewayPrevious is
     }
 
     ////////////////////////////////////////////////////////////
-    //        Functions: AggLayerGateway (pessimistic)        //
+    //        Functions: AgglayerGateway (pessimistic)        //
     ////////////////////////////////////////////////////////////
     /**
      * @notice Function to verify the pessimistic proof.
