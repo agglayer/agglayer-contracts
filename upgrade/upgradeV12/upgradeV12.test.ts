@@ -238,7 +238,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         }
 
         // Verify threshold was set correctly
-        const actualThreshold = await aggLayerGatewayContract.threshold();
+        const actualThreshold = await aggLayerGatewayContract.getThreshold();
         expect(actualThreshold).to.equal(expectedThreshold);
 
         // Verify multisig role was granted correctly
