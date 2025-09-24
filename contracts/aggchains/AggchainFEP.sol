@@ -602,7 +602,7 @@ contract AggchainFEP is AggchainBase {
     ///     Field:           | l2PreRoot         | claimRoot          | claimBlockNum      | rollupConfigHash     | optimisticMode  | trustedSequencer | rangeVkeyCommitment | aggregationVkey |
     ///     length (bits):   | 256               | 256                | 256                | 256                  | 8               | 160              | 256                 | 256             |
     ///
-    /// @param aggchainData custom bytes provided by the chain and it is encode it as ABI solidity format
+    /// @param aggchainData custom bytes provided by the chain, encoded in ABI solidity format
     ///     aggchainData:
     ///     Field:                  | _aggchainVKeySelector | _outputRoot  | _l2BlockNumber |
     ///     length (bits):          | 32                    | 256          | 256            |
