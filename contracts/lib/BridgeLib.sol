@@ -150,11 +150,11 @@ contract BridgeLib {
                 revert NotValidSpender();
             }
 
-            /// @dev To be more aligned with the latest OpenZeppelin ERC20 implementation where ERC20 tokens allow approvals of uint.max and it is widely adopted by DeFi,
-            ///  this check has been removed. Important to warn that removing it is not the most secure approach but has been applied because it is widely used and reduce friction and gas cost
-            // if (value != amount) {
-            //     revert NotValidAmount();
-            // }
+            /// @dev A validation to ensure the permit value matches the intended transfer amount has been
+            ///  intentionally removed to align with the latest OpenZeppelin ERC20 implementation patterns
+            ///  where ERC20 tokens commonly allow approvals of uint256.max. This approach is widely
+            ///  adopted by DeFi protocols to reduce gas costs and friction. While this is less strict
+            ///  from a security perspective, it follows established industry practices.
 
             // we call without checking the result, in case it fails and the sender doesn't have enough balance
             // the following transferFrom should fail. This prevents DoS attacks from using a signature

@@ -221,7 +221,7 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
     const bridgeState = await zkEVMDB.getCurrentAccountState(sovereignBridgeAddress);
     expect(Number(bridgeState.nonce)).to.equal(4);
 
-    // Check if the genesis contains TokenWrappedImplementation contract
+    // Check if the genesis contains BridgeLib contract
     let bridgeLibImplementationObject = genesis.genesis.find(function (obj) {
         return obj.contractName === GENESIS_CONTRACT_NAMES.BRIDGE_LIB;
     });
