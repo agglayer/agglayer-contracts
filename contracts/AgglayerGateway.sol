@@ -78,7 +78,7 @@ contract AgglayerGateway is
     mapping(address => string) public signerToURLs;
 
     /// @notice Threshold required for multisig operations
-    uint256 public threshold;
+    uint256 internal threshold;
 
     /// @notice Hash of the current aggchainSigners array
     bytes32 public aggchainMultisigHash;

@@ -510,7 +510,7 @@ describe('AgglayerGateway tests', () => {
             signer2.address,
             signer3.address,
         ]);
-        expect(await aggLayerGatewayContract.threshold()).to.equal(2);
+        expect(await aggLayerGatewayContract.getThreshold()).to.equal(2);
 
         // Test isSigner
         expect(await aggLayerGatewayContract.isSigner(signer1.address)).to.equal(true);
@@ -536,7 +536,7 @@ describe('AgglayerGateway tests', () => {
         expect(signersAfterRemoval).to.include(signer3.address);
         expect(signersAfterRemoval).to.not.include(signer2.address);
         expect(await aggLayerGatewayContract.isSigner(signer2.address)).to.equal(false);
-        expect(await aggLayerGatewayContract.threshold()).to.equal(1);
+        expect(await aggLayerGatewayContract.getThreshold()).to.equal(1);
 
         // Test access control - non-admin cannot update signers
         await expect(
@@ -738,7 +738,7 @@ describe('AgglayerGateway tests', () => {
 
         // Verify initialization
         expect(await freshGateway.getAggchainSignersCount()).to.equal(signers.length);
-        expect(await freshGateway.threshold()).to.equal(threshold);
+        expect(await freshGateway.getThreshold()).to.equal(threshold);
 
         const actualSigners = await freshGateway.getAggchainSigners();
         expect(actualSigners).to.deep.equal(signers);
@@ -897,7 +897,7 @@ describe('AgglayerGateway tests', () => {
 
         // Verify new functionality - multisig was added
         expect(await upgradedAgglayerGateway.getAggchainSignersCount()).to.equal(3);
-        expect(await upgradedAgglayerGateway.threshold()).to.equal(threshold);
+        expect(await upgradedAgglayerGateway.getThreshold()).to.equal(threshold);
         const actualSigners = await upgradedAgglayerGateway.getAggchainSigners();
         expect(actualSigners).to.deep.equal([signer1.address, signer2.address, signer3.address]);
 
@@ -912,7 +912,7 @@ describe('AgglayerGateway tests', () => {
         ).to.emit(upgradedAgglayerGateway, 'SignersAndThresholdUpdated');
 
         expect(await upgradedAgglayerGateway.getAggchainSignersCount()).to.equal(4);
-        expect(await upgradedAgglayerGateway.threshold()).to.equal(3);
+        expect(await upgradedAgglayerGateway.getThreshold()).to.equal(3);
 
         // Verify the new version string
         expect(await upgradedAgglayerGateway.version()).to.equal('v1.1.0');
