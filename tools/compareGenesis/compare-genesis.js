@@ -24,8 +24,8 @@ const compareAddressState = async (address, expected) => {
     provider.getCode(address, BLOCK_TAG)
   ]);
 
-  const expectedNonce = ethers.toBigInt(expected.nonce || '0x0');
-  const expectedBalance = ethers.toBigInt(expected.balance || '0x0');
+  const expectedNonce = BigInt(expected.nonce || '0x0');
+  const expectedBalance = BigInt(expected.balance || '0x0');
   const expectedCode = (expected.code || '0x').toLowerCase();
 
   // === Nonce ===
