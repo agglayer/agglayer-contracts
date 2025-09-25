@@ -52,8 +52,8 @@ const compareAddressState = async (address, expected) => {
   result.code_match = code.toLowerCase() === expectedCode;
   if (!result.code_match) {
     console.log(chalk.red(`✗ Code mismatch for ${address}`));
-    console.log(`    Expected: ${chalk.yellow(expectedCode.slice(0, 60))}...`);
-    console.log(`    Got:      ${chalk.cyan(code.slice(0, 60))}...`);
+    console.log(`    Expected: ${chalk.yellow(expectedCode.length > 60 ? expectedCode.slice(0, 60) + '...' : expectedCode)}`);
+    console.log(`    Got:      ${chalk.cyan(code.length > 60 ? code.slice(0, 60) + '...' : code)}`);
   } else {
     console.log(chalk.green(`✓ Code OK for ${address}`));
   }
