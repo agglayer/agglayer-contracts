@@ -77,7 +77,13 @@ const compareAddressState = async (address, expected) => {
 };
 
 (async () => {
-  const genesis = JSON.parse(fs.readFileSync(GENESIS_FILE, 'utf8'));
+  let genesis;
+  try {
+    genesis = JSON.parse(fs.readFileSync(GENESIS_FILE, 'utf8'));
+  } catch (e) {
+    console.error(chalk.bgRed.white(`Failed to parse genesis file: ${GENESIS_FILE}\n${e.message}`));
+    process.exit(1);
+  }
   const accounts = genesis.alloc || genesis;
   const addresses = Object.keys(accounts);
 
