@@ -39,7 +39,7 @@ const compareAddressState = async (address, expected) => {
   }
 
   // === Balance ===
-  result.balance_match = balance === expectedBalance;
+  result.balance_match = balance.toString() === expectedBalance.toString();
   if (!result.balance_match) {
     console.log(chalk.red(`✗ Balance mismatch for ${address}`));
     console.log(`    Expected: ${chalk.yellow(expectedBalance)}`);
