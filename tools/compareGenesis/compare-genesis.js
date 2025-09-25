@@ -101,4 +101,13 @@ const compareAddressState = async (address, expected) => {
     console.log(` - Code:    ${r.code_match ? chalk.green("OK") : chalk.red("Mismatch")}`);
     console.log(` - Storage: ${r.storage_mismatches.length === 0 ? chalk.green("OK") : chalk.red(`${r.storage_mismatches.length} mismatches`)}`);
   }
+
+  // Determine if any mismatches occurred
+  const hasMismatch = results.some(r =>
+    !r.nonce_match ||
+    !r.balance_match ||
+    !r.code_match ||
+    (r.storage_mismatches && r.storage_mismatches.length > 0)
+  );
+  process.exit(hasMismatch ? 1 : 0);
 })();
