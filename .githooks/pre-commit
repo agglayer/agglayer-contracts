@@ -11,7 +11,7 @@ if npm run lint; then
     cp artifacts/contracts/LegacyAgglayerGERL2.sol/LegacyAgglayerGERL2.json compiled-contracts/
     cp artifacts/contracts/lib/TokenWrapped.sol/TokenWrapped.json compiled-contracts/
     cp artifacts/contracts/deployment/PolygonZkEVMDeployer.sol/PolygonZkEVMDeployer.json compiled-contracts/
-    cp artifacts/contracts/PolygonZkEVMTimelock.sol/PolygonZkEVMTimelock.json compiled-contracts/
+    cp artifacts/contracts/AgglayerTimelock.sol/AgglayerTimelock.json compiled-contracts/
 
     ## Mocks
     cp artifacts/contracts/mocks/PolygonZkEVMBridgeMock.sol/PolygonZkEVMBridgeMock.json compiled-contracts/
@@ -29,7 +29,6 @@ if npm run lint; then
     cp artifacts/contracts/deployment/PolygonZkEVMDeployer.sol/PolygonZkEVMDeployer.json compiled-contracts/
     cp artifacts/contracts/verifiers/v4.0.0-rc.3/SP1VerifierPlonk.sol/SP1VerifierPlonk.json compiled-contracts/SP1VerifierPlonk.json
     cp artifacts/contracts/deployment/PolygonZkEVMDeployer.sol/PolygonZkEVMDeployer.json compiled-contracts/
-    cp artifacts/contracts/PolygonZkEVMTimelock.sol/PolygonZkEVMTimelock.json compiled-contracts/
 
     ## openzeppelin
     cp artifacts/@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json compiled-contracts/
