@@ -12,10 +12,12 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const MerkleTreeBridge = MTBridge;
 const { getLeafValue } = mtBridgeUtils;
 
-const pathOutput = path.join(__dirname, './output.json');
+const pathOutput = path.join(__dirname, `./output__${new Date().toISOString()}.json`);
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const _GLOBAL_INDEX_MAINNET_FLAG = 2n ** 64n;
+const rollupID = 0;
+const networkIDMainnet = 0;
 
 function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
     return ethers.solidityPackedKeccak256(
@@ -36,14 +38,13 @@ function computeGlobalIndex(indexLocal: any, indexRollup: any, isMainnet: boolea
 }
 
 function simulateGERWithEtherClaims(destinationAddress: any) {
-    const networkIDMainnet = 0;
     const LEAF_TYPE_ASSET = 0;
 
     // Add a claim leaf to rollup exit tree
     const originNetwork = networkIDMainnet;
     const tokenAddress = ethers.ZeroAddress; // ether
     const amount = 1;
-    const destinationNetwork = networkIDMainnet;
+    const destinationNetwork = rollupID;
 
     const metadata = '0x'; // since is ether does not have metadata
     const metadataHash = ethers.solidityPackedKeccak256(['bytes'], [metadata]);
@@ -77,6 +78,8 @@ function simulateGERWithEtherClaims(destinationAddress: any) {
 
     // Modified: Include mainnetExitRoot and rollupRoot in both claims
     output.computedGlobalExitRoot = computedGlobalExitRoot;
+    output.mer = mainnetExitRoot;
+    output.rer = rollupRoot;
     output.claims = [
         {
             originNetwork,
@@ -156,8 +159,10 @@ async function main() {
     ]);
 
     // intialize the bridge
-    await sovereignChainBridgeContract.initialize(
-        0,
+    await sovereignChainBridgeContract[
+        'initialize(uint32,address,uint32,address,address,bytes,address,address,bool,address,address,address)'
+    ](
+        rollupID,
         ethers.ZeroAddress, // zero for ether
         0, // zero for ether
         sovereignChainGlobalExitRootContract.target,
@@ -166,6 +171,9 @@ async function main() {
         deployer.address,
         ethers.ZeroAddress,
         false,
+        deployer.address,
+        deployer.address,
+        deployer.address,
     );
 
     const output = {} as any;
@@ -173,7 +181,9 @@ async function main() {
 
     // insert some gers
     const simulateGERs = simulateGERWithEtherClaims(deployer.address);
-    const gerToInsert = [ethers.hexlify(ethers.randomBytes(32)), simulateGERs.computedGlobalExitRoot];
+    const simulateGER2 = simulateGERWithEtherClaims(ethers.ZeroAddress);
+
+    const gerToInsert = [simulateGER2, simulateGERs];
     const globalExitRoots: any[] = [];
 
     // simulate l1 info tree
@@ -181,7 +191,7 @@ async function main() {
     const merkleTreeL1InfoTree = new MerkleTreeBridge(height);
 
     for (let i = 0; i < gerToInsert.length; i++) {
-        const ger = gerToInsert[i];
+        const ger = gerToInsert[i].computedGlobalExitRoot;
 
         // insert GER
         console.log('inserting GER: ', ger);
@@ -190,6 +200,8 @@ async function main() {
         // Simulate l1 info tree
         const block = await ethers.provider.getBlock('latest');
         globalExitRoots.push({
+            mer: gerToInsert[i].mer,
+            rer: gerToInsert[i].rer,
             globalExitRoot: ger,
             blockHash: block?.hash,
             timestamp: block?.timestamp,
@@ -230,12 +242,52 @@ async function main() {
     // make a bridge transaction to udpate the local exit root
     console.log('making a bridge transaction to update the local exit root');
     const amount = 10;
-    await (
-        await sovereignChainBridgeContract.bridgeAsset(1, deployer.address, amount, ethers.ZeroAddress, true, '0x', {
-            value: amount,
-        })
-    ).wait();
 
+    try {
+        // simulate the call
+        await sovereignChainBridgeContract.bridgeAsset.staticCall(
+            1,
+            deployer.address,
+            amount,
+            ethers.ZeroAddress,
+            true,
+            '0x',
+            {
+                value: amount,
+            },
+        );
+
+        console.log('Simulation succeeded. Sending actual transaction...');
+
+        const tx = await sovereignChainBridgeContract.bridgeAsset(
+            1,
+            deployer.address,
+            amount,
+            ethers.ZeroAddress,
+            true,
+            '0x',
+            {
+                value: amount,
+            },
+        );
+
+        await tx.wait();
+        console.log('Transaction successful.');
+    } catch (error: any) {
+        console.error('Simulation failed.');
+
+        // If the error includes data (revert data), try parsing it
+        if (error?.data) {
+            try {
+                const parsed = sovereignChainBridgeContract.interface.parseError(error.data);
+                console.error('Decoded error:', parsed.name, parsed.args);
+            } catch (parseErr) {
+                console.error('Failed to parse revert data. Raw data:', error.data);
+            }
+        } else {
+            console.error('Unhandled error:', error);
+        }
+    }
     // make claim transaction
     const claimedGlobalIndexes: any[] = [];
     const claimedLeafs: any[] = [];
@@ -287,4 +339,11 @@ async function main() {
 main().catch((e) => {
     console.error(e);
     process.exit(1);
+});
+
+/* eslint-disable no-extend-native */
+Object.defineProperty(BigInt.prototype, 'toJSON', {
+    get() {
+        return () => String(this);
+    },
 });
