@@ -18,6 +18,10 @@ import { checkParams } from '../../src/utils';
 
 import upgradeParams from './upgrade_parameters.json';
 import upgradeOutput from './upgrade_output.json'; // This will be generated after running the upgrade script
+import addRollupType31 from './add_rollup_type_output_fep_bali.json'; // file with schedule and execute data to add rollup type 31
+import addRollupType32 from './add_rollup_type_output_ecdsa_bali.json'; // file with schedule and execute data to add rollup type 31
+import updateRollups31 from './updateRollupOutput-fep.json'; // file with schedule and execute data to update rollup type 31
+import updateRollups32 from './updateRollupOutput-ecdsa.json'; // file with schedule and execute data to update rollup type 32
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 describe('Should shadow fork network, execute upgrade and validate Upgrade V12', () => {
@@ -291,6 +295,108 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         logger.info(`✓ Verified contracts cannot be re-initialized`);
 
         logger.info('✅ Finished shadow fork upgrade test successfully! All 4 contracts upgraded and validated.');
+
+        expect(await rollupManagerContract.rollupTypeCount()).to.equal(30);
+
+        logger.info('Add rollup type 31 AggchainFEP');
+        // /////////////////////
+        // Add rollup type 31 //
+        // /////////////////////
+        const txScheduleAdd31 = {
+            to: addRollupType31.timelockContractAddress,
+            data: addRollupType31.scheduleData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txScheduleAdd31)).wait();
+        logger.info('✓ Sent schedule transaction');
+
+        // Increase time to bypass the timelock delay
+        await time.increase(Number(timelockDelay));
+        logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
+
+        // Send execute transaction
+        const txExecuteAdd31 = {
+            to: addRollupType31.timelockContractAddress,
+            data: addRollupType31.executeData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txExecuteAdd31)).wait();
+        logger.info(`✓ Sent execute transaction`);
+
+        expect(await rollupManagerContract.rollupTypeCount()).to.equal(31);
+
+        logger.info('Add rollup type 32 AggchainFEP');
+        // /////////////////////
+        // Add rollup type 32 //
+        // /////////////////////
+        const txScheduleAdd32 = {
+            to: addRollupType32.timelockContractAddress,
+            data: addRollupType32.scheduleData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txScheduleAdd32)).wait();
+        logger.info('✓ Sent schedule transaction');
+
+        // Increase time to bypass the timelock delay
+        await time.increase(Number(timelockDelay));
+        logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
+
+        // Send execute transaction
+        const txExecuteAdd32 = {
+            to: addRollupType32.timelockContractAddress,
+            data: addRollupType32.executeData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txExecuteAdd32)).wait();
+        logger.info(`✓ Sent execute transaction`);
+
+        expect(await rollupManagerContract.rollupTypeCount()).to.equal(32);
+
+        // await ethers.provider.send('hardhat_impersonateAccount', [addRollupType32.timelockContractAddress]);
+        // const timelockSigner = await ethers.getSigner(addRollupType32.timelockContractAddress as any);
+        // await setBalance(addRollupType32.timelockContractAddress, 100n ** 18n);
+
+        logger.info('Update rollups types 27 -> 31');
+        // ////////////////////////
+        // Update rollup type 31 //
+        // ////////////////////////
+        const txScheduleUpdate31 = {
+            to: addRollupType32.timelockContractAddress,
+            data: updateRollups31.scheduleData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txScheduleUpdate31)).wait();
+        logger.info('✓ Sent schedule transaction');
+
+        // Increase time to bypass the timelock delay
+        await time.increase(Number(timelockDelay));
+        logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
+
+        // Send execute transaction
+        const txExecuteUpdate31 = {
+            to: addRollupType32.timelockContractAddress,
+            data: updateRollups31.executeData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txExecuteUpdate31)).wait();
+        logger.info(`✓ Sent execute transaction`);
+
+        logger.info('Update rollups types 30 -> 32');
+        // ////////////////////////
+        // Update rollup type 32 //
+        // ////////////////////////
+        const txScheduleUpdate32 = {
+            to: addRollupType32.timelockContractAddress,
+            data: updateRollups32.scheduleData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txScheduleUpdate32)).wait();
+        logger.info('✓ Sent schedule transaction');
+
+        // Increase time to bypass the timelock delay
+        await time.increase(Number(timelockDelay));
+        logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
+
+        // Send execute transaction
+        const txExecuteUpdate32 = {
+            to: addRollupType32.timelockContractAddress,
+            data: updateRollups32.executeData,
+        };
+        await (await proposerRoleSigner.sendTransaction(txExecuteUpdate32)).wait();
+        logger.info(`✓ Sent execute transaction`);
     }).timeout(0);
 });
 
