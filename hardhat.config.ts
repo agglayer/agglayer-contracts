@@ -242,7 +242,7 @@ const config: HardhatUserConfig = {
                     metadata: { bytecodeHash: 'none' }, // Get always same bytecode
                 }, // try yul optimizer
             },
-            'contracts/lib/bridgeLib.sol': {
+            'contracts/lib/BridgeLib.sol': {
                 version: '0.8.28',
                 settings: {
                     optimizer: {
