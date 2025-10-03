@@ -172,8 +172,8 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         logger.info('\n========== INDIVIDUAL EXECUTION TEST ==========');
         logger.info('Executing all batch operations individually from timelock contract...');
 
-        const targets = upgradeOutput.decodedScheduleData.targets;
-        const values = upgradeOutput.decodedScheduleData.values;
+        const { targets } = upgradeOutput.decodedScheduleData;
+        const { values } = upgradeOutput.decodedScheduleData;
         const datas = upgradeOutput.decodedScheduleData.payloads;
 
         // Impersonate the timelock contract to simulate calls from its perspective
@@ -200,13 +200,13 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                 // Actually send the transaction from timelock's perspective
                 const tx = await timelockSigner.sendTransaction({
                     to: target,
-                    value: value,
-                    data: data,
+                    value,
+                    data,
                     gasLimit: 3000000,
                 });
                 const receipt = await tx.wait();
 
-                logger.info(`  ✅ Execution SUCCESS (gas used: ${receipt.gasUsed}, block: ${receipt.blockNumber})`);
+                logger.info(`  ✅ Execution SUCCESS (gas used: ${receipt?.gasUsed}, block: ${receipt?.blockNumber})`);
             } catch (error: any) {
                 allSimulationsSuccess = false;
                 failedOperations.push({
@@ -222,7 +222,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                     try {
                         const decodedError = ethers.AbiCoder.defaultAbiCoder().decode(
                             ['string'],
-                            '0x' + error.data.slice(10),
+                            `0x${error.data.slice(10)}`,
                         );
                         logger.error(`     Revert reason: ${decodedError[0]}`);
                     } catch (e) {
@@ -240,6 +240,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             logger.info(`✅ All ${targets.length} operations executed successfully individually!`);
         } else {
             logger.error(`❌ ${failedOperations.length} operation(s) failed execution:`);
+            // eslint-disable-next-line no-restricted-syntax
             for (const failed of failedOperations) {
                 logger.error(`   - Operation ${failed.index + 1} to ${failed.target}: ${failed.error}`);
             }
@@ -279,7 +280,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             gasLimit: 6000000,
         };
         const executeTx = await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
-        logger.info(`✅ Batch execution SUCCESS (gas used: ${executeTx.gasUsed})`);
+        logger.info(`✅ Batch execution SUCCESS (gas used: ${executeTx?.gasUsed})`);
         logger.info('============================================\n');
 
         // Validate all contracts after upgrade
@@ -414,7 +415,6 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
             // Check if this was originally a PP rollup (will have ECDSA type now)
             // or AL gateway rollup (will have FEP type now)
-            const rollupType = await rollupManagerContract.rollupTypeMap(rollupData.rollupTypeID);
             if (rollupData.rollupTypeID === ecdsaRollupTypeID) {
                 PPRollups.push(rollupObject);
             } else if (rollupData.rollupTypeID === fepRollupTypeID) {
@@ -428,6 +428,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
         // 7. Verify FEP rollups were upgraded correctly
         const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+        // eslint-disable-next-line no-restricted-syntax
         for (const rollup of ALgatewayRollups) {
             const aggchainFEPContract = aggchainFEPFactory.attach(rollup.rollupContract as string) as AggchainFEP;
 
@@ -475,6 +476,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
         // 8. Verify ECDSA rollups were upgraded correctly
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        // eslint-disable-next-line no-restricted-syntax
         for (const rollup of PPRollups) {
             const aggchainECDSAContract = aggchainECDSAFactory.attach(
                 rollup.rollupContract as string,

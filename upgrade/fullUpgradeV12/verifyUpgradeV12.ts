@@ -97,7 +97,7 @@ async function main() {
     // 8. Verify AggchainFEP Implementation (if exists)
     if (deployedContracts.aggchainFEPImplementation) {
         logger.info('Verifying AggchainFEP Implementation...');
-        verificationResults['AggchainFEP'] = await trackVerification(
+        verificationResults.AggchainFEP = await trackVerification(
             'AggchainFEP',
             deployedContracts.aggchainFEPImplementation,
             [globalExitRootV2Address, polAddress, bridgeV2Address, rollupManagerAddress, aggLayerGatewayAddress],
@@ -107,7 +107,7 @@ async function main() {
     // 9. Verify AggchainECDSA Implementation (if exists)
     if (deployedContracts.aggchainECDSAImplementation) {
         logger.info('Verifying AggchainECDSA Implementation...');
-        verificationResults['AggchainECDSA'] = await trackVerification(
+        verificationResults.AggchainECDSA = await trackVerification(
             'AggchainECDSA',
             deployedContracts.aggchainECDSAImplementation,
             [globalExitRootV2Address, polAddress, bridgeV2Address, rollupManagerAddress, aggLayerGatewayAddress],

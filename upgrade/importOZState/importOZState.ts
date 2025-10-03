@@ -10,7 +10,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Configuration: Set the RollupManager or AgglayerManager address here
 // You can also set this via environment variable: ROLLUP_MANAGER_ADDRESS
-const ROLLUP_MANAGER_ADDRESS = process.env.ROLLUP_MANAGER_ADDRESS;
+const { ROLLUP_MANAGER_ADDRESS } = process.env;
 
 /**
  * Plain script to import OpenZeppelin upgrade state for all proxy contracts

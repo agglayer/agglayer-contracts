@@ -83,7 +83,7 @@ async function verifyContractEtherscan(
             contract: contractPath,
         });
         logger.info(`✅ Contract ${implementationAddress} verified successfully on Etherscan`);
-    } catch (error) {
+    } catch (error: any) {
         if (error.name === 'ContractAlreadyVerifiedError') {
             logger.info(`✅ Contract ${implementationAddress} is already verified on Etherscan`);
             return true;
@@ -219,17 +219,17 @@ async function decodeScheduleBatchData(scheduleData: any, contractFactories: any
             // Try to decode single data with multiple factories
             const data = timelockTx?.args[i];
             let decodedData = null;
-            let usedFactory = null;
 
+            // eslint-disable-next-line no-restricted-syntax
             for (const factory of contractFactories) {
                 try {
                     const decodedAttempt = factory.interface.parseTransaction({ data });
                     if (decodedAttempt) {
                         decodedData = decodedAttempt;
-                        usedFactory = factory;
                         break;
                     }
                 } catch (error) {
+                    // eslint-disable-next-line no-continue
                     continue;
                 }
             }
@@ -253,18 +253,18 @@ async function decodeScheduleBatchData(scheduleData: any, contractFactories: any
             for (let j = 0; j < payloads.length; j++) {
                 const data = payloads[j];
                 let decodedProxyAdmin = null;
-                let usedFactory = null;
 
                 // Try to decode with each contract factory
+                // eslint-disable-next-line no-restricted-syntax
                 for (const factory of contractFactories) {
                     try {
                         const decodedAttempt = factory.interface.parseTransaction({ data });
                         if (decodedAttempt) {
                             decodedProxyAdmin = decodedAttempt;
-                            usedFactory = factory;
                             break;
                         }
                     } catch (error) {
+                        // eslint-disable-next-line no-continue
                         continue;
                     }
                 }

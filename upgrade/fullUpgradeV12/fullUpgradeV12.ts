@@ -7,9 +7,8 @@ import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { logger } from '../../src/logger';
 import { AgglayerManager, AgglayerBridge } from '../../typechain-types';
-import { genTimelockOperation, decodeScheduleData, decodeScheduleBatchData, genTimelockBatchOperation } from '../utils';
+import { genTimelockOperation, decodeScheduleBatchData, genTimelockBatchOperation } from '../utils';
 import { checkParams, getProviderAdjustingMultiplierGas, getDeployerFromParameters } from '../../src/utils';
-import { addInfoOutput } from '../../tools/utils';
 import * as upgradeParameters from './upgrade_parameters.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -64,6 +63,7 @@ async function main() {
     expect(await upgrades.erc1967.getAdminAddress(globalExitRootV2Address as string)).to.be.equal(proxyAdmin.target);
 
     // Validate AgglayerGateway initialization parameters
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const signersToAdd = _validateAgglayerGatewayInitialization(initializeAgglayerGateway);
     const timelockAddress = await proxyAdmin.owner();
 
@@ -72,7 +72,7 @@ async function main() {
     const timelockContract = await timelockContractFactory.attach(timelockAddress);
 
     // Determine timelock delay: use parameter if provided, otherwise use contract's min delay
-    const contractMinDelay = await timelockContract.getMinDelay();
+    const contractMinDelay = await (timelockContract as any).getMinDelay();
     const paramsMinDelay = upgradeParameters.timelockDelay;
 
     let timelockDelay;
@@ -244,8 +244,10 @@ async function main() {
 
     const aggchianFEPFactory = (await ethers.getContractFactory('AggchainFEP', deployer)) as any;
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const rollup of ALgatewayRollups) {
         const aggchainFEPContract = await aggchianFEPFactory.attach(rollup.rollupContract as string);
+        // eslint-disable-next-line eqeqeq
         if ((await aggchainFEPContract.AGGCHAIN_TYPE()) != 1n) {
             throw new Error(`Rollup ${rollup.rollupID} is not an FEP rollup`);
         }
@@ -324,7 +326,9 @@ async function main() {
     const computedNewRollupTypeECDSA = rollupTypeCount + 2n;
 
     // generate transaction to upgrade all FEP rollups to the new FEP implementation
+    // eslint-disable-next-line no-restricted-syntax
     for (const rollup of ALgatewayRollups) {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         const isInitialized = await _isInitialized(rollup.rollupContract, ethers);
         const encodedData = isInitialized
             ? aggchianFEPFactory.interface.encodeFunctionData('upgradeFromPreviousFEP')
@@ -349,7 +353,9 @@ async function main() {
     }
 
     // generate transaction to upgrade all PP rollups to the new ECDSAMultisig implementation
+    // eslint-disable-next-line no-restricted-syntax
     for (const rollup of PPRollups) {
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         const isInitialized = await _isInitialized(rollup.rollupContract, ethers);
         const encodedData = isInitialized
             ? aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus')
@@ -377,6 +383,7 @@ async function main() {
     const targets = [];
     const values = [];
     const datas = [];
+    // eslint-disable-next-line no-restricted-syntax
     for (const operation of timelockOperations) {
         targets.push(operation.target);
         values.push(operation.value);
@@ -433,7 +440,7 @@ async function main() {
         ];
         const objectDecoded = await decodeScheduleBatchData(scheduleData, contractFactories);
         (outputJson as any).decodedScheduleData = objectDecoded;
-    } catch (error) {
+    } catch (error: any) {
         logger.warn('⚠️  Could not decode schedule data:', error.message);
         (outputJson as any).decodedScheduleData = { error: 'Failed to decode', message: error.message };
     }
@@ -459,6 +466,7 @@ main().catch((e) => {
     process.exit(1);
 });
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 function _validateAgglayerGatewayInitialization(initializeAgglayerGateway: any): Array<{ addr: string; url: string }> {
     logger.info('Validating AgglayerGateway initialization parameters...');
 
@@ -526,9 +534,10 @@ function _validateAgglayerGatewayInitialization(initializeAgglayerGateway: any):
     return signersToAdd;
 }
 
-async function _isInitialized(contractAddress: string, ethers: any): Promise<boolean> {
+// eslint-disable-next-line @typescript-eslint/naming-convention
+async function _isInitialized(contractAddress: string, ethersLib: any): Promise<boolean> {
     // Read storage slot 0 which contains uint8 private _initialized (OpenZeppelin Initializable pattern)
-    const storageValue = await ethers.provider.getStorage(contractAddress, 0);
+    const storageValue = await ethersLib.provider.getStorage(contractAddress, 0);
 
     // The _initialized flag is a uint8 (1 byte) stored at the rightmost position in slot 0
     // Mask with 0xFF to extract only the last byte
