@@ -2,7 +2,6 @@
 /* eslint-disable, no-inner-declarations, no-undef, import/no-unresolved */
 import path = require('path');
 import fs = require('fs');
-import { utils } from 'ffjavascript';
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { logger } from '../../src/logger';
@@ -19,7 +18,7 @@ async function main() {
     }
 
     const content = fs.readFileSync(pathOutputJson, 'utf8');
-    const outputData = utils.unstringifyBigInts(JSON.parse(content)) as any;
+    const outputData = JSON.parse(content) as any;
 
     const { inputs, deployedContracts } = outputData;
 
@@ -116,7 +115,7 @@ async function main() {
 
     // Write back results into the same file for traceability
     outputData.verification = verificationResults;
-    fs.writeFileSync(pathOutputJson, JSON.stringify(utils.stringifyBigInts(outputData), null, 2));
+    fs.writeFileSync(pathOutputJson, JSON.stringify(outputData, null, 2));
     logger.info(`Verification results saved to: ${pathOutputJson}`);
 }
 
