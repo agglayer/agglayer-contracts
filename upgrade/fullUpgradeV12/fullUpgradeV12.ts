@@ -55,34 +55,6 @@ async function main() {
     const newRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
     const aggLayerGatewayFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
 
-    // Force import existing proxies if requested
-    const forceImport = (upgradeParameters as any).forceImport || false;
-    if (forceImport) {
-        logger.info('Force importing existing proxies...');
-
-        const aggLayerGatewayPreviousFactory = await ethers.getContractFactory('AggLayerGatewayPrevious', deployer);
-        const bridgePreviousFactory = await ethers.getContractFactory('PolygonZkEVMBridge', deployer);
-        const globalExitRootPreviousFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot', deployer);
-
-        // AggLayerGateway has no constructor args
-        await upgrades.forceImport(aggLayerGatewayAddress as string, aggLayerGatewayPreviousFactory, {
-            kind: 'transparent',
-        });
-
-        // Bridge has no constructor args
-        await upgrades.forceImport(bridgeV2Address as string, bridgePreviousFactory, {
-            kind: 'transparent',
-        });
-
-        // // GlobalExitRoot has constructor args
-        await upgrades.forceImport(globalExitRootV2Address as string, globalExitRootPreviousFactory, {
-            kind: 'transparent',
-            constructorArgs: [rollupManagerAddress, bridgeV2Address],
-        });
-
-        logger.info('✓ Force import completed');
-    }
-
     // Get proxy admin
     const proxyAdmin = await upgrades.admin.getInstance();
     // Assert correct admin for all contracts

@@ -8,7 +8,6 @@
     "multiplierGas": "",
     "timelockAdminAddress": "0x..",
     "unsafeMode": false,
-    "forceImport": false,
     "initializeAgglayerGateway": {
         "multisigRole": "0x...",
         "signersToAdd": [

@@ -43,21 +43,9 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                 ? `https://${upgradeParams.forkParams.network}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`
                 : upgradeParams.forkParams.rpc;
         logger.info(`Shadow forking ${rpc}`);
+
         await reset(rpc, upgradeOutput.implementationDeployBlockNumber + 1);
         await mine();
-        const forkedBlock = await ethers.provider.getBlockNumber();
-        // If forked block is lower than implementation deploy block, wait until it is reached
-        while (forkedBlock <= upgradeOutput.implementationDeployBlockNumber) {
-            logger.info(
-                `Forked block is ${forkedBlock}, waiting until ${upgradeOutput.implementationDeployBlockNumber}, wait 1 minute...`,
-            );
-            await new Promise((r) => {
-                setTimeout(r, 60000);
-            });
-            logger.info('Retrying fork...');
-            await reset(rpc);
-        }
-        logger.info('Shadow fork Succeed!');
 
         // Get contracts before upgrade
         const rollupManagerFactory = await ethers.getContractFactory('AgglayerManager');
@@ -136,7 +124,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
         logger.info(`Proposer/executor timelock role address: ${proposerRoleAddress}`);
         await ethers.provider.send('hardhat_impersonateAccount', [proposerRoleAddress]);
-        const proposerRoleSigner = await ethers.getSigner(proposerRoleAddress as any);
+        let proposerRoleSigner = await ethers.getSigner(proposerRoleAddress as any);
         await setBalance(proposerRoleAddress, 100n ** 18n);
         logger.info(`✓ Funded proposer account ${proposerRoleAddress}`);
 
@@ -180,23 +168,9 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
         logger.info(`✓ Captured Global Exit Root params - Version: ${gerVersion}`);
 
-        // Send schedule transaction
-        const txScheduleUpgrade = {
-            to: upgradeOutput.timelockContractAddress,
-            data: upgradeOutput.scheduleData,
-        };
-
-        await (await proposerRoleSigner.sendTransaction(txScheduleUpgrade)).wait();
-        logger.info('✓ Sent schedule transaction');
-
-        // Increase time to bypass the timelock delay
-        const timelockDelay = upgradeOutput.decodedScheduleData.delay;
-        await time.increase(Number(timelockDelay));
-        logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
-
-        // Pre-execution validation: Simulate all operations individually
-        logger.info('\n========== PRE-EXECUTION VALIDATION ==========');
-        logger.info('Simulating all batch operations individually from timelock contract...');
+        // Pre-execution validation: Execute all operations individually
+        logger.info('\n========== INDIVIDUAL EXECUTION TEST ==========');
+        logger.info('Executing all batch operations individually from timelock contract...');
 
         const targets = upgradeOutput.decodedScheduleData.targets;
         const values = upgradeOutput.decodedScheduleData.values;
@@ -223,22 +197,16 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             logger.info(`  Data: ${data.substring(0, 66)}...`);
 
             try {
-                // Simulate the transaction from timelock's perspective using callStatic
-                await timelockSigner.call({
+                // Actually send the transaction from timelock's perspective
+                const tx = await timelockSigner.sendTransaction({
                     to: target,
                     value: value,
                     data: data,
+                    gasLimit: 3000000,
                 });
+                const receipt = await tx.wait();
 
-                // Try to estimate gas as additional validation
-                const gasEstimate = await ethers.provider.estimateGas({
-                    from: timelockAddress,
-                    to: target,
-                    value: value,
-                    data: data,
-                });
-
-                logger.info(`  ✅ Simulation SUCCESS (estimated gas: ${gasEstimate})`);
+                logger.info(`  ✅ Execution SUCCESS (gas used: ${receipt.gasUsed}, block: ${receipt.blockNumber})`);
             } catch (error: any) {
                 allSimulationsSuccess = false;
                 failedOperations.push({
@@ -247,7 +215,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                     value,
                     error: error.message,
                 });
-                logger.error(`  ❌ Simulation FAILED: ${error.message}`);
+                logger.error(`  ❌ Execution FAILED: ${error.message}`);
 
                 // Try to decode the error if it's a revert with reason
                 if (error.data) {
@@ -267,27 +235,52 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         // Stop impersonating timelock
         await ethers.provider.send('hardhat_stopImpersonatingAccount', [timelockAddress]);
 
-        logger.info('\n========== SIMULATION SUMMARY ==========');
+        logger.info('\n========== INDIVIDUAL EXECUTION SUMMARY ==========');
         if (allSimulationsSuccess) {
-            logger.info(`✅ All ${targets.length} operations simulated successfully!`);
+            logger.info(`✅ All ${targets.length} operations executed successfully individually!`);
         } else {
-            logger.error(`❌ ${failedOperations.length} operation(s) failed simulation:`);
+            logger.error(`❌ ${failedOperations.length} operation(s) failed execution:`);
             for (const failed of failedOperations) {
                 logger.error(`   - Operation ${failed.index + 1} to ${failed.target}: ${failed.error}`);
             }
-            logger.warn('⚠️  Proceeding with batch execution despite simulation failures...');
+            throw new Error('Individual execution failed, aborting test');
         }
-        logger.info('============================================\n');
+        logger.info('========================================================\n');
 
-        // Send execute transaction
+        // Reset fork to test batch execution
+        logger.info('========== RESETTING FOR BATCH EXECUTION TEST ==========');
+        logger.info('Re-forking to test batch execution...');
+        await reset(rpc, upgradeOutput.implementationDeployBlockNumber + 1);
+
+        // agian impoersonate acoutn after reset
+        await ethers.provider.send('hardhat_impersonateAccount', [proposerRoleAddress]);
+        proposerRoleSigner = await ethers.getSigner(proposerRoleAddress as any);
+        await setBalance(proposerRoleAddress, 100n ** 18n);
+
+        // Send schedule transaction
+        const txScheduleUpgrade = {
+            to: upgradeOutput.timelockContractAddress,
+            data: upgradeOutput.scheduleData,
+        };
+
+        await (await proposerRoleSigner.sendTransaction(txScheduleUpgrade)).wait();
+        logger.info('✓ Sent schedule transaction');
+
+        // Increase time to bypass the timelock delay
+        const timelockDelay = upgradeOutput.decodedScheduleData.delay;
+        await time.increase(Number(timelockDelay));
+        logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
+
+        // Now send batch execute transaction
+        logger.info('========== BATCH EXECUTION TEST ==========');
         const txExecuteUpgrade = {
             to: upgradeOutput.timelockContractAddress,
             data: upgradeOutput.executeData,
             gasLimit: 6000000,
         };
         const executeTx = await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
-        console.log('executeTx', executeTx);
-        logger.info(`✓ Sent execute transaction`);
+        logger.info(`✅ Batch execution SUCCESS (gas used: ${executeTx.gasUsed})`);
+        logger.info('============================================\n');
 
         // Validate all contracts after upgrade
 
