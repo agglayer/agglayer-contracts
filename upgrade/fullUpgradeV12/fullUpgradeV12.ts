@@ -50,7 +50,6 @@ async function main() {
     logger.info(`- Global Exit Root V2: ${globalExitRootV2Address}`);
     logger.info(`- AggLayer Gateway: ${aggLayerGatewayAddress}`);
 
-    const aggLayerGatewayUpgradeFactory = await ethers.getContractFactory('AgglayerGateway', deployer);
     const globalExitRootManagerFactory = await ethers.getContractFactory('AgglayerGER', deployer);
     const bridgeFactory = await ethers.getContractFactory('AgglayerBridge', deployer);
     const newRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
@@ -65,10 +64,10 @@ async function main() {
         const bridgePreviousFactory = await ethers.getContractFactory('PolygonZkEVMBridge', deployer);
         const globalExitRootPreviousFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot', deployer);
 
-        // // AggLayerGateway has no constructor args
-        // await upgrades.forceImport(aggLayerGatewayAddress as string, aggLayerGatewayPreviousFactory, {
-        //     kind: 'transparent',
-        // });
+        // AggLayerGateway has no constructor args
+        await upgrades.forceImport(aggLayerGatewayAddress as string, aggLayerGatewayPreviousFactory, {
+            kind: 'transparent',
+        });
 
         // Bridge has no constructor args
         await upgrades.forceImport(bridgeV2Address as string, bridgePreviousFactory, {
@@ -142,7 +141,7 @@ async function main() {
     // 2. Upgrade AggLayer Gateway
     logger.info('Preparing AggLayer Gateway upgrade...');
 
-    const implAgglayerGateway = await upgrades.prepareUpgrade(aggLayerGatewayAddress, aggLayerGatewayUpgradeFactory, {
+    const implAgglayerGateway = await upgrades.prepareUpgrade(aggLayerGatewayAddress, aggLayerGatewayFactory, {
         unsafeAllow: ['missing-initializer', 'missing-initializer-call', 'constructor'],
     });
 

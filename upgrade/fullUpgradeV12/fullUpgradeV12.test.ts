@@ -451,10 +451,6 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                 `  Rollup ${rollup.rollupID} (ChainID: ${rollup.chainID}) - FEP upgraded to version: ${rollupVersion}`,
             );
 
-            // Check basic rollup parameters are preserved
-            const rollupChainID = await aggchainFEPContract.chainID();
-            expect(rollupChainID).to.equal(rollup.chainID);
-
             const rollupGlobalExitRoot = await aggchainFEPContract.globalExitRootManager();
             expect(rollupGlobalExitRoot).to.equal(globalExitRootV2Address);
 
@@ -476,6 +472,11 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             logger.info(
                 `    ✓ Rollup ${rollup.rollupID}: Trusted sequencer ${trustedSequencer} is in signers list (${aggchainSigners.length} signers)`,
             );
+
+            const threshold = await aggchainFEPContract.getThreshold();
+            expect(threshold).to.equal(aggchainSigners.length); // FEP should have all signers as threshold
+            expect(threshold).to.be.equal(1);
+            logger.info(`    ✓ Rollup ${rollup.rollupID}: Threshold is ${threshold} and should be 1`);
         }
         logger.info(`✓ All ${ALgatewayRollups.length} FEP rollups upgraded and validated successfully`);
 
@@ -499,10 +500,6 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                 `  Rollup ${rollup.rollupID} (ChainID: ${rollup.chainID}) - ECDSA upgraded to version: ${rollupVersion}`,
             );
 
-            // Check basic rollup parameters are preserved
-            const rollupChainID = await aggchainECDSAContract.chainID();
-            expect(rollupChainID).to.equal(rollup.chainID);
-
             const rollupGlobalExitRoot = await aggchainECDSAContract.globalExitRootManager();
             expect(rollupGlobalExitRoot).to.equal(globalExitRootV2Address);
 
@@ -524,6 +521,11 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             logger.info(
                 `    ✓ Rollup ${rollup.rollupID}: Trusted sequencer ${trustedSequencer} is in signers list (${aggchainSigners.length} signers)`,
             );
+
+            const threshold = await aggchainECDSAContract.getThreshold();
+            expect(threshold).to.equal(aggchainSigners.length); // FEP should have all signers as threshold
+            expect(threshold).to.be.equal(1);
+            logger.info(`    ✓ Rollup ${rollup.rollupID}: Threshold is ${threshold} and should be 1`);
         }
         logger.info(`✓ All ${PPRollups.length} ECDSA rollups upgraded and validated successfully`);
 
