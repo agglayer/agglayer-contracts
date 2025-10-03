@@ -193,15 +193,21 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         const timelockDelay = upgradeOutput.decodedScheduleData.delay;
         await time.increase(Number(timelockDelay));
         logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
-        
+
         // Pre-execution validation: Simulate all operations individually
         logger.info('\n========== PRE-EXECUTION VALIDATION ==========');
-        logger.info('Simulating all batch operations individually...');
+        logger.info('Simulating all batch operations individually from timelock contract...');
 
         const targets = upgradeOutput.decodedScheduleData.targets;
         const values = upgradeOutput.decodedScheduleData.values;
-        const payloadsKey = Object.keys(upgradeOutput.decodedScheduleData).find((key) => key.startsWith('datas'));
-        const datas = upgradeOutput.decodedScheduleData[payloadsKey || 'datas'];
+        const datas = upgradeOutput.decodedScheduleData.payloads;
+
+        // Impersonate the timelock contract to simulate calls from its perspective
+        const timelockAddress = upgradeOutput.timelockContractAddress;
+        await ethers.provider.send('hardhat_impersonateAccount', [timelockAddress]);
+        const timelockSigner = await ethers.getSigner(timelockAddress as any);
+        await setBalance(timelockAddress, 100n ** 18n);
+        logger.info(`✓ Impersonating timelock contract: ${timelockAddress}`);
 
         let allSimulationsSuccess = true;
         const failedOperations = [];
@@ -217,8 +223,8 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             logger.info(`  Data: ${data.substring(0, 66)}...`);
 
             try {
-                // Simulate the transaction using callStatic
-                await proposerRoleSigner.call({
+                // Simulate the transaction from timelock's perspective using callStatic
+                await timelockSigner.call({
                     to: target,
                     value: value,
                     data: data,
@@ -226,7 +232,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
                 // Try to estimate gas as additional validation
                 const gasEstimate = await ethers.provider.estimateGas({
-                    from: timelockContract.target,
+                    from: timelockAddress,
                     to: target,
                     value: value,
                     data: data,
@@ -246,7 +252,10 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                 // Try to decode the error if it's a revert with reason
                 if (error.data) {
                     try {
-                        const decodedError = ethers.AbiCoder.defaultAbiCoder().decode(['string'], '0x' + error.data.slice(10));
+                        const decodedError = ethers.AbiCoder.defaultAbiCoder().decode(
+                            ['string'],
+                            '0x' + error.data.slice(10),
+                        );
                         logger.error(`     Revert reason: ${decodedError[0]}`);
                     } catch (e) {
                         // Could not decode error
@@ -254,6 +263,9 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
                 }
             }
         }
+
+        // Stop impersonating timelock
+        await ethers.provider.send('hardhat_stopImpersonatingAccount', [timelockAddress]);
 
         logger.info('\n========== SIMULATION SUMMARY ==========');
         if (allSimulationsSuccess) {
@@ -271,7 +283,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         const txExecuteUpgrade = {
             to: upgradeOutput.timelockContractAddress,
             data: upgradeOutput.executeData,
-            gasLimit: 30000000n,
+            gasLimit: 6000000,
         };
         const executeTx = await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
         console.log('executeTx', executeTx);

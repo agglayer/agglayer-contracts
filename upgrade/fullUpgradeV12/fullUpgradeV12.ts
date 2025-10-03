@@ -65,10 +65,10 @@ async function main() {
         const bridgePreviousFactory = await ethers.getContractFactory('PolygonZkEVMBridge', deployer);
         const globalExitRootPreviousFactory = await ethers.getContractFactory('PolygonZkEVMGlobalExitRoot', deployer);
 
-        // AggLayerGateway has no constructor args
-        await upgrades.forceImport(aggLayerGatewayAddress as string, aggLayerGatewayPreviousFactory, {
-            kind: 'transparent',
-        });
+        // // AggLayerGateway has no constructor args
+        // await upgrades.forceImport(aggLayerGatewayAddress as string, aggLayerGatewayPreviousFactory, {
+        //     kind: 'transparent',
+        // });
 
         // Bridge has no constructor args
         await upgrades.forceImport(bridgeV2Address as string, bridgePreviousFactory, {
