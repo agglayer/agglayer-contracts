@@ -1,0 +1,30 @@
+{
+    "tagSCPreviousVersion": "v1.0.0",
+    "rollupManagerAddress": "0x...",
+    "timelockDelay": 3600,
+    "timelockSalt": "",
+    "maxFeePerGas": "",
+    "maxPriorityFeePerGas": "",
+    "multiplierGas": "",
+    "timelockAdminAddress": "0x..",
+    "unsafeMode": false,
+    "forceImport": false,
+    "initializeAgglayerGateway": {
+        "multisigRole": "0x...",
+        "signersToAdd": [
+            {
+                "addr": "0x...",
+                "url": "https://example.com/signer1"
+            },
+            {
+                "addr": "0x...",
+                "url": "https://example.com/signer2"
+            }
+        ],
+        "newThreshold": 1
+    },
+    "forkParams": {
+        "rpc": "...",
+        "network": "sepolia"
+    }
+}

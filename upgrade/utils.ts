@@ -29,6 +29,31 @@ function genTimelockOperation(target: any, value: any, data: any, predecessor: a
 }
 
 /**
+ * Generates a timelock batch operation with the given input values
+ * @param targets Array of contract addresses to call
+ * @param values Array of ether values to send to each call
+ * @param datas Array of encoded data for each transaction to execute
+ * @param predecessor timelock operation predecessor (bytes32)
+ * @param salt timelock operation salt (bytes32)
+ * @returns The timelock batch operation params
+ */
+function genTimelockBatchOperation(targets: string[], values: any[], datas: any[], predecessor: any, salt: any) {
+    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address[]', 'uint256[]', 'bytes[]', 'bytes32', 'bytes32'],
+        [targets, values, datas, predecessor, salt],
+    );
+    const id = ethers.keccak256(abiEncoded);
+    return {
+        id,
+        targets,
+        values,
+        datas,
+        predecessor,
+        salt,
+    };
+}
+
+/**
  * Function to handle the verification of a contract on etherscan
  * @param implementationAddress the contract address to verify
  * @param constructorArguments the constructor arguments of the contract
@@ -173,6 +198,99 @@ async function decodeScheduleData(scheduleData: any, contractFactory: any) {
     return convertBigIntsToNumbers(objectDecoded);
 }
 
+/**
+ * Decode the data of a schedule transaction to a timelock contract for better readability
+ * Tries to decode with multiple contract factories to find the right match for each payload
+ * @param scheduleData The data of the schedule transaction
+ * @param contractFactories Array of contract factories to try decoding with
+ * @returns The decoded data
+ */
+async function decodeScheduleBatchData(scheduleData: any, contractFactories: any[]) {
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock');
+    const timelockTx = timelockContractFactory.interface.parseTransaction({ data: scheduleData });
+    const objectDecoded = {} as any;
+    const paramsArray = timelockTx?.fragment.inputs as any;
+
+    for (let i = 0; i < paramsArray?.length; i++) {
+        const currentParam = paramsArray[i];
+        objectDecoded[currentParam.name] = timelockTx?.args[i];
+
+        if (currentParam.name === 'data') {
+            // Try to decode single data with multiple factories
+            const data = timelockTx?.args[i];
+            let decodedData = null;
+            let usedFactory = null;
+
+            for (const factory of contractFactories) {
+                try {
+                    const decodedAttempt = factory.interface.parseTransaction({ data });
+                    if (decodedAttempt) {
+                        decodedData = decodedAttempt;
+                        usedFactory = factory;
+                        break;
+                    }
+                } catch (error) {
+                    continue;
+                }
+            }
+
+            if (decodedData) {
+                const objectDecodedData = {} as any;
+                const paramsArrayData = decodedData?.fragment.inputs as any;
+
+                objectDecodedData.signature = decodedData?.signature;
+                objectDecodedData.selector = decodedData?.selector;
+
+                for (let j = 0; j < paramsArrayData?.length; j++) {
+                    const currentParamData = paramsArrayData[j];
+                    objectDecodedData[currentParamData.name] = decodedData?.args[j];
+                }
+                objectDecoded.decodedData = objectDecodedData;
+            }
+        } else if (currentParam.name === 'payloads') {
+            // for each payload
+            const payloads = timelockTx?.args[i];
+            for (let j = 0; j < payloads.length; j++) {
+                const data = payloads[j];
+                let decodedProxyAdmin = null;
+                let usedFactory = null;
+
+                // Try to decode with each contract factory
+                for (const factory of contractFactories) {
+                    try {
+                        const decodedAttempt = factory.interface.parseTransaction({ data });
+                        if (decodedAttempt) {
+                            decodedProxyAdmin = decodedAttempt;
+                            usedFactory = factory;
+                            break;
+                        }
+                    } catch (error) {
+                        continue;
+                    }
+                }
+
+                const resultDecodeProxyAdmin = {} as any;
+                if (decodedProxyAdmin) {
+                    resultDecodeProxyAdmin.signature = decodedProxyAdmin?.signature;
+                    resultDecodeProxyAdmin.selector = decodedProxyAdmin?.selector;
+
+                    const paramsArrayData = decodedProxyAdmin?.fragment.inputs;
+
+                    for (let n = 0; n < paramsArrayData?.length; n++) {
+                        const currentParamData = paramsArrayData[n];
+                        resultDecodeProxyAdmin[currentParamData.name] = decodedProxyAdmin?.args[n];
+                    }
+                } else {
+                    resultDecodeProxyAdmin.error = 'Could not decode with any provided contract factory';
+                    resultDecodeProxyAdmin.rawData = data;
+                }
+                objectDecoded[`decodePayload_${j}`] = resultDecodeProxyAdmin;
+            }
+        }
+    }
+    return convertBigIntsToNumbers(objectDecoded);
+}
+
 // This is a workaround to fix the BigInt serialization issue in JSON
 // when using JSON.stringify on BigInt values, which is common in Ethers
 // eslint-disable-next-line no-extend-native
@@ -182,4 +300,11 @@ Object.defineProperty(BigInt.prototype, 'toJSON', {
     },
 });
 
-export { genTimelockOperation, verifyContractEtherscan, decodeScheduleData, trackVerification };
+export {
+    genTimelockOperation,
+    verifyContractEtherscan,
+    decodeScheduleData,
+    decodeScheduleBatchData,
+    trackVerification,
+    genTimelockBatchOperation,
+};
