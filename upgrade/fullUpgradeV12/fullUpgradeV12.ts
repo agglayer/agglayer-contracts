@@ -100,11 +100,34 @@ async function main() {
     const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
     const timelockContract = await timelockContractFactory.attach(timelockAddress);
 
-    // Use min delay in case was not set.
-    let timelockDelay = upgradeParameters.timelockDelay
-        ? upgradeParameters.timelockDelay
-        : await timelockContract.getMinDelay();
+    // Determine timelock delay: use parameter if provided, otherwise use contract's min delay
+    const contractMinDelay = await timelockContract.getMinDelay();
+    const paramsMinDelay = upgradeParameters.timelockDelay;
 
+    let timelockDelay;
+
+    // Safety check: validate against expected minimum delay if provided
+    if (paramsMinDelay !== undefined && paramsMinDelay !== null) {
+        if (paramsMinDelay < contractMinDelay) {
+            logger.error(
+                `❌ Safety check failed: Timelock delay (${paramsMinDelay}s) is less than expected minimum (${contractMinDelay}s). Aborting.`,
+            );
+            process.exit(1);
+        }
+
+        if (paramsMinDelay > contractMinDelay) {
+            logger.warn(
+                `⚠️  Timelock delay (${paramsMinDelay}s) exceeds expected minimum (${contractMinDelay}s). Proceeding with higher delay.`,
+            );
+        }
+        timelockDelay = paramsMinDelay;
+    } else {
+        // warn saying its the default delay
+        logger.warn(`⚠️  Timelock delay (${timelockDelay}s) is the default delay.`);
+        timelockDelay = contractMinDelay;
+    }
+
+    logger.info(`✓ Timelock delay set to: ${timelockDelay}s (contract min: ${contractMinDelay}s)`);
     // 1. Upgrade Rollup Manager
     logger.info('Preparing Rollup Manager upgrade...');
 

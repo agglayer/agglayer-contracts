@@ -11,6 +11,8 @@ import {
     AgglayerBridge,
     AgglayerGER,
     AgglayerGateway,
+    AggchainFEP,
+    AggchainECDSAMultisig,
 } from '../../typechain-types';
 
 import { logger } from '../../src/logger';
@@ -151,13 +153,14 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             await rollupManagerContract.lastDeactivatedEmergencyStateTimestamp();
         const pol = await rollupManagerContract.pol();
         const rollupCount = await rollupManagerContract.rollupCount();
-        const rollupTypeCount = await rollupManagerContract.rollupTypeCount();
+        const rollupTypeCountBefore = await rollupManagerContract.rollupTypeCount();
         const totalSequencedBatches = await rollupManagerContract.totalSequencedBatches();
         const totalVerifiedBatches = await rollupManagerContract.totalVerifiedBatches();
         const bridgeAddress = await rollupManagerContract.bridgeAddress();
         const globalExitRootManager = await rollupManagerContract.globalExitRootManager();
 
         logger.info(`✓ Captured Rollup Manager params - Version: ${rollupManagerVersion}`);
+        logger.info(`  - Rollup Type Count (before upgrade): ${rollupTypeCountBefore}`);
 
         // 3. Bridge prev params
         const bridgeVersion = await bridgeContract.BRIDGE_VERSION();
@@ -182,6 +185,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
             to: upgradeOutput.timelockContractAddress,
             data: upgradeOutput.scheduleData,
         };
+
         await (await proposerRoleSigner.sendTransaction(txScheduleUpgrade)).wait();
         logger.info('✓ Sent schedule transaction');
 
@@ -189,13 +193,88 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         const timelockDelay = upgradeOutput.decodedScheduleData.delay;
         await time.increase(Number(timelockDelay));
         logger.info(`✓ Increase time ${timelockDelay} seconds to bypass timelock delay`);
+        
+        // Pre-execution validation: Simulate all operations individually
+        logger.info('\n========== PRE-EXECUTION VALIDATION ==========');
+        logger.info('Simulating all batch operations individually...');
+
+        const targets = upgradeOutput.decodedScheduleData.targets;
+        const values = upgradeOutput.decodedScheduleData.values;
+        const payloadsKey = Object.keys(upgradeOutput.decodedScheduleData).find((key) => key.startsWith('datas'));
+        const datas = upgradeOutput.decodedScheduleData[payloadsKey || 'datas'];
+
+        let allSimulationsSuccess = true;
+        const failedOperations = [];
+
+        for (let i = 0; i < targets.length; i++) {
+            const target = targets[i];
+            const value = values[i];
+            const data = datas[i];
+
+            logger.info(`\n[Operation ${i + 1}/${targets.length}]`);
+            logger.info(`  Target: ${target}`);
+            logger.info(`  Value: ${value}`);
+            logger.info(`  Data: ${data.substring(0, 66)}...`);
+
+            try {
+                // Simulate the transaction using callStatic
+                await proposerRoleSigner.call({
+                    to: target,
+                    value: value,
+                    data: data,
+                });
+
+                // Try to estimate gas as additional validation
+                const gasEstimate = await ethers.provider.estimateGas({
+                    from: timelockContract.target,
+                    to: target,
+                    value: value,
+                    data: data,
+                });
+
+                logger.info(`  ✅ Simulation SUCCESS (estimated gas: ${gasEstimate})`);
+            } catch (error: any) {
+                allSimulationsSuccess = false;
+                failedOperations.push({
+                    index: i,
+                    target,
+                    value,
+                    error: error.message,
+                });
+                logger.error(`  ❌ Simulation FAILED: ${error.message}`);
+
+                // Try to decode the error if it's a revert with reason
+                if (error.data) {
+                    try {
+                        const decodedError = ethers.AbiCoder.defaultAbiCoder().decode(['string'], '0x' + error.data.slice(10));
+                        logger.error(`     Revert reason: ${decodedError[0]}`);
+                    } catch (e) {
+                        // Could not decode error
+                    }
+                }
+            }
+        }
+
+        logger.info('\n========== SIMULATION SUMMARY ==========');
+        if (allSimulationsSuccess) {
+            logger.info(`✅ All ${targets.length} operations simulated successfully!`);
+        } else {
+            logger.error(`❌ ${failedOperations.length} operation(s) failed simulation:`);
+            for (const failed of failedOperations) {
+                logger.error(`   - Operation ${failed.index + 1} to ${failed.target}: ${failed.error}`);
+            }
+            logger.warn('⚠️  Proceeding with batch execution despite simulation failures...');
+        }
+        logger.info('============================================\n');
 
         // Send execute transaction
         const txExecuteUpgrade = {
             to: upgradeOutput.timelockContractAddress,
             data: upgradeOutput.executeData,
+            gasLimit: 30000000n,
         };
-        await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
+        const executeTx = await (await proposerRoleSigner.sendTransaction(txExecuteUpgrade)).wait();
+        console.log('executeTx', executeTx);
         logger.info(`✓ Sent execute transaction`);
 
         // Validate all contracts after upgrade
@@ -214,7 +293,6 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         );
         expect(await rollupManagerContract.pol()).to.equal(pol);
         expect(await rollupManagerContract.rollupCount()).to.equal(rollupCount);
-        expect(await rollupManagerContract.rollupTypeCount()).to.equal(rollupTypeCount);
         expect(await rollupManagerContract.totalSequencedBatches()).to.equal(totalSequencedBatches);
         expect(await rollupManagerContract.totalVerifiedBatches()).to.equal(totalVerifiedBatches);
         logger.info(`✓ Checked rollup manager contract storage parameters and new version: ${ROLLUP_MANAGER_VERSION}`);
@@ -290,7 +368,167 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
 
         logger.info(`✓ Verified contracts cannot be re-initialized`);
 
-        logger.info('✅ Finished shadow fork upgrade test successfully! All 4 contracts upgraded and validated.');
+        // 5. Verify new rollup types were added
+        const rollupTypeCountAfter = await rollupManagerContract.rollupTypeCount();
+        expect(rollupTypeCountAfter).to.equal(rollupTypeCountBefore + 2n);
+        logger.info(`✓ New rollup types added: ${rollupTypeCountBefore} -> ${rollupTypeCountAfter}`);
+
+        // Verify FEP rollup type
+        const fepRollupTypeID = rollupTypeCountBefore + 1n;
+        const fepRollupTypeStruct = await rollupManagerContract.rollupTypeMap(fepRollupTypeID);
+        expect(fepRollupTypeStruct.consensusImplementation).to.equal(
+            upgradeOutput.deployedContracts.aggchainFEPImplementation,
+        );
+        expect(fepRollupTypeStruct.rollupVerifierType).to.equal(2n); // ALGateway
+        logger.info(`✓ FEP rollup type (ID: ${fepRollupTypeID}) created with correct implementation`);
+
+        // Verify ECDSA rollup type
+        const ecdsaRollupTypeID = rollupTypeCountBefore + 2n;
+        const ecdsaRollupTypeStruct = await rollupManagerContract.rollupTypeMap(ecdsaRollupTypeID);
+        expect(ecdsaRollupTypeStruct.consensusImplementation).to.equal(
+            upgradeOutput.deployedContracts.aggchainECDSAImplementation,
+        );
+        expect(ecdsaRollupTypeStruct.rollupVerifierType).to.equal(2n); // ALGateway
+        logger.info(`✓ ECDSA rollup type (ID: ${ecdsaRollupTypeID}) created with correct implementation`);
+
+        // 6. Verify rollups were upgraded to new types
+
+        const PPRollups = [];
+        const ALgatewayRollups = [];
+
+        // Categorize rollups by type BEFORE upgrade
+        for (let i = 1; i <= rollupCount; i++) {
+            const rollupData = await rollupManagerContract.rollupIDToRollupData(i);
+
+            const rollupObject = {
+                rollupContract: rollupData.rollupContract,
+                rollupID: i,
+                rollupTypeID: rollupData.rollupTypeID,
+                chainID: rollupData.chainID,
+            };
+
+            // Check if this was originally a PP rollup (will have ECDSA type now)
+            // or AL gateway rollup (will have FEP type now)
+            const rollupType = await rollupManagerContract.rollupTypeMap(rollupData.rollupTypeID);
+            if (rollupData.rollupTypeID === ecdsaRollupTypeID) {
+                PPRollups.push(rollupObject);
+            } else if (rollupData.rollupTypeID === fepRollupTypeID) {
+                ALgatewayRollups.push(rollupObject);
+            }
+        }
+
+        logger.info(
+            `Found rollups after upgrade - ECDSA rollups: ${PPRollups.length}, FEP rollups: ${ALgatewayRollups.length}`,
+        );
+
+        // 7. Verify FEP rollups were upgraded correctly
+        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
+        for (const rollup of ALgatewayRollups) {
+            const aggchainFEPContract = aggchainFEPFactory.attach(rollup.rollupContract as string) as AggchainFEP;
+
+            // Check rollup type matches new FEP type
+            expect(rollup.rollupTypeID).to.equal(fepRollupTypeID);
+
+            // Check AGGCHAIN_TYPE is FEP (1)
+            const aggchainType = await aggchainFEPContract.AGGCHAIN_TYPE();
+            expect(aggchainType).to.equal(1n);
+
+            // Check version is updated
+            const rollupVersion = await aggchainFEPContract.version();
+            logger.info(
+                `  Rollup ${rollup.rollupID} (ChainID: ${rollup.chainID}) - FEP upgraded to version: ${rollupVersion}`,
+            );
+
+            // Check basic rollup parameters are preserved
+            const rollupChainID = await aggchainFEPContract.chainID();
+            expect(rollupChainID).to.equal(rollup.chainID);
+
+            const rollupGlobalExitRoot = await aggchainFEPContract.globalExitRootManager();
+            expect(rollupGlobalExitRoot).to.equal(globalExitRootV2Address);
+
+            const rollupBridge = await aggchainFEPContract.bridgeAddress();
+            expect(rollupBridge).to.equal(bridgeV2Address);
+
+            const rollupManager = await aggchainFEPContract.rollupManager();
+            expect(rollupManager).to.equal(upgradeParams.rollupManagerAddress);
+
+            // Check trusted sequencer and verify signers match
+            const trustedSequencer = await aggchainFEPContract.trustedSequencer();
+            const aggchainSigners = await aggchainFEPContract.getAggchainSigners();
+
+            // Verify trusted sequencer is in the signers list
+            const trustedSequencerInSigners = aggchainSigners.some(
+                (signer: string) => signer.toLowerCase() === trustedSequencer.toLowerCase(),
+            );
+            expect(trustedSequencerInSigners).to.be.true;
+            logger.info(
+                `    ✓ Rollup ${rollup.rollupID}: Trusted sequencer ${trustedSequencer} is in signers list (${aggchainSigners.length} signers)`,
+            );
+        }
+        logger.info(`✓ All ${ALgatewayRollups.length} FEP rollups upgraded and validated successfully`);
+
+        // 8. Verify ECDSA rollups were upgraded correctly
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        for (const rollup of PPRollups) {
+            const aggchainECDSAContract = aggchainECDSAFactory.attach(
+                rollup.rollupContract as string,
+            ) as AggchainECDSAMultisig;
+
+            // Check rollup type matches new ECDSA type
+            expect(rollup.rollupTypeID).to.equal(ecdsaRollupTypeID);
+
+            // Check AGGCHAIN_TYPE is ECDSA (0)
+            const aggchainType = await aggchainECDSAContract.AGGCHAIN_TYPE();
+            expect(aggchainType).to.equal(0n);
+
+            // Check version is updated
+            const rollupVersion = await aggchainECDSAContract.version();
+            logger.info(
+                `  Rollup ${rollup.rollupID} (ChainID: ${rollup.chainID}) - ECDSA upgraded to version: ${rollupVersion}`,
+            );
+
+            // Check basic rollup parameters are preserved
+            const rollupChainID = await aggchainECDSAContract.chainID();
+            expect(rollupChainID).to.equal(rollup.chainID);
+
+            const rollupGlobalExitRoot = await aggchainECDSAContract.globalExitRootManager();
+            expect(rollupGlobalExitRoot).to.equal(globalExitRootV2Address);
+
+            const rollupBridge = await aggchainECDSAContract.bridgeAddress();
+            expect(rollupBridge).to.equal(bridgeV2Address);
+
+            const rollupManager = await aggchainECDSAContract.rollupManager();
+            expect(rollupManager).to.equal(upgradeParams.rollupManagerAddress);
+
+            // Check trusted sequencer and verify signers match
+            const trustedSequencer = await aggchainECDSAContract.trustedSequencer();
+            const aggchainSigners = await aggchainECDSAContract.getAggchainSigners();
+
+            // Verify trusted sequencer is in the signers list
+            const trustedSequencerInSigners = aggchainSigners.some(
+                (signer: string) => signer.toLowerCase() === trustedSequencer.toLowerCase(),
+            );
+            expect(trustedSequencerInSigners).to.be.true;
+            logger.info(
+                `    ✓ Rollup ${rollup.rollupID}: Trusted sequencer ${trustedSequencer} is in signers list (${aggchainSigners.length} signers)`,
+            );
+        }
+        logger.info(`✓ All ${PPRollups.length} ECDSA rollups upgraded and validated successfully`);
+
+        // 9. Final summary
+        logger.info('\n====== UPGRADE TEST SUMMARY ======');
+        logger.info(`✅ All 4 core contracts upgraded successfully`);
+        logger.info(`  - RollupManager: ${ROLLUP_MANAGER_VERSION}`);
+        logger.info(`  - AggLayerGateway: ${AGGLAYER_GATEWAY_VERSION}`);
+        logger.info(`  - Bridge: ${BRIDGE_VERSION}`);
+        logger.info(`  - GlobalExitRoot: ${GER_VERSION}`);
+        logger.info(`✅ 2 new rollup types added (FEP: ${fepRollupTypeID}, ECDSA: ${ecdsaRollupTypeID})`);
+        logger.info(`✅ ${ALgatewayRollups.length} FEP rollups upgraded to new implementation`);
+        logger.info(`✅ ${PPRollups.length} ECDSA rollups upgraded to new implementation`);
+        logger.info(`✅ All rollup signers validated against trusted sequencers`);
+        logger.info('==================================\n');
+
+        logger.info('🎉 Full Upgrade V12 shadow fork test completed successfully!');
     }).timeout(0);
 });
 
