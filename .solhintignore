@@ -1,0 +1,5 @@
+contracts/verifiers/*
+contracts/previousVersions/*
+contracts/mocks/*
+contracts/periphery/*
+contracts/lib/LegacyZKEVMStateVariables.sol
