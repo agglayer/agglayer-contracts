@@ -232,7 +232,7 @@ describe('Should shadow fork network, execute upgrade and validate Upgrade V12',
         expect(actualSigners.length).to.equal(expectedSigners.length);
 
         for (let i = 0; i < expectedSigners.length; i++) {
-            expect(actualSigners).to.include(expectedSigners[i].addr);
+            expect(actualSigners[i].toLocaleLowerCase()).to.include(expectedSigners[i].addr.toLocaleLowerCase());
             const signerUrl = await aggLayerGatewayContract.signerToURLs(expectedSigners[i].addr);
             expect(signerUrl).to.equal(expectedSigners[i].url);
         }
