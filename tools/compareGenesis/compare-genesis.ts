@@ -1,3 +1,5 @@
+/* eslint-disable no-console, no-await-in-loop, prettier/prettier, no-restricted-syntax */
+
 import fs from "fs";
 import { ethers } from "ethers";
 import chalk from "chalk";
