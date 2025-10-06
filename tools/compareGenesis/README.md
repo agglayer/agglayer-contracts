@@ -1,8 +1,8 @@
 # Genesis State Comparator
 
-`compare-genesis.js` is a Node.js tool that validates the initial blockchain state defined in a `genesis.json` file against the actual state of a running Ethereum-compatible node.  
+`compare-genesis.ts` is a **TypeScript** tool that validates the initial blockchain state defined in a `genesis.json` file against the actual state of a running Ethereum-compatible node.
 
-It is designed to be used when bringing up custom networks, rollups, or test environments, to make sure the deployed genesis state matches exactly what was defined.
+It is designed for validating the correctness of genesis configurations when launching custom networks, rollups, or test environments — ensuring the deployed state matches exactly what was defined.
 
 ---
 
@@ -13,14 +13,17 @@ It is designed to be used when bringing up custom networks, rollups, or test env
 - ✅ Verifies **deployed bytecode** against the genesis specification.  
 - ✅ Validates **storage slots** for contracts.  
 - ✅ Supports both plain `genesis.json` and Geth-style `alloc` format.  
+- ✅ Provides colorized console output for better readability.  
 
 ---
 
 ## Requirements
 
 - [Node.js](https://nodejs.org/) **v18+** (tested with v23.x)  
+- [TypeScript](https://www.npmjs.com/package/typescript)  
+- [ts-node](https://www.npmjs.com/package/ts-node)  
 - [ethers.js](https://www.npmjs.com/package/ethers) v6  
-- [chalk](https://www.npmjs.com/package/chalk) (for colored console output)  
+- [chalk](https://www.npmjs.com/package/chalk)  
 
 ---
 
@@ -32,23 +35,30 @@ Clone the repository and install dependencies:
 npm install
 ```
 
----
+This will install both runtime (ethers, chalk) and development dependencies (typescript, ts-node, @types/node).
 
 ## Usage
 
-Run the script with:
+You can run the script directly with ts-node (recommended for development):
 
 ```bash
-node compare-genesis.js <RPC_URL> <GENESIS_FILE>
+npx ts-node compare-genesis.ts <RPC_URL> <GENESIS_FILE>
 ```
+Or compile it to JavaScript and run with Node:
 
+```bash
+npx tsc
+node dist/compare-genesis.js <RPC_URL> <GENESIS_FILE>
+````
+
+## PARAMETERS
 - **RPC_URL**: The RPC endpoint of the node you want to validate.  
 - **GENESIS_FILE**: Path to the `genesis.json` file containing the expected state.  
 
 ### Example
 
 ```bash
-node compare-genesis.js https://rpc-bokuto.katanarpc.com ./genesis.json
+npx ts-node compare-genesis.ts https://rpc-bokuto.katanarpc.com ./genesis.json
 ```
 
 ---
