@@ -1,0 +1,10 @@
+{
+    "1": {
+        "agglayerManager": "0x5132A183E9F3CB7C848b0AAC5Ae0c4f0491B7aB2",
+        "rollupTypeID": "1"
+    },
+    "11155111": {
+        "agglayerManager": "0x5132A183E9F3CB7C848b0AAC5Ae0c4f0491B7aB2",
+        "rollupTypeID": "2"
+    }
+}
