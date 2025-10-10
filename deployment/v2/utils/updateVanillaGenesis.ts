@@ -14,7 +14,10 @@ import { checkParams } from '../../../src/utils';
 // Genesis files have been created previously and so they have old naming, as it shown in the links above
 // Those genesis are already imported on different tooling and added as a metadata on-chain. Therefore, this util aims
 // to support them too
-const supportedGERManagers = [GENESIS_CONTRACT_NAMES.GER_L2_IMPLEMENTATION, 'PolygonZkEVMGlobalExitRootL2 implementation'];
+const supportedGERManagers = [
+    GENESIS_CONTRACT_NAMES.GER_L2_IMPLEMENTATION,
+    'PolygonZkEVMGlobalExitRootL2 implementation',
+];
 const supportedGERManagersProxy = [GENESIS_CONTRACT_NAMES.GER_L2_PROXY, 'PolygonZkEVMGlobalExitRootL2 proxy'];
 const supportedBridgeContracts = ['PolygonZkEVMBridge implementation', 'AgglayerBridge implementation'];
 const supportedBridgeContractsProxy = ['AgglayerBridge proxy', 'PolygonZkEVMBridge proxy'];
