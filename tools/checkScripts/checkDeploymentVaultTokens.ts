@@ -158,6 +158,7 @@ async function main() {
         const code = bytecode.toLowerCase();
         let result = '';
         let idx = 0;
+        // eslint-disable-next-line no-constant-condition
         while (true) {
             const match = code.indexOf('64736f6c63', idx);
             if (match === -1) {
