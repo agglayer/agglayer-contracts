@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity 0.8.20;
+// original: pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import "./IPolygonRollupManagerPrevious.sol";
 import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
@@ -8,7 +9,7 @@ import "../../interfaces/IPolygonZkEVMBridge.sol";
 import "../interfaces/IPolygonRollupBase.sol";
 import "../../interfaces/IVerifierRollup.sol";
 import "../../lib/EmergencyManager.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../lib/PolygonTransparentProxy.sol";
 import "../lib/PolygonAccessControlUpgradeable.sol";
 import "../lib/LegacyZKEVMStateVariables.sol";

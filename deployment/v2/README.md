@@ -67,6 +67,9 @@ A new folder will be created with the following name `deployments/${network}_$(d
 -   `emergencyCouncilAddress`: address, Emergency council address
 -   `polTokenAddress`: address, POL token address, only if deploy on testnet can be left blank and will fulfilled by the scripts.
 -   `zkEVMDeployerAddress`: address, Address of the `PolygonZkEVMDeployer`. Can be left blank, will be fulfilled automatically with the `deploy:deployer:ZkEVM:goerli` script.
+-   `ppVKey`: pessimistic program verification key (AggLayerGateway)
+-   `ppVKeySelector`:  The 4 bytes selector to add to the pessimistic verification keys (AggLayerGateway)
+-   `realVerifier`: bool, Indicates whether deploy a real verifier or not (AggLayerGateway)
 
 ## create_rollup_parameters.json
 
@@ -78,8 +81,35 @@ A new folder will be created with the following name `deployments/${network}_$(d
 -   `chainID`: uint64, chainID of the new rollup
 -   `adminZkEVM`: address, Admin address, can adjust Rollup parameters
 -   `forkID`: uint64, Fork ID of the new rollup, indicates the prover (zkROM/executor) version
--   `consensusContract`: string, Consensus contract name of the new rollup deployed, current options are: "PolygonZkEVMEtrog","PolygonValidiumEtrog",
+-   `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`.
 -   `gasTokenAddress`: address, Gas token address, empty or address(0) for ether
+-   `programVKey`:  program key for pessimistic consensus. if consensus != pessimistic, programVKey === bytes32(0).
+-   `isVanillaClient`: Flag for vanilla/sovereign clients handling
+-   `sovereignParams`: Only mandatory if isVanillaClient = true
+    -   `bridgeManager`: bridge manager address
+    -   `sovereignWETHAddress`: sovereign WETH address
+    -   `sovereignWETHAddressIsNotMintable`: Flag to indicate if the wrapped ETH is not mintable
+    -   `globalExitRootUpdater`: Address of globalExitRootUpdater for sovereign chains
+    -   `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
+    -   `emergencyBridgePauser`: emergency bridge pauser address, can stop the bridge, recommended to be a multisig
+    -   `emergencyBridgeUnpauser`: emergency bridge unpauser address, can unpause the bridge, recommended to be a multisig
+- `aggchainParams`: Only mandatory if consensusContract is AggchainECDSA or AggchainFEP
+    - `initParams`: Only mandatory if consensusContract is AggchainFEP
+        - `l2BlockTime`: The time between L2 blocks in seconds
+        - `rollupConfigHash`: The hash of the chain's rollup configuration
+        - `startingOutputRoot`: Init output root
+        - `startingBlockNumber`: The number of the first L2 block
+        - `startingTimestamp`:  The timestamp of the first L2 block
+        - `submissionInterval`: The minimum interval in L2 blocks at which checkpoints must be submitted
+        - `aggchainManager`: Address that manages all the functionalities related to the aggchain
+        - `optimisticModeManager`: Address that can trigger the optimistic mode
+        - `aggregationVkey`:  The verification key of the aggregation SP1 program.
+        - `rangeVkeyCommitment`: The 32 byte commitment to the BabyBear representation of the verification key of the range SP1 program. 
+    - `useDefaultGateway`: bool, flag to setup initial values for the owned gateway
+    - `ownedAggchainVKey`: bytes32, Initial owned aggchain verification key
+    - `initAggchainVKeySelector`: bytes4, Initial aggchain verification key selector
+    - `vKeyManager`: address, Initial vKeyManager
+
 
 ### Optional Parameters on both parameters
 

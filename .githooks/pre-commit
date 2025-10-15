@@ -6,11 +6,6 @@ if npm run lint; then
     ## force compile contracts
     npx hardhat compile --force
 
-    ## contracts documentation
-    npm run docgen
-    npm run docgen:0.8.17
-    git add docs
-
     ## copy contracts ABI to be exposed
     ## V1 contracts
     cp artifacts/contracts/PolygonZkEVMGlobalExitRootL2.sol/PolygonZkEVMGlobalExitRootL2.json compiled-contracts/
@@ -29,11 +24,16 @@ if npm run lint; then
 
     ## Verifiers
     cp artifacts/contracts/verifiers/FflonkVerifier_10.sol/FflonkVerifier_10.json compiled-contracts/FflonkVerifier.json
+    cp artifacts/@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json compiled-contracts/
+    cp artifacts/@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json compiled-contracts/
+    cp artifacts/contracts/deployment/PolygonZkEVMDeployer.sol/PolygonZkEVMDeployer.json compiled-contracts/
     cp artifacts/contracts/verifiers/v4.0.0-rc.3/SP1VerifierPlonk.sol/SP1VerifierPlonk.json compiled-contracts/SP1VerifierPlonk.json
+    cp artifacts/contracts/deployment/PolygonZkEVMDeployer.sol/PolygonZkEVMDeployer.json compiled-contracts/
+    cp artifacts/contracts/PolygonZkEVMTimelock.sol/PolygonZkEVMTimelock.json compiled-contracts/
 
     ## openzeppelin
-    cp artifacts/@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json compiled-contracts/
-    cp artifacts/@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json compiled-contracts/
+    cp artifacts/@openzeppelin/contracts4/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json compiled-contracts/
+    cp artifacts/@openzeppelin/contracts4/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json compiled-contracts/
 
     ## V2 General
     cp artifacts/contracts/v2/PolygonRollupManager.sol/PolygonRollupManager.json compiled-contracts/
@@ -49,17 +49,26 @@ if npm run lint; then
     cp artifacts/contracts/v2/consensus/pessimistic/PolygonPessimisticConsensus.sol/PolygonPessimisticConsensus.json compiled-contracts/
 
     ## V2 utils
-    cp artifacts/contracts/v2/utils/ClaimCompressor.sol/ClaimCompressor.json compiled-contracts/
+    cp artifacts/contracts/v2/periphery/ClaimCompressor.sol/ClaimCompressor.json compiled-contracts/
+
+    ## al-v0.3.0
+    cp artifacts/contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol/GlobalExitRootManagerL2SovereignChain.json compiled-contracts/
+    cp artifacts/contracts/v2/sovereignChains/BridgeL2SovereignChain.sol/BridgeL2SovereignChain.json compiled-contracts/
+    cp artifacts/contracts/v2/AggLayerGateway.sol/AggLayerGateway.json compiled-contracts/
+    cp artifacts/contracts/v2/lib/AggchainBase.sol/AggchainBase.json compiled-contracts/
+    cp artifacts/contracts/v2/aggchains/AggchainECDSA.sol/AggchainECDSA.json compiled-contracts/
+    cp artifacts/contracts/v2/aggchains/AggchainFEP.sol/AggchainFEP.json compiled-contracts/
+
     git add compiled-contracts
 
-    ## V2 Sovereign
-    cp artifacts/contracts/v2/sovereignChains/BridgeL2SovereignChain.sol/BridgeL2SovereignChain.json compiled-contracts/
-    cp artifacts/contracts/v2/sovereignChains/GlobalExitRootManagerL2SovereignChain.sol/GlobalExitRootManagerL2SovereignChain.json compiled-contracts/
-
-    ## generate forge selectors
+    ## Forge nightly version should be installed to properly parse transient storage
+    ## 'foundryup --install nightly'
     forge selectors ls > docs/selectors.txt
-    git add docs/selectors.txt
+    forge doc --out docs/contracts
+    sh storage-layout.sh
 
+    git add docs
+    git add compiled-contracts
     exit 0
 else
     exit 1

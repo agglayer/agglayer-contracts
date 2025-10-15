@@ -293,9 +293,16 @@ interface IPolygonRollupManager {
     error PendingStateNumExist();
 
     /**
-     * @dev Only Chains with Pesismistic proofs
+     * @dev Thrown when a function is executed for a State transition chains when it is not allowed
+     * @dev This function was previously called `OnlyChainsWithPessimisticProofs`but with the new ALGateway verifier Type
+     *      state transitions must be excluded
      */
-    error OnlyChainsWithPessimisticProofs();
+    error StateTransitionChainsNotAllowed();
+
+    /**
+     * @dev Custom chain data must be zero for pessimistic verifier type
+     */
+    error AggchainDataMustBeZeroForPessimisticVerifierType();
 
     /**
      * @dev Invalid Pessimistic proof
@@ -307,9 +314,40 @@ interface IPolygonRollupManager {
      */
     error InvalidVerifierType();
 
+    /**
+     * @dev Thrown when trying to deploy rollup Manager with some zero address as the input
+     */
+    error InvalidConstructorInputs();
+
+    /**
+     * @dev Thrown when trying to create a rollup but the input parameters are not  according with the chosen rollupType
+     */
+    error InvalidInputsForRollupType();
+
+    /**
+     * @dev Thrown when trying to add an existing rollup or create a new rollup type with an invalid consensus implementation address
+     */
+    error InvalidImplementationAddress();
+
+    /**
+     * @dev Thrown when trying to create rollup or rollup type with an invalid verifier address
+     */
+    error InvalidVerifierAddress();
+
+    /**
+     * @dev Thrown when trying to migrate a rollup to a non pessimistic rollup type with `initMigration` function.
+     */
+    error NewRollupTypeMustBePessimisticOrALGateway();
+
+    /**
+     * @dev Thrown when trying to finish a migration of a rollup to a pessimistic rollup type with `verifyPessimisticTrustedAggregator` function and the proposed new local exit root does not match the expected new local exit root
+     */
+    error InvalidNewLocalExitRoot();
+
     enum VerifierType {
         StateTransition,
-        Pessimistic
+        Pessimistic,
+        ALGateway
     }
 
     function addNewRollupType(
@@ -324,24 +362,21 @@ interface IPolygonRollupManager {
 
     function obsoleteRollupType(uint32 rollupTypeID) external;
 
-    function createNewRollup(
+    function attachAggchainToAL(
         uint32 rollupTypeID,
         uint64 chainID,
-        address admin,
-        address sequencer,
-        address gasTokenAddress,
-        string memory sequencerURL,
-        string memory networkName
+        bytes memory initializeBytesAggchain
     ) external;
 
     function addExistingRollup(
-        IPolygonRollupBase rollupAddress,
+        address rollupAddress,
         address verifier,
         uint64 forkID,
         uint64 chainID,
         bytes32 initRoot,
         VerifierType rollupVerifierType,
-        bytes32 programVKey
+        bytes32 programVKey,
+        bytes32 initPessimisticRoot
     ) external;
 
     function updateRollupByRollupAdmin(
@@ -381,7 +416,8 @@ interface IPolygonRollupManager {
         uint32 l1InfoTreeLeafCount,
         bytes32 newLocalExitRoot,
         bytes32 newPessimisticRoot,
-        bytes calldata proof
+        bytes calldata proof,
+        bytes memory aggchainData
     ) external;
 
     function activateEmergencyState() external;
@@ -406,7 +442,8 @@ interface IPolygonRollupManager {
         uint32 rollupID,
         bytes32 selectedGlobalExitRoot,
         bytes32 newLocalExitRoot,
-        bytes32 newPessimisticRoot
+        bytes32 newPessimisticRoot,
+        bytes memory aggchainData
     ) external view returns (bytes memory);
 
     function getInputSnarkBytes(

@@ -20,11 +20,6 @@ Fill `.env` with your `INFURA_PROJECT_ID` and `ETHERSCAN_API_KEY`
 cp ./tools/createNewRollup/create_new_rollup.json.example ./tools/createNewRollup/create_new_rollup.json
 ```
 
--   Copy genesis file (only for sovereign chains)
-```
-cp ./tools/createNewRollup/genesis.json.example ./tools/createNewRollup/genesis.json
-```
-
 -  Set your parameters -> create_new_rollup.json
     - `type`: Specify the type of rollup creation, only available:
         - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
@@ -45,6 +40,7 @@ cp ./tools/createNewRollup/genesis.json.example ./tools/createNewRollup/genesis.
     - `timelockSalt(optional)`: timelock salt, only required on timelock type
     -   `rollupManagerAddress`: Address of deployed rollupManager contract
     -   `rollupTypeId`: The id of the rollup type of the rollup to deploy. WARNING: the type must match with the `consensusContractName`. Example: if the type is validium, the contract name has to be `PolygonValidiumEtrog`
+    -   `proxiedTokensManager`:  Address of proxiedTokensManager role
     -   `isVanillaClient`: Flag for vanilla/sovereign clients handling
     -   `sovereignParams`:
         -   `bridgeManager`: bridge manager address
@@ -52,6 +48,10 @@ cp ./tools/createNewRollup/genesis.json.example ./tools/createNewRollup/genesis.
         -   `sovereignWETHAddressIsNotMintable`: Flag to indicate if the wrapped ETH is not mintable
         -   `globalExitRootUpdater`: Address of globalExitRootUpdater for sovereign chains
         -   `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
+        -   `emergencyBridgePauser`: Address of emergencyBridgePauser role
+        -   `emergencyBridgeUnpauser`: Address of emergencyBridgeUnpauser role
+    - `aggchainParams`:
+        -   `aggchainManager`: Address that manages all the functionalities related to the aggchain
 
 -  Set your parameters -> genesis.json
   - Is the genesis used to create the rollupType
@@ -59,7 +59,7 @@ cp ./tools/createNewRollup/genesis.json.example ./tools/createNewRollup/genesis.
 
 -  Run tool:
 ```
-npx hardhat run ./tools/createNewRollup/createNewRollup.ts --network sepolia
+npx hardhat run ./tools/createNewRollup/createNewRollup.ts --network <network>
 ```
 
 ### More Info

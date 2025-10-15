@@ -8,7 +8,5 @@ interface IPolygonZkEVMGlobalExitRootV2 is IBasePolygonZkEVMGlobalExitRoot {
 
     function getRoot() external view returns (bytes32);
 
-    function l1InfoRootMap(
-        uint32 depositCount
-    ) external view returns (bytes32);
+    function l1InfoRootMap(uint32 depositCount) external view returns (bytes32);
 }

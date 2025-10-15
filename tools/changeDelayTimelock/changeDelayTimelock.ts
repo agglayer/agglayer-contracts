@@ -1,48 +1,48 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {utils} from "ffjavascript";
-import path = require("path");
-import fs = require("fs");
+import { utils } from 'ffjavascript';
+import path = require('path');
+import fs = require('fs');
 
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../../.env")});
-import {ethers, network, upgrades} from "hardhat";
-import { PolygonZkEVMTimelock } from "../../typechain-types";
+import * as dotenv from 'dotenv';
+import { ethers } from 'hardhat';
+import { PolygonZkEVMTimelock } from '../../typechain-types';
+import { genOperation } from '../utils';
+import parameters from './change_delay_timelock.json';
 
-const parameters = require("./change_delay_timelock.json");
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
 const dateStr = new Date().toISOString();
 const pathOutputJson = path.resolve(__dirname, `./change_delay_output-${dateStr}.json`);
 
 async function main() {
-
     const outputJson = {} as any;
 
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock");
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock');
     const timelockContract = (await timelockContractFactory.attach(
-        parameters.timelockContractAddress
+        parameters.timelockContractAddress,
     )) as PolygonZkEVMTimelock;
 
-    console.log("#######################\n");
-    console.log("timelockContract address: ", timelockContract.target)
-    console.log("#######################\n");
+    console.log('#######################\n');
+    console.log('timelockContract address: ', timelockContract.target);
+    console.log('#######################\n');
 
-    const timelockDelay = parameters.timeLockDelay ? parameters.timeLockDelay : Number(await timelockContract.getMinDelay());
+    const timelockDelay = parameters.timeLockDelay
+        ? parameters.timeLockDelay
+        : Number(await timelockContract.getMinDelay());
     const salt = parameters.timelockSalt || ethers.ZeroHash;
     const predecessor = parameters.predecessor || ethers.ZeroHash;
 
     const operation = genOperation(
         parameters.timelockContractAddress,
         0, // value
-        timelockContract.interface.encodeFunctionData(
-            'updateDelay',
-            [parameters.newMinDelay],
-        ),
+        timelockContract.interface.encodeFunctionData('updateDelay', [parameters.newMinDelay]),
         predecessor, // predecessor
-        salt // salt
+        salt, // salt
     );
 
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData('schedule', [
         operation.target,
         operation.value,
         operation.data,
@@ -52,7 +52,7 @@ async function main() {
     ]);
 
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
+    const executeData = timelockContractFactory.interface.encodeFunctionData('execute', [
         operation.target,
         operation.value,
         operation.data,
@@ -60,15 +60,17 @@ async function main() {
         operation.salt,
     ]);
 
-    console.log("timelockDelay: ", timelockDelay)
-    console.log({scheduleData});
-    console.log({executeData});
-   
+    console.log('timelockDelay: ', timelockDelay);
+    console.log({ scheduleData });
+    console.log({ executeData });
+
     outputJson.scheduleData = scheduleData;
     outputJson.executeData = executeData;
 
     // Decode the scheduleData for better readability
-    const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
+    const timelockTx = timelockContractFactory.interface.parseTransaction({
+        data: scheduleData,
+    });
     const paramsArray = timelockTx?.fragment.inputs as any;
     const objectDecoded = {} as any;
 
@@ -76,7 +78,7 @@ async function main() {
         const currentParam = paramsArray[i];
         objectDecoded[currentParam.name] = timelockTx?.args[i];
 
-        if (currentParam.name == "data") {
+        if (currentParam.name === 'data') {
             const decodedTimelockTx = timelockContractFactory.interface.parseTransaction({
                 data: timelockTx?.args[i],
             });
@@ -87,32 +89,15 @@ async function main() {
             objectDecodedData.selector = decodedTimelockTx?.selector;
 
             for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedTimelockTx?.args[j];
+                const currentParamData = paramsArrayData[j];
+                objectDecodedData[currentParamData.name] = decodedTimelockTx?.args[j];
             }
-            objectDecoded["decodedData"] = objectDecodedData;
+            objectDecoded.decodedData = objectDecodedData;
         }
     }
     outputJson.decodedScheduleData = objectDecoded;
 
     await fs.writeFileSync(pathOutputJson, JSON.stringify(utils.stringifyBigInts(outputJson), null, 1));
-}
-
-// OZ test functions
-function genOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
-    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "bytes", "uint256", "bytes32"],
-        [target, value, data, predecessor, salt]
-    );
-    const id = ethers.keccak256(abiEncoded);
-    return {
-        id,
-        target,
-        value,
-        data,
-        predecessor,
-        salt,
-    };
 }
 
 main().catch((e) => {

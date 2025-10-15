@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 import "../../interfaces/IPolygonZkEVMErrors.sol";
 import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
 import "../interfaces/IPolygonConsensusBase.sol";
 import "../interfaces/IPolygonRollupBase.sol";
 import "../interfaces/IPolygonZkEVMBridgeV2.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "./PolygonConstantsBase.sol";
 import "../PolygonRollupManager.sol";
 
@@ -85,7 +85,8 @@ abstract contract PolygonConsensusBase is
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[50] private _gap;
+    /// @custom:oz-renamed-from _gap
+    uint256[50] private __gap;
 
     /**
      * @dev Emitted when the admin updates the trusted sequencer address
@@ -126,7 +127,7 @@ abstract contract PolygonConsensusBase is
         bridgeAddress = _bridgeAddress;
         rollupManager = _rollupManager;
 
-        // Disable initalizers on the implementation following the best practices
+        // Disable initializers on the implementation following the best practices
         _disableInitializers();
     }
 
@@ -146,7 +147,30 @@ abstract contract PolygonConsensusBase is
         string memory sequencerURL,
         string memory _networkName
     ) external virtual onlyRollupManager initializer {
-        // Set initialize variables
+        _initializePolygonConsensusBase(
+            _admin,
+            sequencer,
+            _gasTokenAddress,
+            sequencerURL,
+            _networkName
+        );
+    }
+
+    /**
+     * @param _admin Admin address
+     * @param sequencer Trusted sequencer address
+     * @param _gasTokenAddress Indicates the token address in mainnet that will be used as a gas token
+     * Note if a wrapped token of the bridge is used, the original network and address of this wrapped are used instead
+     * @param sequencerURL Trusted sequencer URL
+     * @param _networkName L2 network name
+     */
+    function _initializePolygonConsensusBase(
+        address _admin,
+        address sequencer,
+        address _gasTokenAddress,
+        string memory sequencerURL,
+        string memory _networkName
+    ) internal {
         admin = _admin;
         trustedSequencer = sequencer;
 

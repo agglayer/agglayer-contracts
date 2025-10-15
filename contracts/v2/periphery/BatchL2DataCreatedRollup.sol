@@ -3,11 +3,9 @@ pragma solidity ^0.8.20;
 
 import "../lib/PolygonRollupBaseEtrog.sol";
 
-
 // This contract is only used for a specific tool: zkevm-contracts/tools/batchL2DataCreatedRollup.
 // This contract is part of the zkevm-contracts/contracts/v2/lib/PolygonRollupBaseEtrog.sol contract.
 contract BatchL2DataCreatedRollup {
-
     uint8 public constant INITIALIZE_TX_BRIDGE_LIST_LEN_LEN = 0xf9;
     bytes public constant INITIALIZE_TX_BRIDGE_PARAMS = hex"80808401c9c38094";
     uint16 public constant INITIALIZE_TX_CONSTANT_BYTES = 32;
@@ -60,7 +58,7 @@ contract BatchL2DataCreatedRollup {
 
         bytes memory bytesToSign;
         uint16 initializeBrigeDataLen = uint16(initializeBrigeData.length);
-        
+
         if (_gasTokenMetadata.length == 0) {
             bytesToSign = abi.encodePacked(
                 INITIALIZE_TX_BRIDGE_LIST_LEN_LEN,
@@ -75,8 +73,7 @@ contract BatchL2DataCreatedRollup {
         } else {
             bytesToSign = abi.encodePacked(
                 INITIALIZE_TX_BRIDGE_LIST_LEN_LEN,
-                initializeBrigeDataLen +
-                    INITIALIZE_TX_CONSTANT_BYTES, // do not support more than 2 bytes of length, intended to revert on overflow
+                initializeBrigeDataLen + INITIALIZE_TX_CONSTANT_BYTES, // do not support more than 2 bytes of length, intended to revert on overflow
                 INITIALIZE_TX_BRIDGE_PARAMS,
                 bridgeAddress,
                 INITIALIZE_TX_BRIDGE_PARAMS_AFTER_BRIDGE_ADDRESS,

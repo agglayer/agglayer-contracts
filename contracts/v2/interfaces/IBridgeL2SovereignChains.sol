@@ -6,11 +6,6 @@ import "./IPolygonZkEVMBridgeV2.sol";
 
 interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
     /**
-     * @dev Thrown when try to set a zero address to a non valid zero address field
-     */
-    error InvalidZeroAddress();
-
-    /**
      * @dev Thrown when the origin network is invalid
      */
     error OriginNetworkInvalid();
@@ -35,11 +30,6 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
      * @dev Thrown when initializing sovereign bridge with invalid sovereign WETH token params
      */
     error InvalidSovereignWETHAddressParams();
-
-    /**
-     * @dev Thrown when initializing sovereign bridge with invalid sovereign WETH token params
-     */
-    error InvalidInitializeFunction();
 
     /**
      * @dev Thrown when initializing calling a function with invalid arrays length
@@ -70,6 +60,56 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
      */
     error EmergencyStateNotAllowed();
 
+    /**
+     * @dev Thrown when trying to initialize a sovereign bridge with a zero network ID, reserved for mainnet
+     */
+    error InvalidZeroNetworkID();
+
+    /**
+     @dev Thrown when trying to substract more rather than available balance
+     */
+    error LocalBalanceTreeUnderflow(
+        uint32 originNetwork,
+        address originTokenAddress,
+        uint256 amount,
+        uint256 localBalanceTreeAmount
+    );
+
+    /**
+     @dev Thrown when trying to add an amount over the maximum allowed balance
+     */
+    error LocalBalanceTreeOverflow(
+        uint32 originNetwork,
+        address originTokenAddress,
+        uint256 amount,
+        uint256 localBalanceTreeAmount
+    );
+
+    /**
+     * @dev Thrown when the caller is not the globalExitRootRemover
+     */
+    error OnlyGlobalExitRootRemover();
+
+    /**
+     * @dev Thrown when the caller is not the emergencyBridgePauser address
+     */
+    error OnlyEmergencyBridgePauser();
+
+    /**
+     * @dev Thrown when trying to call a function that only the pending bridge pauser can call.
+     */
+    error OnlyPendingEmergencyBridgePauser();
+
+    /**
+     * @dev Thrown when the caller is not the emergencyBridgeUnpauser address
+     */
+    error OnlyEmergencyBridgeUnpauser();
+
+    /**
+     * @dev Thrown when trying to call a function that only pending bridge unpauser can call.
+     */
+    error OnlyPendingEmergencyBridgeUnpauser();
+
     function initialize(
         uint32 _networkID,
         address _gasTokenAddress,
@@ -79,6 +119,9 @@ interface IBridgeL2SovereignChains is IPolygonZkEVMBridgeV2 {
         bytes memory _gasTokenMetadata,
         address _bridgeManager,
         address sovereignWETHAddress,
-        bool _sovereignWETHAddressIsNotMintable
+        bool _sovereignWETHAddressIsNotMintable,
+        address _emergencyBridgePauser,
+        address _emergencyBridgeUnpauser,
+        address _proxiedTokensManager
     ) external;
 }
