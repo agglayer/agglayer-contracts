@@ -1,8 +1,8 @@
 
-## [v12.1.0-rc.3] - 2025-09-12
+## [v12.1.2] - 2025-10-14
 
 ### 🚨 Breaking Changes
-- New tooling package (v12.1.0-rc.3)
+- New tooling package (v12.1.2)
 - Rename & Reorg: contracts/v2/PolygonRollupManager.sol -> contracts/AgglayerManager.sol: v1.0.0
 - Rename & Reorg: contracts/v2/PolygonZkEVMBridgeV2.sol -> contracts/AgglayerBridge.sol: v1.1.0
 - Rename & Reorg: contracts/v2/PolygonZkEVMGlobalExitRootV2.sol -> contracts/AgglayerGER.sol: v1.0.0
@@ -17,6 +17,22 @@
 - ➕ New! contracts/sovereignChains/AggOracleCommittee.sol: v1.0.0
 
 ### 📜 Changelog (PRs)
+[PR #546](https://github.com/agglayer/agglayer-contracts/pull/546) - fix sovereign genesis tool
+[PR #543](https://github.com/agglayer/agglayer-contracts/pull/543) - Feature/fix upgrade v12
+[PR #544](https://github.com/agglayer/agglayer-contracts/pull/544) - Feature/full upgrade v12
+[PR #527](https://github.com/agglayer/agglayer-contracts/pull/527) - Feature/udpate tools
+[PR #542](https://github.com/agglayer/agglayer-contracts/pull/542) - renaming timelock
+[PR #537](https://github.com/agglayer/agglayer-contracts/pull/537) - Feature/audit remediations
+[PR #538](https://github.com/agglayer/agglayer-contracts/pull/538) - several remediations
+[PR #534](https://github.com/agglayer/agglayer-contracts/pull/534) - Feature/fix migration
+[PR #536](https://github.com/agglayer/agglayer-contracts/pull/536) - fix genesis bridgeLib + inconsistencies
+[PR #526](https://github.com/agglayer/agglayer-contracts/pull/526) - reorg v2 -> contracts
+[PR #525](https://github.com/agglayer/agglayer-contracts/pull/525) - Feature/renaming agglayer
+[PR #532](https://github.com/agglayer/agglayer-contracts/pull/532) - allow aggchainECDSAMultig with isVanillaClient = false. Add batchData…
+[PR #529](https://github.com/agglayer/agglayer-contracts/pull/529) - all global owners
+[PR #524](https://github.com/agglayer/agglayer-contracts/pull/524) - Feature/initialize tool refactor
+[PR #528](https://github.com/agglayer/agglayer-contracts/pull/528) - Internal audit + initializaiton fixes
+[PR #522](https://github.com/agglayer/agglayer-contracts/pull/522) - feat: Finished upgrade contracts to v12 script
 [PR #504](https://github.com/agglayer/agglayer-contracts/pull/504) - [v0.3.5 phase III]:newConsensusType-outpostsL2
 [PR #520](https://github.com/agglayer/agglayer-contracts/pull/520) - small docs fixes
 [PR #519](https://github.com/agglayer/agglayer-contracts/pull/519) - Fix found informationals
@@ -31,7 +47,9 @@
 [PR #499](https://github.com/agglayer/agglayer-contracts/pull/499) - agg oracle comittee
 [PR #502](https://github.com/agglayer/agglayer-contracts/pull/502) - update versions
 
+
 ---
+
 > This CHANGELOG is a bit different; we are only adding the versions for the first time.
 > In the Breaking Changes section, we’ve listed the versions that have been changed.
 > In the New Features section, we’ve listed the versions that didn’t exist before.
