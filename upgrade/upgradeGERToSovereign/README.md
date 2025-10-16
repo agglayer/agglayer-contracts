@@ -40,17 +40,6 @@ Fill `.env` with your credentials:
 cp ./upgrade/upgradeGERToSovereign/upgrade_parameters.json.example ./upgrade/upgradeGERToSovereign/upgrade_parameters.json
 ```
 
-4. **Local Balance Tree file**
-You’ll need the path to a .json file containing the local balance tree in order to run the script and perform the upgrade.
-This JSON file must include three arrays with the LBT information, structured as follows:
-```
-{
-    "originNetwork": [ ... ],
-    "originTokenAddress": [ ... ],
-    "totalSupply": [ ... ]
-}
-```
-
 ## Configuration
 
 ### Required Parameters
@@ -104,7 +93,7 @@ Update `upgrade_parameters.json` with the following values:
 Run the upgrade script to deploy new implementations and generate timelock operations:
 
 ```bash
-npx hardhat run ./upgrade/upgradeGERToSovereign/upgradeGERToSovereign.ts --network polygonZKEVMTestnet
+npx hardhat run ./upgrade/upgradeGERToSovereign/upgradeGERToSovereign.ts --network <network>
 ```
 
 > Note that the network must change depending on which network the upgrade is being performed on
