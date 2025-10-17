@@ -1,6 +1,6 @@
-# Upgrade from Etrog to Sovereign
+# Upgrade GERL2 from Etrog to Sovereign
 
-Script to create schedule and execute transaction for upgrading bridge L2 and GER L2 from etrog version to sovereign.
+Script to create schedule and execute transaction for upgrading GER L2 from etrog version to sovereign.
 
 - `PolygonZkEVMGlobalExitRootL2` (Etrog) --> `AgglayerGERL2`
 

@@ -38,13 +38,19 @@ async function main() {
     const mandatoryUpgradeParameters = [
         'bridgeL2',
         'gerL2',
-        'ger_initiaizationParameters.globalExitRootUpdater',
-        'ger_initiaizationParameters.globalExitRootRemover',
+        'ger_initializationParameters.globalExitRootUpdater',
+        'ger_initializationParameters.globalExitRootRemover',
     ];
     checkParams(upgradeParameters, mandatoryUpgradeParameters);
     const salt = upgradeParameters.timelockSalt || ethers.ZeroHash;
     const { bridgeL2, gerL2 } = upgradeParameters;
-    const { globalExitRootUpdater, globalExitRootRemover } = upgradeParameters.ger_initiaizationParameters;
+    const { globalExitRootUpdater, globalExitRootRemover } = upgradeParameters.ger_initializationParameters;
+
+    // _globalExitRootUpdater can't be set to zero
+    // _globalExitRootRemover can be set to zero if the chain doesn't want to have this feature
+    if (globalExitRootUpdater === '0x0000000000000000000000000000000000000000') {
+        throw new Error('globalExitRootUpdater cannot be zero address');
+    }
 
     // Load provider
     const currentProvider = getProviderAdjustingMultiplierGas(upgradeParameters, ethers);
@@ -55,7 +61,9 @@ async function main() {
 
     const contractGER = await ethers.getContractAt(OLD_GER_L2, gerL2);
     const bridgeL2Address = await contractGER.bridgeAddress();
+    const gerL2Address = '0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa';
 
+    expect(gerL2Address).to.be.equal(gerL2.toLocaleLowerCase(), 'The GERL2 address is not correct.');
     expect(bridgeL2Address.toLocaleLowerCase()).to.be.equal(
         bridgeL2.toLocaleLowerCase(),
         'bridgeL2 address mismatch between GER and input',

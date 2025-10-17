@@ -1,7 +1,7 @@
 {
     "bridgeL2": "0x..",
     "gerL2": "0x..",
-    "ger_initiaizationParameters": {
+    "ger_initializationParameters": {
         "globalExitRootUpdater": "0x..",
         "globalExitRootRemover": "0x.."
     },
