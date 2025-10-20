@@ -1,4 +1,4 @@
-# Upgrade GERL2 from Etrog to Sovereign
+# Upgrade from Etrog to Sovereign
 
 Script to create schedule and execute transaction for upgrading GER L2 from etrog version to sovereign.
 
@@ -33,6 +33,10 @@ Fill `.env` with your credentials:
 - `ETHERSCAN_API_KEY` - For contract verification
 - `DEPLOYER_PRIVATE_KEY` - Private key for deployment account
 - `INFURA_PROJECT_ID` - For network access (if using Infura)
+
+If you're going to use an RPC that isn't in the `hardhat.config`, you can set the following variable for the RPC and run the Hardhat command with `--network custom`:
+- `CUSTOM_PROVIDER` - L2 `rpc-url` for upgrade
+
 
 3. **Copy configuration files**
 
@@ -97,6 +101,7 @@ npx hardhat run ./upgrade/upgradeGERToSovereign/upgradeGERToSovereign.ts --netwo
 ```
 
 > Note that the network must change depending on which network the upgrade is being performed on
+> Example network: polygonZKEVMTestnet, custom, etc.
 
 - `upgrade_output.json` with all deployment addresses and transaction data
 
