@@ -26,6 +26,35 @@ contract AggchainECDSAMultisig is AggchainBase {
     string public constant AGGCHAIN_ECDSA_MULTISIG_VERSION = "v1.0.0";
 
     ////////////////////////////////////////////////////////////
+    //                 Legacy FEP Storage (kept)              //
+    ////////////////////////////////////////////////////////////
+    struct OutputProposal {
+        bytes32 outputRoot;
+        uint128 timestamp;
+        uint128 l2BlockNumber;
+    }
+
+    struct OpSuccinctConfig {
+        bytes32 aggregationVkey;
+        bytes32 rangeVkeyCommitment;
+        bytes32 rollupConfigHash;
+    }
+
+    OutputProposal[] internal l2Outputs;
+    uint256 public startingBlockNumber;
+    uint256 public startingTimestamp;
+    uint256 public submissionInterval;
+    uint256 public l2BlockTime;
+    bytes32 public aggregationVkey;
+    bytes32 public rangeVkeyCommitment;
+    bytes32 public rollupConfigHash;
+    bool public optimisticMode;
+    address public optimisticModeManager;
+    address public pendingOptimisticModeManager;
+    mapping(bytes32 => OpSuccinctConfig) public opSuccinctConfigs;
+    bytes32 public selectedOpSuccinctConfigName;
+
+    ////////////////////////////////////////////////////////////
     //                         Errors                         //
     ////////////////////////////////////////////////////////////
     /// @notice Thrown when trying to initialize the wrong initialize function.
