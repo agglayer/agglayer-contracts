@@ -10,11 +10,13 @@ import {
     AgglayerBridge,
     AgglayerGER,
     AgglayerManagerMock,
+    IAggchainBase,
     AggchainECDSAMultisig,
     AggchainFEP,
     AgglayerGateway,
 } from '../../typechain-types';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
+import { encodeInitAggchainManager } from '../../src/utils-common-aggchain';
 
 describe('Upgrade FEP to ECDSA', () => {
     let deployer: any;
@@ -135,8 +137,8 @@ describe('Upgrade FEP to ECDSA', () => {
         await expect(
             polygonZkEVMBridgeContract.initialize(
                 networkIDMainnet,
-                ethers.ZeroAddress, // zero for ether
-                ethers.ZeroAddress, // zero for ether
+                ethers.ZeroAddress, // gas token address
+                ethers.ZeroAddress, // gas token network
                 polygonZkEVMGlobalExitRoot.target,
                 rollupManagerContract.target,
                 '0x',
@@ -222,8 +224,19 @@ describe('Upgrade FEP to ECDSA', () => {
     });
 
     it('should migrate FEP to ECDSA', async () => {
+        // Deploy FEP contract directly.
+        // TODO: Unsure if it has to be a proxy. With a proxy i get a circular reference when attaching.
+        const aggchainFEPContract = await aggchainFEPFactory.deploy(
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            rollupManagerContract.target,
+            aggLayerGatewayContract.target,
+        );
+        await aggchainFEPContract.waitForDeployment();
 
-        const aggchainFEPProxy = await upgrades.deployProxy(aggchainFEPFactory, [], {
+        // Deploy ECDSA contract
+        const aggchainECDSAContract = await upgrades.deployProxy(aggchainECDSAFactory, [], {
             initializer: false,
             constructorArgs: [
                 polygonZkEVMGlobalExitRoot.target,
@@ -234,62 +247,114 @@ describe('Upgrade FEP to ECDSA', () => {
             ],
             unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
         });
-        await aggchainFEPProxy.waitForDeployment();
+        await aggchainECDSAContract.waitForDeployment();
 
-        // Create new rollup type for FEP
-        await expect(
-            rollupManagerContract.connect(timelock).addNewRollupType(
-                aggchainFEPProxy.target,
+        // Create new rollup type for FEP. ID=1
+        await rollupManagerContract.connect(timelock).addNewRollupType(
+                aggchainFEPContract.target, // Use direct contract instead of proxy
                 ethers.ZeroAddress, // verifier
                 0, // fork id
-                VerifierType.ALGateway,
+                VerifierType.ALGateway, // Back to ALGateway
                 ethers.ZeroHash, // genesis
                 '', // description
                 ethers.ZeroHash, // programVKey
-            ),
+            )
+
+        // Create new rollup type for ECDSA. ID=2
+        await rollupManagerContract.connect(timelock).addNewRollupType(
+            aggchainECDSAContract.target,
+            ethers.ZeroAddress, // verifier
+            0, // fork id
+            VerifierType.ALGateway, // Back to ALGateway
+            ethers.ZeroHash, // genesis
+            '', // description
+            ethers.ZeroHash, // programVKey
         )
-            .to.emit(rollupManagerContract, 'AddNewRollupType')
-            .withArgs(
-                1,
-                aggchainFEPProxy.target,
-                ethers.ZeroAddress, // verifier
-                0, // fork id
-                VerifierType.ALGateway,
-                ethers.ZeroHash, // genesis
-                '', // description
-                ethers.ZeroHash, // programVKey
+
+        // Attach FEP aggchain to AL with the following parameters
+            const initParams = {
+                l2BlockTime: 2, // 2 seconds per block
+                rollupConfigHash: computeRandomBytes(32),
+                startingOutputRoot: computeRandomBytes(32),
+                startingBlockNumber: 0,
+                startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
+                submissionInterval: 10, // Every 100 blocks
+                optimisticModeManager: admin.address,
+                aggregationVkey: computeRandomBytes(32),
+                rangeVkeyCommitment: computeRandomBytes(32),
+            };
+    
+            // convert init params into array with same order, all params
+            const initParamsArray = [
+                initParams.l2BlockTime,
+                initParams.rollupConfigHash,
+                initParams.startingOutputRoot,
+                initParams.startingBlockNumber,
+                initParams.startingTimestamp,
+                initParams.submissionInterval,
+                initParams.optimisticModeManager,
+                initParams.aggregationVkey,
+                initParams.rangeVkeyCommitment,
+            ];
+
+        
+            const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(
+                [
+                    'tuple(uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32)',
+                    'bool',
+                    'bytes32',
+                    'bytes4',
+                    'address',
+                    'address',
+                    'address',
+                    'address',
+                    'string',
+                    'string',
+                ],
+                [
+                    initParamsArray,
+                    false, // useDefaultGateway
+                    ethers.ZeroHash, // initOwnedAggchainVKey
+                    '0x00000001', // initAggchainVKeySelector
+                    
+                    aggLayerAdmin.address,
+                    admin.address,
+                    trustedSequencer.address,
+                    ethers.ZeroAddress, // gas token address
+                    '', // trusted sequencer url
+                    '', // network name
+                ],
             );
 
-        await rollupManagerContract.connect(admin).attachAggchainToAL(1, 1001, "0x")
-
-        // Create new rollup type for ECDSA
-        await expect(
-            rollupManagerContract.connect(timelock).addNewRollupType(
-                aggchainECDSAContract.target,
-                ethers.ZeroAddress, // verifier
-                0, // fork id
-                VerifierType.ALGateway,
-                ethers.ZeroHash, // genesis
-                '', // description
-                ethers.ZeroHash, // programVKey
-            ),
-        )
-            .to.emit(rollupManagerContract, 'AddNewRollupType')
-            .withArgs(
-                2,
-                aggchainECDSAContract.target,
-                ethers.ZeroAddress, // verifier
-                0, // fork id
-                VerifierType.ALGateway,
-                ethers.ZeroHash, // genesis
-                '', // description
-                ethers.ZeroHash, // programVKey
-            );
-
-        // Ensure migration works fine.
-        await rollupManagerContract.connect(timelock).updateRollup(aggchainFEPProxy.target, 2, "0x")
+        await rollupManagerContract.connect(admin).attachAggchainToAL(1, 1001, initializeBytesAggchain)
         
-        // TODO: Run asserts
+        // TODO: Assert stuff in here
         
+        // Debug stuff
+        const rollupID = await rollupManagerContract.chainIDToRollupID(1001);
+        console.log("Rollup ID for chainID 1001:", rollupID.toString());
+        
+        // Get the actual rollup address that was created
+        const rollupDataBefore = await rollupManagerContract.rollupIDToRollupDataV2(rollupID);
+        const rollupTypeDataBefore = await rollupManagerContract.rollupTypeMap(rollupDataBefore.rollupTypeID);
+        const implementationContractBefore = aggchainFEPFactory.attach(rollupTypeDataBefore.consensusImplementation);
+        const aggchainTypeBefore = await implementationContractBefore.AGGCHAIN_TYPE();
+        console.log("AGGCHAIN_TYPE()", aggchainTypeBefore);
+        console.log("consensusImplementation", rollupTypeDataBefore.consensusImplementation);
+
+        expect(aggchainTypeBefore).to.equal('0x0001');
+
+        // Update rollup to ECDSA type (ID=2)
+        await rollupManagerContract.connect(timelock).updateRollup(aggchainFEPContract.target, 2, "0x")
+
+        // Check if the rollup was updated to ECDSA type 0x0000
+        const rollupData2 = await rollupManagerContract.rollupIDToRollupDataV2(rollupID);
+        const rollupTypeData2 = await rollupManagerContract.rollupTypeMap(rollupData2.rollupTypeID);
+        const implementationContract2 = aggchainFEPFactory.attach(rollupTypeData2.consensusImplementation);
+        const aggchainType2 = await implementationContract2.AGGCHAIN_TYPE();
+        console.log("AGGCHAIN_TYPE()", aggchainType2);
+        console.log("consensusImplementation", rollupTypeData2.consensusImplementation);
+
+        expect(aggchainType2).to.equal('0x0000');
     });
 });
