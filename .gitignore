@@ -21,6 +21,8 @@ docker/gethData/
 typechain-types/
 create_rollup_parameters.json
 create_rollup_output_*
+dependencies/
+lcov.info
 
 docker/deploymentOutput
 
