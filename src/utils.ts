@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
  * @param {Object} connectedEthers current ethers instance connected to a network
  */
 export function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
-    let currentProvider = connectedEthers.provider;
+    const currentProvider = connectedEthers.provider;
     if (parameters.multiplierGas || parameters.maxFeePerGas) {
         if (process.env.HARDHAT_NETWORK !== 'hardhat') {
             if (parameters.maxPriorityFeePerGas && parameters.maxFeePerGas) {
