@@ -82,3 +82,51 @@ The smartcontract used to verify a proof, it's a generated contract from zkEVM R
 ```
 git config --local core.hooksPath .githooks/
 ```
+
+## Foundry
+
+A convenient justfile is provided to run common tasks using [Just](https://just.systems/man/en/introduction.html).
+
+### Prerequisites
+
+- Install [Foundry](https://getfoundry.sh/)
+- Install Just (optional, but recommended) - see [here](https://just.systems/man/en/packages.html)
+- Run Hardhat compiler to generate artifacts
+
+```shell
+npx hardhat compile
+```
+
+NOTE: Hardhat generated artifacts are required to resolve the version mismatch between contracts while running the tests, due to the stricter compiler version handling in Foundry.
+
+### Install dependencies
+
+```shell
+just install
+```
+
+### Compilation
+
+```shell
+just build
+```
+
+### Run Tests
+
+```shell
+just test
+```
+
+### Show coverage
+
+```shell
+just coverage
+```
+
+### Format code
+
+Default configuration in the `justfile` only formats the contracts in the script and test folders to avoid formatting the main contracts folder which is managed by Hardhat.
+
+```shell
+just fmt
+```
