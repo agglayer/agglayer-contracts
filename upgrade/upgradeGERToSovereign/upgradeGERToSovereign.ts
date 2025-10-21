@@ -148,6 +148,7 @@ async function main() {
     // Get current block number, used in the shallow fork tests
     const blockNumber = await ethers.provider.getBlockNumber();
     outputJson = {
+        ...outputJson,
         scheduleData,
         executeData,
         timelockContractAddress: timelockAddress,

@@ -11,12 +11,9 @@ import { execSync } from 'child_process';
  * @param {Object} connectedEthers current ethers instance connected to a network
  */
 export function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
-    let currentProvider = connectedEthers.provider;
+    const currentProvider = connectedEthers.provider;
     if (parameters.multiplierGas || parameters.maxFeePerGas) {
         if (process.env.HARDHAT_NETWORK !== 'hardhat') {
-            currentProvider = ethers.getDefaultProvider(
-                `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            );
             if (parameters.maxPriorityFeePerGas && parameters.maxFeePerGas) {
                 console.log(
                     `Hardcoded gas used: MaxPriority${parameters.maxPriorityFeePerGas} gwei, MaxFee${parameters.maxFeePerGas} gwei`,
@@ -30,8 +27,10 @@ export function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
                 currentProvider.getFeeData = async () => FEE_DATA;
             } else {
                 console.log('Multiplier gas used: ', parameters.multiplierGas);
+                // Save the original getFeeData function to avoid infinite recursion
+                const originalGetFeeData = currentProvider.getFeeData.bind(currentProvider);
                 async function overrideFeeData() {
-                    const feedata = await connectedEthers.provider.getFeeData();
+                    const feedata = await originalGetFeeData();
                     return new connectedEthers.FeeData(
                         null,
                         (feedata.maxFeePerGas * BigInt(parameters.multiplierGas)) / BigInt(1000),

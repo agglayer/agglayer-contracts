@@ -114,10 +114,10 @@ async function main() {
     const agglayerGERL2Factory = await ethers.getContractFactory('AgglayerGERL2');
     const gerL2Contract = agglayerGERL2Factory.attach(upgradeParams.gerL2) as AgglayerGERL2;
     expect(await gerL2Contract.globalExitRootUpdater()).to.equal(
-        upgradeParams.ger_initiaizationParameters.globalExitRootUpdater,
+        upgradeParams.ger_initializationParameters.globalExitRootUpdater,
     );
     expect(await gerL2Contract.globalExitRootRemover()).to.equal(
-        upgradeParams.ger_initiaizationParameters.globalExitRootRemover,
+        upgradeParams.ger_initializationParameters.globalExitRootRemover,
     );
     expect(await gerL2Contract.GER_SOVEREIGN_VERSION()).to.equal(GER_VERSION);
     expect(await gerL2Contract.bridgeAddress()).to.equal(gerBridgeAddress);
