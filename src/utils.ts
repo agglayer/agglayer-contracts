@@ -14,9 +14,6 @@ export function getProviderAdjustingMultiplierGas(parameters, connectedEthers) {
     let currentProvider = connectedEthers.provider;
     if (parameters.multiplierGas || parameters.maxFeePerGas) {
         if (process.env.HARDHAT_NETWORK !== 'hardhat') {
-            // currentProvider = ethers.getDefaultProvider(
-            //     `https://${process.env.HARDHAT_NETWORK}.infura.io/v3/${process.env.INFURA_PROJECT_ID}`,
-            // );
             if (parameters.maxPriorityFeePerGas && parameters.maxFeePerGas) {
                 console.log(
                     `Hardcoded gas used: MaxPriority${parameters.maxPriorityFeePerGas} gwei, MaxFee${parameters.maxFeePerGas} gwei`,
