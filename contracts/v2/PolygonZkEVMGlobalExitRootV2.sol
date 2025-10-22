@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.28;
 
 import "./interfaces/IPolygonZkEVMGlobalExitRootV2.sol";
 import "./lib/PolygonZkEVMGlobalExitRootBaseStorage.sol";
 import "../lib/GlobalExitRootLib.sol";
 import "./lib/DepositContractBase.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable4/proxy/utils/Initializable.sol";
 
 /**
  * Contract responsible for managing the exit roots across multiple networks
@@ -17,10 +17,15 @@ contract PolygonZkEVMGlobalExitRootV2 is
     Initializable
 {
     // PolygonZkEVMBridge address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable bridgeAddress;
 
     // Rollup manager contract address
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable rollupManager;
+
+    // Current Global Exit Root Manager version
+    string public constant GER_VERSION = "al-v0.3.0";
 
     // Store every l1InfoLeaf
     mapping(uint32 leafCount => bytes32 l1InfoRoot) public l1InfoRootMap;

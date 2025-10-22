@@ -1,17 +1,18 @@
 /* eslint-disable no-await-in-loop, no-use-before-define, no-lonely-if */
 /* eslint-disable no-console, no-inner-declarations, no-undef, import/no-unresolved */
-import {expect} from "chai";
-import path = require("path");
-import fs = require("fs");
+import path = require('path');
+import fs = require('fs');
 
-import * as dotenv from "dotenv";
-dotenv.config({path: path.resolve(__dirname, "../../.env")});
-import {ethers} from "hardhat";
+import * as dotenv from 'dotenv';
+import { ethers } from 'hardhat';
+import '../../deployment/helpers/utils';
+import { genOperation } from '../utils';
 
-const addRollupParameters = require("./grantRole.json");
+import addRollupParameters from './grantRole.json';
 
-const pathOutputJson = path.join(__dirname, "./grantRoleOutput.json");
-import "../../deployment/helpers/utils";
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+const pathOutputJson = path.join(__dirname, './grantRoleOutput.json');
 
 async function main() {
     const outputJson = {} as any;
@@ -21,32 +22,32 @@ async function main() {
      * Check that every necessary parameter is fullfilled
      */
     const mandatoryDeploymentParameters = [
-        "roleName",
-        "accountToGrantRole",
-        "timelockDelay",
-        "polygonRollupManagerAddress",
+        'roleName',
+        'accountToGrantRole',
+        'timelockDelay',
+        'polygonRollupManagerAddress',
     ];
 
-    for (const parameterName of mandatoryDeploymentParameters) {
-        if (addRollupParameters[parameterName] === undefined || addRollupParameters[parameterName] === "") {
+    mandatoryDeploymentParameters.forEach((parameterName) => {
+        if (addRollupParameters[parameterName] === undefined || addRollupParameters[parameterName] === '') {
             throw new Error(`Missing parameter: ${parameterName}`);
         }
-    }
+    });
 
-    const {roleName, accountToGrantRole, polygonRollupManagerAddress, timelockDelay} = addRollupParameters;
+    const { roleName, accountToGrantRole, polygonRollupManagerAddress, timelockDelay } = addRollupParameters;
     const salt = addRollupParameters.timelockSalt || ethers.ZeroHash;
 
     const supportedRoles = [
-        "ADD_ROLLUP_TYPE_ROLE",
-        "OBSOLETE_ROLLUP_TYPE_ROLE",
-        "CREATE_ROLLUP_ROLE",
-        "ADD_EXISTING_ROLLUP_ROLE",
-        "UPDATE_ROLLUP_ROLE",
-        "TRUSTED_AGGREGATOR_ROLE",
-        "TRUSTED_AGGREGATOR_ROLE_ADMIN",
-        "SET_FEE_ROLE",
-        "STOP_EMERGENCY_ROLE",
-        "EMERGENCY_COUNCIL_ROLE",
+        'ADD_ROLLUP_TYPE_ROLE',
+        'OBSOLETE_ROLLUP_TYPE_ROLE',
+        'CREATE_ROLLUP_ROLE',
+        'ADD_EXISTING_ROLLUP_ROLE',
+        'UPDATE_ROLLUP_ROLE',
+        'TRUSTED_AGGREGATOR_ROLE',
+        'TRUSTED_AGGREGATOR_ROLE_ADMIN',
+        'SET_FEE_ROLE',
+        'STOP_EMERGENCY_ROLE',
+        'EMERGENCY_COUNCIL_ROLE',
     ];
 
     if (!supportedRoles.includes(roleName)) {
@@ -55,21 +56,21 @@ async function main() {
     const roleID = ethers.id(roleName);
 
     // load timelock
-    const timelockContractFactory = await ethers.getContractFactory("PolygonZkEVMTimelock");
+    const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock');
 
     // Load Rollup manager
-    const PolgonRollupManagerFactory = await ethers.getContractFactory("PolygonRollupManager");
+    const PolgonRollupManagerFactory = await ethers.getContractFactory('PolygonRollupManager');
 
     const operation = genOperation(
         polygonRollupManagerAddress,
         0, // value
-        PolgonRollupManagerFactory.interface.encodeFunctionData("grantRole", [roleID, accountToGrantRole]),
+        PolgonRollupManagerFactory.interface.encodeFunctionData('grantRole', [roleID, accountToGrantRole]),
         ethers.ZeroHash, // predecesoor
-        salt // salt
+        salt, // salt
     );
 
     // Schedule operation
-    const scheduleData = timelockContractFactory.interface.encodeFunctionData("schedule", [
+    const scheduleData = timelockContractFactory.interface.encodeFunctionData('schedule', [
         operation.target,
         operation.value,
         operation.data,
@@ -78,7 +79,7 @@ async function main() {
         timelockDelay,
     ]);
     // Execute operation
-    const executeData = timelockContractFactory.interface.encodeFunctionData("execute", [
+    const executeData = timelockContractFactory.interface.encodeFunctionData('execute', [
         operation.target,
         operation.value,
         operation.data,
@@ -86,14 +87,16 @@ async function main() {
         operation.salt,
     ]);
 
-    console.log({scheduleData});
-    console.log({executeData});
+    console.log({ scheduleData });
+    console.log({ executeData });
 
     outputJson.scheduleData = scheduleData;
     outputJson.executeData = executeData;
 
     // Decode the scheduleData for better readibility
-    const timelockTx = timelockContractFactory.interface.parseTransaction({data: scheduleData});
+    const timelockTx = timelockContractFactory.interface.parseTransaction({
+        data: scheduleData,
+    });
     const paramsArray = timelockTx?.fragment.inputs as any;
     const objectDecoded = {} as any;
 
@@ -101,7 +104,7 @@ async function main() {
         const currentParam = paramsArray[i];
         objectDecoded[currentParam.name] = timelockTx?.args[i];
 
-        if (currentParam.name == "data") {
+        if (currentParam.name === 'data') {
             const decodedRollupManagerData = PolgonRollupManagerFactory.interface.parseTransaction({
                 data: timelockTx?.args[i],
             });
@@ -109,10 +112,10 @@ async function main() {
             const paramsArrayData = decodedRollupManagerData?.fragment.inputs as any;
 
             for (let j = 0; j < paramsArrayData?.length; j++) {
-                const currentParam = paramsArrayData[j];
-                objectDecodedData[currentParam.name] = decodedRollupManagerData?.args[j];
+                const currentParamData = paramsArrayData[j];
+                objectDecodedData[currentParamData.name] = decodedRollupManagerData?.args[j];
             }
-            objectDecoded["decodedData"] = objectDecodedData;
+            objectDecoded.decodedData = objectDecodedData;
         }
     }
 
@@ -125,20 +128,3 @@ main().catch((e) => {
     console.error(e);
     process.exit(1);
 });
-
-// OZ test functions
-function genOperation(target: any, value: any, data: any, predecessor: any, salt: any) {
-    const abiEncoded = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "bytes", "uint256", "bytes32"],
-        [target, value, data, predecessor, salt]
-    );
-    const id = ethers.keccak256(abiEncoded);
-    return {
-        id,
-        target,
-        value,
-        data,
-        predecessor,
-        salt,
-    };
-}

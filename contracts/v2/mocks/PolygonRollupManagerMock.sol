@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.20;
+pragma solidity 0.8.28;
 import "../PolygonRollupManager.sol";
 
 /**
@@ -14,17 +14,25 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
     constructor(
         IPolygonZkEVMGlobalExitRootV2 _globalExitRootManager,
         IERC20Upgradeable _pol,
-        IPolygonZkEVMBridge _bridgeAddress
-    ) PolygonRollupManager(_globalExitRootManager, _pol, _bridgeAddress) {}
+        IPolygonZkEVMBridge _bridgeAddress,
+        IAggLayerGateway _aggLayerGateway
+    )
+        PolygonRollupManager(
+            _globalExitRootManager,
+            _pol,
+            _bridgeAddress,
+            _aggLayerGateway
+        )
+    {}
 
     function initializeMock(
         address trustedAggregator,
-        uint64 _pendingStateTimeout,
-        uint64 _trustedAggregatorTimeout,
+        // uint64 _pendingStateTimeout,
+        // uint64 _trustedAggregatorTimeout,
         address admin,
         address timelock,
         address emergencyCouncil
-    ) external reinitializer(2) {
+    ) external reinitializer(4) {
         //pendingStateTimeout = _pendingStateTimeout;
         //trustedAggregatorTimeout = _trustedAggregatorTimeout;
 
@@ -67,6 +75,8 @@ contract PolygonRollupManagerMock is PolygonRollupManager {
 
         // Since it's mock, use admin for everything
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
     function prepareMockCalculateRoot(bytes32[] memory localExitRoots) public {

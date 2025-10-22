@@ -5,16 +5,16 @@ name: Build-Docker image
 
 on:
     push:
-        branches: [main, develop, feature/ongoingPP]
+        branches: [main, develop, feature/ongoing-v0.3.0]
     pull_request:
-        branches: [main, develop, feature/ongoingPP]
+        branches: [main, develop, feature/ongoing-v0.3.0]
 jobs:
     build:
         runs-on: ubuntu-latest
 
         strategy:
             matrix:
-                node-version: [20.x]
+                node-version: [22.x]
 
         steps:
             - name: Use Node.js ${{ matrix.node-version }}

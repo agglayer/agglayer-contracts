@@ -57,7 +57,7 @@ Running the tool, the updateRollup transaction will be sent directly
 - Set your parameters
 - Run tool:
 ```
-npx hardhat run ./tools/updateRollup/updateRollupTimelock.ts --network <network>
+npx hardhat run ./tools/updateRollup/updateRollup.ts --network <network>
 ```
 - Output:
   - scheduleData

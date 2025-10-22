@@ -14,9 +14,19 @@ interface IBasePolygonZkEVMGlobalExitRoot {
     error OnlyGlobalExitRootUpdater();
 
     /**
+     * @dev Thrown when trying to call a function that only the pending GlobalExitRootUpdater can call.
+     */
+    error OnlyPendingGlobalExitRootUpdater();
+
+    /**
      * @dev Thrown when the caller is not the globalExitRootRemover
      */
     error OnlyGlobalExitRootRemover();
+
+    /**
+     * @dev Thrown when trying to call a function that only the pending GlobalExitRootRemover can call.
+     */
+    error OnlyPendingGlobalExitRootRemover();
 
     /**
      * @dev Thrown when trying to insert a global exit root that is already set
@@ -24,14 +34,14 @@ interface IBasePolygonZkEVMGlobalExitRoot {
     error GlobalExitRootAlreadySet();
 
     /**
-     * @dev Thrown when trying to remove more global exit roots thank inserted
+     * @dev Thrown when trying to remove a ger that doesn't exist
      */
-    error NotEnoughGlobalExitRootsInserted();
+    error GlobalExitRootNotFound();
 
     /**
-     * @dev Thrown when trying to remove a ger that is not the last one
+     * @dev Thrown when trying to call a function with an input zero address
      */
-    error NotLastInsertedGlobalExitRoot();
+    error InvalidZeroAddress();
 
     function updateExitRoot(bytes32 newRollupExitRoot) external;
 
