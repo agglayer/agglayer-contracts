@@ -224,8 +224,7 @@ describe('Upgrade FEP to ECDSA', () => {
     });
 
     it('should migrate FEP to ECDSA', async () => {
-        // Deploy FEP contract directly.
-        // TODO: Unsure if it has to be a proxy. With a proxy i get a circular reference when attaching.
+        // Deploy FEP contract
         const aggchainFEPContract = await aggchainFEPFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
@@ -236,17 +235,13 @@ describe('Upgrade FEP to ECDSA', () => {
         await aggchainFEPContract.waitForDeployment();
 
         // Deploy ECDSA contract
-        const aggchainECDSAContract = await upgrades.deployProxy(aggchainECDSAFactory, [], {
-            initializer: false,
-            constructorArgs: [
-                polygonZkEVMGlobalExitRoot.target,
-                polTokenContract.target,
-                polygonZkEVMBridgeContract.target,
-                rollupManagerContract.target,
-                aggLayerGatewayContract.target,
-            ],
-            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
-        });
+        const aggchainECDSAContract = await aggchainECDSAFactory.deploy(
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            rollupManagerContract.target,
+            aggLayerGatewayContract.target,
+        );
         await aggchainECDSAContract.waitForDeployment();
 
         // Create new rollup type for FEP. ID=1
@@ -326,6 +321,9 @@ describe('Upgrade FEP to ECDSA', () => {
                 ],
             );
 
+        const aggchainMultisigHash = await aggLayerGatewayContract.getAggchainMultisigHash();
+        console.log("aggchainMultisigHash", aggchainMultisigHash);
+
         await rollupManagerContract.connect(admin).attachAggchainToAL(1, 1001, initializeBytesAggchain)
         
         // TODO: Assert stuff in here
@@ -341,11 +339,40 @@ describe('Upgrade FEP to ECDSA', () => {
         const aggchainTypeBefore = await implementationContractBefore.AGGCHAIN_TYPE();
         console.log("AGGCHAIN_TYPE()", aggchainTypeBefore);
         console.log("consensusImplementation", rollupTypeDataBefore.consensusImplementation);
+        
 
         expect(aggchainTypeBefore).to.equal('0x0001');
+        const totalVerifiedBatchesBefore = await rollupManagerContract.totalVerifiedBatches();
+        // todo assert this and others
+        console.log("totalVerifiedBatchesBefore", totalVerifiedBatchesBefore);
+
+        // Initialize signers on the aggchain contract to avoid AggchainSignersHashNotInitialized error
+        const aggchainContract = aggchainFEPFactory.attach(rollupDataBefore.rollupContract);
+
+        // Verify pessimistic for FEP chain
+        const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
+        const newLER = ethers.ZeroHash; // Use zero hash for initial LER
+        const newPPRoot = computeRandomBytes(32); // New pessimistic root
+        const proofPP = '0x00'; // Proof (empty for testing)
+        
+        // todo not working. Verify after and before and run way more asserts
+        //await expect(
+        //    rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
+        //        rollupID,
+        //        lastL1InfoTreeLeafCount,
+        //        newLER,
+        //        newPPRoot,
+        //        proofPP,
+        //        '0x', // aggchainData is zero for pessimistic
+        //    ),
+        //).to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
+        // .withArgs(rollupID, 0, ethers.ZeroHash, newLER, trustedAggregator.address);
+
+        // console.log("Current LER (Local Exit Root):", rollupDataBefore.lastLocalExitRoot);
+         
 
         // Update rollup to ECDSA type (ID=2)
-        await rollupManagerContract.connect(timelock).updateRollup(aggchainFEPContract.target, 2, "0x")
+        await rollupManagerContract.connect(timelock).updateRollup(rollupDataBefore.rollupContract, 2, "0x")
 
         // Check if the rollup was updated to ECDSA type 0x0000
         const rollupData2 = await rollupManagerContract.rollupIDToRollupDataV2(rollupID);

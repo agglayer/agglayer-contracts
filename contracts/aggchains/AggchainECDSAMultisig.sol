@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import "../lib/AggchainBase.sol";
+import "../lib/MigrationFEPToECDSASlots.sol";
 
 /**
  * @title AggchainECDSAMultisig
@@ -10,7 +11,7 @@ import "../lib/AggchainBase.sol";
  * transitions on the pessimistic trees (local_exit_tree, local_balance_tree, nullifier_tree & height).
  * The addresses and threshold are managed by the aggchainManager.
  */
-contract AggchainECDSAMultisig is AggchainBase {
+contract AggchainECDSAMultisig is AggchainBase, MigrationFEPToECDSASlots {
     ////////////////////////////////////////////////////////////
     //                  Transient Storage                     //
     ////////////////////////////////////////////////////////////
@@ -23,36 +24,7 @@ contract AggchainECDSAMultisig is AggchainBase {
     bytes2 public constant AGGCHAIN_TYPE = 0x0000;
 
     /// @notice Aggchain version
-    string public constant AGGCHAIN_ECDSA_MULTISIG_VERSION = "v1.0.0";
-
-    ////////////////////////////////////////////////////////////
-    //                 Legacy FEP Storage (kept)              //
-    ////////////////////////////////////////////////////////////
-    struct OutputProposal {
-        bytes32 outputRoot;
-        uint128 timestamp;
-        uint128 l2BlockNumber;
-    }
-
-    struct OpSuccinctConfig {
-        bytes32 aggregationVkey;
-        bytes32 rangeVkeyCommitment;
-        bytes32 rollupConfigHash;
-    }
-
-    OutputProposal[] internal l2Outputs;
-    uint256 public startingBlockNumber;
-    uint256 public startingTimestamp;
-    uint256 public submissionInterval;
-    uint256 public l2BlockTime;
-    bytes32 public aggregationVkey;
-    bytes32 public rangeVkeyCommitment;
-    bytes32 public rollupConfigHash;
-    bool public optimisticMode;
-    address public optimisticModeManager;
-    address public pendingOptimisticModeManager;
-    mapping(bytes32 => OpSuccinctConfig) public opSuccinctConfigs;
-    bytes32 public selectedOpSuccinctConfigName;
+    string public constant AGGCHAIN_ECDSA_MULTISIG_VERSION = "v1.0.1";
 
     ////////////////////////////////////////////////////////////
     //                         Errors                         //
