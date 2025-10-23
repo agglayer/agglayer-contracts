@@ -21,7 +21,4 @@ abstract contract MigrationFEPToECDSASlots {
     address public pendingOptimisticModeManager;
     mapping(bytes32 => AggchainFEP.OpSuccinctConfig) public opSuccinctConfigs;
     bytes32 public selectedOpSuccinctConfigName;
-    bytes32 public lastRollupExitRoot;
-    bytes32 public lastMainnetExitRoot;
-    mapping(bytes32 => uint256) public globalExitRootMap;
 }

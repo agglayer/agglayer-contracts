@@ -46,7 +46,7 @@ describe('Upgrade FEP to ECDSA', () => {
         upgrades.silenceWarnings();
 
         // load signers
-        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, beneficiary, aggLayerAdmin] =
+        [deployer, trustedAggregator, trustedSequencer, admin, timelock, emergencyCouncil, aggLayerAdmin] =
             await ethers.getSigners();
 
         // deploy mock verifier
