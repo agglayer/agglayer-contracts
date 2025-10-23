@@ -21,7 +21,6 @@ describe('Upgrade FEP to ECDSA', () => {
     let trustedAggregator: any;
     let trustedSequencer: any;
     let admin: any;
-    let beneficiary: any;
     let aggLayerAdmin: any;
 
     let polTokenContract: ERC20PermitMock;
@@ -214,7 +213,6 @@ describe('Upgrade FEP to ECDSA', () => {
         const upgradedContract = aggchainECDSAFactory.attach(aggchainFEPProxy.target);
         const aggchainTypeAfter = await upgradedContract.AGGCHAIN_TYPE();
         expect(aggchainTypeAfter).to.equal('0x0000');
-        
     });
 
     it('should migrate FEP to ECDSA after a verified pessimistic proof', async () => {
@@ -250,7 +248,7 @@ describe('Upgrade FEP to ECDSA', () => {
             ethers.ZeroHash, // genesis
             '', // description
             ethers.ZeroHash,
-        )
+        );
         const rollupTypeFEPId = await rollupManagerContract.rollupTypeCount();
 
         // Create new rollup type for ECDSA. ID=2
@@ -262,16 +260,15 @@ describe('Upgrade FEP to ECDSA', () => {
             ethers.ZeroHash, // genesis
             '', // description
             ethers.ZeroHash,
-        )
+        );
         const rollupTypeECDSAId = await rollupManagerContract.rollupTypeCount();
 
-        const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(
-            ['address'],
-            [aggLayerAdmin.address]
-        );
+        const initializeBytesAggchain = ethers.AbiCoder.defaultAbiCoder().encode(['address'], [aggLayerAdmin.address]);
 
         // Attach the FEP aggchain to the AL
-        await rollupManagerContract.connect(admin).attachAggchainToAL(rollupTypeFEPId, chainId, initializeBytesAggchain)
+        await rollupManagerContract
+            .connect(admin)
+            .attachAggchainToAL(rollupTypeFEPId, chainId, initializeBytesAggchain);
 
         // Get aggchain data
         const rollupID = await rollupManagerContract.chainIDToRollupID(chainId);
@@ -295,18 +292,18 @@ describe('Upgrade FEP to ECDSA', () => {
                 // signers
                 { addr: trustedSequencer.address, url: 'http://sequencer.example.com' },
                 { addr: trustedAggregator.address, url: 'http://aggregator.example.com' },
-                { addr: emergencyCouncil.address, url: 'http://council.example.com' }
+                { addr: emergencyCouncil.address, url: 'http://council.example.com' },
             ],
-            2,     // threshold
-            true,  // useDefaultVkeys
+            2, // threshold
+            true, // useDefaultVkeys
             false, // useDefaultSigners
-            ethers.ZeroHash,  // initOwnedAggchainVKey (ignored when useDefaultVkeys is true)
-            '0x00000000',     // initAggchainVKeySelector (ignored when useDefaultVkeys is true)
-            admin.address,    // admin
+            ethers.ZeroHash, // initOwnedAggchainVKey (ignored when useDefaultVkeys is true)
+            '0x00000000', // initAggchainVKeySelector (ignored when useDefaultVkeys is true)
+            admin.address, // admin
             trustedSequencer.address, // trustedSequencer
-            ethers.ZeroAddress,       // gasTokenAddress
-            '',                       // trustedSequencerURL
-            ''                        // networkName
+            ethers.ZeroAddress, // gasTokenAddress
+            '', // trustedSequencerURL
+            '', // networkName
         );
 
         // Verify pessimistic for FEP chain
@@ -322,20 +319,23 @@ describe('Upgrade FEP to ECDSA', () => {
 
         const aggchainData = ethers.AbiCoder.defaultAbiCoder().encode(
             ['bytes4', 'bytes32', 'uint256'],
-            [aggchainVKeySelectorForData, outputRoot, l2BlockNumber]
+            [aggchainVKeySelectorForData, outputRoot, l2BlockNumber],
         );
 
         // Verify pessimistic proof before the migration to make it more realistic
         await expect(
-            rollupManagerContract.connect(trustedAggregator).verifyPessimisticTrustedAggregator(
-                rollupID,
-                lastL1InfoTreeLeafCount,
-                newLER,
-                newPPRoot,
-                proofPP,
-                aggchainData,
-            ),
-        ).to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
+            rollupManagerContract
+                .connect(trustedAggregator)
+                .verifyPessimisticTrustedAggregator(
+                    rollupID,
+                    lastL1InfoTreeLeafCount,
+                    newLER,
+                    newPPRoot,
+                    proofPP,
+                    aggchainData,
+                ),
+        )
+            .to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
             .withArgs(rollupID, 0, ethers.ZeroHash, newLER, trustedAggregator.address);
 
         // Get the rollup data before migration (FEP)
@@ -344,7 +344,7 @@ describe('Upgrade FEP to ECDSA', () => {
         const implementationContractBefore = aggchainFEPFactory.attach(rollupTypeDataBefore.consensusImplementation);
         const aggchainTypeBefore = await implementationContractBefore.AGGCHAIN_TYPE();
         const totalVerifiedBatchesBefore = await rollupManagerContract.totalVerifiedBatches();
-        
+
         // For completeness. Assert the rollup data before migration (FEP)
         expect(aggchainTypeBefore).to.equal('0x0001');
         expect(totalVerifiedBatchesBefore).to.equal(0);
@@ -356,14 +356,16 @@ describe('Upgrade FEP to ECDSA', () => {
         expect(rollupDataBefore.lastPessimisticRoot).to.equal(newPPRoot);
 
         // Migrate the aggchain from FEP (ID=1) to ECDSA type (ID=2)
-        await rollupManagerContract.connect(timelock).updateRollup(rollupDataBefore.rollupContract, rollupTypeECDSAId, "0x")
+        await rollupManagerContract
+            .connect(timelock)
+            .updateRollup(rollupDataBefore.rollupContract, rollupTypeECDSAId, '0x');
 
         // Get the rollup data after migration (ECDSA)
         const rollupDataAfter = await rollupManagerContract.rollupIDToRollupDataV2(rollupID);
         const rollupTypeDataAfter = await rollupManagerContract.rollupTypeMap(rollupDataAfter.rollupTypeID);
         const implementationContractAfter = aggchainFEPFactory.attach(rollupTypeDataAfter.consensusImplementation);
         const aggchainTypeAfter = await implementationContractAfter.AGGCHAIN_TYPE();
-        
+
         // Ensure the migration was successful
         expect(aggchainTypeAfter).to.equal('0x0000');
         expect(rollupDataAfter.rollupTypeID).to.equal(rollupTypeECDSAId);
