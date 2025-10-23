@@ -10,13 +10,9 @@ import {
     AgglayerBridge,
     AgglayerGER,
     AgglayerManagerMock,
-    IAggchainBase,
-    AggchainECDSAMultisig,
-    AggchainFEP,
     AgglayerGateway,
 } from '../../typechain-types';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
-import { encodeInitAggchainManager } from '../../src/utils-common-aggchain';
 
 describe('Upgrade FEP to ECDSA', () => {
     let deployer: any;
@@ -37,14 +33,12 @@ describe('Upgrade FEP to ECDSA', () => {
 
     let aggchainECDSAFactory: any;
     let aggchainFEPFactory: any;
+    let firstDeployment = true;
 
     const networkIDMainnet = 0;
-
-    let firstDeployment = true;
     const polTokenName = 'POL Token';
     const polTokenSymbol = 'POL';
     const polTokenInitialBalance = ethers.parseEther('20000000');
-
     const PESSIMISTIC_SELECTOR = '0x00000001';
     const aggchainVKeySelector = '0x12340001';
     const programVKey = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -60,7 +54,7 @@ describe('Upgrade FEP to ECDSA', () => {
         const VerifierRollupHelperFactory = await ethers.getContractFactory('VerifierRollupHelperMock');
         verifierContract = await VerifierRollupHelperFactory.deploy();
 
-        // deploy pol
+        // deploy pol token
         const polTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
         polTokenContract = await polTokenFactory.deploy(
             polTokenName,
@@ -69,10 +63,7 @@ describe('Upgrade FEP to ECDSA', () => {
             polTokenInitialBalance,
         );
 
-        /*
-         * deploy global exit root manager
-         * In order to not have trouble with nonce deploy first proxy admin
-         */
+        // deploy proxy admin
         await upgrades.deployProxyAdmin();
 
         if ((await upgrades.admin.getInstance()).target !== '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0') {
@@ -89,7 +80,8 @@ describe('Upgrade FEP to ECDSA', () => {
         const nonceProxyBridge =
             Number(await ethers.provider.getTransactionCount(deployer.address)) + (firstDeployment ? 3 : 2);
 
-        const nonceProxyZkevm = nonceProxyBridge + 2; // Always have to redeploy impl since the polygonZkEVMGlobalExitRoot address changes
+        // Always have to redeploy impl since the polygonZkEVMGlobalExitRoot address changes
+        const nonceProxyZkevm = nonceProxyBridge + 2;
 
         const precalculateBridgeAddress = ethers.getCreateAddress({
             from: deployer.address,
@@ -174,13 +166,6 @@ describe('Upgrade FEP to ECDSA', () => {
             0, // newThreshold
         );
 
-        // Grant AL_MULTISIG_ROLE to initialize signers
-        const AL_MULTISIG_ROLE = ethers.id('AL_MULTISIG_ROLE');
-        await aggLayerGatewayContract.connect(admin).grantRole(AL_MULTISIG_ROLE, admin.address);
-
-        // Initialize empty signers to avoid AggchainSignersHashNotInitialized error
-        await aggLayerGatewayContract.connect(admin).updateSignersAndThreshold([], [], 0);
-
         const aggchainVKey = computeRandomBytes(32);
 
         // Compose selector for generated aggchain verification key
@@ -194,7 +179,7 @@ describe('Upgrade FEP to ECDSA', () => {
         aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
     });
 
-    it('should upgrade FEP to ECDSA', async () => {
+    it('should migrate FEP proxy to ECDSA', async () => {
         // Deploy FEP behind a proxy
         const aggchainFEPProxy = await upgrades.deployProxy(aggchainFEPFactory, [], {
             initializer: false,
@@ -209,6 +194,10 @@ describe('Upgrade FEP to ECDSA', () => {
         });
         await aggchainFEPProxy.waitForDeployment();
 
+        // Before is FEP
+        const aggchainTypeBefore = await aggchainFEPFactory.attach(aggchainFEPProxy.target).AGGCHAIN_TYPE();
+        expect(aggchainTypeBefore).to.equal('0x0001');
+
         // Ensure FEP is upgradable to ECDSA
         await upgrades.upgradeProxy(aggchainFEPProxy, aggchainECDSAFactory, {
             constructorArgs: [
@@ -220,9 +209,15 @@ describe('Upgrade FEP to ECDSA', () => {
             ],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
         });
+
+        // After is ECDSA
+        const upgradedContract = aggchainECDSAFactory.attach(aggchainFEPProxy.target);
+        const aggchainTypeAfter = await upgradedContract.AGGCHAIN_TYPE();
+        expect(aggchainTypeAfter).to.equal('0x0000');
+        
     });
 
-    it('should migrate FEP to ECDSA', async () => {
+    it('should migrate FEP to ECDSA after a verified pessimistic proof', async () => {
         const chainId = 1001;
         const forkId = 0;
 
@@ -283,7 +278,7 @@ describe('Upgrade FEP to ECDSA', () => {
         const rollupData = await rollupManagerContract.rollupIDToRollupDataV2(rollupID);
         const aggchainContract = aggchainFEPFactory.attach(rollupData.rollupContract);
 
-        // Initialize FEP contract with proper parameters to avoid latestOutputIndex underflow
+        // Initialize FEP contract
         await aggchainContract.connect(aggLayerAdmin).initialize(
             {
                 l2BlockTime: 2,
@@ -313,8 +308,6 @@ describe('Upgrade FEP to ECDSA', () => {
             '',                       // trustedSequencerURL
             ''                        // networkName
         );
-
-        
 
         // Verify pessimistic for FEP chain
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
@@ -362,7 +355,7 @@ describe('Upgrade FEP to ECDSA', () => {
         expect(rollupDataBefore.lastVerifiedBatch).to.equal(0);
         expect(rollupDataBefore.lastPessimisticRoot).to.equal(newPPRoot);
 
-        // Update rollup to ECDSA type (ID=2)
+        // Migrate the aggchain from FEP (ID=1) to ECDSA type (ID=2)
         await rollupManagerContract.connect(timelock).updateRollup(rollupDataBefore.rollupContract, rollupTypeECDSAId, "0x")
 
         // Get the rollup data after migration (ECDSA)
