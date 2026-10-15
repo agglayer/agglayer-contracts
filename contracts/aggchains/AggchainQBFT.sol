@@ -87,13 +87,17 @@ contract AggchainQBFT is AggchainBase {
     /// @notice keccak256(abi.encode(chainId, epochLength, genesisBlockHash)); fixed at initialization.
     bytes32 public chainConfigHash;
 
+    /// @notice Block the chain started settling from (`InitParams.startingBlockNumber`); set at initialization, never changed.
+    /// @dev The prover needs it to fetch the QBFT hash of the starting block (the `genesisBlockHash` of `chainConfigHash`).
+    uint64 public startingBlockNumber;
+
     /// @notice Informational copy of the epoch length, also committed inside `chainConfigHash`.
     uint64 public epochLength;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
-     * 5 storage slots used above, 50 slots reserved in total for this contract.
+     * 5 storage slots used above (`startingBlockNumber` and `epochLength` share one slot), 50 slots reserved in total for this contract.
      */
     uint256[45] private __gap;
 
@@ -343,6 +347,7 @@ contract AggchainQBFT is AggchainBase {
             }
         }
 
+        startingBlockNumber = _initParams.startingBlockNumber;
         lastProvenBlockNumber = _initParams.startingBlockNumber;
         lastProvenBlockHash = _initParams.startingBlockHash;
 

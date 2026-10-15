@@ -254,6 +254,7 @@ describe('AggchainQBFT', () => {
 
         // QBFT storage
         expect(await aggchainQBFTContract.lastProvenBlockNumber()).to.be.equal(initParams.startingBlockNumber);
+        expect(await aggchainQBFTContract.startingBlockNumber()).to.be.equal(initParams.startingBlockNumber);
         expect(await aggchainQBFTContract.lastProvenBlockHash()).to.be.equal(genesisBlockHash);
         expect(await aggchainQBFTContract.consensusStateHash()).to.be.equal(genesisConsensusHash);
         expect(await aggchainQBFTContract.epochLength()).to.be.equal(epochLength);
@@ -307,6 +308,7 @@ describe('AggchainQBFT', () => {
         await initializeQBFT(aggchainQBFTContract, params);
 
         expect(await aggchainQBFTContract.lastProvenBlockNumber()).to.be.equal(1234);
+        expect(await aggchainQBFTContract.startingBlockNumber()).to.be.equal(1234);
         expect(await aggchainQBFTContract.lastProvenBlockHash()).to.be.equal(params.startingBlockHash);
         expect(await aggchainQBFTContract.consensusStateHash()).to.be.equal(
             utilsQBFT.computeConsensusStateHash(startingValidators, []),
@@ -508,6 +510,8 @@ describe('AggchainQBFT', () => {
             .withArgs(newBlockNumber, newBlockHash, newConsensusHash);
 
         expect(await aggchainQBFTContract.lastProvenBlockNumber()).to.be.equal(newBlockNumber);
+        // the starting block number is never modified by settlements
+        expect(await aggchainQBFTContract.startingBlockNumber()).to.be.equal(initParams.startingBlockNumber);
         expect(await aggchainQBFTContract.lastProvenBlockHash()).to.be.equal(newBlockHash);
         expect(await aggchainQBFTContract.consensusStateHash()).to.be.equal(newConsensusHash);
 
@@ -639,6 +643,7 @@ describe('AggchainQBFT', () => {
 
         // QBFT state
         expect(await upgraded.lastProvenBlockNumber()).to.be.equal(27);
+        expect(await upgraded.startingBlockNumber()).to.be.equal(27);
         expect(await upgraded.lastProvenBlockHash()).to.be.equal(migrationParams.startingBlockHash);
         expect(await upgraded.consensusStateHash()).to.be.equal(replayStep27.consensus_hash_after);
         expect(await upgraded.epochLength()).to.be.equal(epochLength);
