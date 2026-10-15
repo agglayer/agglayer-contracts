@@ -3,7 +3,7 @@
     "trustedSequencerURL": "http://besu-rpc:8545",
     "networkName": "besu-qbft",
     "trustedSequencer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    "chainID": 1005,
+    "chainID": 2151908,
     "rollupAdminAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "consensusContractName": "AggchainQBFT",
     "gasTokenAddress": "0x0000000000000000000000000000000000000000",
