@@ -13,9 +13,10 @@ export const CONSENSUS_TYPE = {
 export const AGGCHAIN_CONTRACT_NAMES = {
     ECDSA: 'AggchainECDSAMultisig',
     FEP: 'AggchainFEP',
+    QBFT: 'AggchainQBFT',
 };
 
-export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSAMultisig', 'AggchainFEP'];
+export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSAMultisig', 'AggchainFEP', 'AggchainQBFT'];
 
 /// //////////////////////////////
 /// // Functions for Aggchain ////
@@ -23,7 +24,7 @@ export const ARRAY_AGGCHAIN_SUPPORTED_NAMES = ['AggchainECDSAMultisig', 'Aggchai
 
 /**
  * Compute aggchain hash
- * @param {Number|BigInt} aggchainType agg chain type (ECDSA: 0, FEP: 1)
+ * @param {Number|BigInt} aggchainType agg chain type (ECDSA: 0, FEP: 1, QBFT: 2)
  * @param {String} aggchainVKey aggchain verification key
  * @param {String} hashAggchainParams hash aggchain params
  * @param {String} signersHash hash of the signers array (keccak256(abi.encodePacked(threshold, aggchainSigners)))
@@ -45,7 +46,7 @@ export function computeAggchainHash(aggchainType, aggchainVKey, hashAggchainPara
 /**
  * Encodes the vKey selector for aggchain
  * @param {String} _aggchainVKeyVersion aggchain vkey selector
- * @param {String} _aggchainType aggchain selector type (ECDSA:0, FEP: 1)
+ * @param {String} _aggchainType aggchain selector type (ECDSA:0, FEP: 1, QBFT: 2)
  * @returns AggchainVKeySelector
  */
 export function getAggchainVKeySelector(_aggchainVKeyVersion, _aggchainType) {

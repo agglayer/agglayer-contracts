@@ -1,0 +1,16 @@
+{
+  "description": "range crossing the add votes, the validator-set change adding node5 and the first epoch block after it",
+  "prev_block_number": 25,
+  "prev_block_hash": "0x15cdcbb46e1f708ef45cd38e878b81972e195adf41cd619ec9ba9188e37fa9dc",
+  "prev_consensus_hash": "0x01b5ab9a778e5587aea0973952753ad523cc250877eb1116fe50f74dfc420464",
+  "new_block_number": 40,
+  "new_block_hash": "0xc2f8c5f69c1a30e2850d94ff1347c34c5b641310af92c3222995158f3cfce4a8",
+  "new_consensus_hash": "0xc984f38019e756445ed4b397427386ac2d76abfe0245e1e09f69cb509aa6eb96",
+  "chain_id": 2151908,
+  "epoch_length": 20,
+  "genesis_block_hash": "0x855d837fc260c85fceda4c7d6fe649da2bcb7a43346cfd3732881bf779e3500b",
+  "chain_config_hash": "0xac5677cff8a567cba705d7ba56f131d88071ba38e88dfe466982f3d68100eb15",
+  "aggchain_params": "0x82cb59958a87bf44f034a1e66a45ce3eed30eb58444253fbc7f3909688911bec",
+  "aggchain_vkey_selector": "0x00010002",
+  "aggchain_data": "0x0001000200000000000000000000000000000000000000000000000000000000c2f8c5f69c1a30e2850d94ff1347c34c5b641310af92c3222995158f3cfce4a80000000000000000000000000000000000000000000000000000000000000028c984f38019e756445ed4b397427386ac2d76abfe0245e1e09f69cb509aa6eb96"
+}

@@ -26,6 +26,14 @@ Fill `.env` with your `INFURA_PROJECT_ID` and (optionally) `MNEMONIC` or `ETHERS
 cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRollup/initialize_rollup.json
 ```
 
+For `AggchainQBFT` start from the QBFT example instead:
+
+```
+cp ./tools/initializeRollup/initialize_rollup_qbft.json.example ./tools/initializeRollup/initialize_rollup.json
+```
+
+When the contract is already initialized as `AggchainECDSAMultisig` (storage `_initialized == 2`) and the proxy has been upgraded to the `AggchainQBFT` implementation, the tool calls `initializeFromECDSAMultisig(qbftParams)`; only `qbftParams` is required in that case (the existing admin, signers, threshold and vkey flags are kept).
+
 - Set your parameters in `initialize_rollup.json`:
 
     - `type`: Specify the type of rollup creation. Options:
@@ -37,7 +45,7 @@ cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRol
     - `trustedSequencer`: Sequencer address of the new rollup.
     - `chainID`: ChainID of the rollup (must be unique, 32 bits max).
     - `rollupAdminAddress`: Admin address of the new rollup.
-    - `consensusContractName`: Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`.
+    - `consensusContractName`: Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP", "AggchainQBFT"]`.
     - `gasTokenAddress`: Address of the native gas token (zero address if ether).
     - `deployerPvtKey` (optional): Private key to deploy from a specific wallet.
     - `maxFeePerGas` (optional): String, set `maxFeePerGas` (in gwei). Must also set `maxPriorityFeePerGas` to use.
@@ -47,7 +55,13 @@ cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRol
     - `timelockSalt` (optional for Timelock): Timelock salt.
     - `rollupManagerAddress`: Address of deployed RollupManager contract.
     - `aggchainParams` (required for Aggchain consensus contracts):
-        - `initParams`: Object with Aggchain-specific initialization parameters:
+        - `qbftParams` (only for `AggchainQBFT`, used instead of `initParams`): Object with the `AggchainQBFT.InitParams`. See `initialize_rollup_qbft.json.example`:
+            - `startingBlockNumber`: Number. Block the chain starts settling from (usually 0, or the last L2 block of the last settled ECDSA certificate when migrating).
+            - `startingBlockHash`: String. QBFT on-chain hash of that block (non-zero).
+            - `startingValidators`: Array of addresses. `validators[]` of that block's `extraData`, strictly sorted ascending (non-empty).
+            - `chainId`: Number. Chain id of the Besu network.
+            - `epochLength`: Number. `qbft.epochlength` of the Besu genesis (non-zero).
+        - `initParams` (only for `AggchainFEP`): Object with Aggchain-specific initialization parameters:
             - `l2BlockTime`: Number. L2 block time in seconds.
             - `rollupConfigHash`: String. Hash of the rollup configuration.
             - `startingOutputRoot`: String. Initial output root for the rollup.

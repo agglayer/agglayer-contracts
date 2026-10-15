@@ -171,6 +171,47 @@ async function main() {
                 trustedSequencerURL,
                 networkName,
             );
+        } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.QBFT) {
+            if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
+                throw new Error(
+                    `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
+                );
+            }
+
+            // check mandatory params in aggchainParams
+            const mandatoryAggchainParams = [
+                'qbftParams',
+                'signers',
+                'threshold',
+                'useDefaultVkeys',
+                'useDefaultSigners',
+                'initOwnedAggchainVKey',
+                'initAggchainVKeySelector',
+            ];
+            checkParams(aggchainParams, mandatoryAggchainParams);
+            checkParams(aggchainParams.qbftParams, [
+                'startingBlockNumber',
+                'startingBlockHash',
+                'startingValidators',
+                'chainId',
+                'epochLength',
+            ]);
+
+            // Initialize QBFT with direct parameters
+            initializeTx = await aggchainContract.initialize.populateTransaction(
+                aggchainParams.qbftParams,
+                aggchainParams.signers,
+                aggchainParams.threshold,
+                aggchainParams.useDefaultVkeys,
+                aggchainParams.useDefaultSigners,
+                aggchainParams.initOwnedAggchainVKey,
+                aggchainParams.initAggchainVKeySelector,
+                rollupAdminAddress,
+                trustedSequencer,
+                gasTokenAddress,
+                trustedSequencerURL,
+                networkName,
+            );
         } else {
             throw new Error(`Aggchain ${consensusContractName} not supported`);
         }
@@ -218,6 +259,27 @@ async function main() {
         } else {
             throw new Error(`Aggchain ${consensusContractName} not supported`);
         }
+    } else if (initializedValue === 2 && consensusContractName === AGGCHAIN_CONTRACT_NAMES.QBFT) {
+        if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
+            throw new Error(
+                `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
+            );
+        }
+
+        // check mandatory params in aggchainParams
+        checkParams(aggchainParams, ['qbftParams']);
+        checkParams(aggchainParams.qbftParams, [
+            'startingBlockNumber',
+            'startingBlockHash',
+            'startingValidators',
+            'chainId',
+            'epochLength',
+        ]);
+
+        // Initialize QBFT from ECDSA Multisig (keeps admin, signers, threshold and vkey flags)
+        initializeTx = await aggchainContract.initializeFromECDSAMultisig.populateTransaction(
+            aggchainParams.qbftParams,
+        );
     } else if (initializedValue === 2 && consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
         if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
             throw new Error(

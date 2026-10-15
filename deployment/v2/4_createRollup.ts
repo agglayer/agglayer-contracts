@@ -10,6 +10,7 @@ import { processorUtils, Constants } from '@0xpolygonhermez/zkevm-commonjs';
 import '../helpers/utils';
 
 import * as utilsFEP from '../../src/utils-aggchain-FEP';
+import * as utilsQBFT from '../../src/utils-aggchain-QBFT';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
 import {
     GENESIS_CONTRACT_NAMES,
@@ -97,8 +98,12 @@ async function main() {
         throw new Error(`Consensus contract not supported, supported contracts are: ${supportedConsensus}`);
     }
 
-    // if consensusContract is AggchainFEP, check isVanillaClient === true
-    if (utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP === consensusContract && !isVanillaClient) {
+    // if consensusContract is AggchainFEP or AggchainQBFT, check isVanillaClient === true
+    if (
+        (utilsAggchain.AGGCHAIN_CONTRACT_NAMES.FEP === consensusContract ||
+            utilsAggchain.AGGCHAIN_CONTRACT_NAMES.QBFT === consensusContract) &&
+        !isVanillaClient
+    ) {
         throw new Error(`Consensus contract ${consensusContract} requires isVanillaClient === true`);
     } else if (arraySupportedAggchains.includes(consensusContract) && programVKey !== ethers.ZeroHash) {
         throw new Error(`Consensus contract ${consensusContract} requires programVKey === bytes32(0)`);
@@ -344,6 +349,11 @@ async function main() {
             aggchainInitParams.initParams = createRollupParameters.aggchainParams.initParams;
             aggchainInitParams.signers = []; // No signers initially
             aggchainInitParams.threshold = 0; // No threshold initially
+        } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.QBFT) {
+            // Add QBFT-specific parameters
+            aggchainInitParams.qbftParams = createRollupParameters.aggchainParams.qbftParams;
+            aggchainInitParams.signers = []; // No signers initially
+            aggchainInitParams.threshold = 0; // No threshold initially
         } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
             // Add ECDSA-specific parameters
             aggchainInitParams.signers = createRollupParameters.aggchainParams.signers || [];
@@ -451,6 +461,8 @@ async function main() {
         if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
             // ECDSA Multisig uses type 0x0000
             aggchainType = '0x0000';
+        } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.QBFT) {
+            aggchainType = utilsQBFT.AGGCHAIN_TYPE_QBFT;
         }
 
         // Load aggLayerGateway
@@ -530,6 +542,22 @@ async function main() {
             // Initialize FEP contract with direct parameters using aggchainManager
             txInitAggChain = await aggchainContractWithManager.initialize(
                 aggchainInitParams.initParams,
+                aggchainInitParams.signers,
+                aggchainInitParams.threshold,
+                aggchainInitParams.useDefaultVkeys,
+                aggchainInitParams.useDefaultSigners,
+                aggchainInitParams.initOwnedAggchainVKey,
+                aggchainInitParams.initAggchainVKeySelector,
+                aggchainInitParams.adminZkEVM,
+                aggchainInitParams.trustedSequencer,
+                aggchainInitParams.gasTokenAddress,
+                aggchainInitParams.trustedSequencerURL,
+                aggchainInitParams.networkName,
+            );
+        } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.QBFT) {
+            // Initialize QBFT contract with direct parameters using aggchainManager
+            txInitAggChain = await aggchainContractWithManager.initialize(
+                aggchainInitParams.qbftParams,
                 aggchainInitParams.signers,
                 aggchainInitParams.threshold,
                 aggchainInitParams.useDefaultVkeys,

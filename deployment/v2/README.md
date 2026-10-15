@@ -84,7 +84,7 @@ A new folder will be created with the following name `deployments/${network}_$(d
 - `chainID`: uint64, chainID of the new rollup
 - `adminZkEVM`: address, Admin address, can adjust Rollup parameters
 - `forkID`: uint64, Fork ID of the new rollup, indicates the prover (zkROM/executor) version
-- `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`.
+- `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP", "AggchainQBFT"]`.
 - `gasTokenAddress`: address, Gas token address, empty or address(0) for ether
 - `programVKey`: program key for pessimistic consensus. if consensus != pessimistic, programVKey === bytes32(0).
 - `isVanillaClient`: Flag for vanilla/sovereign clients handling
@@ -96,13 +96,19 @@ A new folder will be created with the following name `deployments/${network}_$(d
     - `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
     - `emergencyBridgePauser`: emergency bridge pauser address, can stop the bridge, recommended to be a multisig
     - `emergencyBridgeUnpauser`: emergency bridge unpauser address, can unpause the bridge, recommended to be a multisig
-- `aggchainParams`: Only mandatory if consensusContract is AggchainECDSA or AggchainFEP
+- `aggchainParams`: Only mandatory if consensusContract is AggchainECDSA, AggchainFEP or AggchainQBFT
     - `aggchainManager`: Address that manages all the functionalities related to the aggchain
     - `aggchainManagerPvtKey`: (Optional) Private key for the aggchainManager account. If provided, will be used to sign transactions. If empty, will use deployer.
     - `initParams`: Only mandatory if consensusContract is AggchainFEP
         - `l2BlockTime`: The time between L2 blocks in seconds
         - `rollupConfigHash`: The hash of the chain's rollup configuration
         - `startingOutputRoot`: Init output root
+    - `qbftParams`: Only mandatory if consensusContract is AggchainQBFT (see `create_rollup_parameters_qbft.json.example`)
+        - `startingBlockNumber`: Block the chain starts settling from, usually 0
+        - `startingBlockHash`: QBFT on-chain hash of that block
+        - `startingValidators`: `validators[]` of that block's extraData, sorted ascending
+        - `chainId`: Chain id of the Besu network
+        - `epochLength`: `qbft.epochlength` of the Besu genesis
     - `useDefaultVkeys`: Whether to use default verification keys from AgglayerGateway
     - `useDefaultSigners`: Whether to use default signers from AgglayerGateway
         - `startingBlockNumber`: The number of the first L2 block

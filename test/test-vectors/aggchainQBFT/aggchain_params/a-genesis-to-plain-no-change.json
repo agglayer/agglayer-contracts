@@ -1,0 +1,16 @@
+{
+  "description": "genesis to a plain header before any vote; consensus hash unchanged",
+  "prev_block_number": 0,
+  "prev_block_hash": "0x855d837fc260c85fceda4c7d6fe649da2bcb7a43346cfd3732881bf779e3500b",
+  "prev_consensus_hash": "0x01b5ab9a778e5587aea0973952753ad523cc250877eb1116fe50f74dfc420464",
+  "new_block_number": 2,
+  "new_block_hash": "0xd72d82bde323540130e61c67ec0e3afdae5dd9aad3c1fa2585e43cbee2bd7093",
+  "new_consensus_hash": "0x01b5ab9a778e5587aea0973952753ad523cc250877eb1116fe50f74dfc420464",
+  "chain_id": 2151908,
+  "epoch_length": 20,
+  "genesis_block_hash": "0x855d837fc260c85fceda4c7d6fe649da2bcb7a43346cfd3732881bf779e3500b",
+  "chain_config_hash": "0xac5677cff8a567cba705d7ba56f131d88071ba38e88dfe466982f3d68100eb15",
+  "aggchain_params": "0x4767ad0abd4a88e0ec0c312229e0d353972fafdec7a43baed2dbc265192e1e32",
+  "aggchain_vkey_selector": "0x00010002",
+  "aggchain_data": "0x0001000200000000000000000000000000000000000000000000000000000000d72d82bde323540130e61c67ec0e3afdae5dd9aad3c1fa2585e43cbee2bd7093000000000000000000000000000000000000000000000000000000000000000201b5ab9a778e5587aea0973952753ad523cc250877eb1116fe50f74dfc420464"
+}

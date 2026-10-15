@@ -1,0 +1,46 @@
+{
+    "type":"EOA",
+    "trustedSequencerURL": "http://besu-rpc:8545",
+    "networkName": "besu-qbft",
+    "trustedSequencer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "chainID": 1005,
+    "rollupAdminAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "consensusContractName": "AggchainQBFT",
+    "gasTokenAddress": "0x0000000000000000000000000000000000000000",
+    "deployerPvtKey": "",
+    "maxFeePerGas": "",
+    "maxPriorityFeePerGas": "",
+    "multiplierGas": "",
+    "timelockDelay": 0,
+    "timelockSalt": "",
+    "rollupManagerAddress": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+    "aggchainParams": {
+        "qbftParams": {
+            "startingBlockNumber": 0,
+            "startingBlockHash": "0x855d837fc260c85fceda4c7d6fe649da2bcb7a43346cfd3732881bf779e3500b",
+            "startingValidators": [
+                "0x0aba97e330850e308b53f94861b8b3ade5815b4e",
+                "0x0dd6667c4eb39920c854be95bc3c05c4a2fab1f6",
+                "0x7f87754838ff25c579f1ac5cdd2d0e05351420c9",
+                "0xeede9efab2d4f5df03a8381ee779e05fabc8ecd3"
+            ],
+            "chainId": 2151908,
+            "epochLength": 20
+        },
+        "useDefaultVkeys": false,
+        "useDefaultSigners": false,
+        "signers": [
+            {
+                "addr": "0x...",
+                "url": "https://example.com/signer1"
+            },
+            {
+                "addr": "0x...",
+                "url": "https://example.com/signer2"
+            }
+        ],
+        "threshold": 1,
+        "initOwnedAggchainVKey": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "initAggchainVKeySelector": "0x00010002"
+    }
+}
