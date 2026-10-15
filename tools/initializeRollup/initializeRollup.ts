@@ -193,6 +193,7 @@ async function main() {
                 'startingBlockNumber',
                 'startingBlockHash',
                 'startingValidators',
+                'startingOutstandingVotes',
                 'chainId',
                 'epochLength',
             ]);
@@ -272,11 +273,16 @@ async function main() {
             'startingBlockNumber',
             'startingBlockHash',
             'startingValidators',
+            'startingOutstandingVotes',
             'chainId',
             'epochLength',
         ]);
 
         // Initialize QBFT from ECDSA Multisig (keeps admin, signers, threshold and vkey flags)
+        logger.warn(
+            'AggchainQBFT migrated from ECDSA multisig: no owned vkey is set. After this transaction the aggchainManager must call ' +
+                'addOwnedAggchainVKey(selector, vkey) or enableUseDefaultVkeysFlag(), otherwise getVKeyAndAggchainParams reverts with AggchainVKeyNotFound',
+        );
         initializeTx = await aggchainContract.initializeFromECDSAMultisig.populateTransaction(
             aggchainParams.qbftParams,
         );

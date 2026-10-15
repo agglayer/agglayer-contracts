@@ -32,7 +32,7 @@ For `AggchainQBFT` start from the QBFT example instead:
 cp ./tools/initializeRollup/initialize_rollup_qbft.json.example ./tools/initializeRollup/initialize_rollup.json
 ```
 
-When the contract is already initialized as `AggchainECDSAMultisig` (storage `_initialized == 2`) and the proxy has been upgraded to the `AggchainQBFT` implementation, the tool calls `initializeFromECDSAMultisig(qbftParams)`; only `qbftParams` is required in that case (the existing admin, signers, threshold and vkey flags are kept).
+When the contract is already initialized as `AggchainECDSAMultisig` (storage `_initialized == 2`) and the proxy has been upgraded to the `AggchainQBFT` implementation, the tool calls `initializeFromECDSAMultisig(qbftParams)`; only `qbftParams` is required in that case (the existing admin, signers, threshold and vkey flags are kept). No owned vkey is set by the migration: afterwards the aggchainManager must call `addOwnedAggchainVKey(selector, vkey)` or `enableUseDefaultVkeysFlag()`.
 
 - Set your parameters in `initialize_rollup.json`:
 
@@ -59,6 +59,7 @@ When the contract is already initialized as `AggchainECDSAMultisig` (storage `_i
             - `startingBlockNumber`: Number. Block the chain starts settling from (usually 0, or the last L2 block of the last settled ECDSA certificate when migrating).
             - `startingBlockHash`: String. QBFT on-chain hash of that block (non-zero).
             - `startingValidators`: Array of addresses. `validators[]` of that block's `extraData`, strictly sorted ascending (non-empty).
+            - `startingOutstandingVotes`: Array of `{subject, voter, add}`. Outstanding votes of the tally after the starting block (the prover rebuilds the tally from the last epoch block). Strictly ascending by `(subject, voter)`, every `voter` a starting validator, and must be empty (`[]`) when `startingBlockNumber % epochLength == 0` (genesis or an epoch block). `consensusStateHash = keccak256(abi.encode(startingValidators, startingOutstandingVotes))`.
             - `chainId`: Number. Chain id of the Besu network.
             - `epochLength`: Number. `qbft.epochlength` of the Besu genesis (non-zero).
         - `initParams` (only for `AggchainFEP`): Object with Aggchain-specific initialization parameters:

@@ -19,6 +19,7 @@ import {
     CREATE_ROLLUP_ROLE,
 } from '../../src/constants';
 import * as utilsPP from '../../src/pessimistic-utils';
+import { checkParams } from '../../src/utils';
 import {
     AgglayerManager,
     PolygonZkEVMEtrog,
@@ -351,6 +352,17 @@ async function main() {
             aggchainInitParams.threshold = 0; // No threshold initially
         } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.QBFT) {
             // Add QBFT-specific parameters
+            if (createRollupParameters.aggchainParams.qbftParams === undefined) {
+                throw new Error('Missing parameter: aggchainParams.qbftParams');
+            }
+            checkParams(createRollupParameters.aggchainParams.qbftParams, [
+                'startingBlockNumber',
+                'startingBlockHash',
+                'startingValidators',
+                'startingOutstandingVotes',
+                'chainId',
+                'epochLength',
+            ]);
             aggchainInitParams.qbftParams = createRollupParameters.aggchainParams.qbftParams;
             aggchainInitParams.signers = []; // No signers initially
             aggchainInitParams.threshold = 0; // No threshold initially

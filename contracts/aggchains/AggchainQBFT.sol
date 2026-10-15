@@ -22,12 +22,15 @@ contract AggchainQBFT is AggchainBase {
     /// @custom:field startingBlockNumber Block the chain starts settling from, usually 0.
     /// @custom:field startingBlockHash   QBFT on-chain hash of that block.
     /// @custom:field startingValidators  `validators[]` of that block's extraData, sorted ascending.
+    /// @custom:field startingOutstandingVotes Outstanding votes of the tally after that block, strictly ascending by
+    ///                                   (subject, voter). Must be empty when the block is genesis or an epoch block.
     /// @custom:field chainId             Chain id of the Besu network.
     /// @custom:field epochLength         `qbft.epochlength` from the genesis.
     struct InitParams {
         uint64 startingBlockNumber;
         bytes32 startingBlockHash;
         address[] startingValidators;
+        Vote[] startingOutstandingVotes;
         uint64 chainId;
         uint64 epochLength;
     }
@@ -126,6 +129,15 @@ contract AggchainQBFT is AggchainBase {
 
     /// @notice Thrown when the starting validators are not strictly sorted in ascending order (or contain address zero).
     error StartingValidatorsNotSorted();
+
+    /// @notice Thrown when the starting outstanding votes are not strictly ascending by (subject, voter).
+    error OutstandingVotesNotSorted();
+
+    /// @notice Thrown when a starting outstanding vote was cast by an address that is not a starting validator.
+    error OutstandingVoteFromNonValidator();
+
+    /// @notice Thrown when there are starting outstanding votes at genesis or at an epoch block.
+    error OutstandingVotesMustBeEmptyAtEpoch();
 
     /// @notice Thrown when the starting block hash is zero.
     error StartingBlockHashCannotBeZero();
@@ -294,12 +306,48 @@ contract AggchainQBFT is AggchainBase {
             previousValidator = validator;
         }
 
+        // Outstanding votes are cleared by every epoch block (and are empty at genesis)
+        Vote[] memory votes = _initParams.startingOutstandingVotes;
+        if (
+            votes.length != 0 &&
+            _initParams.startingBlockNumber % _initParams.epochLength == 0
+        ) {
+            revert OutstandingVotesMustBeEmptyAtEpoch();
+        }
+
+        // Votes must be canonical (strictly ascending by (subject, voter)) and cast by a current validator
+        for (uint256 i = 0; i < votes.length; i++) {
+            if (i != 0) {
+                Vote memory prev = votes[i - 1];
+                if (
+                    votes[i].subject < prev.subject ||
+                    (votes[i].subject == prev.subject &&
+                        votes[i].voter <= prev.voter)
+                ) {
+                    revert OutstandingVotesNotSorted();
+                }
+            }
+            bool isValidator = false;
+            for (
+                uint256 j = 0;
+                j < _initParams.startingValidators.length;
+                j++
+            ) {
+                if (_initParams.startingValidators[j] == votes[i].voter) {
+                    isValidator = true;
+                    break;
+                }
+            }
+            if (!isValidator) {
+                revert OutstandingVoteFromNonValidator();
+            }
+        }
+
         lastProvenBlockNumber = _initParams.startingBlockNumber;
         lastProvenBlockHash = _initParams.startingBlockHash;
 
-        // outstanding votes are empty at genesis and at any epoch block
         consensusStateHash = keccak256(
-            abi.encode(_initParams.startingValidators, new Vote[](0))
+            abi.encode(_initParams.startingValidators, votes)
         );
 
         chainConfigHash = keccak256(

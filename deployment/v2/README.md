@@ -107,6 +107,7 @@ A new folder will be created with the following name `deployments/${network}_$(d
         - `startingBlockNumber`: Block the chain starts settling from, usually 0
         - `startingBlockHash`: QBFT on-chain hash of that block
         - `startingValidators`: `validators[]` of that block's extraData, sorted ascending
+        - `startingOutstandingVotes`: Outstanding votes `{subject, voter, add}` after the starting block, strictly ascending by (subject, voter), voters must be starting validators, empty at genesis/epoch blocks
         - `chainId`: Chain id of the Besu network
         - `epochLength`: `qbft.epochlength` of the Besu genesis
     - `useDefaultVkeys`: Whether to use default verification keys from AgglayerGateway

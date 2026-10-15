@@ -11,11 +11,14 @@ import * as utilsAggchain from '../../src/utils-common-aggchain';
 const pathTestvectors = path.join(__dirname, '../test-vectors/aggchainQBFT');
 const readJson = (...parts: string[]) => JSON.parse(fs.readFileSync(path.join(pathTestvectors, ...parts), 'utf8'));
 const genesisHeader = readJson('headers', '000000-genesis.json');
+const replaySteps = readJson('tally', 'replay.json').steps;
 const aggchainParamsVectors = fs
     .readdirSync(path.join(pathTestvectors, 'aggchain_params'))
     .filter((file) => file.endsWith('.json'))
     .sort()
     .map((file) => ({ file, ...readJson('aggchain_params', file) }));
+
+const replayStep27 = replaySteps[27];
 
 describe('AggchainQBFT', () => {
     let trustedSequencer: any;
@@ -66,6 +69,7 @@ describe('AggchainQBFT', () => {
         startingBlockNumber: genesisHeader.number,
         startingBlockHash: genesisBlockHash,
         startingValidators: genesisValidators,
+        startingOutstandingVotes: [] as any[],
         chainId,
         epochLength,
     };
@@ -296,6 +300,7 @@ describe('AggchainQBFT', () => {
             startingBlockNumber: 1234,
             startingBlockHash: ethers.id('startingBlockHash'),
             startingValidators,
+            startingOutstandingVotes: [],
             chainId: 7,
             epochLength: 30000,
         };
@@ -623,18 +628,19 @@ describe('AggchainQBFT', () => {
 
         // the starting block is the last L2 block of the last settled ECDSA certificate
         const migrationParams = {
-            startingBlockNumber: 25,
+            startingBlockNumber: 27,
             startingBlockHash: ethers.id('lastEcdsaSettledBlock'),
-            startingValidators: genesisValidators,
+            startingValidators: replayStep27.validators_after,
+            startingOutstandingVotes: replayStep27.outstanding_after,
             chainId,
             epochLength,
         };
         await upgraded.connect(aggchainManager).initializeFromECDSAMultisig(migrationParams, { gasPrice: 0 });
 
         // QBFT state
-        expect(await upgraded.lastProvenBlockNumber()).to.be.equal(25);
+        expect(await upgraded.lastProvenBlockNumber()).to.be.equal(27);
         expect(await upgraded.lastProvenBlockHash()).to.be.equal(migrationParams.startingBlockHash);
-        expect(await upgraded.consensusStateHash()).to.be.equal(genesisConsensusHash);
+        expect(await upgraded.consensusStateHash()).to.be.equal(replayStep27.consensus_hash_after);
         expect(await upgraded.epochLength()).to.be.equal(epochLength);
         expect(await upgraded.chainConfigHash()).to.be.equal(
             utilsQBFT.computeChainConfigHash(chainId, epochLength, migrationParams.startingBlockHash),
@@ -681,7 +687,7 @@ describe('AggchainQBFT', () => {
         expect(params).to.be.equal(
             utilsQBFT.computeHashAggchainParamsQBFT(
                 migrationParams.startingBlockHash,
-                genesisConsensusHash,
+                replayStep27.consensus_hash_after,
                 ethers.id('newBlockHash'),
                 30,
                 ethers.id('newConsensusHash'),
@@ -692,6 +698,65 @@ describe('AggchainQBFT', () => {
             upgraded,
             'BlockProven',
         );
+    });
+
+    it('should initialize at a non epoch block with outstanding votes (tally/replay.json)', async () => {
+        for (const stepNumber of [11, 26, 27, 55, 56]) {
+            const step = replaySteps[stepNumber];
+            expect(step.outstanding_after.length).to.be.greaterThan(0);
+            expect(stepNumber % epochLength).to.not.be.equal(0);
+
+            const contract = await deployQBFTProxy();
+            await initializeQBFT(contract, {
+                ...initParams,
+                startingBlockNumber: stepNumber,
+                startingValidators: step.validators_after,
+                startingOutstandingVotes: step.outstanding_after,
+            });
+            // same hash as the reference tally after that header
+            expect(await contract.consensusStateHash()).to.be.equal(step.consensus_hash_after);
+        }
+    });
+
+    it('should check the starting outstanding votes validation', async () => {
+        const step = replaySteps[27];
+        const [vote1, vote2] = step.outstanding_after;
+        const base = {
+            ...initParams,
+            startingBlockNumber: 27,
+            startingValidators: step.validators_after,
+            startingOutstandingVotes: step.outstanding_after,
+        };
+        // sanity
+        await initializeQBFT(await deployQBFTProxy(), base);
+
+        const expectRevert = async (params: any, error: string) => {
+            const contract = await deployQBFTProxy();
+            await expect(initializeQBFT(contract, params)).to.be.revertedWithCustomError(contract, error);
+        };
+
+        // not sorted (voter order swapped)
+        await expectRevert({ ...base, startingOutstandingVotes: [vote2, vote1] }, 'OutstandingVotesNotSorted');
+        // duplicated vote
+        await expectRevert({ ...base, startingOutstandingVotes: [vote1, vote1] }, 'OutstandingVotesNotSorted');
+        // subject not sorted
+        const otherSubject = { ...vote1, subject: step.validators_after[0] };
+        await expectRevert({ ...base, startingOutstandingVotes: [vote1, otherSubject] }, 'OutstandingVotesNotSorted');
+        // voter that is not a validator
+        await expectRevert(
+            { ...base, startingOutstandingVotes: [{ ...vote1, voter: signer1.address }] },
+            'OutstandingVoteFromNonValidator',
+        );
+        // votes at an epoch block
+        await expectRevert({ ...base, startingBlockNumber: 20 }, 'OutstandingVotesMustBeEmptyAtEpoch');
+        // votes at genesis
+        await expectRevert({ ...base, startingBlockNumber: 0 }, 'OutstandingVotesMustBeEmptyAtEpoch');
+        // empty votes are always accepted, also at an epoch block
+        await initializeQBFT(await deployQBFTProxy(), {
+            ...base,
+            startingBlockNumber: 20,
+            startingOutstandingVotes: [],
+        });
     });
 
     it('should revert initializeFromECDSAMultisig on a fresh (v0) contract', async () => {
