@@ -41,9 +41,17 @@
             "chainId": 2151908,
             "epochLength": 20
         },
+        "l2RpcUrl": "",
         "useDefaultVkeys": false,
         "useDefaultSigners": false,
         "initOwnedAggchainVKey": "0x6666666666666666666666666666666666666666666666666666666666666666",
-        "initAggchainVKeySelector": "0x00010002"
+        "initAggchainVKeySelector": "0x00010002",
+        "signers": [
+            {
+                "addr": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                "url": "http://aggsender-signer:8080"
+            }
+        ],
+        "threshold": 1
     }
 }

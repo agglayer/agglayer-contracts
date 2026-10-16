@@ -110,6 +110,8 @@ A new folder will be created with the following name `deployments/${network}_$(d
         - `startingOutstandingVotes`: Outstanding votes `{subject, voter, add}` after the starting block, strictly ascending by (subject, voter), voters must be starting validators, empty at genesis/epoch blocks
         - `chainId`: Chain id of the Besu network
         - `epochLength`: `qbft.epochlength` of the Besu genesis
+    - `l2RpcUrl`: Only for AggchainQBFT, optional (or env `L2_RPC_URL`). Besu L2 RPC used to verify `chainId`, `startingBlockHash` and `startingValidators` before initializing; skipped with a loud warning if absent. `startingOutstandingVotes` should be generated with `aggkit-prover-qbft init-params`
+    - `signers` / `threshold`: Only for AggchainQBFT/ECDSA. For AggchainQBFT the script aborts if `useDefaultSigners` is false and `signers` is empty or `threshold < 1`
     - `useDefaultVkeys`: Whether to use default verification keys from AgglayerGateway
     - `useDefaultSigners`: Whether to use default signers from AgglayerGateway
         - `startingBlockNumber`: The number of the first L2 block

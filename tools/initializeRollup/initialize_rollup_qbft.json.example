@@ -28,6 +28,7 @@
             "chainId": 2151908,
             "epochLength": 20
         },
+        "l2RpcUrl": "",
         "useDefaultVkeys": false,
         "useDefaultSigners": false,
         "signers": [

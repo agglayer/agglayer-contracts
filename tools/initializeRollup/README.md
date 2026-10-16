@@ -59,7 +59,7 @@ When the contract is already initialized as `AggchainECDSAMultisig` (storage `_i
             - `startingBlockNumber`: Number. Block the chain starts settling from (usually 0, or the last L2 block of the last settled ECDSA certificate when migrating).
             - `startingBlockHash`: String. QBFT on-chain hash of that block (non-zero).
             - `startingValidators`: Array of addresses. `validators[]` of that block's `extraData`, strictly sorted ascending (non-empty).
-            - `startingOutstandingVotes`: Array of `{subject, voter, add}`. Outstanding votes of the tally after the starting block (the prover rebuilds the tally from the last epoch block). Strictly ascending by `(subject, voter)`, every `voter` a starting validator, and must be empty (`[]`) when `startingBlockNumber % epochLength == 0` (genesis or an epoch block). `consensusStateHash = keccak256(abi.encode(startingValidators, startingOutstandingVotes))`.
+            - `startingOutstandingVotes`: Array of `{subject, voter, add}`. Outstanding votes of the tally after the starting block (the prover rebuilds the tally from the last epoch block). They cannot be derived reliably in TypeScript: generate them with `aggkit-prover-qbft init-params` from `prover-besu-qbft`. Strictly ascending by `(subject, voter)`, every `voter` a starting validator, and must be empty (`[]`) when `startingBlockNumber % epochLength == 0` (genesis or an epoch block). `consensusStateHash = keccak256(abi.encode(startingValidators, startingOutstandingVotes))`.
             - `chainId`: Number. Chain id of the Besu network.
             - `epochLength`: Number. `qbft.epochlength` of the Besu genesis (non-zero).
         - `initParams` (only for `AggchainFEP`): Object with Aggchain-specific initialization parameters:
@@ -72,12 +72,14 @@ When the contract is already initialized as `AggchainECDSAMultisig` (storage `_i
             - `optimisticModeManager`: Address. Address of the optimistic mode manager.
             - `aggregationVkey`: String. Aggregation verification key.
             - `rangeVkeyCommitment`: String. Range verification key commitment.
+        - `l2RpcUrl` (only for `AggchainQBFT`, optional, falls back to env `L2_RPC_URL`): RPC of the Besu L2 node. Before sending the transaction the tool verifies against it that `eth_chainId == qbftParams.chainId`, `eth_getBlockByNumber(startingBlockNumber).hash == startingBlockHash` and that `qbft_getValidatorsByBlockNumber(startingBlockNumber)` (sorted) equals `startingValidators`. For the ECDSA migration it also checks that the L2 bridge `getRoot()` at `startingBlockNumber` equals the rollup `lastLocalExitRoot` in the AgglayerManager, and aborts otherwise (another block would skip or replay bridge claims). **If no URL is available the checks are skipped with a loud warning: a wrong value bricks the chain.**
+        - `l2BridgeAddress` (only for `AggchainQBFT`, optional): L2 bridge address used for the `getRoot()` check, default `0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe`.
         - `useDefaultVkeys`: Boolean. Whether to use default verification keys from AgglayerGateway.
         - `useDefaultSigners`: Boolean. Whether to use default signers from AgglayerGateway.
         - `signers`: Array of SignerInfo objects for multisig functionality (required if useDefaultSigners is false). Each object must have:
             - `addr`: Signer address (cannot be zero address)
             - `url`: Signer URL (must be non-empty string)
-        - `threshold`: Number. Minimum number of signatures required for multisig operations (required if useDefaultSigners is false).
+        - `threshold`: Number. Minimum number of signatures required for multisig operations (required if useDefaultSigners is false). For `AggchainQBFT` the tool aborts if `useDefaultSigners` is false and `signers` is empty or `threshold < 1` (the aggsender would have an empty committee and never send a certificate).
         - `initOwnedAggchainVKey`: String. Owned verification key for the aggchain.
         - `initAggchainVKeySelector`: String. Selector for the aggchain verification key.
         - `vKeyManager`: Address. Manager address for verification keys.

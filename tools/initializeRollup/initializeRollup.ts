@@ -7,6 +7,7 @@ import { ethers } from 'hardhat';
 import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
 import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
+import { checkQbftSignersConfig, preflightQbftInit } from '../../src/utils-aggchain-QBFT';
 import { logger } from '../../src/logger';
 import { checkParams, getDeployerFromParameters, getProviderAdjustingMultiplierGas } from '../../src/utils';
 // NOTE: Direct initialization is now used instead of encoded bytes
@@ -198,6 +199,14 @@ async function main() {
                 'epochLength',
             ]);
 
+            // fail fast on an empty committee and verify the params against the L2 before sending anything
+            checkQbftSignersConfig(aggchainParams.useDefaultSigners, aggchainParams.signers, aggchainParams.threshold);
+            await preflightQbftInit(aggchainParams.qbftParams, {
+                l2RpcUrl: aggchainParams.l2RpcUrl,
+                l2BridgeAddress: aggchainParams.l2BridgeAddress,
+                warn: (msg) => logger.warn(msg),
+            });
+
             // Initialize QBFT with direct parameters
             initializeTx = await aggchainContract.initialize.populateTransaction(
                 aggchainParams.qbftParams,
@@ -277,6 +286,14 @@ async function main() {
             'chainId',
             'epochLength',
         ]);
+
+        // verify the params against the L2 and check the starting block is the last settled one
+        await preflightQbftInit(aggchainParams.qbftParams, {
+            l2RpcUrl: aggchainParams.l2RpcUrl,
+            l2BridgeAddress: aggchainParams.l2BridgeAddress,
+            expectedLastLocalExitRoot: rollup.lastLocalExitRoot,
+            warn: (msg) => logger.warn(msg),
+        });
 
         // Initialize QBFT from ECDSA Multisig (keeps admin, signers, threshold and vkey flags)
         logger.warn(

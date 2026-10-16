@@ -364,8 +364,20 @@ async function main() {
                 'epochLength',
             ]);
             aggchainInitParams.qbftParams = createRollupParameters.aggchainParams.qbftParams;
-            aggchainInitParams.signers = []; // No signers initially
-            aggchainInitParams.threshold = 0; // No threshold initially
+            aggchainInitParams.signers = createRollupParameters.aggchainParams.signers || [];
+            aggchainInitParams.threshold = createRollupParameters.aggchainParams.threshold || 0;
+            // fail fast on an empty committee: the aggsender could never send a certificate
+            utilsQBFT.checkQbftSignersConfig(
+                aggchainInitParams.useDefaultSigners,
+                aggchainInitParams.signers,
+                aggchainInitParams.threshold,
+            );
+            // verify the params against the L2 (skipped with a warning if no L2 RPC url)
+            await utilsQBFT.preflightQbftInit(aggchainInitParams.qbftParams, {
+                l2RpcUrl: createRollupParameters.aggchainParams.l2RpcUrl,
+                l2BridgeAddress: createRollupParameters.aggchainParams.l2BridgeAddress,
+                warn: (msg) => console.warn(msg),
+            });
         } else if (consensusContract === utilsAggchain.AGGCHAIN_CONTRACT_NAMES.ECDSA) {
             // Add ECDSA-specific parameters
             aggchainInitParams.signers = createRollupParameters.aggchainParams.signers || [];
