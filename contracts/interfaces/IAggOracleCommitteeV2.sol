@@ -3,7 +3,6 @@
 pragma solidity 0.8.28;
 
 import {IAgglayerGERL2} from "./IAgglayerGERL2.sol";
-import {IAgglayerBridgeL2} from "./IAgglayerBridgeL2.sol";
 import {IVersion} from "./IVersion.sol";
 
 /**
@@ -14,14 +13,14 @@ interface IAggOracleCommitteeV2Events {
     /// @notice Emitted when a GER is injected
     event GERInjected(bytes32 indexed globalExitRoot);
 
-    /// @notice Emitted when a GER is injected
-    event LERInjected(uint32 indexed rollupIndex, bytes32 indexed LER, bytes indexed agglayerParams);
-
     /// @notice Emitted when the aggOracleProposer is updated
     event UpdateAggOracleProposer(address indexed newProposer);
 
     /// @notice Emitted when validators and threshold are updated
-    event ValidatorsAndThresholdUpdated(address[] validators, uint256 threshold);
+    event ValidatorsAndThresholdUpdated(
+        address[] validators,
+        uint256 threshold
+    );
 }
 
 /**
@@ -32,9 +31,6 @@ interface IAggOracleCommitteeV2Errors {
     /// @notice Thrown when the AgglayerGERL2 address is zero
     error AgglayerGERL2CannotBeZero();
 
-    /// @notice Thrown when the AgglayerBridgeL2 address is zero
-    error AgglayerBridgeL2CannotBeZero();
-
     /// @notice Thrown when the owner address is zero
     error OwnerCannotBeZero();
 
@@ -44,14 +40,14 @@ interface IAggOracleCommitteeV2Errors {
     /// @notice Thrown when the caller is not the oracle proposer
     error OnlyAggOracleProposerCanCall();
 
-    /// @notice Thrown when array lengths don't match
-    error ArrayLengthMismatch();
-
     /// @notice Thrown when a GER is zero
     error GERCannotBeZero();
 
     /// @notice Thrown when the validator address is zero
     error ValidatorCannotBeZero();
+
+    /// @notice Thrown when the validator address is this contract
+    error ValidatorCannotBeThisContract();
 
     /// @notice Thrown when the address is already a validator
     error ValidatorAlreadyExists();
@@ -62,17 +58,20 @@ interface IAggOracleCommitteeV2Errors {
     /// @notice Thrown when the validator index doesn't match the address
     error ValidatorIndexMismatch();
 
+    /// @notice Thrown when the number of validators exceeds MAX_VALIDATORS
+    error TooManyValidators();
+
     /// @notice Thrown when threshold is greater than the number of validators
     error ThresholdCannotBeGreaterThanValidators();
 
-    /// @notice Thrown when threshold cannot be zero if any validator exists
-    error ThresholdCannotBeZeroIfAnyValidatorExists();
+    /// @notice Thrown when threshold is zero
+    error ThresholdCannotBeZero();
 
     /// @notice Thrown when indices are not in descending order
     error IndicesNotInDescendingOrder();
 
-    /// @notice Thrown when there are insufficient signatures
-    error InsufficientSignatures();
+    /// @notice Thrown when the signatures length is not exactly threshold * 65 bytes
+    error InvalidSignaturesLength();
 
     /// @notice Thrown when a validator does not exist
     error ValidatorDoesNotExist();
@@ -83,14 +82,14 @@ interface IAggOracleCommitteeV2Errors {
     /// @notice Thrown when a validator is not found
     error ValidatorNotFound();
 
-    /// @notice Thrown when a LER is zero
-    error LERCannotBeZero();
+    /// @notice Thrown when trying to renounce ownership
+    error RenounceOwnershipDisabled();
 }
 
 /**
  * @title IAggOracleCommitteeV2
- * @notice Core interface for the AggOracleCommitteeV2 contract responsible for managing the insertion of GERs and LERs.
- * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs and LERs.
+ * @notice Core interface for the AggOracleCommitteeV2 contract responsible for managing the insertion of GERs.
+ * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs.
  */
 interface IAggOracleCommitteeV2 is
     IAggOracleCommitteeV2Errors,
@@ -131,18 +130,6 @@ interface IAggOracleCommitteeV2 is
         uint256 index;
     }
 
-    /**
-     * @notice Struct containing LER information
-     * @param rollupIndex The rollup index
-     * @param LER The local exit root
-     * @param agglayerParams The agglayer parameters
-     */
-    struct LERInformation {
-        uint32 rollupIndex;
-        bytes32 LER;
-        bytes agglayerParams;
-    }
-
     ////////////////////
     // External Functions
     ////////////////////
@@ -150,9 +137,9 @@ interface IAggOracleCommitteeV2 is
     /**
      * @notice Initializes the contract
      * @param _owner Owner of the contract, presumably a multisig
-     * @param _newProposer Address that can propose GER/LER injections
+     * @param _newProposer Address that can propose GER injections
      * @param _newValidators Initial array of validator information
-     * @param _newThreshold Number of signatures required for GER/LER injection
+     * @param _newThreshold Number of signatures required for GER injection
      */
     function initialize(
         address _owner,
@@ -162,7 +149,7 @@ interface IAggOracleCommitteeV2 is
     ) external;
 
     /**
-     * @notice Inject multiple GERs with signature verification
+     * @notice Inject a GER with signature verification
      * @param _globalExitRoot The GER to inject
      * @param _signatures The signatures to verify
      */
@@ -254,9 +241,6 @@ interface IAggOracleCommitteeV2 is
     /// @notice Global exit root manager L2
     function agglayerGERL2() external view returns (IAgglayerGERL2);
 
-    /// @notice Agglayer Bridge L2
-    function agglayerBridgeL2() external view returns (IAgglayerBridgeL2);
-
     /// @notice Array of validators
     function validators(uint256 index) external view returns (address);
 
@@ -264,8 +248,10 @@ interface IAggOracleCommitteeV2 is
     function threshold() external view returns (uint256);
 
     /// @notice Mapping to track validator information
-    function validatorInfo(address validator) external view returns (bool isValidator, string memory url);
+    function validatorInfo(
+        address validator
+    ) external view returns (bool isValidator, string memory url);
 
-    /// @notice Address that can propose GER and LER injections
+    /// @notice Address that can propose GER injections
     function proposer() external view returns (address);
 }

@@ -5,21 +5,25 @@ pragma solidity 0.8.28;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/OwnableUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts5/utils/cryptography/ECDSA.sol";
 import {IAgglayerGERL2} from "../interfaces/IAgglayerGERL2.sol";
-import {IAgglayerBridgeL2} from "../interfaces/IAgglayerBridgeL2.sol";
 import {IAggOracleCommitteeV2} from "../interfaces/IAggOracleCommitteeV2.sol";
 import {IVersion} from "../interfaces/IVersion.sol";
 import {SignatureDecoder} from "../lib/SignatureDecoder.sol";
 
 /**
  * @title AggOracleCommitteeV2
- * @notice Contract responsible for managing the insertion of GERs (Global Exit Roots) and LERs (Local Exit Roots)
- * @notice Proposer-validator management is equal as the one implemented in the AggchainSigners contract but a minor modification
- *         which allows the `url` of a validator to be empty. This Sc will be deployed on L2 and therefore GASc osts are not an issue.
- * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs and LERs
+ * @notice Contract responsible for managing the insertion of GERs (Global Exit Roots)
+ * @notice Proposer-validator management is the same as the one implemented in the AggchainSigners contract, with one minor modification:
+ *         the `url` of a validator is allowed to be empty. This contract is deployed on L2, therefore gas costs are not an issue.
+ * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs.
  *      It implements a threshold-based multi-signature scheme where a minimum number of oracle validators must sign
- *      each GER/LER injection before it can be executed.
+ *      each GER injection before it can be executed.
  */
-contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion, IAggOracleCommitteeV2 {
+contract AggOracleCommitteeV2 is
+    SignatureDecoder,
+    OwnableUpgradeable,
+    IVersion,
+    IAggOracleCommitteeV2
+{
     ////////////////////
     // Immutables & Constants
     ////////////////////
@@ -27,14 +31,12 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     /// @notice Version constant
     string public constant VERSION_AGG_ORACLE_COMMITTEE_V2 = "v1.0.0";
 
-    /// @notice Merkle tree depth constant for SMT proofs
-    uint256 internal constant _DEPOSIT_CONTRACT_TREE_DEPTH = 32;
+    /// @notice Maximum number of oracle validators
+    uint256 public constant MAX_VALIDATORS = 255;
 
     /// @notice Global exit root manager L2 - manages the GER tree
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAgglayerGERL2 public immutable agglayerGERL2;
-
-    /// @notice Agglayer Bridge L2 - manages cross-chain asset transfers
-    IAgglayerBridgeL2 public immutable agglayerBridgeL2;
 
     ////////////////////
     // Storage
@@ -43,14 +45,18 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     /// @notice Array of oracle validator addresses
     address[] public validators;
 
-    /// @notice Number of signatures required to inject a GER or LER
+    /// @notice Number of signatures required to inject a GER
     uint256 public threshold;
 
     /// @notice Mapping to track if an address is an authorized oracle validator
     mapping(address => ValidatorInternalInfo) public validatorInfo;
 
-    /// @notice Address authorized to propose GER and LER injections
+    /// @notice Address authorized to propose GER injections
     address public proposer;
+
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain.
+    uint256[46] private __gap;
 
     ////////////////////
     // Modifiers
@@ -73,24 +79,15 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
 
     /**
      * @notice Contract constructor
-     * @dev Disables initializers on the implementation contract following UUPS proxy pattern best practices
+     * @dev Disables initializers on the implementation contract following proxy pattern best practices
      * @param _agglayerGERL2 Address of the Agglayer Global Exit Root manager L2
-     * @param _agglayerBridgeL2 Address of the Agglayer Bridge L2
      */
-    constructor(
-        IAgglayerGERL2 _agglayerGERL2,
-        IAgglayerBridgeL2 _agglayerBridgeL2
-    ) {
+    constructor(IAgglayerGERL2 _agglayerGERL2) {
         if (address(_agglayerGERL2) == address(0)) {
             revert AgglayerGERL2CannotBeZero();
         }
 
-        if (address(_agglayerBridgeL2) == address(0)) {
-            revert AgglayerBridgeL2CannotBeZero();
-        }
-
         agglayerGERL2 = _agglayerGERL2;
-        agglayerBridgeL2 = _agglayerBridgeL2;
         _disableInitializers();
     }
 
@@ -102,9 +99,9 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
      * @notice Initializes the contract with initial configuration
      * @dev Can only be called once due to initializer modifier. Sets up the owner, validators, threshold, and proposer
      * @param _owner Owner of the contract, presumably a multisig for governance
-     * @param _newProposer Address authorized to propose GER/LER injections
+     * @param _newProposer Address authorized to propose GER injections
      * @param _newValidators Initial array of oracle validator addresses
-     * @param _newThreshold Number of signatures required for GER/LER injection
+     * @param _newThreshold Number of signatures required for GER injection
      */
     function initialize(
         address _owner,
@@ -117,10 +114,11 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
             revert OwnerCannotBeZero();
         }
 
-        // Validate proposer is not zero address
-        if (_newProposer == address(0)) {
-            revert ProposerCannotBeZero();
-        }
+        // Initialize ownership
+        __Ownable_init(_owner);
+
+        // Set the proposer, validated in the internal function _updateAggOracleProposer
+        _updateAggOracleProposer(_newProposer);
 
         // threshold and validators are validated in the internal function _updateValidatorsAndThreshold
         _updateValidatorsAndThreshold(
@@ -128,10 +126,6 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
             _newValidators,
             _newThreshold
         );
-
-        // Initialize ownership
-        __Ownable_init(_owner);
-
     }
 
     ////////////////////
@@ -139,8 +133,8 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     ////////////////////
 
     /**
-     * @notice Inject multiple Global Exit Roots (GERs) with signature verification
-     * @dev Each GER must be signed by at least `threshold` number of oracle validators
+     * @notice Inject a Global Exit Root (GER) with signature verification
+     * @dev The GER must be signed by exactly `threshold` oracle validators
      *      Signatures must be ordered by signer address in ascending order to prevent duplicates
      * @param _globalExitRoot The global exit root to inject into the GER manager
      * @param _signatures Concatenated signatures for the global exit root (65 bytes per signature: r+s+v)
@@ -158,39 +152,6 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
         emit GERInjected(_globalExitRoot);
     }
 
-    /**
-     * @notice Inject multiple Local Exit Roots (LERs) with signature verification
-     * @dev Each LER must be signed by at least `threshold` number of oracle validators
-     *      Signatures must be ordered by signer address in ascending order to prevent duplicates
-     * @param _lerInformation Array of LER information containing rollup index, LER, and agglayer params
-     * @param _signatures Array of concatenated signatures for each LER (65 bytes per signature: r+s+v)
-     */
-    function injectLER(
-        LERInformation[] calldata _lerInformation,
-        bytes[] calldata _signatures
-    ) external onlyAggOracleProposer {
-        // Validate input arrays have matching lengths
-        if (_lerInformation.length != _signatures.length) {
-            revert ArrayLengthMismatch();
-        }
-
-        // Process each LER
-        for (uint256 i = 0; i < _lerInformation.length; i++) {
-            LERInformation calldata lerInfo = _lerInformation[i];
-            
-            // Validate the LER
-            _validateLER(lerInfo.rollupIndex, lerInfo.LER, lerInfo.agglayerParams, _signatures[i]);
-
-            // Emit LER injection event
-            // Note: The actual insertion of LER into bridge/GER manager depends on final bridge implementation
-            emit LERInjected(
-                lerInfo.rollupIndex,
-                lerInfo.LER,
-                lerInfo.agglayerParams
-            );
-        }
-    }
-
     ////////////////////
     // Owner Functions
     ////////////////////
@@ -201,13 +162,7 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
      * @param _newProposer New proposer address
      */
     function updateAggOracleProposer(address _newProposer) external onlyOwner {
-        // Validate proposer is not zero address
-        if (_newProposer == address(0)) {
-            revert ProposerCannotBeZero();
-        }
-
-        proposer = _newProposer;
-        emit UpdateAggOracleProposer(_newProposer);
+        _updateAggOracleProposer(_newProposer);
     }
 
     /**
@@ -241,7 +196,19 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
         ValidatorInfo[] memory _validatorsToAdd,
         uint256 _newThreshold
     ) external onlyOwner {
-        _updateValidatorsAndThreshold(_validatorsToRemove, _validatorsToAdd, _newThreshold);
+        _updateValidatorsAndThreshold(
+            _validatorsToRemove,
+            _validatorsToAdd,
+            _newThreshold
+        );
+    }
+
+    /**
+     * @notice Renouncing ownership is disabled
+     * @dev Without an owner, validators, threshold and proposer could never be updated again
+     */
+    function renounceOwnership() public pure override {
+        revert RenounceOwnershipDisabled();
     }
 
     ////////////////////
@@ -249,8 +216,23 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     ////////////////////
 
     /**
+     * @notice Internal function to update the oracle proposer
+     * @dev Validates that the proposer is not the zero address
+     * @param _newProposer New proposer address
+     */
+    function _updateAggOracleProposer(address _newProposer) internal {
+        // Validate proposer is not zero address
+        if (_newProposer == address(0)) {
+            revert ProposerCannotBeZero();
+        }
+
+        proposer = _newProposer;
+        emit UpdateAggOracleProposer(_newProposer);
+    }
+
+    /**
      * @notice Internal function to add an oracle validator
-     * @dev Validates that the address is not zero and not already a validator
+     * @dev Validates that the address is not zero, not this contract and not already a validator
      * @param _newValidator Address of the new validator
      * @param _url URL of the validator
      */
@@ -259,7 +241,12 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
         if (_newValidator == address(0)) {
             revert ValidatorCannotBeZero();
         }
-        
+
+        // Validate address is not this contract
+        if (_newValidator == address(this)) {
+            revert ValidatorCannotBeThisContract();
+        }
+
         // Validate address is not already a validator
         if (validatorInfo[_newValidator].isValidator) {
             revert ValidatorAlreadyExists();
@@ -275,8 +262,8 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     }
 
     /**
-     * @notice Remove an existing oracle validator
-     * @dev Only callable by the contract owner. Uses swap-and-pop pattern for gas-efficient removal
+     * @notice Internal function to remove an existing oracle validator
+     * @dev Uses swap-and-pop pattern for gas-efficient removal
      * @param _oracleValidatorAddress Address of the oracle validator to remove
      * @param _oracleValidatorIndex Index of the validator in the validators array
      */
@@ -306,33 +293,45 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
         validators.pop();
     }
 
-    // internal function to uopdate the threshold
+    /**
+     * @notice Internal function to update the threshold
+     * @dev Same rule as a Safe wallet: 1 <= threshold <= number of validators.
+     *      This also forces at least one validator to exist
+     * @param _newThreshold New threshold value
+     */
     function _updateThreshold(uint256 _newThreshold) internal {
+        // Validate threshold is not zero
+        if (_newThreshold == 0) {
+            revert ThresholdCannotBeZero();
+        }
+
         // Validate threshold doesn't exceed number of validators
         if (_newThreshold > validators.length) {
             revert ThresholdCannotBeGreaterThanValidators();
         }
 
-        // Validate threshold is not zero
-        if (validators.length != 0 && _newThreshold == 0) {
-            revert ThresholdCannotBeZeroIfAnyValidatorExists();
-        }
-
         threshold = _newThreshold;
     }
 
-    // new internal function that updates: Validators (either added or removed) and the threshold
+    /**
+     * @notice Internal function to update validators (added and/or removed) and the threshold
+     * @dev Removes validators first (in descending index order), then adds new validators, then updates the threshold
+     * @param _validatorsToRemove Array of validators to remove with their indices (MUST be in descending index order)
+     * @param _validatorsToAdd Array of new validators to add with their URLs
+     * @param _newThreshold New threshold value
+     */
     function _updateValidatorsAndThreshold(
         RemoveValidatorInfo[] memory _validatorsToRemove,
         ValidatorInfo[] memory _validatorsToAdd,
         uint256 _newThreshold
     ) internal {
         // Validate descending order of indices for removal to avoid index shifting issues
-        // When removing multiple signers, we must process them from highest index to lowest
+        // When removing multiple validators, we must process them from highest index to lowest
         if (_validatorsToRemove.length > 1) {
             for (uint256 i = 0; i < _validatorsToRemove.length - 1; i++) {
                 if (
-                    _validatorsToRemove[i].index <= _validatorsToRemove[i + 1].index
+                    _validatorsToRemove[i].index <=
+                    _validatorsToRemove[i + 1].index
                 ) {
                     revert IndicesNotInDescendingOrder();
                 }
@@ -341,7 +340,10 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
 
         // Remove validators (in descending index order to avoid index shifting issues)
         for (uint256 i = 0; i < _validatorsToRemove.length; i++) {
-            _removeValidator(_validatorsToRemove[i].addr, _validatorsToRemove[i].index);
+            _removeValidator(
+                _validatorsToRemove[i].addr,
+                _validatorsToRemove[i].index
+            );
         }
 
         // Add new validators
@@ -349,12 +351,14 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
             _addValidator(_validatorsToAdd[i].addr, _validatorsToAdd[i].url);
         }
 
+        // Validate the number of validators does not exceed the maximum
+        if (validators.length > MAX_VALIDATORS) {
+            revert TooManyValidators();
+        }
+
         _updateThreshold(_newThreshold);
 
-        emit ValidatorsAndThresholdUpdated(
-            validators,
-            threshold
-        );
+        emit ValidatorsAndThresholdUpdated(validators, threshold);
     }
 
     /**
@@ -392,60 +396,13 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     }
 
     /**
-     * @notice Build message hash for LER verification
-     * @dev Virtual function to allow for different hashing schemes in derived contracts
-     * @param _rollupIndex The rollup index
-     * @param _LER The local exit root
-     * @param _agglayerParams The agglayer parameters
-     * @return The message hash to be signed by oracle validators
-     */
-    function _buildLERMessage(
-        uint32 _rollupIndex,
-        bytes32 _LER,
-        bytes memory _agglayerParams
-    ) internal pure virtual returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                _rollupIndex,
-                _LER,
-                _agglayerParams
-            )
-        );
-    }
-
-    /**
-     * @notice Validate a LER
-     * @dev Validates the LER is not zero and builds the message hash to verify
-     * @param _rollupIndex The rollup index
-     * @param _LER The local exit root
-     * @param _agglayerParams The agglayer parameters
-     * @param _signatures The signatures to verify
-     */
-    function _validateLER(
-        uint32 _rollupIndex,
-        bytes32 _LER,
-        bytes memory _agglayerParams,
-        bytes memory _signatures
-    ) internal view {
-        // Validate LER is not zero
-        if (_LER == bytes32(0)) {
-            revert LERCannotBeZero();
-        }
-
-        // Build the message hash to verify
-        bytes32 messageHash = _buildLERMessage(_rollupIndex, _LER, _agglayerParams);
-
-        // Verify required number of valid signatures
-        _verifySignatures(messageHash, _signatures);
-    }
-
-    /**
      * @notice Verify signatures meet the threshold requirement
      * @notice Heavily based on the Safe multisig implementation: https://github.com/safe-fndn/safe-smart-account/blob/v1.5.0/contracts/Safe.sol#L287
      * @dev Implements signature verification similar to Safe multisig
      *      - Expects tightly packed signatures (r, s, v) where v is 27 or 28
      *      - Requires exactly `threshold` number of signatures
      *      - Signers must be in ascending address order to prevent duplicate signatures
+     *      - ECDSA.recover reverts on invalid signatures and malleable (high-s) signatures
      * @param _messageHash The message hash that was signed
      * @param _signatures Concatenated signatures (65 bytes each: 32 bytes r + 32 bytes s + 1 byte v)
      */
@@ -453,16 +410,19 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
         bytes32 _messageHash,
         bytes memory _signatures
     ) internal view {
-        // Validate minimum signature length (threshold * 65 bytes per signature)
-        if (_signatures.length < threshold * 65) {
-            revert InsufficientSignatures();
+        // cache threshold
+        uint256 currentThreshold = threshold;
+
+        // Validate signatures length is exactly threshold * 65 bytes
+        if (_signatures.length != currentThreshold * 65) {
+            revert InvalidSignaturesLength();
         }
 
         address lastValidator = address(0);
         address currentValidator;
 
         // Verify each required signature
-        for (uint256 i = 0; i < threshold; i++) {
+        for (uint256 i = 0; i < currentThreshold; i++) {
             // Extract signature components (v, r, s)
             (uint8 v, bytes32 r, bytes32 s) = _splitSignature(_signatures, i);
 
@@ -487,21 +447,18 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     // View Functions
     ////////////////////
 
+    /**
+     * @notice Verify a GER with signatures without injecting it
+     * @dev Reverts if the GER or the signatures are not valid
+     * @param _globalExitRoot The GER to verify
+     * @param _signatures The signatures to verify
+     * @return True if the GER is valid
+     */
     function verifyGER(
         bytes32 _globalExitRoot,
         bytes memory _signatures
     ) external view returns (bool) {
         _validateGER(_globalExitRoot, _signatures);
-        return true;
-    }
-
-    function verifyLER(
-        uint32 _rollupIndex,
-        bytes32 _LER,
-        bytes memory _agglayerParams,
-        bytes memory _signatures
-    ) external view returns (bool) {
-        _validateLER(_rollupIndex, _LER, _agglayerParams, _signatures);
         return true;
     }
 
@@ -523,12 +480,18 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
     }
 
     /**
-     * @notice Returns all oracle validator addresses
-     * @dev Returns a memory copy of the entire validators array
-     * @return Array of all oracle validator addresses
+     * @notice Returns all oracle validators with their information
+     * @dev Returns a memory copy of the validators array along with their URLs
+     * @return Array of all oracle validators information
      */
-    function getValidatorsInfo() external view returns (ValidatorInfo[] memory) {
-        ValidatorInfo[] memory validatorInfos = new ValidatorInfo[](validators.length);
+    function getValidatorsInfo()
+        external
+        view
+        returns (ValidatorInfo[] memory)
+    {
+        ValidatorInfo[] memory validatorInfos = new ValidatorInfo[](
+            validators.length
+        );
         for (uint256 i = 0; i < validators.length; i++) {
             validatorInfos[i] = ValidatorInfo({
                 addr: validators[i],
@@ -549,7 +512,6 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
 
     /**
      * @notice Returns the version of the contract
-     * @dev Returns the version of the contract
      * @return The version of the contract
      */
     function version() external pure returns (string memory) {
@@ -558,7 +520,6 @@ contract AggOracleCommitteeV2 is SignatureDecoder, OwnableUpgradeable, IVersion,
 
     /**
      * @notice Returns if an address is a validator
-     * @dev Returns if an address is a validator
      * @param _validator The address to check
      * @return True if the address is a validator
      */
