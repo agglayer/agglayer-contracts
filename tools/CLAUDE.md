@@ -36,7 +36,7 @@ Tools will be documented as they are used. If you use a tool, update this file w
 | `aggLayerGatewayTools/` | AgglayerGateway operations |
 | `createSovereignGenesis/` | Create sovereign chain genesis |
 | `createSovereignGenesisWithHardhat/` | Create sovereign genesis using Hardhat |
-| `compareGenesis/` | Compare genesis files |
+| `auditGenesis/` | Audit a sovereign genesis: compare it against the L2 genesis block, check L2 timelock roles, inspect the timelock adminAddress on L1 (EOA / Safe original setup) and its deployment on L2; writes a markdown report |
 | `upgradePreEtrogGenesis/` | Upgrade pre-Etrog genesis |
 | `changeDelayTimelock/` | Change timelock delay |
 | `batchL2DataCreatedRollup/` | Batch L2 data operations |
