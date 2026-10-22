@@ -6,6 +6,8 @@ import { ethers } from 'ethers';
  * Storage slots & events from https://github.com/safe-global/safe-smart-account
  */
 const SENTINEL_MODULES = '0x0000000000000000000000000000000000000001';
+const MODULES_PAGE_SIZE = 50;
+const MAX_MODULES_PAGES = 100;
 const GUARD_STORAGE_SLOT = ethers.id('guard_manager.guard.address');
 const FALLBACK_HANDLER_STORAGE_SLOT = ethers.id('fallback_manager.handler.address');
 const PROXY_CREATION_TOPIC = ethers.id('ProxyCreation(address,address)');
@@ -64,6 +66,8 @@ export interface SafeCreation {
     initializer?: string;
     saltNonce?: bigint;
     callback?: string;
+    // raw factory calldata of the creation transaction (to replay it on another chain)
+    creationCalldata?: string;
     setupParams?: SafeSetupParams;
     chainSpecific: boolean;
     predictedAddress?: string;
@@ -84,12 +88,49 @@ async function callSafe(
     return safeInterface.decodeFunctionResult(fn, await provider.call({ to: address, data, blockTag }));
 }
 
+// errors meaning the address does not implement the Safe interface (revert or unexpected return data)
+// any other error (timeout, rate limit, server error...) must not be read as "not a Safe"
+function isNotSafeError(e: any) {
+    return ['CALL_EXCEPTION', 'BAD_DATA', 'BUFFER_OVERRUN', 'NUMERIC_FAULT', 'INVALID_ARGUMENT'].some((code) =>
+        ethers.isError(e, code as ethers.ErrorCode),
+    );
+}
+
+/**
+ * Read all the enabled modules of a Safe
+ * The last returned module is used as the next page start: valid for v1.3.0 & v1.4.1 (they differ on `next`)
+ * @param provider provider
+ * @param address Safe address
+ * @param blockTag block tag
+ * @returns enabled modules
+ */
+async function getAllModules(provider: ethers.JsonRpcProvider, address: string, blockTag: ethers.BlockTag) {
+    const modules: string[] = [];
+    let start = SENTINEL_MODULES;
+    for (let page = 0; page < MAX_MODULES_PAGES; page++) {
+        const [pageModules] = await callSafe(
+            provider,
+            address,
+            'getModulesPaginated',
+            [start, MODULES_PAGE_SIZE],
+            blockTag,
+        );
+        modules.push(...pageModules);
+        if (pageModules.length < MODULES_PAGE_SIZE) {
+            return modules;
+        }
+        start = pageModules[pageModules.length - 1];
+    }
+    throw new Error(`more than ${MAX_MODULES_PAGES * MODULES_PAGE_SIZE} modules enabled in ${address}`);
+}
+
 /**
  * Read the Safe configuration of an address
  * @param provider provider
  * @param address address to inspect
  * @param blockTag block tag
  * @returns Safe configuration, or undefined if the address does not behave like a Safe
+ * @throws on RPC errors (timeout, rate limit...): they do not mean the address is not a Safe
  */
 export async function getSafeInfo(
     provider: ethers.JsonRpcProvider,
@@ -101,7 +142,7 @@ export async function getSafeInfo(
         const [owners] = await callSafe(provider, address, 'getOwners', [], blockTag);
         const [threshold] = await callSafe(provider, address, 'getThreshold', [], blockTag);
         const [nonce] = await callSafe(provider, address, 'nonce', [], blockTag);
-        const [modules] = await callSafe(provider, address, 'getModulesPaginated', [SENTINEL_MODULES, 50], blockTag);
+        const modules = await getAllModules(provider, address, blockTag);
         const [singletonSlot, guardSlot, fallbackHandlerSlot] = await Promise.all([
             provider.getStorage(address, 0, blockTag),
             provider.getStorage(address, GUARD_STORAGE_SLOT, blockTag),
@@ -114,12 +155,15 @@ export async function getSafeInfo(
             owners: [...owners],
             threshold,
             nonce,
-            modules: [...modules],
+            modules,
             guard: storageToAddress(guardSlot),
             fallbackHandler: storageToAddress(fallbackHandlerSlot),
         };
     } catch (e) {
-        return undefined;
+        if (isNotSafeError(e)) {
+            return undefined;
+        }
+        throw e;
     }
 }
 
@@ -221,6 +265,7 @@ export async function getSafeCreation(
     }
 
     creation.creationMethod = parsedTx.name;
+    creation.creationCalldata = tx.data;
     creation.initializer = parsedTx.args.initializer;
     creation.saltNonce = parsedTx.args.saltNonce;
     creation.chainSpecific = parsedTx.name === 'createChainSpecificProxyWithNonce';

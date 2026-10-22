@@ -8,6 +8,7 @@ import yargs from 'yargs/yargs';
 import { getSafeCreation, getSafeInfo, SafeInfo } from './safe-inspector';
 import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG, TIMELOCK } from '../../src/constants';
 import { getTimelockRoleMemberSlot, initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
+import safeContracts from '../createSovereignGenesis/safe-contracts.json';
 
 // ======= CONFIGURATION ======= //
 const argv = yargs(process.argv.slice(2))
@@ -30,6 +31,18 @@ const argv = yargs(process.argv.slice(2))
 const BLOCK_TAG = 'earliest'; // Genesis block
 const RPC_TIMEOUT_MS = 15000;
 const EIP7702_DELEGATION_PREFIX = '0xef0100';
+// bytes32(uint256(keccak256('eip1967.proxy.admin')) - 1)
+const EIP1967_ADMIN_SLOT = '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
+// max block range per eth_getLogs request when the RPC rejects the full range
+const LOGS_BLOCK_RANGE = 10000;
+// Safe singletons (implementations) trusted as the code a Safe proxy delegates to: codeHash => name
+const TRUSTED_SAFE_SINGLETONS: Record<string, string> = Object.fromEntries(
+    [...safeContracts['v1.3.0'], ...safeContracts['v1.4.1-3']]
+        .filter((contract) =>
+            ['GnosisSafe', 'GnosisSafeL2', 'Safe', 'SafeL2'].includes(contract.contractName.split(' ').pop()!),
+        )
+        .map((contract) => [contract.codeHash, contract.contractName]),
+);
 const dateStr = new Date().toISOString();
 const pathReport = path.join(__dirname, `audit-genesis-${dateStr}.md`);
 // ============================= //
@@ -71,8 +84,34 @@ interface Check {
 const checks: Check[] = [];
 const report: string[] = [];
 
+// hide RPC API keys & credentials: keep only the scheme and the host
+function maskRpcUrl(url: string) {
+    try {
+        const { protocol, host, pathname, search } = new URL(url);
+        return pathname.length > 1 || search !== '' ? `${protocol}//${host}/***` : `${protocol}//${host}`;
+    } catch (e) {
+        return '***';
+    }
+}
+
+// redact any RPC url (the given ones and any url inside RPC error messages) before logging or storing text
+function redact(text: string) {
+    let redacted = text;
+    [argv['l1-rpc'], argv['l2-rpc']].forEach((url: string) => {
+        redacted = redacted.split(url).join(maskRpcUrl(url));
+    });
+    return redacted.replace(/https?:\/\/[^\s"'<>)]+/g, (url) => maskRpcUrl(url));
+}
+
+// safe error message: ethers short message (no request details) plus the node error, redacted
+function errorMessage(e: any): string {
+    const message = String(e?.shortMessage ?? e?.message ?? e);
+    const nodeMessage = e?.error?.message;
+    return redact(typeof nodeMessage === 'string' ? `${message}: ${nodeMessage}` : message);
+}
+
 function md(line = '') {
-    report.push(line);
+    report.push(redact(line));
 }
 
 // escape a markdown table cell: backslashes first, then the column separator
@@ -95,7 +134,8 @@ const STATUS_COLOR: Record<Status, chalk.Chalk> = {
     INFO: chalk.blue,
 };
 
-function check(section: string, status: Status, message: string) {
+function check(section: string, status: Status, rawMessage: string) {
+    const message = redact(rawMessage);
     checks.push({ section, status, message });
     console.log(STATUS_COLOR[status](`[${status}] ${message}`));
     md(`- ${STATUS_ICON[status]} **${status}**: ${message}`);
@@ -120,19 +160,54 @@ function logComparison(field: string, match: boolean, expected?: string, actual?
     }
 }
 
-// hide RPC API keys & credentials in the report: keep only the scheme and the host
-function maskRpcUrl(url: string) {
-    try {
-        const { protocol, host, pathname, search } = new URL(url);
-        return pathname.length > 1 || search !== '' ? `${protocol}//${host}/***` : `${protocol}//${host}`;
-    } catch (e) {
-        return '***';
-    }
-}
-
 // genesis storage keys may come without the 0x prefix
 function normalizeSlot(slot: string) {
     return slot.startsWith('0x') ? slot : `0x${slot}`;
+}
+
+// genesis storage as { [32 bytes slot]: value }
+function toStorageMap(storage: Record<string, string>) {
+    const map: Record<string, bigint> = {};
+    Object.entries(storage).forEach(([slot, value]) => {
+        map[ethers.toBeHex(BigInt(normalizeSlot(slot)), 32)] = BigInt(normalizeSlot(value));
+    });
+    return map;
+}
+
+function storageValueToAddress(value: bigint | string) {
+    return ethers.getAddress(ethers.dataSlice(ethers.toBeHex(BigInt(value), 32), 12));
+}
+
+/**
+ * eth_getLogs over the whole chain, split in block ranges if the RPC rejects the full range
+ * @param provider provider
+ * @param filter address & topics
+ * @returns all the logs
+ * @throws if any range can not be read: the result would be incomplete
+ */
+async function getAllLogs(provider: ethers.JsonRpcProvider, filter: { address: string; topics: any[] }) {
+    const latest = await provider.getBlockNumber();
+    try {
+        return await provider.getLogs({ ...filter, fromBlock: 0, toBlock: latest });
+    } catch (e) {
+        const logs: ethers.Log[] = [];
+        for (let fromBlock = 0; fromBlock <= latest; fromBlock += LOGS_BLOCK_RANGE) {
+            const toBlock = Math.min(fromBlock + LOGS_BLOCK_RANGE - 1, latest);
+            logs.push(...(await provider.getLogs({ ...filter, fromBlock, toBlock })));
+        }
+        return logs;
+    }
+}
+
+/**
+ * Check the code a Safe proxy delegates to (its singleton) is a trusted Safe implementation
+ * @param provider provider of the chain where the Safe is deployed
+ * @param singleton singleton address read from the Safe proxy storage slot 0
+ * @returns trusted singleton name, or undefined if not trusted
+ */
+async function getTrustedSingletonName(provider: ethers.JsonRpcProvider, singleton: string) {
+    const code = await provider.getCode(singleton);
+    return code === '0x' ? undefined : TRUSTED_SAFE_SINGLETONS[ethers.keccak256(code)];
 }
 
 /**
@@ -154,7 +229,7 @@ async function connect(url: string, label: string): Promise<{ provider: ethers.J
         return { provider, chainId: network.chainId };
     } catch (e: any) {
         provider.destroy();
-        throw new Error(`Cannot connect to ${label} (${maskRpcUrl(url)}): ${e.message}`);
+        throw new Error(`Cannot connect to ${label} (${maskRpcUrl(url)}): ${errorMessage(e)}`);
     } finally {
         clearTimeout(timeout);
     }
@@ -328,6 +403,20 @@ async function auditSafeAdmin(
     if (l1Info.guard !== ethers.ZeroAddress) {
         check(SECTION, 'WARN', `Safe has a guard set on L1 (${l1Info.guard})`);
     }
+    const l1SingletonName = await getTrustedSingletonName(l1Provider, l1Info.singleton);
+    if (l1SingletonName !== undefined) {
+        check(
+            SECTION,
+            'PASS',
+            `L1 singleton ${l1Info.singleton} is a trusted Safe implementation (${l1SingletonName})`,
+        );
+    } else {
+        check(
+            SECTION,
+            'WARN',
+            `L1 singleton ${l1Info.singleton} is NOT a known Safe v1.3.0/v1.4.1 implementation: the reported configuration may not be enforced`,
+        );
+    }
 
     // original setup on L1
     let creation;
@@ -337,7 +426,7 @@ async function auditSafeAdmin(
         check(
             SECTION,
             'WARN',
-            `Could not recover the Safe original setup from L1 (an archive L1 RPC may be needed): ${e.message}`,
+            `Could not recover the Safe original setup from L1 (an archive L1 RPC may be needed): ${errorMessage(e)}`,
         );
     }
 
@@ -426,10 +515,36 @@ async function auditSafeAdmin(
             `Bytecode deployed on L2 at ${adminAddress}${l2Code === l1Code ? ' (same as L1)' : ' (DIFFERENT from L1)'}`,
         );
 
-        const l2Info = await getSafeInfo(l2Provider, adminAddress);
+        let l2Info: SafeInfo | undefined;
+        try {
+            l2Info = await getSafeInfo(l2Provider, adminAddress);
+        } catch (e: any) {
+            check(
+                'Timelock admin Safe on L2',
+                'FAIL',
+                `Could not inspect the Safe on L2 (RPC error): ${errorMessage(e)}`,
+            );
+            return;
+        }
         if (l2Info === undefined) {
             check('Timelock admin Safe on L2', 'FAIL', 'Code deployed on L2 at the admin address is not a Safe');
             return;
+        }
+
+        // the proxy delegates to the singleton in its storage slot 0: only trust its getters if it is a real Safe
+        const l2SingletonName = await getTrustedSingletonName(l2Provider, l2Info.singleton);
+        if (l2SingletonName === undefined) {
+            check(
+                'Timelock admin Safe on L2',
+                'FAIL',
+                `L2 singleton ${l2Info.singleton} is NOT a trusted Safe implementation: the reported owners/threshold can not be trusted`,
+            );
+        } else {
+            check(
+                'Timelock admin Safe on L2',
+                'PASS',
+                `L2 singleton ${l2Info.singleton} is a trusted Safe implementation (${l2SingletonName})`,
+            );
         }
 
         logSafeInfo('Configuration on L2', l2Info);
@@ -463,6 +578,11 @@ async function auditSafeAdmin(
     );
 
     if (creation === undefined || creation.factory === undefined || creation.singleton === undefined) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            'Can NOT verify the Safe can be deployed on L2 at the same address: its creation (factory, singleton) is unknown',
+        );
         return;
     }
 
@@ -471,6 +591,9 @@ async function auditSafeAdmin(
         ['Factory', creation.factory],
         ['Singleton', creation.singleton],
     ];
+    if (creation.callback !== undefined && creation.callback !== ethers.ZeroAddress) {
+        dependencies.push(['Creation callback', creation.callback]);
+    }
     if (creation.setupParams !== undefined) {
         if (creation.setupParams.to !== ethers.ZeroAddress) {
             dependencies.push(['Setup `to` (delegatecall)', creation.setupParams.to]);
@@ -503,18 +626,67 @@ async function auditSafeAdmin(
         return;
     }
 
-    if (
-        allDependenciesOk &&
-        creation.predictedAddress !== undefined &&
-        sameAddress(creation.predictedAddress, adminAddress)
-    ) {
+    if (creation.creationCalldata === undefined) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            'Can NOT verify the Safe can be deployed on L2 at the same address: its creation parameters are unknown',
+        );
+        return;
+    }
+
+    if (!allDependenciesOk) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            'Contracts used by the Safe creation are missing or different on L2 (see table)',
+        );
+    }
+
+    const l2SingletonName = await getTrustedSingletonName(l2Provider, creation.singleton);
+    if (l2SingletonName === undefined) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            `Singleton ${creation.singleton} on L2 is NOT a trusted Safe implementation`,
+        );
+    }
+
+    // simulate the exact original factory call on L2: it covers the callback, the setup delegatecall
+    // (e.g. SafeToL2Setup) and the fallback handler
+    let simulatedAddress: string | undefined;
+    try {
+        const result = await l2Provider.call({ to: creation.factory, data: creation.creationCalldata });
+        if (result === '0x') {
+            throw new Error('the call returns no data, is the factory deployed on L2?');
+        }
+        [simulatedAddress] = ethers.AbiCoder.defaultAbiCoder().decode(['address'], result);
+    } catch (e: any) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            `The Safe can NOT be deployed on L2 at the same address: the original factory call fails on L2 (${errorMessage(e)})`,
+        );
+        return;
+    }
+
+    if (!sameAddress(simulatedAddress, adminAddress)) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            `The original factory call on L2 deploys the Safe at ${simulatedAddress}, NOT at ${adminAddress}`,
+        );
+        return;
+    }
+
+    if (allDependenciesOk && l2SingletonName !== undefined) {
         check(
             'Timelock admin Safe on L2',
             'PASS',
-            'The Safe can be deployed on L2 at the same address by replaying its creation',
+            'Simulated on L2: replaying the original factory call deploys the Safe at the same address',
         );
         md();
-        md('Deploy it on L2 calling the factory with the original parameters:');
+        md('Deploy it on L2 sending the original creation calldata to the factory:');
         md();
         md('```');
         md(`factory:     ${creation.factory}`);
@@ -525,19 +697,8 @@ async function auditSafeAdmin(
             md(`callback:    ${creation.callback}`);
         }
         md(`initializer: ${creation.initializer}`);
+        md(`calldata:    ${creation.creationCalldata}`);
         md('```');
-    } else if (!allDependenciesOk) {
-        check(
-            'Timelock admin Safe on L2',
-            'FAIL',
-            'The Safe can NOT be deployed on L2 at the same address: contracts needed are missing or different on L2',
-        );
-    } else {
-        check(
-            'Timelock admin Safe on L2',
-            'FAIL',
-            'Can NOT verify the Safe can be deployed on L2 at the same address: its creation parameters are unknown',
-        );
     }
 }
 
@@ -588,7 +749,7 @@ async function auditSafeAdmin(
             const res = await compareAddressState(l2Provider, address, accountsMap[address]);
             results.push(res);
         } catch (e: any) {
-            check('Genesis vs L2 genesis block', 'FAIL', `Error checking ${address}: ${e.message}`);
+            check('Genesis vs L2 genesis block', 'FAIL', `Error checking ${address}: ${errorMessage(e)}`);
         }
     }
 
@@ -655,13 +816,6 @@ async function auditSafeAdmin(
         if (timelockGenesis === undefined) {
             check(TIMELOCK_SECTION, 'FAIL', `Timelock ${timelockAddress} not found in the genesis file`);
         }
-        const toStorageMap = (storage: Record<string, string>) => {
-            const map: Record<string, bigint> = {};
-            Object.entries(storage).forEach(([slot, value]) => {
-                map[ethers.toBeHex(BigInt(normalizeSlot(slot)), 32)] = BigInt(normalizeSlot(value));
-            });
-            return map;
-        };
         const genesisStorage = toStorageMap(timelockGenesis?.storage ?? {});
         const expectedStorage = toStorageMap(initializeTimelockStorage(minDelay, adminAddress, timelockAddress));
         const storageValue = (slot: string) => genesisStorage[ethers.toBeHex(BigInt(slot), 32)] ?? 0n;
@@ -733,7 +887,7 @@ async function auditSafeAdmin(
             const [l2MinDelay] = await contractCall(l2Provider, timelockInterface, timelockAddress, 'getMinDelay');
             check(TIMELOCK_SECTION, 'INFO', `L2 timelock current minDelay: ${l2MinDelay} seconds`);
         } catch (e: any) {
-            check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 timelock: ${e.message}`);
+            check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 timelock: ${errorMessage(e)}`);
         }
 
         // roles granted/revoked on L2 after the genesis
@@ -744,11 +898,9 @@ async function auditSafeAdmin(
             });
             const grantedTopic = roleEventsInterface.getEvent('RoleGranted')!.topicHash;
             const revokedTopic = roleEventsInterface.getEvent('RoleRevoked')!.topicHash;
-            const logs = await l2Provider.getLogs({
+            const logs = await getAllLogs(l2Provider, {
                 address: timelockAddress,
                 topics: [[grantedTopic, revokedTopic]],
-                fromBlock: 0,
-                toBlock: 'latest',
             });
 
             // genesis role members, then apply the events in order
@@ -796,7 +948,11 @@ async function auditSafeAdmin(
                 );
             }
         } catch (e: any) {
-            check(TIMELOCK_SECTION, 'WARN', `Could not scan the L2 timelock role events: ${e.message}`);
+            check(
+                TIMELOCK_SECTION,
+                'FAIL',
+                `Could not scan the complete L2 timelock role history, roles granted to other addresses can not be ruled out: ${errorMessage(e)}`,
+            );
         }
 
         if (!ethers.isAddress(proxyAdminAddress)) {
@@ -815,7 +971,60 @@ async function auditSafeAdmin(
                     `L2 ProxyAdmin (${proxyAdminAddress}) owner is ${ok ? 'the timelock' : `NOT the timelock (${owner})`}`,
                 );
             } catch (e: any) {
-                check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 ProxyAdmin owner: ${e.message}`);
+                check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 ProxyAdmin owner: ${errorMessage(e)}`);
+            }
+
+            // every proxy must be administered by the ProxyAdmin (EIP-1967 admin slot), in genesis & on L2
+            const proxies = new Map<string, string>();
+            Object.entries(accountsMap).forEach(([address, account]) => {
+                if ((toStorageMap(account.storage ?? {})[EIP1967_ADMIN_SLOT] ?? 0n) !== 0n) {
+                    proxies.set(address.toLowerCase(), namesByAddress[address.toLowerCase()] ?? '');
+                }
+            });
+            Object.entries(genesisOutput.genesisSCNames ?? {}).forEach(([name, address]) => {
+                if (name.toLowerCase().endsWith(' proxy')) {
+                    proxies.set((address as string).toLowerCase(), name);
+                }
+            });
+
+            if (proxies.size === 0) {
+                check(TIMELOCK_SECTION, 'FAIL', 'No upgradeable proxies found in the genesis');
+            } else {
+                try {
+                    const rows: string[][] = [];
+                    const wrongProxies: string[] = [];
+                    for (const [address, name] of proxies) {
+                        const genesisValue =
+                            toStorageMap(genesisAccount(address)?.storage ?? {})[EIP1967_ADMIN_SLOT] ?? 0n;
+                        const l2Value = await l2Provider.getStorage(address, EIP1967_ADMIN_SLOT);
+                        const genesisAdmin = storageValueToAddress(genesisValue);
+                        const l2Admin = storageValueToAddress(l2Value);
+                        const ok =
+                            sameAddress(genesisAdmin, proxyAdminAddress) && sameAddress(l2Admin, proxyAdminAddress);
+                        if (!ok) {
+                            wrongProxies.push(`${name || address}`);
+                        }
+                        rows.push([name, ethers.getAddress(address), genesisAdmin, l2Admin, ok ? 'OK' : '**WRONG**']);
+                    }
+                    md('### Upgradeable proxies');
+                    md();
+                    mdTable(['Proxy', 'Address', 'Genesis admin', 'L2 admin', 'Status'], rows);
+                    if (wrongProxies.length === 0) {
+                        check(
+                            TIMELOCK_SECTION,
+                            'PASS',
+                            `All ${proxies.size} upgradeable proxies are administered by the ProxyAdmin (genesis & L2)`,
+                        );
+                    } else {
+                        check(
+                            TIMELOCK_SECTION,
+                            'FAIL',
+                            `Proxies NOT administered by the ProxyAdmin (genesis or L2): ${wrongProxies.join(', ')}`,
+                        );
+                    }
+                } catch (e: any) {
+                    check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 proxies admin: ${errorMessage(e)}`);
+                }
             }
         }
 
@@ -857,8 +1066,16 @@ async function auditSafeAdmin(
                 `adminAddress is an EOA with an EIP-7702 delegation on L1 (to ${ethers.getAddress(ethers.dataSlice(l1Code, 3))}): delegations are per chain, double check it`,
             );
         } else {
-            const l1Info = await getSafeInfo(l1Provider, adminAddress);
-            if (l1Info === undefined) {
+            let l1Info: SafeInfo | undefined;
+            let l1InfoError: string | undefined;
+            try {
+                l1Info = await getSafeInfo(l1Provider, adminAddress);
+            } catch (e: any) {
+                l1InfoError = errorMessage(e);
+            }
+            if (l1InfoError !== undefined) {
+                check(ADMIN_SECTION, 'FAIL', `Could not inspect adminAddress on L1 (RPC error): ${l1InfoError}`);
+            } else if (l1Info === undefined) {
                 const l2AdminCode = await l2Provider.getCode(adminAddress);
                 check(
                     ADMIN_SECTION,
@@ -917,6 +1134,6 @@ async function auditSafeAdmin(
 
     process.exit(failed ? 1 : 0);
 })().catch((e) => {
-    console.error(chalk.bgRed.white(e.message));
+    console.error(chalk.bgRed.white(errorMessage(e)));
     process.exit(1);
 });
