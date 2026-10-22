@@ -3,7 +3,9 @@
 `audit-genesis.ts` audits a sovereign chain genesis:
 
 1. Checks the L2 genesis block matches the `genesis.json` file (nonce, balance, bytecode and storage of every account).
-2. Checks the L2 timelock gives all its roles to the `timelockParameters.adminAddress`, and that the timelock owns the L2 `ProxyAdmin`. The ProxyAdmin is the only way to upgrade the L2 contracts.
+2. Checks the L2 timelock gives all its roles to the `timelockParameters.adminAddress` **and to nobody else**, and that the timelock owns the L2 `ProxyAdmin`. The ProxyAdmin is the only way to upgrade the L2 contracts.
+   - The genesis timelock storage must be exactly the one written by `createSovereignGenesis` (all roles to `adminAddress`, `TIMELOCK_ADMIN_ROLE` also to the timelock itself, `minDelay`). Any other slot fails the audit, and role members are identified when they are known addresses (genesis accounts, Polygon multisig).
+   - On the live L2, `adminAddress` must hold every role, and the timelock `RoleGranted`/`RoleRevoked` events are replayed to catch roles granted to other addresses after the genesis.
 3. Inspects the `adminAddress` on L1 to check that it can control the L2 timelock:
    - **EOA**: make sure you control its private key. An address with no code and no transactions on L1 can not be confirmed as an EOA. EIP-7702 delegated EOAs are flagged.
    - **Safe**: prints its current L1 configuration and its **original setup** (threshold + owners from the `SafeSetup` event). Then it checks whether the Safe bytecode is deployed on the L2:
@@ -49,10 +51,10 @@ Each check is reported as:
 
 - `PASS`: check succeeded.
 - `WARN`: needs a manual review, e.g. a Safe not deployed on L2 yet, or L1 owners that changed since the Safe creation.
-- `FAIL`: the genesis is wrong or the timelock admin can not be verified, e.g. a genesis mismatch, a missing timelock role, the Polygon multisig set as admin, or a Safe that can not be deployed at the same address on L2.
+- `FAIL`: the genesis is wrong or the timelock admin can not be verified, e.g. a genesis mismatch, a missing or extra timelock role, a missing ProxyAdmin, the Polygon multisig set as admin, or a Safe that can not be deployed at the same address on L2.
 - `INFO`: informational only.
 
-API keys in RPC urls (`/v3/<key>`, `/v2/<key>`, query strings) are masked in the report.
+RPC urls are shown in the report and in errors as scheme + host only (`https://mainnet.infura.io/***`), so API keys in the path, query string or credentials are never written.
 
 ## Exit Codes
 

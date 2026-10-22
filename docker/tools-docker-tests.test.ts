@@ -5,8 +5,8 @@ import path from 'path';
 import shelljs from 'shelljs';
 import { ConsensusContracts } from '../src/pessimistic-utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../src/utils-common-aggchain';
-import { GENESIS_CONTRACT_NAMES } from '../src/constants';
-import { initializeTimelockStorage } from '../src/genesis/genesis-helpers';
+import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG, TIMELOCK } from '../src/constants';
+import { getTimelockRoleMemberSlot, initializeTimelockStorage } from '../src/genesis/genesis-helpers';
 import safeContracts from '../tools/createSovereignGenesis/safe-contracts.json';
 
 import {
@@ -259,8 +259,6 @@ describe('Tooling docker build tests Contract', () => {
         const outputFile = 'output-rollupID-docker-test.json';
         const pathOutputGenesis = path.join(toolDir, outputGenesisFile);
         const pathOutput = path.join(toolDir, outputFile);
-        const polygonMultisig = '0x242daE44F5d8fb54B198D03a94dA45B5a4413e21';
-        const timelockRoles = ['TIMELOCK_ADMIN_ROLE', 'PROPOSER_ROLE', 'EXECUTOR_ROLE', 'CANCELLER_ROLE'];
         const backups = {} as { [filePath: string]: string };
         let genesisParams: any;
 
@@ -273,12 +271,6 @@ describe('Tooling docker build tests Contract', () => {
                 'npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --network localhost',
                 { silent: true },
             );
-        }
-
-        // storage slot of `account` in the `_roles[role].members` mapping (OZ v4.8.2 AccessControl, slot 0)
-        function timelockRoleMemberSlot(role: string, account: string) {
-            const roleSlot = ethers.solidityPackedKeccak256(['uint256', 'uint256'], [ethers.id(role), 0]);
-            return ethers.solidityPackedKeccak256(['uint256', 'uint256'], [account, roleSlot]);
         }
 
         before(() => {
@@ -356,9 +348,9 @@ describe('Tooling docker build tests Contract', () => {
             const timelockStorage = accounts[timelockAddress.toLowerCase()].storage;
 
             expect(timelockStorage).to.deep.equal(initializeTimelockStorage(minDelay, adminAddress, timelockAddress));
-            timelockRoles.forEach((role) => {
-                expect(BigInt(timelockStorage[timelockRoleMemberSlot(role, adminAddress)])).to.equal(1n);
-                expect(timelockStorage[timelockRoleMemberSlot(role, polygonMultisig)]).to.equal(undefined);
+            Object.values(TIMELOCK.ROLES).forEach((roleHash) => {
+                expect(BigInt(timelockStorage[getTimelockRoleMemberSlot(roleHash, adminAddress)])).to.equal(1n);
+                expect(timelockStorage[getTimelockRoleMemberSlot(roleHash, POLYGON_MULTISIG)]).to.equal(undefined);
             });
             expect(BigInt(timelockStorage[ethers.toBeHex(2, 32)])).to.equal(BigInt(minDelay));
             expect(output.timelockParameters).to.deep.equal(genesisParams.timelockParameters);
@@ -396,13 +388,28 @@ describe('Tooling docker build tests Contract', () => {
                 timelockParameters: {
                     ...genesisParams.timelockParameters,
                     // check is case insensitive
-                    adminAddress: polygonMultisig.toLowerCase(),
+                    adminAddress: POLYGON_MULTISIG.toLowerCase(),
                 },
             });
             expect(out.code).to.not.equal(0);
             expect(`${out.stdout}${out.stderr}`).to.include(
-                `timelockParameters.adminAddress must not be the Polygon multisig (${polygonMultisig})`,
+                `timelockParameters.adminAddress must not be the Polygon multisig (${POLYGON_MULTISIG})`,
             );
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
+
+        it('Check tool create genesis file fails if the timelock admin is not a valid address', async () => {
+            const out = runTool({
+                ...genesisParams,
+                timelockParameters: {
+                    ...genesisParams.timelockParameters,
+                    // one character missing
+                    adminAddress: genesisParams.timelockParameters.adminAddress.slice(0, -1),
+                },
+            });
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include('Invalid parameter address: adminAddress');
             expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
             expect(fs.existsSync(pathOutput)).to.equal(false);
         });

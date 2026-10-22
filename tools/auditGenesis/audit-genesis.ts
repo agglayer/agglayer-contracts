@@ -6,6 +6,8 @@ import { ethers } from 'ethers';
 import chalk from 'chalk';
 import yargs from 'yargs/yargs';
 import { getSafeCreation, getSafeInfo, SafeInfo } from './safe-inspector';
+import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG, TIMELOCK } from '../../src/constants';
+import { getTimelockRoleMemberSlot, initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
 
 // ======= CONFIGURATION ======= //
 const argv = yargs(process.argv.slice(2))
@@ -27,11 +29,6 @@ const argv = yargs(process.argv.slice(2))
 
 const BLOCK_TAG = 'earliest'; // Genesis block
 const RPC_TIMEOUT_MS = 15000;
-const POLYGON_MULTISIG = '0x242daE44F5d8fb54B198D03a94dA45B5a4413e21';
-const TIMELOCK_CONTRACT_NAME = 'PolygonZkEVMTimelock';
-const PROXY_ADMIN_CONTRACT_NAME = 'ProxyAdmin';
-const TIMELOCK_ROLES = ['TIMELOCK_ADMIN_ROLE', 'PROPOSER_ROLE', 'EXECUTOR_ROLE', 'CANCELLER_ROLE'];
-const TIMELOCK_MIN_DELAY_SLOT = ethers.toBeHex(2, 32);
 const EIP7702_DELEGATION_PREFIX = '0xef0100';
 const dateStr = new Date().toISOString();
 const pathReport = path.join(__dirname, `audit-genesis-${dateStr}.md`);
@@ -42,6 +39,10 @@ const timelockInterface = new ethers.Interface([
     'function getMinDelay() view returns (uint256)',
 ]);
 const ownableInterface = new ethers.Interface(['function owner() view returns (address)']);
+const roleEventsInterface = new ethers.Interface([
+    'event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)',
+    'event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)',
+]);
 
 interface GenesisAccount {
     balance?: string;
@@ -74,10 +75,15 @@ function md(line = '') {
     report.push(line);
 }
 
+// escape a markdown table cell: backslashes first, then the column separator
+function escapeMdCell(cell: string | number | bigint) {
+    return String(cell).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+}
+
 function mdTable(headers: string[], rows: (string | number | bigint)[][]) {
     md(`| ${headers.join(' | ')} |`);
     md(`| ${headers.map(() => '---').join(' | ')} |`);
-    rows.forEach((row) => md(`| ${row.map((cell) => String(cell).replace(/\|/g, '\\|')).join(' | ')} |`));
+    rows.forEach((row) => md(`| ${row.map(escapeMdCell).join(' | ')} |`));
     md();
 }
 
@@ -114,9 +120,19 @@ function logComparison(field: string, match: boolean, expected?: string, actual?
     }
 }
 
-// hide RPC API keys in the report (e.g. infura `/v3/<key>`, alchemy `/v2/<key>`, `?apikey=<key>`)
+// hide RPC API keys & credentials in the report: keep only the scheme and the host
 function maskRpcUrl(url: string) {
-    return url.replace(/\/(v\d+)\/[^/?]+/, '/$1/***').replace(/\?.*$/, '?***');
+    try {
+        const { protocol, host, pathname, search } = new URL(url);
+        return pathname.length > 1 || search !== '' ? `${protocol}//${host}/***` : `${protocol}//${host}`;
+    } catch (e) {
+        return '***';
+    }
+}
+
+// genesis storage keys may come without the 0x prefix
+function normalizeSlot(slot: string) {
+    return slot.startsWith('0x') ? slot : `0x${slot}`;
 }
 
 /**
@@ -187,8 +203,7 @@ async function compareAddressState(
     // Compare storage
     const storage = expected.storage || {};
     for (const [slot, expectedValue] of Object.entries(storage)) {
-        const normalizedSlot = slot.startsWith('0x') ? slot : `0x${slot}`;
-        const actual = await provider.getStorage(address, normalizedSlot, BLOCK_TAG);
+        const actual = await provider.getStorage(address, normalizeSlot(slot), BLOCK_TAG);
 
         if (BigInt(actual) !== BigInt(expectedValue)) {
             result.storage_mismatches.push({ slot, expected: expectedValue, actual });
@@ -240,12 +255,6 @@ function getAccountsMap(raw: any): Record<string, GenesisAccount> {
     }
 
     return accountsMap;
-}
-
-// storage slot of `account` in the `_roles[role].members` mapping (OZ v4.8.2 AccessControl, slot 0)
-function timelockRoleMemberSlot(role: string, account: string) {
-    const roleSlot = ethers.solidityPackedKeccak256(['uint256', 'uint256'], [ethers.id(role), 0]);
-    return ethers.solidityPackedKeccak256(['uint256', 'uint256'], [account, roleSlot]);
 }
 
 async function contractCall(
@@ -618,8 +627,8 @@ async function auditSafeAdmin(
     startSection(TIMELOCK_SECTION);
     const adminAddress = genesisOutput.timelockParameters?.adminAddress;
     const minDelay = genesisOutput.timelockParameters?.minDelay;
-    const timelockAddress = genesisOutput.genesisSCNames?.[TIMELOCK_CONTRACT_NAME];
-    const proxyAdminAddress = genesisOutput.genesisSCNames?.[PROXY_ADMIN_CONTRACT_NAME];
+    const timelockAddress = genesisOutput.genesisSCNames?.[GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK];
+    const proxyAdminAddress = genesisOutput.genesisSCNames?.[GENESIS_CONTRACT_NAMES.PROXY_ADMIN];
 
     if (!ethers.isAddress(adminAddress) || minDelay === undefined || !ethers.isAddress(timelockAddress)) {
         check(
@@ -641,40 +650,84 @@ async function auditSafeAdmin(
             check(TIMELOCK_SECTION, 'FAIL', `adminAddress is the Polygon multisig (${POLYGON_MULTISIG})`);
         }
 
-        // genesis file storage
+        // genesis file storage: must be exactly the storage written by createSovereignGenesis
         const timelockGenesis = genesisAccount(timelockAddress);
-        const timelockStorage = timelockGenesis?.storage ?? {};
-        const storageValue = (slot: string) => {
-            const entry = Object.entries(timelockStorage).find(([key]) => BigInt(key) === BigInt(slot));
-            return entry === undefined ? 0n : BigInt(entry[1]);
+        if (timelockGenesis === undefined) {
+            check(TIMELOCK_SECTION, 'FAIL', `Timelock ${timelockAddress} not found in the genesis file`);
+        }
+        const toStorageMap = (storage: Record<string, string>) => {
+            const map: Record<string, bigint> = {};
+            Object.entries(storage).forEach(([slot, value]) => {
+                map[ethers.toBeHex(BigInt(normalizeSlot(slot)), 32)] = BigInt(normalizeSlot(value));
+            });
+            return map;
         };
+        const genesisStorage = toStorageMap(timelockGenesis?.storage ?? {});
+        const expectedStorage = toStorageMap(initializeTimelockStorage(minDelay, adminAddress, timelockAddress));
+        const storageValue = (slot: string) => genesisStorage[ethers.toBeHex(BigInt(slot), 32)] ?? 0n;
 
-        const genesisRolesOk = TIMELOCK_ROLES.every(
-            (role) => storageValue(timelockRoleMemberSlot(role, adminAddress)) === 1n,
+        const genesisRolesOk = Object.values(TIMELOCK.ROLES).every(
+            (roleHash) => storageValue(getTimelockRoleMemberSlot(roleHash, adminAddress)) === 1n,
         );
         check(
             TIMELOCK_SECTION,
             genesisRolesOk ? 'PASS' : 'FAIL',
-            `Genesis timelock storage grants ${genesisRolesOk ? '' : 'NOT '}all roles (${TIMELOCK_ROLES.join(', ')}) to adminAddress`,
+            `Genesis timelock storage grants ${genesisRolesOk ? '' : 'NOT '}all roles (${Object.keys(TIMELOCK.ROLES).join(', ')}) to adminAddress`,
         );
-        const genesisMinDelayOk = storageValue(TIMELOCK_MIN_DELAY_SLOT) === BigInt(minDelay);
+        const genesisMinDelayOk = storageValue(ethers.toBeHex(TIMELOCK.MINDELAY_STORAGE_POS, 32)) === BigInt(minDelay);
         check(
             TIMELOCK_SECTION,
             genesisMinDelayOk ? 'PASS' : 'FAIL',
             `Genesis timelock minDelay ${genesisMinDelayOk ? 'is' : 'is NOT'} ${minDelay}`,
         );
 
+        // no other role member or unexpected storage: identify role members among known addresses
+        const roleMemberLabels: Record<string, string> = {};
+        [...Object.keys(accountsMap), POLYGON_MULTISIG].forEach((account) => {
+            Object.entries(TIMELOCK.ROLES).forEach(([roleName, roleHash]) => {
+                const label = `${roleName} member: ${ethers.getAddress(account)}`;
+                roleMemberLabels[ethers.toBeHex(BigInt(getTimelockRoleMemberSlot(roleHash, account)), 32)] = label;
+            });
+        });
+        const storageDiffs: string[][] = [];
+        new Set([...Object.keys(expectedStorage), ...Object.keys(genesisStorage)]).forEach((slot) => {
+            const expectedValue = expectedStorage[slot] ?? 0n;
+            const genesisValue = genesisStorage[slot] ?? 0n;
+            if (expectedValue !== genesisValue) {
+                storageDiffs.push([
+                    slot,
+                    roleMemberLabels[slot] ?? 'unknown',
+                    ethers.toBeHex(expectedValue, 32),
+                    ethers.toBeHex(genesisValue, 32),
+                ]);
+            }
+        });
+        if (storageDiffs.length === 0) {
+            check(
+                TIMELOCK_SECTION,
+                'PASS',
+                'Genesis timelock storage is exactly the expected one: roles granted only to adminAddress (and TIMELOCK_ADMIN_ROLE to the timelock itself)',
+            );
+        } else {
+            check(
+                TIMELOCK_SECTION,
+                'FAIL',
+                `Genesis timelock storage differs from the expected one in ${storageDiffs.length} slot(s): other addresses may hold timelock roles`,
+            );
+            mdTable(['Slot', 'Meaning', 'Expected', 'Genesis'], storageDiffs);
+        }
+
         // current L2 state
         try {
-            for (const role of TIMELOCK_ROLES) {
+            for (const [roleName, roleHash] of Object.entries(TIMELOCK.ROLES)) {
                 const [hasRole] = await contractCall(l2Provider, timelockInterface, timelockAddress, 'hasRole', [
-                    ethers.id(role),
+                    roleHash,
                     adminAddress,
                 ]);
                 check(
                     TIMELOCK_SECTION,
                     hasRole ? 'PASS' : 'FAIL',
-                    `L2 timelock: adminAddress ${hasRole ? 'has' : 'does NOT have'} ${role}`,
+                    `L2 timelock: adminAddress ${hasRole ? 'has' : 'does NOT have'} ${roleName}`,
                 );
             }
             const [l2MinDelay] = await contractCall(l2Provider, timelockInterface, timelockAddress, 'getMinDelay');
@@ -683,7 +736,76 @@ async function auditSafeAdmin(
             check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 timelock: ${e.message}`);
         }
 
-        if (ethers.isAddress(proxyAdminAddress)) {
+        // roles granted/revoked on L2 after the genesis
+        try {
+            const roleNames: Record<string, string> = {};
+            Object.entries(TIMELOCK.ROLES).forEach(([roleName, roleHash]) => {
+                roleNames[roleHash] = roleName;
+            });
+            const grantedTopic = roleEventsInterface.getEvent('RoleGranted')!.topicHash;
+            const revokedTopic = roleEventsInterface.getEvent('RoleRevoked')!.topicHash;
+            const logs = await l2Provider.getLogs({
+                address: timelockAddress,
+                topics: [[grantedTopic, revokedTopic]],
+                fromBlock: 0,
+                toBlock: 'latest',
+            });
+
+            // genesis role members, then apply the events in order
+            const members = new Map<string, Set<string>>();
+            Object.values(TIMELOCK.ROLES).forEach((roleHash) => {
+                members.set(roleHash, new Set([adminAddress.toLowerCase()]));
+            });
+            members.get(TIMELOCK.ROLES.TIMELOCK_ADMIN_ROLE)!.add(timelockAddress.toLowerCase());
+            for (const log of logs) {
+                const event = roleEventsInterface.parseLog(log)!;
+                const roleHash = event.args.role as string;
+                if (!members.has(roleHash)) {
+                    members.set(roleHash, new Set());
+                }
+                if (event.name === 'RoleGranted') {
+                    members.get(roleHash)!.add(event.args.account.toLowerCase());
+                } else {
+                    members.get(roleHash)!.delete(event.args.account.toLowerCase());
+                }
+            }
+
+            const unexpectedMembers: string[] = [];
+            members.forEach((accounts, roleHash) => {
+                accounts.forEach((account) => {
+                    const expected =
+                        account === adminAddress.toLowerCase() ||
+                        (roleHash === TIMELOCK.ROLES.TIMELOCK_ADMIN_ROLE && account === timelockAddress.toLowerCase());
+                    if (!expected) {
+                        unexpectedMembers.push(`${roleNames[roleHash] ?? roleHash}: ${ethers.getAddress(account)}`);
+                    }
+                });
+            });
+
+            if (unexpectedMembers.length === 0) {
+                check(
+                    TIMELOCK_SECTION,
+                    'PASS',
+                    `L2 timelock: no roles granted to other addresses after the genesis (${logs.length} role events)`,
+                );
+            } else {
+                check(
+                    TIMELOCK_SECTION,
+                    'FAIL',
+                    `L2 timelock: roles granted to other addresses after the genesis: ${unexpectedMembers.join(', ')}`,
+                );
+            }
+        } catch (e: any) {
+            check(TIMELOCK_SECTION, 'WARN', `Could not scan the L2 timelock role events: ${e.message}`);
+        }
+
+        if (!ethers.isAddress(proxyAdminAddress)) {
+            check(
+                TIMELOCK_SECTION,
+                'FAIL',
+                `Genesis output has no ${GENESIS_CONTRACT_NAMES.PROXY_ADMIN} address: the ProxyAdmin owner can not be checked`,
+            );
+        } else {
             try {
                 const [owner] = await contractCall(l2Provider, ownableInterface, proxyAdminAddress, 'owner');
                 const ok = sameAddress(owner, timelockAddress);
@@ -776,9 +898,7 @@ async function auditSafeAdmin(
     if (problems.length > 0) {
         summary.push('| Status | Section | Check |', '| --- | --- | --- |');
         problems.forEach((c) =>
-            summary.push(
-                `| ${STATUS_ICON[c.status]} ${c.status} | ${c.section} | ${c.message.replace(/\|/g, '\\|')} |`,
-            ),
+            summary.push(`| ${STATUS_ICON[c.status]} ${c.status} | ${c.section} | ${escapeMdCell(c.message)} |`),
         );
         summary.push('');
     }
