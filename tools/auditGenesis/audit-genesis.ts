@@ -44,6 +44,12 @@ const TRUSTED_SAFE_PROXIES: Record<string, string> = {
 // only setup delegatecall supported: SafeToL2Setup.setupToL2(l2Singleton) switches the singleton on L2 chains
 const SAFE_TO_L2_SETUP = safeContracts['v1.4.1-3'].find((contract) => contract.contractName.endsWith('SafeToL2Setup'))!;
 const safeToL2SetupInterface = new ethers.Interface(['function setupToL2(address l2Singleton)']);
+// official Safe proxy factories trusted to replay a Safe creation on L2: codeHash => name
+const TRUSTED_SAFE_FACTORIES: Record<string, string> = Object.fromEntries(
+    [...safeContracts['v1.3.0'], ...safeContracts['v1.4.1-3']]
+        .filter((contract) => contract.contractName.endsWith('ProxyFactory'))
+        .map((contract) => [contract.codeHash, contract.contractName]),
+);
 // Safe singletons (implementations) trusted as the code a Safe proxy delegates to: codeHash => name
 const TRUSTED_SAFE_SINGLETONS: Record<string, string> = Object.fromEntries(
     [...safeContracts['v1.3.0'], ...safeContracts['v1.4.1-3']]
@@ -730,8 +736,31 @@ async function auditSafeAdmin(
         );
     }
 
-    // simulate the exact original factory call on L2: it covers the callback, the setup delegatecall
-    // (e.g. SafeToL2Setup) and the fallback handler
+    // a creation callback runs arbitrary code on the new Safe after its setup: its result can not be verified
+    if (creation.callback !== undefined && creation.callback !== ethers.ZeroAddress) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            `The Safe was created with a callback (${creation.callback}) that can change it after setup: the resulting Safe can not be verified`,
+        );
+        return;
+    }
+
+    // only an official Safe factory is trusted to really deploy the Safe at the address it returns
+    const l2FactoryCode = await l2Provider.getCode(creation.factory);
+    const l2FactoryName = l2FactoryCode === '0x' ? undefined : TRUSTED_SAFE_FACTORIES[ethers.keccak256(l2FactoryCode)];
+    if (l2FactoryName === undefined) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            `Factory ${creation.factory} on L2 is missing or NOT an official Safe proxy factory: its simulation can not be trusted`,
+        );
+        return;
+    }
+    check('Timelock admin Safe on L2', 'PASS', `Factory ${creation.factory} on L2 is an official ${l2FactoryName}`);
+
+    // simulate the exact original factory call on L2: it covers the setup delegatecall (e.g. SafeToL2Setup)
+    // and the fallback handler
     let simulatedAddress: string | undefined;
     try {
         const result = await l2Provider.call({ to: creation.factory, data: creation.creationCalldata });
@@ -820,6 +849,20 @@ async function auditSafeAdmin(
 
     // 2) Compare genesis vs L2 genesis block
     startSection('Genesis vs L2 genesis block');
+
+    // the L2 node must run the chain the genesis was created for
+    const expectedChainId = genesisOutput.chainID;
+    if (expectedChainId === undefined || expectedChainId === null || expectedChainId === '') {
+        check('Genesis vs L2 genesis block', 'FAIL', 'Genesis output has no chainID: the L2 chain can not be verified');
+    } else if (BigInt(expectedChainId) !== l2ChainId) {
+        check(
+            'Genesis vs L2 genesis block',
+            'FAIL',
+            `L2 chainId ${l2ChainId} is NOT the genesis chainID ${expectedChainId}: wrong chain`,
+        );
+    } else {
+        check('Genesis vs L2 genesis block', 'PASS', `L2 chainId ${l2ChainId} is the genesis chainID`);
+    }
     const results: CompareResult[] = [];
     for (const address of addresses) {
         console.log(chalk.blue.bold(`\n=== Checking ${address} ===`));
