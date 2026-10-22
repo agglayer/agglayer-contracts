@@ -12,6 +12,7 @@
    - **EOA**: make sure you control its private key. Only a nonce >= 2 proves an EOA (an account without code can only increase its nonce by signing transactions); with nonce 0 or 1 it can not be confirmed (a contract created with empty code also has nonce 1) and it is a warning. EIP-7702 delegated EOAs are flagged.
    - **Safe**: the code at `adminAddress` must be an official Safe proxy (v1.3.0 `GnosisSafeProxy` or v1.4.1 `SafeProxy`), otherwise it is reported as a contract for manual review. Prints its current L1 configuration (all enabled modules included) and its **original setup** (threshold + owners from the `SafeSetup` event). The Safe singleton (the code the proxy delegates to) must be a trusted Safe v1.3.0/v1.4.1 implementation. Then it checks whether the Safe is deployed on the L2:
      - if deployed: the L2 code must be an official Safe proxy and its L2 singleton a trusted Safe implementation (otherwise its owners/threshold can not be trusted), and it prints its L2 configuration (threshold, owners, modules, guard).
+     - the owners must be able to sign on L2 (the L2 Safe owners, or the original owners for a Safe not deployed yet): an owner without code holds a key; a contract owner (e.g. another Safe) can only sign where it is deployed. If fewer owners than the threshold can sign on L2 the audit fails; contract owners are reported for manual review.
      - if not deployed: recovers its creation parameters (factory, singleton, initializer, saltNonce) and **simulates the exact original factory call on L2** (`eth_call`): it must succeed and return the Safe address. The factory must be an official Safe proxy factory (v1.3.0 or v1.4.1) on L2. The setup delegatecall must be none or the official `SafeToL2Setup`, and the singleton it switches to must be a trusted Safe implementation on L2; any other setup delegatecall, a creation callback (`createProxyWithCallback`) or an ERC-20 setup payment (the token is called during the setup) can change the Safe and can not be verified, so it fails. If the creation can not be recovered (or the L1 RPC fails while recovering it), the audit fails.
    - RPC errors (timeouts, rate limits, server errors) while inspecting the admin fail the audit: they are never read as "not a Safe".
    - **Any other contract**: reported as a warning for manual review (code size, codeHash and whether it has code on L2).
@@ -58,6 +59,14 @@ Each check is reported as:
 - `INFO`: informational only.
 
 RPC urls are shown in the report, the console and RPC error messages as scheme + host only (`https://mainnet.infura.io/***`), so API keys in the path, query string or credentials are never written.
+
+## Tests
+
+`test/src/audit-genesis.test.ts` (run by `npm run test`) boots local L1/L2 chains with anvil and audits genesis files built with the `createSovereignGenesis` helpers: EOA and Safe admins, wrong chainId, extra timelock roles, wrong proxy admin, nested Safe owners, creation callbacks and fake Safe proxies. No external RPC is needed. The tests are skipped when anvil ([Foundry](https://book.getfoundry.sh/getting-started/installation)) is not installed.
+
+```bash
+npx hardhat test test/src/audit-genesis.test.ts
+```
 
 ## Exit Codes
 
