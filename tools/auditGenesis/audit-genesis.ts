@@ -225,6 +225,83 @@ async function getTrustedSingletonName(provider: ethers.JsonRpcProvider, singlet
     return code === '0x' ? undefined : TRUSTED_SAFE_SINGLETONS[ethers.keccak256(code)];
 }
 
+function isEip7702Delegation(code: string) {
+    return code.startsWith(EIP7702_DELEGATION_PREFIX) && ethers.dataLength(code) === 23;
+}
+
+/**
+ * Check the Safe owners can sign on L2. An owner without code (or with an EIP-7702 delegation) holds a key and
+ * can sign on any chain; a contract owner (e.g. another Safe) can only sign (EIP-1271 / approveHash) where it
+ * is deployed, and its own configuration there must be reviewed manually
+ * @param l1Provider L1 provider
+ * @param l2Provider L2 provider
+ * @param owners Safe owners
+ * @param threshold Safe threshold
+ * @param section report section
+ * @param label which owners are checked (e.g. "L2 Safe owners")
+ */
+async function auditOwnersSigning(
+    l1Provider: ethers.JsonRpcProvider,
+    l2Provider: ethers.JsonRpcProvider,
+    owners: string[],
+    threshold: bigint,
+    section: string,
+    label: string,
+) {
+    const rows: string[][] = [];
+    let keyOwners = 0;
+    const contractOwnersOnL2: string[] = [];
+    const ownersNotOnL2: string[] = [];
+    for (const owner of owners) {
+        const [codeL1, codeL2] = await Promise.all([l1Provider.getCode(owner), l2Provider.getCode(owner)]);
+        let status;
+        if (codeL2 !== '0x' && !isEip7702Delegation(codeL2)) {
+            contractOwnersOnL2.push(owner);
+            status = 'contract on L2: review manually';
+        } else if (codeL1 !== '0x' && !isEip7702Delegation(codeL1)) {
+            ownersNotOnL2.push(owner);
+            status = 'contract on L1, NOT on L2: can NOT sign on L2';
+        } else {
+            keyOwners += 1;
+            status = 'no code (EOA): can sign';
+        }
+        rows.push([owner, status]);
+    }
+    md(`### ${label}: signing on L2`);
+    md();
+    mdTable(['Owner', 'L2 signing'], rows);
+
+    if (BigInt(keyOwners + contractOwnersOnL2.length) < threshold) {
+        check(
+            section,
+            'FAIL',
+            `${label}: only ${keyOwners + contractOwnersOnL2.length} of ${owners.length} owners can sign on L2, threshold is ${threshold}: the Safe can NOT operate the timelock on L2`,
+        );
+        return;
+    }
+    if (ownersNotOnL2.length > 0) {
+        check(
+            section,
+            'WARN',
+            `${label}: contract owners NOT deployed on L2 can not sign there: ${ownersNotOnL2.join(', ')}`,
+        );
+    }
+    if (contractOwnersOnL2.length > 0) {
+        check(
+            section,
+            'WARN',
+            `${label}: contract owners on L2, review their configuration manually: ${contractOwnersOnL2.join(', ')}`,
+        );
+    }
+    if (ownersNotOnL2.length === 0 && contractOwnersOnL2.length === 0) {
+        check(
+            section,
+            'PASS',
+            `${label}: all ${owners.length} owners hold a key and can sign on L2 (threshold ${threshold})`,
+        );
+    }
+}
+
 /**
  * Create a provider and check it is reachable
  * @param url RPC url
@@ -600,6 +677,14 @@ async function auditSafeAdmin(
                 'L2 owners/threshold differ from the current L1 configuration, double check them',
             );
         }
+        await auditOwnersSigning(
+            l1Provider,
+            l2Provider,
+            l2Info.owners,
+            l2Info.threshold,
+            'Timelock admin Safe on L2',
+            'L2 Safe owners',
+        );
         if (l2Info.modules.length > 0) {
             check('Timelock admin Safe on L2', 'WARN', `Safe has ${l2Info.modules.length} module(s) enabled on L2`);
         }
@@ -813,6 +898,16 @@ async function auditSafeAdmin(
         );
         return;
     }
+
+    // the deployed Safe gets the original owners: they must be able to sign on L2
+    await auditOwnersSigning(
+        l1Provider,
+        l2Provider,
+        creation.owners,
+        creation.threshold,
+        'Timelock admin Safe on L2',
+        'Original Safe owners',
+    );
 
     if (allDependenciesOk && l2SingletonName !== undefined) {
         check(
@@ -1240,7 +1335,7 @@ async function auditSafeAdmin(
             if (l2Code !== '0x') {
                 check(ADMIN_SECTION, 'WARN', 'adminAddress has no code on L1 but it has code on L2, double check it');
             }
-        } else if (l1Code.startsWith(EIP7702_DELEGATION_PREFIX) && ethers.dataLength(l1Code) === 23) {
+        } else if (isEip7702Delegation(l1Code)) {
             check(
                 ADMIN_SECTION,
                 'WARN',
