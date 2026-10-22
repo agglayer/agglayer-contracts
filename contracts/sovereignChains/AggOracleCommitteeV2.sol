@@ -2,12 +2,11 @@
 
 pragma solidity 0.8.28;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/Ownable2StepUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts5/utils/cryptography/ECDSA.sol";
 import {IAgglayerGERL2} from "../interfaces/IAgglayerGERL2.sol";
 import {IAggOracleCommitteeV2} from "../interfaces/IAggOracleCommitteeV2.sol";
 import {IVersion} from "../interfaces/IVersion.sol";
-import {SignatureDecoder} from "../lib/SignatureDecoder.sol";
 
 /**
  * @title AggOracleCommitteeV2
@@ -17,10 +16,12 @@ import {SignatureDecoder} from "../lib/SignatureDecoder.sol";
  * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs.
  *      It implements a threshold-based multi-signature scheme where a minimum number of oracle validators must sign
  *      each GER injection before it can be executed.
+ *      Ownership is transferred in two steps: the new owner must accept it.
+ *      This contract is meant for fresh deployments only: there is no upgrade path from AggOracleCommittee (V1),
+ *      since both storage layouts are incompatible.
  */
 contract AggOracleCommitteeV2 is
-    SignatureDecoder,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     IVersion,
     IAggOracleCommitteeV2
 {
@@ -54,9 +55,17 @@ contract AggOracleCommitteeV2 is
     /// @notice Address authorized to propose GER injections
     address public proposer;
 
+    /// @notice GERs already processed by this contract (inserted, or marked because they were already set in the
+    ///         AgglayerGERL2). A processed GER can never be injected again, even if it is later removed from the
+    ///         AgglayerGERL2, so its validator signatures can not be replayed.
+    /// @dev A GER inserted by another updater and removed before this contract processed it is not tracked here:
+    ///      validators must not sign a GER that has been removed from the AgglayerGERL2
+    mapping(bytes32 => bool) public injectedGERs;
+
     /// @dev This empty reserved space is put in place to allow future versions to add new
     /// variables without shifting down storage in the inheritance chain.
-    uint256[46] private __gap;
+    // slither-disable-next-line unused-state,naming-convention
+    uint256[45] private __gap;
 
     ////////////////////
     // Modifiers
@@ -116,6 +125,7 @@ contract AggOracleCommitteeV2 is
 
         // Initialize ownership
         __Ownable_init(_owner);
+        __Ownable2Step_init();
 
         // Set the proposer, validated in the internal function _updateAggOracleProposer
         _updateAggOracleProposer(_newProposer);
@@ -136,9 +146,13 @@ contract AggOracleCommitteeV2 is
      * @notice Inject a Global Exit Root (GER) with signature verification
      * @dev The GER must be signed by exactly `threshold` oracle validators
      *      Signatures must be ordered by signer address in ascending order to prevent duplicates
+     *      A GER can only be processed once: once processed, it can never be injected again, even if it is later
+     *      removed from the AgglayerGERL2 (see `injectedGERs` for the GERs this guarantee does not cover)
+     *      If the GER is already set in the AgglayerGERL2 (e.g. by a previous updater), it is only marked as injected
      * @param _globalExitRoot The global exit root to inject into the GER manager
      * @param _signatures Concatenated signatures for the global exit root (65 bytes per signature: r+s+v)
      */
+    // slither-disable-next-line reentrancy-events (only view call to the trusted immutable agglayerGERL2 before the events)
     function injectGER(
         bytes32 _globalExitRoot,
         bytes calldata _signatures
@@ -146,10 +160,20 @@ contract AggOracleCommitteeV2 is
         // Validate the GER
         _validateGER(_globalExitRoot, _signatures);
 
-        // Insert the GER into the global exit root manager
-        agglayerGERL2.insertGlobalExitRoot(_globalExitRoot);
+        // Mark the GER as injected before any external call
+        injectedGERs[_globalExitRoot] = true;
+
+        // If the GER was already set by another updater, only mark it: skipping the insertion avoids a revert
+        // that would roll back the mark
+        if (agglayerGERL2.globalExitRootMap(_globalExitRoot) != 0) {
+            emit GERMarkedAsInjected(_globalExitRoot);
+            return;
+        }
 
         emit GERInjected(_globalExitRoot);
+
+        // Insert the GER into the global exit root manager
+        agglayerGERL2.insertGlobalExitRoot(_globalExitRoot);
     }
 
     ////////////////////
@@ -375,17 +399,22 @@ contract AggOracleCommitteeV2 is
 
     /**
      * @notice Validate a GER
-     * @dev Validates the GER is not zero and builds the message hash to verify
+     * @dev Validates the GER is not zero, has not been injected before and builds the message hash to verify
      * @param _globalExitRoot The GER to validate
      * @param _signatures The signatures to verify
      */
     function _validateGER(
         bytes32 _globalExitRoot,
-        bytes memory _signatures
+        bytes calldata _signatures
     ) internal view {
         // Validate GER is not zero
         if (_globalExitRoot == bytes32(0)) {
             revert GERCannotBeZero();
+        }
+
+        // Validate GER has not been injected before
+        if (injectedGERs[_globalExitRoot]) {
+            revert GERAlreadyInjected();
         }
 
         // Build the message hash to verify
@@ -408,7 +437,7 @@ contract AggOracleCommitteeV2 is
      */
     function _verifySignatures(
         bytes32 _messageHash,
-        bytes memory _signatures
+        bytes calldata _signatures
     ) internal view {
         // cache threshold
         uint256 currentThreshold = threshold;
@@ -423,11 +452,11 @@ contract AggOracleCommitteeV2 is
 
         // Verify each required signature
         for (uint256 i = 0; i < currentThreshold; i++) {
-            // Extract signature components (v, r, s)
-            (uint8 v, bytes32 r, bytes32 s) = _splitSignature(_signatures, i);
-
-            // Recover the signer address from the signature
-            currentValidator = ECDSA.recover(_messageHash, v, r, s);
+            // Recover the signer address from the i-th 65 bytes signature (r, s, v)
+            currentValidator = ECDSA.recover(
+                _messageHash,
+                _signatures[i * 65:(i + 1) * 65]
+            );
 
             // Validate signer is an authorized oracle validator
             if (!validatorInfo[currentValidator].isValidator) {
@@ -456,7 +485,7 @@ contract AggOracleCommitteeV2 is
      */
     function verifyGER(
         bytes32 _globalExitRoot,
-        bytes memory _signatures
+        bytes calldata _signatures
     ) external view returns (bool) {
         _validateGER(_globalExitRoot, _signatures);
         return true;
@@ -471,7 +500,8 @@ contract AggOracleCommitteeV2 is
     function getValidatorIndex(
         address _validator
     ) external view returns (uint256) {
-        for (uint256 i = 0; i < validators.length; ++i) {
+        uint256 validatorsLength = validators.length;
+        for (uint256 i = 0; i < validatorsLength; ++i) {
             if (validators[i] == _validator) {
                 return i;
             }
@@ -489,10 +519,11 @@ contract AggOracleCommitteeV2 is
         view
         returns (ValidatorInfo[] memory)
     {
+        uint256 validatorsLength = validators.length;
         ValidatorInfo[] memory validatorInfos = new ValidatorInfo[](
-            validators.length
+            validatorsLength
         );
-        for (uint256 i = 0; i < validators.length; i++) {
+        for (uint256 i = 0; i < validatorsLength; i++) {
             validatorInfos[i] = ValidatorInfo({
                 addr: validators[i],
                 url: validatorInfo[validators[i]].url

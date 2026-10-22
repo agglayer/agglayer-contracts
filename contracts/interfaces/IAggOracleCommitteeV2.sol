@@ -13,6 +13,10 @@ interface IAggOracleCommitteeV2Events {
     /// @notice Emitted when a GER is injected
     event GERInjected(bytes32 indexed globalExitRoot);
 
+    /// @notice Emitted when a GER already set in the AgglayerGERL2 by another updater is marked as injected,
+    ///         without being inserted again
+    event GERMarkedAsInjected(bytes32 indexed globalExitRoot);
+
     /// @notice Emitted when the aggOracleProposer is updated
     event UpdateAggOracleProposer(address indexed newProposer);
 
@@ -42,6 +46,9 @@ interface IAggOracleCommitteeV2Errors {
 
     /// @notice Thrown when a GER is zero
     error GERCannotBeZero();
+
+    /// @notice Thrown when a GER has already been injected by this contract
+    error GERAlreadyInjected();
 
     /// @notice Thrown when the validator address is zero
     error ValidatorCannotBeZero();
@@ -203,7 +210,7 @@ interface IAggOracleCommitteeV2 is
      */
     function verifyGER(
         bytes32 _globalExitRoot,
-        bytes memory _signatures
+        bytes calldata _signatures
     ) external view returns (bool);
 
     /**
@@ -250,8 +257,11 @@ interface IAggOracleCommitteeV2 is
     /// @notice Mapping to track validator information
     function validatorInfo(
         address validator
-    ) external view returns (bool isValidator, string memory url);
+    ) external view returns (bool exists, string memory url);
 
     /// @notice Address that can propose GER injections
     function proposer() external view returns (address);
+
+    /// @notice Returns if a GER has already been injected by this contract
+    function injectedGERs(bytes32 globalExitRoot) external view returns (bool);
 }

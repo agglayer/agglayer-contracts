@@ -560,12 +560,59 @@ describe('AggOracleCommitteeV2 tests', () => {
             expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
         });
 
-        it('Should transfer ownership', async () => {
+        it('Should transfer ownership in two steps', async () => {
+            // step 1: the owner proposes the new owner, ownership does not change yet
             await expect(aggOracleCommitteeContract.connect(owner).transferOwnership(notOwner.address))
+                .to.emit(aggOracleCommitteeContract, 'OwnershipTransferStarted')
+                .withArgs(owner.address, notOwner.address);
+
+            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(notOwner.address);
+
+            // step 2: the pending owner accepts
+            await expect(aggOracleCommitteeContract.connect(notOwner).acceptOwnership())
                 .to.emit(aggOracleCommitteeContract, 'OwnershipTransferred')
                 .withArgs(owner.address, notOwner.address);
 
             expect(await aggOracleCommitteeContract.owner()).to.equal(notOwner.address);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(ethers.ZeroAddress);
+        });
+
+        it('Should fail to accept ownership if not the pending owner', async () => {
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(notOwner.address);
+
+            await expect(aggOracleCommitteeContract.connect(proposer).acceptOwnership())
+                .to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount')
+                .withArgs(proposer.address);
+
+            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
+        });
+
+        it('Should allow the owner to overwrite or cancel a pending ownership transfer', async () => {
+            // overwrite the pending owner
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(notOwner.address);
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(proposer.address);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(proposer.address);
+
+            await expect(aggOracleCommitteeContract.connect(notOwner).acceptOwnership()).to.be.revertedWithCustomError(
+                aggOracleCommitteeContract,
+                'OwnableUnauthorizedAccount',
+            );
+
+            // cancel the pending transfer
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(ethers.ZeroAddress);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(ethers.ZeroAddress);
+
+            await expect(aggOracleCommitteeContract.connect(proposer).acceptOwnership()).to.be.revertedWithCustomError(
+                aggOracleCommitteeContract,
+                'OwnableUnauthorizedAccount',
+            );
+        });
+
+        it('Should fail to start an ownership transfer if not owner', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(notOwner).transferOwnership(notOwner.address),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
         });
     });
 
@@ -746,11 +793,66 @@ describe('AggOracleCommitteeV2 tests', () => {
             const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
             const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
 
+            expect(await aggOracleCommitteeContract.injectedGERs(globalExitRoot)).to.equal(false);
             await aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures);
+            expect(await aggOracleCommitteeContract.injectedGERs(globalExitRoot)).to.equal(true);
+
+            await expect(
+                aggOracleCommitteeContract.verifyGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
 
             await expect(
                 aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
-            ).to.be.revertedWithCustomError(globalExitRootManagerContract, 'GlobalExitRootAlreadySet');
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+        });
+
+        it('Should fail to re-inject a global exit root removed from the AgglayerGERL2 (replay)', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            await aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures);
+
+            // the globalExitRootRemover (deployer) removes the GER
+            await globalExitRootManagerContract.removeGlobalExitRoots([globalExitRoot]);
+            expect(await globalExitRootManagerContract.globalExitRootMap(globalExitRoot)).to.equal(0);
+
+            // the old signatures can not be replayed
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+
+            // fresh signatures from the validators can not re-inject it either
+            const freshSignatures = signGERSorted(globalExitRoot, [validator2, validator3]);
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, freshSignatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+        });
+
+        it('Should only mark a global exit root already set by another updater, and block its replay after removal', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            // move the updater role to the deployer, insert the GER and give the role back to the committee
+            await aggOracleCommitteeContract.connect(owner).transferGlobalExitRootUpdater(deployer.address);
+            await globalExitRootManagerContract.acceptGlobalExitRootUpdater();
+            await globalExitRootManagerContract.insertGlobalExitRoot(globalExitRoot);
+            await setCommitteeAsGERUpdater();
+            const insertedTimestamp = await globalExitRootManagerContract.globalExitRootMap(globalExitRoot);
+
+            // the GER is marked as injected without being inserted again
+            await expect(aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures))
+                .to.emit(aggOracleCommitteeContract, 'GERMarkedAsInjected')
+                .withArgs(globalExitRoot)
+                .to.not.emit(aggOracleCommitteeContract, 'GERInjected')
+                .to.not.emit(globalExitRootManagerContract, 'UpdateHashChainValue');
+            expect(await aggOracleCommitteeContract.injectedGERs(globalExitRoot)).to.equal(true);
+            expect(await globalExitRootManagerContract.globalExitRootMap(globalExitRoot)).to.equal(insertedTimestamp);
+
+            // after the remover deletes it, the old signatures can not be replayed
+            await globalExitRootManagerContract.removeGlobalExitRoots([globalExitRoot]);
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
         });
 
         it('Should fail to inject if the committee is not the globalExitRootUpdater', async () => {
