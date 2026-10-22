@@ -493,8 +493,8 @@ async function auditSafeAdmin(
         if (creation.chainSpecific) {
             check(
                 SECTION,
-                'FAIL',
-                'Safe was created with `createChainSpecificProxyWithNonce`: its address depends on the L1 chainId, it can NOT be deployed at the same address on L2',
+                'INFO',
+                'Safe was created with `createChainSpecificProxyWithNonce`: its address depends on the L1 chainId, its creation can not be replayed on L2',
             );
         }
 
@@ -654,7 +654,13 @@ async function auditSafeAdmin(
     }
     mdTable(['Contract', 'Address', 'L2 status'], rows);
 
+    // only a problem when the Safe is not on L2 yet: it can not be created there at the same address
     if (creation.chainSpecific) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            'The Safe was created with `createChainSpecificProxyWithNonce` (its address depends on the L1 chainId): it can NOT be deployed at the same address on L2',
+        );
         return;
     }
 
@@ -1198,11 +1204,19 @@ async function auditSafeAdmin(
         md();
 
         if (l1Code === '0x') {
-            if (l1Nonce > 0) {
+            // a contract created with empty code also has nonce 1 and no key: only a nonce >= 2 proves an EOA
+            // (an account without code can only increase its nonce by signing transactions)
+            if (l1Nonce >= 2) {
                 check(
                     ADMIN_SECTION,
                     'PASS',
                     `adminAddress is an EOA on L1 (nonce ${l1Nonce}): make sure you control its private key, it is the same address on L2`,
+                );
+            } else if (l1Nonce === 1) {
+                check(
+                    ADMIN_SECTION,
+                    'WARN',
+                    'adminAddress has no code and nonce 1 on L1: it can NOT be confirmed as an EOA (a contract created with empty code also has nonce 1). Confirm you control its private key',
                 );
             } else {
                 check(
