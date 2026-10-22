@@ -160,6 +160,19 @@ async function main() {
         process.exit(1);
     }
 
+    // nobody could ever propose an L2 upgrade: upgrades locked forever
+    const genesisBaseTimelock = genesisBase.genesis.find(
+        (obj: any) => obj.contractName === GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK,
+    );
+    const adminAddressLower = createGenesisSovereignParams.timelockParameters.adminAddress.toLowerCase();
+    if (
+        adminAddressLower === ethers.ZeroAddress ||
+        (genesisBaseTimelock !== undefined && adminAddressLower === genesisBaseTimelock.address.toLowerCase())
+    ) {
+        logger.error('timelockParameters.adminAddress must not be the zero address nor the timelock itself');
+        process.exit(1);
+    }
+
     /// //////////////////////////////////////////
     ///    CHECK SC PARAMS & ON-CHAIN DATA    ///
     /// //////////////////////////////////////////

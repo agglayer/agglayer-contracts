@@ -35,6 +35,15 @@ const EIP7702_DELEGATION_PREFIX = '0xef0100';
 const EIP1967_ADMIN_SLOT = '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
 // max block range per eth_getLogs request when the RPC rejects the full range
 const LOGS_BLOCK_RANGE = 10000;
+// official Safe proxy runtime code (the same for every proxy of a version, the singleton is in storage slot 0):
+// codeHash => name. Taken from Ethereum mainnet Safes created by the canonical factories
+const TRUSTED_SAFE_PROXIES: Record<string, string> = {
+    '0xb89c1b3bdf2cf8827818646bce9a8f6e372885f8c55e5c07acbd307cb133b000': 'GnosisSafeProxy v1.3.0',
+    '0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c': 'SafeProxy v1.4.1',
+};
+// only setup delegatecall supported: SafeToL2Setup.setupToL2(l2Singleton) switches the singleton on L2 chains
+const SAFE_TO_L2_SETUP = safeContracts['v1.4.1-3'].find((contract) => contract.contractName.endsWith('SafeToL2Setup'))!;
+const safeToL2SetupInterface = new ethers.Interface(['function setupToL2(address l2Singleton)']);
 // Safe singletons (implementations) trusted as the code a Safe proxy delegates to: codeHash => name
 const TRUSTED_SAFE_SINGLETONS: Record<string, string> = Object.fromEntries(
     [...safeContracts['v1.3.0'], ...safeContracts['v1.4.1-3']]
@@ -280,7 +289,7 @@ async function compareAddressState(
     for (const [slot, expectedValue] of Object.entries(storage)) {
         const actual = await provider.getStorage(address, normalizeSlot(slot), BLOCK_TAG);
 
-        if (BigInt(actual) !== BigInt(expectedValue)) {
+        if (BigInt(actual) !== BigInt(normalizeSlot(expectedValue))) {
             result.storage_mismatches.push({ slot, expected: expectedValue, actual });
             console.log(chalk.red(`✗ Storage mismatch at slot ${slot}`));
             console.log(`    Expected: ${chalk.yellow(expectedValue)}`);
@@ -338,9 +347,10 @@ async function contractCall(
     to: string,
     fn: string,
     args: any[] = [],
+    blockTag: ethers.BlockTag = 'latest',
 ) {
     const data = contractInterface.encodeFunctionData(fn, args);
-    return contractInterface.decodeFunctionResult(fn, await provider.call({ to, data }));
+    return contractInterface.decodeFunctionResult(fn, await provider.call({ to, data, blockTag }));
 }
 
 function sameAddress(a?: string, b?: string) {
@@ -419,19 +429,24 @@ async function auditSafeAdmin(
     }
 
     // original setup on L1
+    // an RPC error (could not look) is a failure, distinct from a lookup that finds no SafeSetup event
     let creation;
+    let creationLookupFailed = false;
     try {
         creation = await getSafeCreation(l1Provider, adminAddress);
     } catch (e: any) {
+        creationLookupFailed = true;
         check(
             SECTION,
-            'WARN',
-            `Could not recover the Safe original setup from L1 (an archive L1 RPC may be needed): ${errorMessage(e)}`,
+            'FAIL',
+            `Could not recover the Safe original setup from L1 (RPC error, an archive L1 RPC may be needed): ${errorMessage(e)}`,
         );
     }
 
     if (creation === undefined) {
-        check(SECTION, 'WARN', 'SafeSetup event not found on L1: original setup unknown');
+        if (!creationLookupFailed) {
+            check(SECTION, 'WARN', 'SafeSetup event not found on L1: original setup unknown');
+        }
     } else {
         console.log(chalk.bold('  Original setup on L1 (SafeSetup event)'));
         console.log(`    Threshold        : ${creation.threshold} of ${creation.owners.length}`);
@@ -514,6 +529,17 @@ async function auditSafeAdmin(
             l2Code === l1Code ? 'PASS' : 'WARN',
             `Bytecode deployed on L2 at ${adminAddress}${l2Code === l1Code ? ' (same as L1)' : ' (DIFFERENT from L1)'}`,
         );
+
+        const l2ProxyName = TRUSTED_SAFE_PROXIES[ethers.keccak256(l2Code)];
+        if (l2ProxyName === undefined) {
+            check(
+                'Timelock admin Safe on L2',
+                'FAIL',
+                `Code deployed on L2 at ${adminAddress} is NOT an official Safe proxy (codeHash ${ethers.keccak256(l2Code)}): its configuration can not be trusted`,
+            );
+            return;
+        }
+        check('Timelock admin Safe on L2', 'PASS', `L2 code at ${adminAddress} is an official ${l2ProxyName}`);
 
         let l2Info: SafeInfo | undefined;
         try {
@@ -649,6 +675,58 @@ async function auditSafeAdmin(
             'Timelock admin Safe on L2',
             'FAIL',
             `Singleton ${creation.singleton} on L2 is NOT a trusted Safe implementation`,
+        );
+    }
+
+    // the setup delegatecall can change the Safe (e.g. its singleton): only known setups are verifiable
+    if (creation.setupParams === undefined) {
+        check(
+            'Timelock admin Safe on L2',
+            'FAIL',
+            'The Safe initializer is not a Safe `setup` call: the resulting Safe can not be verified',
+        );
+        return;
+    }
+    if (creation.setupParams.to !== ethers.ZeroAddress) {
+        if (!sameAddress(creation.setupParams.to, SAFE_TO_L2_SETUP.address)) {
+            check(
+                'Timelock admin Safe on L2',
+                'FAIL',
+                `The Safe setup delegatecalls an unknown contract (${creation.setupParams.to}): the resulting Safe can not be verified`,
+            );
+            return;
+        }
+
+        const setupCode = await l2Provider.getCode(SAFE_TO_L2_SETUP.address);
+        let l2Singleton: string | undefined;
+        try {
+            [l2Singleton] = safeToL2SetupInterface.decodeFunctionData('setupToL2', creation.setupParams.data);
+        } catch (e) {
+            l2Singleton = undefined;
+        }
+        const effectiveSingletonName =
+            l2Singleton === undefined ? undefined : await getTrustedSingletonName(l2Provider, l2Singleton);
+
+        if (setupCode === '0x' || ethers.keccak256(setupCode) !== SAFE_TO_L2_SETUP.codeHash) {
+            check(
+                'Timelock admin Safe on L2',
+                'FAIL',
+                `SafeToL2Setup (${SAFE_TO_L2_SETUP.address}) is missing or NOT the official one on L2`,
+            );
+            return;
+        }
+        if (effectiveSingletonName === undefined) {
+            check(
+                'Timelock admin Safe on L2',
+                'FAIL',
+                `The Safe setup (SafeToL2Setup) switches the singleton to ${l2Singleton ?? 'an undecodable address'}, NOT a trusted Safe implementation on L2`,
+            );
+            return;
+        }
+        check(
+            'Timelock admin Safe on L2',
+            'PASS',
+            `The Safe setup (SafeToL2Setup) switches the singleton to ${l2Singleton}, a trusted Safe implementation on L2 (${effectiveSingletonName})`,
         );
     }
 
@@ -810,6 +888,13 @@ async function auditSafeAdmin(
         if (sameAddress(adminAddress, POLYGON_MULTISIG)) {
             check(TIMELOCK_SECTION, 'FAIL', `adminAddress is the Polygon multisig (${POLYGON_MULTISIG})`);
         }
+        // nobody could ever propose an L2 upgrade: upgrades locked forever
+        if (sameAddress(adminAddress, ethers.ZeroAddress)) {
+            check(TIMELOCK_SECTION, 'FAIL', 'adminAddress is the zero address: nobody can propose L2 upgrades');
+        }
+        if (sameAddress(adminAddress, timelockAddress)) {
+            check(TIMELOCK_SECTION, 'FAIL', 'adminAddress is the timelock itself: nobody can propose L2 upgrades');
+        }
 
         // genesis file storage: must be exactly the storage written by createSovereignGenesis
         const timelockGenesis = genesisAccount(timelockAddress);
@@ -962,16 +1047,33 @@ async function auditSafeAdmin(
                 `Genesis output has no ${GENESIS_CONTRACT_NAMES.PROXY_ADMIN} address: the ProxyAdmin owner can not be checked`,
             );
         } else {
-            try {
-                const [owner] = await contractCall(l2Provider, ownableInterface, proxyAdminAddress, 'owner');
-                const ok = sameAddress(owner, timelockAddress);
-                check(
-                    TIMELOCK_SECTION,
-                    ok ? 'PASS' : 'FAIL',
-                    `L2 ProxyAdmin (${proxyAdminAddress}) owner is ${ok ? 'the timelock' : `NOT the timelock (${owner})`}`,
-                );
-            } catch (e: any) {
-                check(TIMELOCK_SECTION, 'FAIL', `Error reading the L2 ProxyAdmin owner: ${errorMessage(e)}`);
+            // owner must be the timelock from the genesis block, not only now
+            for (const [blockTag, when] of [
+                ['earliest', 'at genesis'],
+                ['latest', 'now'],
+            ]) {
+                try {
+                    const [owner] = await contractCall(
+                        l2Provider,
+                        ownableInterface,
+                        proxyAdminAddress,
+                        'owner',
+                        [],
+                        blockTag,
+                    );
+                    const ok = sameAddress(owner, timelockAddress);
+                    check(
+                        TIMELOCK_SECTION,
+                        ok ? 'PASS' : 'FAIL',
+                        `L2 ProxyAdmin (${proxyAdminAddress}) owner ${when} is ${ok ? 'the timelock' : `NOT the timelock (${owner})`}`,
+                    );
+                } catch (e: any) {
+                    check(
+                        TIMELOCK_SECTION,
+                        'FAIL',
+                        `Error reading the L2 ProxyAdmin owner ${when}: ${errorMessage(e)}`,
+                    );
+                }
             }
 
             // every proxy must be administered by the ProxyAdmin (EIP-1967 admin slot), in genesis & on L2
@@ -1075,12 +1177,16 @@ async function auditSafeAdmin(
             }
             if (l1InfoError !== undefined) {
                 check(ADMIN_SECTION, 'FAIL', `Could not inspect adminAddress on L1 (RPC error): ${l1InfoError}`);
-            } else if (l1Info === undefined) {
+            } else if (l1Info === undefined || TRUSTED_SAFE_PROXIES[ethers.keccak256(l1Code)] === undefined) {
                 const l2AdminCode = await l2Provider.getCode(adminAddress);
+                const notSafeReason =
+                    l1Info === undefined
+                        ? 'that is NOT a Safe'
+                        : 'that answers like a Safe but is NOT an official Safe proxy';
                 check(
                     ADMIN_SECTION,
                     'WARN',
-                    `adminAddress is a contract on L1 that is NOT a Safe (code size ${ethers.dataLength(l1Code)} bytes, codeHash ${ethers.keccak256(l1Code)}): review it manually`,
+                    `adminAddress is a contract on L1 ${notSafeReason} (code size ${ethers.dataLength(l1Code)} bytes, codeHash ${ethers.keccak256(l1Code)}): review it manually`,
                 );
                 check(
                     ADMIN_SECTION,
@@ -1093,7 +1199,7 @@ async function auditSafeAdmin(
                 check(
                     ADMIN_SECTION,
                     'PASS',
-                    `adminAddress is a Safe v${l1Info.version} on L1 (threshold ${l1Info.threshold} of ${l1Info.owners.length})`,
+                    `adminAddress is an official ${TRUSTED_SAFE_PROXIES[ethers.keccak256(l1Code)]} on L1 (Safe v${l1Info.version}, threshold ${l1Info.threshold} of ${l1Info.owners.length})`,
                 );
                 await auditSafeAdmin(l1Provider, l2Provider, adminAddress, l1Code, l1Info);
             }

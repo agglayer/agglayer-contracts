@@ -413,5 +413,18 @@ describe('Tooling docker build tests Contract', () => {
             expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
             expect(fs.existsSync(pathOutput)).to.equal(false);
         });
+
+        it('Check tool create genesis file fails if the timelock admin is the zero address', async () => {
+            const out = runTool({
+                ...genesisParams,
+                timelockParameters: { ...genesisParams.timelockParameters, adminAddress: ethers.ZeroAddress },
+            });
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include(
+                'timelockParameters.adminAddress must not be the zero address nor the timelock itself',
+            );
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
     });
 });
