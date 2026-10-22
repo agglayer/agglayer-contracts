@@ -238,10 +238,6 @@ describe('Tool auditGenesis', function () {
         return { safe: safe as string, calldata };
     }
 
-    async function setL1Nonce(account: string, nonce: number) {
-        await l1.send('anvil_setNonce', [account, ethers.toQuantity(nonce)]);
-    }
-
     before(async function () {
         if (!anvilAvailable) {
             console.warn('    anvil (Foundry) is not installed: skipping auditGenesis tests');
@@ -267,29 +263,18 @@ describe('Tool auditGenesis', function () {
         }
     });
 
-    it('EOA admin (L1 nonce >= 2): PASS', async () => {
+    it('EOA admin (no bytecode): reported as most probably an EOA, PASS', async () => {
         const admin = ethers.Wallet.createRandom().address;
-        await setL1Nonce(admin, 2);
         const files = buildGenesis('eoa', admin);
         const res = runAudit(await startL2(files), files);
 
         expect(res.code, res.out).to.equal(0);
         expect(res.fails).to.deep.equal([]);
         expect(res.warns).to.deep.equal([]);
-        expect(res.out).to.include('adminAddress is an EOA on L1');
+        expect(res.out).to.include('adminAddress is most probably an EOA since it has no bytecode');
         expect(res.out).to.include('Genesis timelock storage is exactly the expected one');
         expect(res.out).to.include('upgradeable proxies are administered by the ProxyAdmin');
         expect(res.out).to.include('owner at genesis is the timelock');
-    });
-
-    it('EOA admin with L1 nonce 1: WARN (can not be confirmed as an EOA)', async () => {
-        const admin = ethers.Wallet.createRandom().address;
-        await setL1Nonce(admin, 1);
-        const files = buildGenesis('eoa-nonce1', admin);
-        const res = runAudit(await startL2(files), files);
-
-        expect(res.code, res.out).to.equal(0);
-        expect(res.warns.join('\n')).to.include('nonce 1 on L1: it can NOT be confirmed as an EOA');
     });
 
     it('Polygon multisig, zero address and the timelock itself as admin: FAIL', async () => {
@@ -315,7 +300,6 @@ describe('Tool auditGenesis', function () {
 
     it('L2 chainId different from the genesis chainID: FAIL', async () => {
         const admin = ethers.Wallet.createRandom().address;
-        await setL1Nonce(admin, 2);
         const files = buildGenesis('wrong-chain', admin);
         const l2Url = await startL2(files);
         const wrongOutput = path.join(tmpDir, 'wrong-chain-output-bad.json');
@@ -329,7 +313,6 @@ describe('Tool auditGenesis', function () {
 
     it('extra timelock role member in the genesis: FAIL and identified', async () => {
         const admin = ethers.Wallet.createRandom().address;
-        await setL1Nonce(admin, 2);
         const intruder = SENDER;
         const files = buildGenesis('extra-role', admin, (alloc, genesisSCNames) => {
             const timelock = genesisSCNames[GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK];
@@ -346,7 +329,6 @@ describe('Tool auditGenesis', function () {
 
     it('proxy not administered by the ProxyAdmin: FAIL', async () => {
         const admin = ethers.Wallet.createRandom().address;
-        await setL1Nonce(admin, 2);
         const files = buildGenesis('proxy-admin', admin, (alloc) => {
             const proxy = Object.keys(alloc).find(
                 (address) => (alloc[address].storage ?? {})[EIP1967_ADMIN_SLOT] !== undefined,
@@ -369,7 +351,9 @@ describe('Tool auditGenesis', function () {
         expect(before.code, before.out).to.equal(0);
         expect(before.fails).to.deep.equal([]);
         expect(before.out).to.include('Simulated on L2: replaying the original factory call deploys the Safe');
-        expect(before.out).to.include('Original Safe owners: all 1 owners hold a key and can sign on L2');
+        expect(before.out).to.include(
+            'Original Safe owners: all 1 owners have no bytecode (most probably EOAs) and can sign on L2',
+        );
 
         // replay the creation on L2: the deployed Safe is verified
         await sendAs(l2Url, SENDER, SAFE_FACTORY, calldata);
@@ -377,7 +361,24 @@ describe('Tool auditGenesis', function () {
         expect(after.code, after.out).to.equal(0);
         expect(after.fails).to.deep.equal([]);
         expect(after.out).to.include('is an official SafeProxy v1.4.1');
-        expect(after.out).to.include('L2 Safe owners: all 1 owners hold a key and can sign on L2');
+        expect(after.out).to.include(
+            'L2 Safe owners: all 1 owners have no bytecode (most probably EOAs) and can sign on L2',
+        );
+    });
+
+    it('Safe deployed on L2 with threshold 0: FAIL', async () => {
+        const { safe, calldata } = await createSafe([SENDER], 1, 6);
+        const files = buildGenesis('threshold-zero', safe);
+        const l2Url = await startL2(files);
+        await sendAs(l2Url, SENDER, SAFE_FACTORY, calldata);
+        // Safe threshold is in storage slot 4
+        const l2 = new ethers.JsonRpcProvider(l2Url, undefined, { staticNetwork: true });
+        await l2.send('anvil_setStorageAt', [safe, ethers.toBeHex(4, 32), ethers.toBeHex(0, 32)]);
+        l2.destroy();
+
+        const res = runAudit(l2Url, files);
+        expect(res.code).to.equal(1);
+        expect(res.fails.join('\n')).to.include('L2 Safe owners: threshold is 0');
     });
 
     it('Safe admin owned by another Safe that is not on L2: FAIL (owners can not sign on L2)', async () => {

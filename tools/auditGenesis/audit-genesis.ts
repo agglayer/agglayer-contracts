@@ -230,8 +230,8 @@ function isEip7702Delegation(code: string) {
 }
 
 /**
- * Check the Safe owners can sign on L2. An owner without code (or with an EIP-7702 delegation) holds a key and
- * can sign on any chain; a contract owner (e.g. another Safe) can only sign (EIP-1271 / approveHash) where it
+ * Check the Safe owners can sign on L2. An owner without code (or with an EIP-7702 delegation) is most probably
+ * an EOA and can sign on any chain; a contract owner (e.g. another Safe) can only sign (EIP-1271 / approveHash) where it
  * is deployed, and its own configuration there must be reviewed manually
  * @param l1Provider L1 provider
  * @param l2Provider L2 provider
@@ -248,6 +248,12 @@ async function auditOwnersSigning(
     section: string,
     label: string,
 ) {
+    // threshold 0: the Safe rejects every owner transaction (GS001)
+    if (threshold === 0n) {
+        check(section, 'FAIL', `${label}: threshold is 0, the Safe rejects every owner transaction`);
+        return;
+    }
+
     const rows: string[][] = [];
     let keyOwners = 0;
     const contractOwnersOnL2: string[] = [];
@@ -263,7 +269,7 @@ async function auditOwnersSigning(
             status = 'contract on L1, NOT on L2: can NOT sign on L2';
         } else {
             keyOwners += 1;
-            status = 'no code (EOA): can sign';
+            status = 'no bytecode: most probably an EOA, can sign';
         }
         rows.push([owner, status]);
     }
@@ -297,7 +303,7 @@ async function auditOwnersSigning(
         check(
             section,
             'PASS',
-            `${label}: all ${owners.length} owners hold a key and can sign on L2 (threshold ${threshold})`,
+            `${label}: all ${owners.length} owners have no bytecode (most probably EOAs) and can sign on L2 (threshold ${threshold})`,
         );
     }
 }
@@ -1310,27 +1316,12 @@ async function auditSafeAdmin(
         md();
 
         if (l1Code === '0x') {
-            // a contract created with empty code also has nonce 1 and no key: only a nonce >= 2 proves an EOA
-            // (an account without code can only increase its nonce by signing transactions)
-            if (l1Nonce >= 2) {
-                check(
-                    ADMIN_SECTION,
-                    'PASS',
-                    `adminAddress is an EOA on L1 (nonce ${l1Nonce}): make sure you control its private key, it is the same address on L2`,
-                );
-            } else if (l1Nonce === 1) {
-                check(
-                    ADMIN_SECTION,
-                    'WARN',
-                    'adminAddress has no code and nonce 1 on L1: it can NOT be confirmed as an EOA (a contract created with empty code also has nonce 1). Confirm you control its private key',
-                );
-            } else {
-                check(
-                    ADMIN_SECTION,
-                    'WARN',
-                    'adminAddress has no code and no transactions on L1: it can NOT be confirmed as an EOA (it could be a not yet deployed contract). Make sure you control it',
-                );
-            }
+            // chain state can not prove a key holder (a contract can end up without code): just report it
+            check(
+                ADMIN_SECTION,
+                'INFO',
+                `adminAddress is most probably an EOA since it has no bytecode on L1 (nonce ${l1Nonce}): make sure you control its private key, it is the same address on L2`,
+            );
             const l2Code = await l2Provider.getCode(adminAddress);
             if (l2Code !== '0x') {
                 check(ADMIN_SECTION, 'WARN', 'adminAddress has no code on L1 but it has code on L2, double check it');
