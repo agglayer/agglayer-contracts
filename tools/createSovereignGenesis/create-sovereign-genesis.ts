@@ -16,8 +16,9 @@ import { initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
 import { checkParams, getGitInfo } from '../../src/utils';
 import { logger } from '../../src/logger';
 import { formatGenesis } from './helpers';
+import { addSAFEBytecode } from './helpers-safe';
 import { checkBridgeAddress } from '../utils';
-import { GENESIS_CONTRACT_NAMES } from '../../src/constants';
+import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG } from '../../src/constants';
 // read files
 import genesisBase from './genesis-base.json';
 import createGenesisSovereignParams from './create-genesis-sovereign-params.json';
@@ -133,19 +134,43 @@ async function main() {
         }
     }
 
-    if (createGenesisSovereignParams.setTimelockParameters === true) {
-        // check timelock parameters
-        if (
-            createGenesisSovereignParams.timelockParameters === undefined ||
-            createGenesisSovereignParams.timelockParameters === ''
-        ) {
-            logger.error('setTimelockParameters is set to true but missing parameter timelockParameters');
-            process.exit(1);
-        }
+    // timelock parameters must always be set, otherwise the genesis-base timelock roles would be kept
+    if (createGenesisSovereignParams.setTimelockParameters !== true) {
+        logger.error('setTimelockParameters must be set to true');
+        process.exit(1);
+    }
 
-        const paramsTimelockParameters = ['adminAddress', 'minDelay'];
+    // check timelock parameters
+    if (
+        createGenesisSovereignParams.timelockParameters === undefined ||
+        createGenesisSovereignParams.timelockParameters === ''
+    ) {
+        logger.error('setTimelockParameters is set to true but missing parameter timelockParameters');
+        process.exit(1);
+    }
 
-        checkParams(createGenesisSovereignParams.timelockParameters, paramsTimelockParameters);
+    const paramsTimelockParameters = ['adminAddress', 'minDelay'];
+
+    // check adminAddress is a valid address
+    checkParams(createGenesisSovereignParams.timelockParameters, paramsTimelockParameters, true);
+
+    // Polygon multisig must never be the timelock admin of a sovereign chain
+    if (createGenesisSovereignParams.timelockParameters.adminAddress.toLowerCase() === POLYGON_MULTISIG.toLowerCase()) {
+        logger.error(`timelockParameters.adminAddress must not be the Polygon multisig (${POLYGON_MULTISIG})`);
+        process.exit(1);
+    }
+
+    // nobody could ever propose an L2 upgrade: upgrades locked forever
+    const genesisBaseTimelock = genesisBase.genesis.find(
+        (obj: any) => obj.contractName === GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK,
+    );
+    const adminAddressLower = createGenesisSovereignParams.timelockParameters.adminAddress.toLowerCase();
+    if (
+        adminAddressLower === ethers.ZeroAddress ||
+        (genesisBaseTimelock !== undefined && adminAddressLower === genesisBaseTimelock.address.toLowerCase())
+    ) {
+        logger.error('timelockParameters.adminAddress must not be the zero address nor the timelock itself');
+        process.exit(1);
     }
 
     /// //////////////////////////////////////////
@@ -325,6 +350,10 @@ async function main() {
         timelockContractInfo.storage = storageTimelock;
     }
 
+    // add Safe deterministic deployment factories, Safe v1.3.0 & Safe v1.4.1-3 contracts
+    logger.info('Add Safe contracts');
+    finalGenesis = addSAFEBytecode(finalGenesis);
+
     // regenerate root with the zkEVM root
     const poseidon = await getPoseidon();
     const { F } = poseidon;
@@ -429,6 +458,25 @@ async function main() {
     logger.info('Output saved at:');
     logger.info(`   output genesis: ${pathOutputGenesisJson}`);
     logger.info(`   output info   : ${pathOutputJson}`);
+
+    // warn about the timelock admin, it controls all the L2 upgrades
+    const timelockAdminWarning = [
+        '',
+        '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+        '!!!                               WARNING                                    !!!',
+        '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+        `   timelockParameters.adminAddress: ${createGenesisSovereignParams.timelockParameters.adminAddress}`,
+        `   timelockParameters.minDelay    : ${createGenesisSovereignParams.timelockParameters.minDelay}`,
+        '',
+        '   This address gets ALL the L2 timelock roles (ADMIN, PROPOSER, EXECUTOR, CANCELLER).',
+        '   The L2 timelock owns the ProxyAdmin: it is the ONLY way to perform L2 upgrades',
+        '   (bridge, global exit root, ...).',
+        '   -> You MUST control this address on the L2.',
+        '   -> If it is a Safe: DOUBLE CHECK its initial configuration on the L2',
+        '      (owners, threshold, version, chain where it is deployed).',
+        '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+    ];
+    timelockAdminWarning.forEach((line) => logger.warn(line));
 }
 
 main().catch((e) => {

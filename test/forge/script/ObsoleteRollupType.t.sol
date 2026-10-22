@@ -44,7 +44,7 @@ contract ObsoleteRollupTypeTest is Test {
 
     function setUp() public {
         // Create mainnet fork
-        mainnetFork = vm.createSelectFork("ethereum", 23848426);
+        mainnetFork = vm.createSelectFork("mainnet", 23848426);
 
         // Deploy script
         script = new ObsoleteRollupType();
