@@ -344,7 +344,10 @@ function getAccountsMap(raw: any): Record<string, GenesisAccount> {
         accountsMap = raw;
     }
 
-    return accountsMap;
+    // geth `alloc` addresses may come without the 0x prefix
+    return Object.fromEntries(
+        Object.entries(accountsMap).map(([address, account]) => [normalizeSlot(address), account]),
+    );
 }
 
 async function contractCall(
@@ -599,6 +602,14 @@ async function auditSafeAdmin(
         }
         if (l2Info.modules.length > 0) {
             check('Timelock admin Safe on L2', 'WARN', `Safe has ${l2Info.modules.length} module(s) enabled on L2`);
+        }
+        // a guard can veto every Safe transaction (e.g. scheduling L2 upgrades)
+        if (l2Info.guard !== ethers.ZeroAddress) {
+            check(
+                'Timelock admin Safe on L2',
+                'WARN',
+                `Safe has a guard set on L2 (${l2Info.guard}): review it manually`,
+            );
         }
         return;
     }
