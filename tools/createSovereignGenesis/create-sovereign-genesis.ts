@@ -404,6 +404,7 @@ async function main() {
     const gitInfo = getGitInfo();
     outputJson.gitInfo = gitInfo;
     outputJson.network = hardhatArguments.network;
+    outputJson.l1ChainID = Number((await ethers.provider.getNetwork()).chainId);
     outputJson.rollupManagerAddress = createGenesisSovereignParams.rollupManagerAddress;
     outputJson.RollupManagerInfo = RollupManagerInfo;
     outputJson.gasTokenAddress = gasTokenAddress;

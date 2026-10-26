@@ -31,6 +31,10 @@ const argv = yargs(process.argv.slice(2))
 const BLOCK_TAG = 'earliest'; // Genesis block
 const RPC_TIMEOUT_MS = 15000;
 const EIP7702_DELEGATION_PREFIX = '0xef0100';
+// Safe owners linked list sentinel
+const SENTINEL_OWNERS = '0x0000000000000000000000000000000000000001';
+// L1 chain ids of the createSovereignGenesis `network`, for outputs without `l1ChainID`
+const NETWORK_CHAIN_IDS: Record<string, number> = { mainnet: 1, sepolia: 11155111 };
 // bytes32(uint256(keccak256('eip1967.proxy.admin')) - 1)
 const EIP1967_ADMIN_SLOT = '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103';
 // max block range per eth_getLogs request when the RPC rejects the full range
@@ -258,10 +262,18 @@ async function auditOwnersSigning(
     let keyOwners = 0;
     const contractOwnersOnL2: string[] = [];
     const ownersNotOnL2: string[] = [];
+    const invalidOwners: string[] = [];
     for (const owner of owners) {
-        const [codeL1, codeL2] = await Promise.all([l1Provider.getCode(owner), l2Provider.getCode(owner)]);
+        // a malformed owner list can return the zero address (or the sentinel): Safe rejects its signatures (GS026)
+        const invalid = [ethers.ZeroAddress, SENTINEL_OWNERS].includes(ethers.getAddress(owner));
+        const [codeL1, codeL2] = invalid
+            ? ['0x', '0x']
+            : await Promise.all([l1Provider.getCode(owner), l2Provider.getCode(owner)]);
         let status;
-        if (codeL2 !== '0x' && !isEip7702Delegation(codeL2)) {
+        if (invalid) {
+            invalidOwners.push(owner);
+            status = 'invalid owner (zero/sentinel address): can NOT sign';
+        } else if (codeL2 !== '0x' && !isEip7702Delegation(codeL2)) {
             contractOwnersOnL2.push(owner);
             status = 'contract on L2: review manually';
         } else if (codeL1 !== '0x' && !isEip7702Delegation(codeL1)) {
@@ -284,6 +296,13 @@ async function auditOwnersSigning(
             `${label}: only ${keyOwners + contractOwnersOnL2.length} of ${owners.length} owners can sign on L2, threshold is ${threshold}: the Safe can NOT operate the timelock on L2`,
         );
         return;
+    }
+    if (invalidOwners.length > 0) {
+        check(
+            section,
+            'WARN',
+            `${label}: invalid owners (zero/sentinel address) can not sign: ${invalidOwners.join(', ')}`,
+        );
     }
     if (ownersNotOnL2.length > 0) {
         check(
@@ -991,6 +1010,24 @@ async function auditSafeAdmin(
         );
     } else {
         check('Genesis vs L2 genesis block', 'PASS', `L2 chainId ${l2ChainId} is the genesis chainID`);
+    }
+
+    // the L1 RPC must be the L1 the genesis was created against (e.g. not the L2 RPC by mistake)
+    const expectedL1ChainId = genesisOutput.l1ChainID ?? NETWORK_CHAIN_IDS[genesisOutput.network];
+    if (expectedL1ChainId === undefined || expectedL1ChainId === null || expectedL1ChainId === '') {
+        check(
+            'Genesis vs L2 genesis block',
+            'FAIL',
+            'Genesis output has no l1ChainID (nor a known network): the L1 RPC can not be verified',
+        );
+    } else if (BigInt(expectedL1ChainId) !== l1ChainId) {
+        check(
+            'Genesis vs L2 genesis block',
+            'FAIL',
+            `L1 RPC chainId ${l1ChainId} is NOT the genesis L1 chainId ${expectedL1ChainId}: wrong L1 RPC`,
+        );
+    } else {
+        check('Genesis vs L2 genesis block', 'PASS', `L1 RPC chainId ${l1ChainId} is the genesis L1 chainId`);
     }
     const results: CompareResult[] = [];
     for (const address of addresses) {

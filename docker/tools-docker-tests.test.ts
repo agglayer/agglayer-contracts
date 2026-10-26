@@ -354,6 +354,8 @@ describe('Tooling docker build tests Contract', () => {
             });
             expect(BigInt(timelockStorage[ethers.toBeHex(2, 32)])).to.equal(BigInt(minDelay));
             expect(output.timelockParameters).to.deep.equal(genesisParams.timelockParameters);
+            // L1 chain the genesis was created against (checked by auditGenesis)
+            expect(output.l1ChainID).to.equal(Number((await ethers.provider.getNetwork()).chainId));
 
             // preMintAccounts
             genesisParams.preMintAccounts.forEach((preMintAccount: { address: string; balance: string }) => {

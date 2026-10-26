@@ -98,6 +98,7 @@ describe('Tool auditGenesis', function () {
             files.output,
             JSON.stringify({
                 chainID: chainId,
+                l1ChainID: L1_CHAIN_ID,
                 genesisSCNames,
                 timelockParameters: { adminAddress, minDelay: MIN_DELAY },
             }),
@@ -159,7 +160,7 @@ describe('Tool auditGenesis', function () {
         return startAnvil(files.alloc, files.chainId);
     }
 
-    function runAudit(l2Url: string, files: GenesisFiles, outputFile = files.output): AuditResult {
+    function runAudit(l2Url: string, files: GenesisFiles, outputFile = files.output, l1RpcUrl = l1Url): AuditResult {
         const res = spawnSync(
             'npx',
             [
@@ -173,7 +174,7 @@ describe('Tool auditGenesis', function () {
                 '--genesis-output',
                 outputFile,
                 '--l1-rpc',
-                l1Url,
+                l1RpcUrl,
             ],
             { cwd: REPO_ROOT, encoding: 'utf8', timeout: 300000 },
         );
@@ -311,6 +312,17 @@ describe('Tool auditGenesis', function () {
         expect(res.fails.join('\n')).to.include('wrong chain');
     });
 
+    it('L2 RPC passed as --l1-rpc: FAIL (wrong L1 RPC)', async () => {
+        // the L1 Safe is not on L2: with the wrong L1 RPC it would look like an EOA
+        const { safe } = await createSafe([SENDER], 1, 7);
+        const files = buildGenesis('wrong-l1', safe);
+        const l2Url = await startL2(files);
+
+        const res = runAudit(l2Url, files, files.output, l2Url);
+        expect(res.code).to.equal(1);
+        expect(res.fails.join('\n')).to.include('wrong L1 RPC');
+    });
+
     it('extra timelock role member in the genesis: FAIL and identified', async () => {
         const admin = ethers.Wallet.createRandom().address;
         const intruder = SENDER;
@@ -379,6 +391,26 @@ describe('Tool auditGenesis', function () {
         const res = runAudit(l2Url, files);
         expect(res.code).to.equal(1);
         expect(res.fails.join('\n')).to.include('L2 Safe owners: threshold is 0');
+    });
+
+    it('Safe deployed on L2 with a malformed owner list (zero address owner): FAIL', async () => {
+        const { safe, calldata } = await createSafe([SENDER], 1, 8);
+        const files = buildGenesis('zero-owner', safe);
+        const l2Url = await startL2(files);
+        await sendAs(l2Url, SENDER, SAFE_FACTORY, calldata);
+        // owners linked list (slot 2) emptied with ownerCount (slot 3) = 1: getOwners() returns [address(0)]
+        const sentinel = '0x0000000000000000000000000000000000000001';
+        const ownersSentinelSlot = ethers.solidityPackedKeccak256(['uint256', 'uint256'], [sentinel, 2]);
+        const l2 = new ethers.JsonRpcProvider(l2Url, undefined, { staticNetwork: true });
+        await l2.send('anvil_setStorageAt', [safe, ownersSentinelSlot, ethers.toBeHex(1, 32)]);
+        expect(await l2.call({ to: safe, data: ethers.id('getOwners()').slice(0, 10) })).to.include(
+            '0000000000000000000000000000000000000000000000000000000000000000',
+        );
+        l2.destroy();
+
+        const res = runAudit(l2Url, files);
+        expect(res.code).to.equal(1);
+        expect(res.fails.join('\n')).to.include('L2 Safe owners: only 0 of 1 owners can sign on L2');
     });
 
     it('Safe admin owned by another Safe that is not on L2: FAIL (owners can not sign on L2)', async () => {
