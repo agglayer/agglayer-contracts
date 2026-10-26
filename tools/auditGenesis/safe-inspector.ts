@@ -8,6 +8,8 @@ import { ethers } from 'ethers';
 const SENTINEL_MODULES = '0x0000000000000000000000000000000000000001';
 const MODULES_PAGE_SIZE = 50;
 const MAX_MODULES_PAGES = 100;
+// max block range per eth_getLogs request when the RPC rejects the full range
+const LOGS_BLOCK_RANGE = 10000;
 const GUARD_STORAGE_SLOT = ethers.id('guard_manager.guard.address');
 const FALLBACK_HANDLER_STORAGE_SLOT = ethers.id('fallback_manager.handler.address');
 const PROXY_CREATION_TOPIC = ethers.id('ProxyCreation(address,address)');
@@ -199,9 +201,15 @@ async function getSafeSetupLog(provider: ethers.JsonRpcProvider, address: string
     try {
         logs = await provider.getLogs({ address, topics: [topic], fromBlock: 0, toBlock: 'latest' });
     } catch (e) {
-        // RPC does not allow the whole block range: look only at the creation block
+        // RPC does not allow the whole block range: scan from the creation block to the head in ranges
+        // (the setup can happen in a later transaction than the creation)
         const creationBlock = await findCreationBlock(provider, address);
-        logs = await provider.getLogs({ address, topics: [topic], fromBlock: creationBlock, toBlock: creationBlock });
+        const latest = await provider.getBlockNumber();
+        logs = [];
+        for (let fromBlock = creationBlock; fromBlock <= latest && logs.length === 0; fromBlock += LOGS_BLOCK_RANGE) {
+            const toBlock = Math.min(fromBlock + LOGS_BLOCK_RANGE - 1, latest);
+            logs = await provider.getLogs({ address, topics: [topic], fromBlock, toBlock });
+        }
     }
     return logs[0];
 }

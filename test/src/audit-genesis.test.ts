@@ -240,6 +240,9 @@ describe('Tool auditGenesis', function () {
     }
 
     before(async function () {
+        if (!anvilAvailable && process.env.CI !== undefined) {
+            throw new Error('anvil (Foundry) is required to run the auditGenesis tests in CI');
+        }
         if (!anvilAvailable) {
             console.warn('    anvil (Foundry) is not installed: skipping auditGenesis tests');
             this.skip();
