@@ -863,13 +863,18 @@ async function auditSafeAdmin(
         );
     }
 
-    // an ERC-20 setup payment calls the token during the setup (it can re-enter the new Safe): not verifiable.
-    // An ETH payment is sent with 2300 gas, it can not re-enter
-    if (creation.setupParams.payment > 0n && creation.setupParams.paymentToken !== ethers.ZeroAddress) {
+    // a setup payment can not be verified by the simulation: an ERC-20 payment calls the token during the setup (it
+    // can re-enter the new Safe), and an ETH payment is `payment * min(1, gasprice)`, 0 in an eth_call simulation
+    // (an unfunded Safe would pass the simulation and revert on the real deployment, GS011)
+    if (creation.setupParams.payment > 0n) {
+        const paymentAsset =
+            creation.setupParams.paymentToken === ethers.ZeroAddress
+                ? 'ETH'
+                : `the ERC-20 ${creation.setupParams.paymentToken}`;
         check(
             'Timelock admin Safe on L2',
             'FAIL',
-            `The Safe setup pays ${creation.setupParams.payment} of the ERC-20 ${creation.setupParams.paymentToken}: the token is called during the setup and can change the Safe, the resulting Safe can not be verified`,
+            `The Safe setup pays ${creation.setupParams.payment} of ${paymentAsset}: the deployment with a setup payment can not be verified`,
         );
         return;
     }

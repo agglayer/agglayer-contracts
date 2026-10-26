@@ -209,7 +209,7 @@ describe('Tool auditGenesis', function () {
      * Create a Safe v1.4.1 on the local L1
      * @returns Safe address and the factory calldata (to replay it on L2)
      */
-    async function createSafe(owners: string[], threshold: number, saltNonce: number, callback?: string) {
+    async function createSafe(owners: string[], threshold: number, saltNonce: number, callback?: string, payment = 0) {
         const initializer = safeInterface.encodeFunctionData('setup', [
             owners,
             threshold,
@@ -217,8 +217,8 @@ describe('Tool auditGenesis', function () {
             '0x',
             ethers.ZeroAddress,
             ethers.ZeroAddress,
-            0,
-            ethers.ZeroAddress,
+            payment,
+            payment > 0 ? SENDER : ethers.ZeroAddress,
         ]);
         const calldata =
             callback === undefined
@@ -237,6 +237,10 @@ describe('Tool auditGenesis', function () {
             ['address'],
             await l1.call({ from: SENDER, to: SAFE_FACTORY, data: calldata }),
         );
+        if (payment > 0) {
+            // the Safe pays the setup payment: fund it before its creation
+            await l1.send('anvil_setBalance', [safe, ethers.toQuantity(payment)]);
+        }
         await sendAs(l1Url, SENDER, SAFE_FACTORY, calldata);
         return { safe: safe as string, calldata };
     }
@@ -459,6 +463,15 @@ describe('Tool auditGenesis', function () {
 
         expect(res.code).to.equal(1);
         expect(res.fails.join('\n')).to.include('Original Safe owners: only 0 of 1 owners can sign on L2');
+    });
+
+    it('Safe with an ETH setup payment, not on L2: FAIL (can not be verified)', async () => {
+        const { safe } = await createSafe([SENDER], 1, 9, undefined, 1000);
+        const files = buildGenesis('eth-payment', safe);
+        const res = runAudit(await startL2(files), files);
+
+        expect(res.code).to.equal(1);
+        expect(res.fails.join('\n')).to.include('The Safe setup pays 1000 of ETH');
     });
 
     it('Safe created with a creation callback: FAIL', async () => {
