@@ -1285,7 +1285,12 @@ async function auditSafeAdmin(
                 }
             }
 
-            // every proxy must be administered by the ProxyAdmin (EIP-1967 admin slot), in genesis & on L2
+            // every proxy must be administered by the ProxyAdmin (EIP-1967 admin slot), in genesis & on L2. Except the
+            // WETH proxy created for custom gas token chains: TokenWrappedTransparentProxy sets the bridge
+            // proxiedTokensManager as its admin
+            const wethProxyAddress = genesisOutput.genesisSCNames?.[GENESIS_CONTRACT_NAMES.WETH_PROXY];
+            const expectedProxyAdmin = (address: string) =>
+                sameAddress(address, wethProxyAddress) ? genesisOutput.proxiedTokensManager : proxyAdminAddress;
             const proxies = new Map<string, string>();
             Object.entries(accountsMap).forEach(([address, account]) => {
                 if ((toStorageMap(account.storage ?? {})[EIP1967_ADMIN_SLOT] ?? 0n) !== 0n) {
@@ -1310,27 +1315,37 @@ async function auditSafeAdmin(
                         const l2Value = await l2Provider.getStorage(address, EIP1967_ADMIN_SLOT);
                         const genesisAdmin = storageValueToAddress(genesisValue);
                         const l2Admin = storageValueToAddress(l2Value);
+                        const expectedAdmin = expectedProxyAdmin(address);
                         const ok =
-                            sameAddress(genesisAdmin, proxyAdminAddress) && sameAddress(l2Admin, proxyAdminAddress);
+                            ethers.isAddress(expectedAdmin) &&
+                            sameAddress(genesisAdmin, expectedAdmin) &&
+                            sameAddress(l2Admin, expectedAdmin);
                         if (!ok) {
                             wrongProxies.push(`${name || address}`);
                         }
-                        rows.push([name, ethers.getAddress(address), genesisAdmin, l2Admin, ok ? 'OK' : '**WRONG**']);
+                        rows.push([
+                            name,
+                            ethers.getAddress(address),
+                            ethers.isAddress(expectedAdmin) ? expectedAdmin : 'unknown (missing in genesis output)',
+                            genesisAdmin,
+                            l2Admin,
+                            ok ? 'OK' : '**WRONG**',
+                        ]);
                     }
                     md('### Upgradeable proxies');
                     md();
-                    mdTable(['Proxy', 'Address', 'Genesis admin', 'L2 admin', 'Status'], rows);
+                    mdTable(['Proxy', 'Address', 'Expected admin', 'Genesis admin', 'L2 admin', 'Status'], rows);
                     if (wrongProxies.length === 0) {
                         check(
                             TIMELOCK_SECTION,
                             'PASS',
-                            `All ${proxies.size} upgradeable proxies are administered by the ProxyAdmin (genesis & L2)`,
+                            `All ${proxies.size} upgradeable proxies are administered by their expected admin (ProxyAdmin, WETH proxy: proxiedTokensManager), in genesis & L2`,
                         );
                     } else {
                         check(
                             TIMELOCK_SECTION,
                             'FAIL',
-                            `Proxies NOT administered by the ProxyAdmin (genesis or L2): ${wrongProxies.join(', ')}`,
+                            `Proxies NOT administered by their expected admin (genesis or L2): ${wrongProxies.join(', ')}`,
                         );
                     }
                 } catch (e: any) {

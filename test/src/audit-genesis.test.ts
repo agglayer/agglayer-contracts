@@ -67,6 +67,7 @@ describe('Tool auditGenesis', function () {
         name: string,
         adminAddress: string,
         mutate?: (alloc: any, genesisSCNames: Record<string, string>) => void,
+        extraOutput: Record<string, any> = {},
     ): GenesisFiles {
         const chainId = nextChainId;
         nextChainId += 1;
@@ -101,6 +102,7 @@ describe('Tool auditGenesis', function () {
                 l1ChainID: L1_CHAIN_ID,
                 genesisSCNames,
                 timelockParameters: { adminAddress, minDelay: MIN_DELAY },
+                ...extraOutput,
             }),
         );
         return files;
@@ -277,7 +279,7 @@ describe('Tool auditGenesis', function () {
         expect(res.warns).to.deep.equal([]);
         expect(res.out).to.include('adminAddress is most probably an EOA since it has no bytecode');
         expect(res.out).to.include('Genesis timelock storage is exactly the expected one');
-        expect(res.out).to.include('upgradeable proxies are administered by the ProxyAdmin');
+        expect(res.out).to.include('upgradeable proxies are administered by their expected admin');
         expect(res.out).to.include('owner at genesis is the timelock');
     });
 
@@ -353,7 +355,40 @@ describe('Tool auditGenesis', function () {
         const res = runAudit(await startL2(files), files);
 
         expect(res.code).to.equal(1);
-        expect(res.fails.join('\n')).to.include('Proxies NOT administered by the ProxyAdmin');
+        expect(res.fails.join('\n')).to.include('Proxies NOT administered by their expected admin');
+    });
+
+    it('custom gas token: WETH proxy administered by the proxiedTokensManager, not the ProxyAdmin', async () => {
+        const admin = ethers.Wallet.createRandom().address;
+        const proxiedTokensManager = ethers.Wallet.createRandom().address;
+        const wethProxy = '0x00000000000000000000000000000000000077e7';
+        // WETH proxy (as created by the bridge at initialization) with the given EIP-1967 admin
+        const withWethProxy =
+            (wethAdmin: string | undefined) => (alloc: any, genesisSCNames: Record<string, string>) => {
+                const bridgeProxy = genesisSCNames['PolygonZkEVMBridge proxy'];
+                alloc[wethProxy] = {
+                    code: alloc[bridgeProxy].code,
+                    balance: '0x0',
+                    nonce: '0x1',
+                    storage: {
+                        [EIP1967_ADMIN_SLOT]: ethers.zeroPadValue(wethAdmin ?? genesisSCNames.ProxyAdmin, 32),
+                    },
+                };
+                genesisSCNames[GENESIS_CONTRACT_NAMES.WETH_PROXY] = wethProxy;
+            };
+
+        const ok = buildGenesis('weth-ok', admin, withWethProxy(proxiedTokensManager), { proxiedTokensManager });
+        const resOk = runAudit(await startL2(ok), ok);
+        expect(resOk.code, resOk.out).to.equal(0);
+        expect(resOk.out).to.include('All 3 upgradeable proxies are administered by their expected admin');
+
+        // WETH proxy administered by the core ProxyAdmin instead of the proxiedTokensManager
+        const wrong = buildGenesis('weth-wrong', admin, withWethProxy(undefined), { proxiedTokensManager });
+        const resWrong = runAudit(await startL2(wrong), wrong);
+        expect(resWrong.code).to.equal(1);
+        expect(resWrong.fails.join('\n')).to.include(
+            `Proxies NOT administered by their expected admin (genesis or L2): ${GENESIS_CONTRACT_NAMES.WETH_PROXY}`,
+        );
     });
 
     it('Safe admin with EOA owners: not on L2 yet (simulated), then deployed on L2', async () => {
