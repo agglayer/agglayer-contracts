@@ -5,6 +5,9 @@ import path from 'path';
 import shelljs from 'shelljs';
 import { ConsensusContracts } from '../src/pessimistic-utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../src/utils-common-aggchain';
+import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG, TIMELOCK } from '../src/constants';
+import { getTimelockRoleMemberSlot, initializeTimelockStorage } from '../src/genesis/genesis-helpers';
+import safeContracts from '../tools/createSovereignGenesis/safe-contracts.json';
 
 import {
     AgglayerManager,
@@ -247,23 +250,183 @@ describe('Tooling docker build tests Contract', () => {
         expect(rollupType[6]).to.equal(createRollupTypeConfig.programVKey);
     });
 
-    it('Check tool create genesis file', async () => {
-        // Copy example genesis and config file
-        fs.copyFileSync(
-            path.join(__dirname, './scripts/tools/create-genesis-sovereign-params.json'),
-            path.join(__dirname, '../tools/createSovereignGenesis/create-genesis-sovereign-params.json'),
-        );
-        fs.copyFileSync(
-            path.join(__dirname, './deploymentOutput/genesis.json'),
-            path.join(__dirname, '../tools/createSovereignGenesis/genesis-base.json'),
-        );
-        // Run tool
-        const out = shelljs.exec(
-            'npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --network localhost',
-        );
+    describe('Tool createSovereignGenesis', () => {
+        const toolDir = path.join(__dirname, '../tools/createSovereignGenesis');
+        const pathParams = path.join(toolDir, 'create-genesis-sovereign-params.json');
+        const pathGenesisBase = path.join(toolDir, 'genesis-base.json');
+        // output names match the tool .gitignore patterns
+        const outputGenesisFile = 'genesis-rollupID-docker-test.json';
+        const outputFile = 'output-rollupID-docker-test.json';
+        const pathOutputGenesis = path.join(toolDir, outputGenesisFile);
+        const pathOutput = path.join(toolDir, outputFile);
+        const backups = {} as { [filePath: string]: string };
+        let genesisParams: any;
 
-        if (out.code === 1) {
-            throw new Error('Error creating genesis');
+        function runTool(params: any) {
+            fs.rmSync(pathOutputGenesis, { force: true });
+            fs.rmSync(pathOutput, { force: true });
+            fs.writeFileSync(pathParams, JSON.stringify(params, null, 4));
+
+            return shelljs.exec(
+                'npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --network localhost',
+                { silent: true },
+            );
         }
+
+        before(() => {
+            // keep local tool files to restore them after the tests
+            [pathParams, pathGenesisBase].forEach((filePath) => {
+                if (fs.existsSync(filePath)) {
+                    backups[filePath] = fs.readFileSync(filePath, 'utf8');
+                }
+            });
+
+            // Copy docker genesis and config file
+            fs.copyFileSync(path.join(__dirname, './deploymentOutput/genesis.json'), pathGenesisBase);
+            genesisParams = JSON.parse(
+                fs.readFileSync(path.join(__dirname, './scripts/tools/create-genesis-sovereign-params.json'), 'utf8'),
+            );
+            genesisParams.outputGenesisPath = `./${outputGenesisFile}`;
+            genesisParams.outputPath = `./${outputFile}`;
+        });
+
+        after(() => {
+            fs.rmSync(pathOutputGenesis, { force: true });
+            fs.rmSync(pathOutput, { force: true });
+            [pathParams, pathGenesisBase].forEach((filePath) => {
+                if (backups[filePath] !== undefined) {
+                    fs.writeFileSync(filePath, backups[filePath]);
+                } else {
+                    fs.rmSync(filePath, { force: true });
+                }
+            });
+        });
+
+        it('Check tool create genesis file', async () => {
+            const out = runTool(genesisParams);
+            expect(out.code, `${out.stdout}${out.stderr}`).to.equal(0);
+
+            const genesis = JSON.parse(fs.readFileSync(pathOutputGenesis, 'utf8'));
+            const output = JSON.parse(fs.readFileSync(pathOutput, 'utf8'));
+
+            // geth format: { [address]: { code, storage, balance, nonce } }
+            expect(genesisParams.formatGenesis).to.equal('geth');
+            const accounts = Object.fromEntries(
+                Object.entries(genesis).map(([address, account]) => [address.toLowerCase(), account]),
+            ) as any;
+
+            // Safe deterministic deployment factories, Safe v1.3.0 & Safe v1.4.1-3 contracts
+            const safeGenesisContracts = [
+                ...safeContracts.deterministicDeploymentFactories,
+                ...safeContracts['v1.3.0'],
+                ...safeContracts['v1.4.1-3'],
+            ] as any[];
+            expect(safeGenesisContracts.length).to.equal(23);
+
+            safeGenesisContracts.forEach((contract) => {
+                const account = accounts[contract.address.toLowerCase()];
+                expect(account, `${contract.contractName} not found in genesis`).to.not.equal(undefined);
+                expect(account.code).to.equal(contract.bytecode);
+                expect(ethers.keccak256(account.code)).to.equal(contract.codeHash);
+                expect(account.nonce).to.equal('0x1');
+                expect(account.balance).to.equal('0x0');
+                expect(account.storage).to.deep.equal(contract.storage);
+                expect(output.genesisSCNames[contract.contractName]).to.equal(contract.address);
+            });
+
+            // Safe singletons are locked with threshold = 1 (slot 4)
+            ['Safe v1.3.0 GnosisSafe', 'Safe v1.3.0 GnosisSafeL2', 'Safe v1.4.1 Safe', 'Safe v1.4.1 SafeL2'].forEach(
+                (contractName) => {
+                    const account = accounts[output.genesisSCNames[contractName].toLowerCase()];
+                    expect(account.storage[ethers.toBeHex(4, 32)]).to.equal(ethers.toBeHex(1, 32));
+                },
+            );
+
+            // Timelock storage
+            const { adminAddress, minDelay } = genesisParams.timelockParameters;
+            const timelockAddress = output.genesisSCNames[GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK];
+            const timelockStorage = accounts[timelockAddress.toLowerCase()].storage;
+
+            expect(timelockStorage).to.deep.equal(initializeTimelockStorage(minDelay, adminAddress, timelockAddress));
+            Object.values(TIMELOCK.ROLES).forEach((roleHash) => {
+                expect(BigInt(timelockStorage[getTimelockRoleMemberSlot(roleHash, adminAddress)])).to.equal(1n);
+                expect(timelockStorage[getTimelockRoleMemberSlot(roleHash, POLYGON_MULTISIG)]).to.equal(undefined);
+            });
+            expect(BigInt(timelockStorage[ethers.toBeHex(2, 32)])).to.equal(BigInt(minDelay));
+            expect(output.timelockParameters).to.deep.equal(genesisParams.timelockParameters);
+            // L1 chain the genesis was created against (checked by auditGenesis)
+            expect(output.l1ChainID).to.equal(Number((await ethers.provider.getNetwork()).chainId));
+
+            // preMintAccounts
+            genesisParams.preMintAccounts.forEach((preMintAccount: { address: string; balance: string }) => {
+                expect(BigInt(accounts[preMintAccount.address.toLowerCase()].balance)).to.equal(
+                    BigInt(preMintAccount.balance),
+                );
+            });
+        });
+
+        it('Check tool create genesis file fails if setTimelockParameters is missing', async () => {
+            const params = { ...genesisParams };
+            delete params.setTimelockParameters;
+
+            const out = runTool(params);
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include('Missing parameter: setTimelockParameters');
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
+
+        it('Check tool create genesis file fails if setTimelockParameters is not true', async () => {
+            const out = runTool({ ...genesisParams, setTimelockParameters: false });
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include('setTimelockParameters must be set to true');
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
+
+        it('Check tool create genesis file fails if the timelock admin is the Polygon multisig', async () => {
+            const out = runTool({
+                ...genesisParams,
+                timelockParameters: {
+                    ...genesisParams.timelockParameters,
+                    // check is case insensitive
+                    adminAddress: POLYGON_MULTISIG.toLowerCase(),
+                },
+            });
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include(
+                `timelockParameters.adminAddress must not be the Polygon multisig (${POLYGON_MULTISIG})`,
+            );
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
+
+        it('Check tool create genesis file fails if the timelock admin is not a valid address', async () => {
+            const out = runTool({
+                ...genesisParams,
+                timelockParameters: {
+                    ...genesisParams.timelockParameters,
+                    // one character missing
+                    adminAddress: genesisParams.timelockParameters.adminAddress.slice(0, -1),
+                },
+            });
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include('Invalid parameter address: adminAddress');
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
+
+        it('Check tool create genesis file fails if the timelock admin is the zero address', async () => {
+            const out = runTool({
+                ...genesisParams,
+                timelockParameters: { ...genesisParams.timelockParameters, adminAddress: ethers.ZeroAddress },
+            });
+            expect(out.code).to.not.equal(0);
+            expect(`${out.stdout}${out.stderr}`).to.include(
+                'timelockParameters.adminAddress must not be the zero address nor the timelock itself',
+            );
+            expect(fs.existsSync(pathOutputGenesis)).to.equal(false);
+            expect(fs.existsSync(pathOutput)).to.equal(false);
+        });
     });
 });

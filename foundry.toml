@@ -35,9 +35,8 @@ remappings_version = false
 remappings_location = "config"
 
 [rpc_endpoints]
-mainnet = "https://mainnet.infura.io/v3/${INFURA_KEY}"
-sepolia = "https://sepolia.infura.io/v3/${INFURA_KEY}"
-ethereum = "https://ethereum-rpc.publicnode.com"
+mainnet = "${MAINNET_PROVIDER}"
+sepolia = "${SEPOLIA_PROVIDER}"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}" }
