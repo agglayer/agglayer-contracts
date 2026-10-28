@@ -43,7 +43,10 @@ For each rollup, the implementation and admin addresses are read from the ERC-19
 
 The proxy bytecode comes from the rollup manager version that **created** the rollup: `AgglayerManager` deploys the proxy with `new PolygonTransparentProxy(...)`, so it is compiled with the rollup manager compiler settings of that version. The defaults of this checkout (`contracts/lib/PolygonTransparentProxy.sol`, solc 0.8.28, 100 runs, `cancun`) match rollups created by a rollup manager built from `v12.1.0-rc.4` or later. Rollups created by older rollup managers can fail (different compiler settings or proxy source path), typically with `BuildInfoCompilerVersionMismatchError` or `DeployedBytecodeMismatchError` (the script prints a hint pointing to this section).
 
-Proxy source path and rollup manager compiler settings per agglayer-contracts tag (from `hardhat.config.ts`; in `v10.0.0-rc.0` to `v10.0.0-rc.2` the proxy file override used `shanghai` while the rollup manager used `cancun`):
+Proxy source path and rollup manager compiler settings per agglayer-contracts tag (from `hardhat.config.ts`). Exceptions:
+
+- `v10.0.0-rc.0` to `v10.0.0-rc.2`: the proxy file override used `shanghai` while the rollup manager used `cancun`. In that checkout, set the `evmVersion` of the proxy file override to `cancun` before running the tool
+- `v10.1.0-rc.9`: uses 100 runs (`v10.1.0-rc.8` and `v10.1.0-rc.10` use 500 runs)
 
 |                          Tags                           |                            `proxyContract`                             |      Compiler settings       |
 | :-----------------------------------------------------: | :--------------------------------------------------------------------: | :--------------------------: |
@@ -71,7 +74,7 @@ The example file values are illustrative: set the `implementationContract` match
 
 ### Upgraded rollups
 
-The proxy constructor argument is the implementation the proxy was **deployed** with (the rollup type `consensusImplementation` at creation time). If the rollup was later upgraded, the current ERC-1967 implementation differs from it, and the proxy verification will fail. In that case set `proxyConstructorImplementation` to the original implementation address.
+The proxy constructor argument is the implementation the proxy was **deployed** with (the rollup type `consensusImplementation` at creation time). If the rollup was later upgraded, the current ERC-1967 implementation differs from it, and the proxy verification will fail (Etherscan typically answers `Fail - Unable to verify`; the script prints a hint pointing to this section). In that case set `proxyConstructorImplementation` to the original implementation address: the implementation of the first `Upgraded(address)` event emitted by the proxy, in its creation transaction.
 
 ## Usage
 
@@ -97,5 +100,8 @@ npx hardhat run tools/verifyRollup/verifyRollup.ts --network <network>
 
 ## Notes
 
-- The tool has not yet been validated end to end against Etherscan
-- The installed `@nomicfoundation/hardhat-verify` uses the Etherscan V1 API for built-in networks such as `mainnet` and `sepolia`. If Etherscan rejects V1 requests, add a `customChains` entry in `hardhat.config.ts` using `https://api.etherscan.io/v2/api?chainid=<chainId>` as `apiURL`, like the existing `opSepolia` entry
+- Etherscan V1 endpoints are deprecated. `hardhat.config.ts` defines `customChains` entries for `sepolia` and `mainnet` using the Etherscan V2 API (`https://api.etherscan.io/v2/api?chainid=<chainId>`), like `opSepolia`. hardhat-verify selects the chain config by the chain ID of the connected network and `customChains` take precedence over its built-in chains. To use another chain, add a `customChains` entry the same way
+- The installed `@nomicfoundation/hardhat-verify` (1.1.1) drops the query string of the API URL in its GET requests (already verified check and verification status polling), so the `chainid` parameter of V2 URLs would be lost. The script restores it at runtime
+- `@openzeppelin/hardhat-upgrades` overrides the verification of ERC-1967 proxies: for each proxy it also checks the current implementation and the admin (the AgglayerManager), tries the OpenZeppelin proxy artifacts first and then falls back to `proxyContract`, and links the proxy to its implementation on Etherscan. The resulting `Failed to verify TransparentUpgradeableProxy ... Bytecode does not match ...` log is expected when the fallback succeeds
+- Etherscan marks contracts with the same bytecode as an already verified one as verified ("similar match"), so most rollup proxies are reported as `already verified`
+- Validated on Sepolia: already verified proxies (bali rollup 92) and a fresh verification of a proxy created by a `v10` rollup manager (bali rollup 38, `proxyConstructorImplementation` set, `contracts/v2/lib/PolygonTransparentProxy.sol` with 0.8.28, 500 runs, `cancun`)

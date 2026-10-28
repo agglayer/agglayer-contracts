@@ -20,6 +20,10 @@ const DEFAULT_PROXY_CONTRACT = 'contracts/lib/PolygonTransparentProxy.sol:Polygo
 const PROXY_MISMATCH_MESSAGES = ['is being compiled with', 'was compiled with solidity', "bytecode doesn't match"];
 const PROXY_MISMATCH_HINT =
     'Hint: the proxy bytecode depends on the rollup manager version that created the rollup. See "Older rollups" in tools/verifyRollup/README.md';
+// Etherscan rejects the submission when the constructor arguments do not match the creation code
+const CONSTRUCTOR_ARGS_MISMATCH_MESSAGES = ['unable to verify', 'constructor argument'];
+const CONSTRUCTOR_ARGS_MISMATCH_HINT =
+    'Hint: if the rollup was upgraded, the proxy constructor implementation differs from the current one. See "Upgraded rollups" in tools/verifyRollup/README.md';
 
 interface RollupEntry {
     rollupAddress?: string;
@@ -64,12 +68,14 @@ async function main() {
 
     let etherscan: Etherscan | undefined;
     if (!dryRun) {
-        checkEtherscanApiKey();
         const chainConfig = await Etherscan.getCurrentChainConfig(
             hre.network.name,
             hre.network.provider,
             hre.config.etherscan.customChains,
         );
+        // hardhat-verify resolves the API key with the network name of the matched chain config
+        checkEtherscanApiKey(chainConfig.network);
+        keepApiUrlQueryParams(chainConfig.urls.apiURL);
         etherscan = Etherscan.fromChainConfig(hre.config.etherscan.apiKey, chainConfig);
     }
 
@@ -129,6 +135,12 @@ async function main() {
         ) {
             console.log(`[${label}] ${PROXY_MISMATCH_HINT}`);
             proxyResult.error = `${proxyResult.error} ${PROXY_MISMATCH_HINT}`;
+        } else if (
+            proxyResult.status === 'failed' &&
+            CONSTRUCTOR_ARGS_MISMATCH_MESSAGES.some((message) => proxyResult.error?.toLowerCase().includes(message))
+        ) {
+            console.log(`[${label}] ${CONSTRUCTOR_ARGS_MISMATCH_HINT}`);
+            proxyResult.error = `${proxyResult.error} ${CONSTRUCTOR_ARGS_MISMATCH_HINT}`;
         }
         results.push(proxyResult);
 
@@ -181,10 +193,10 @@ async function main() {
 /**
  * Fail fast if the Etherscan API key used by hardhat-verify for the selected network is not set
  */
-function checkEtherscanApiKey() {
+function checkEtherscanApiKey(networkName: string) {
     const { apiKey } = hre.config.etherscan;
-    const networkName = hre.network.name;
     const key = typeof apiKey === 'string' ? apiKey : apiKey[networkName];
+    const keyPath = typeof apiKey === 'string' ? 'etherscan.apiKey' : `etherscan.apiKey.${networkName}`;
     if (key === undefined) {
         throw new Error(
             `No Etherscan API key configured for network "${networkName}" in hardhat.config.ts (etherscan.apiKey)`,
@@ -192,9 +204,34 @@ function checkEtherscanApiKey() {
     }
     if (key === '' || key === 'undefined') {
         throw new Error(
-            `Etherscan API key for network "${networkName}" is not set. Set the environment variable referenced in hardhat.config.ts (etherscan.apiKey.${networkName}) in your .env`,
+            `Etherscan API key for network "${networkName}" is not set. Set the environment variable referenced in hardhat.config.ts (${keyPath}) in your .env`,
         );
     }
+}
+
+/**
+ * hardhat-verify 1.1.1 replaces the whole query string of the API URL in its GET requests (isVerified, getVerificationStatus),
+ * dropping the "chainid" parameter required by Etherscan V2 URLs (https://api.etherscan.io/v2/api?chainid=<chainId>).
+ * Wrap its GET helper to add back the query parameters of the configured API URL
+ */
+function keepApiUrlQueryParams(apiURL: string) {
+    const apiUrl = new URL(apiURL);
+    if (apiUrl.search === '') {
+        return;
+    }
+    // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+    const undici = require('@nomicfoundation/hardhat-verify/internal/undici');
+    const { sendGetRequest } = undici;
+    undici.sendGetRequest = (url: URL) => {
+        if (url.origin === apiUrl.origin && url.pathname === apiUrl.pathname) {
+            apiUrl.searchParams.forEach((value, key) => {
+                if (!url.searchParams.has(key)) {
+                    url.searchParams.set(key, value);
+                }
+            });
+        }
+        return sendGetRequest(url);
+    };
 }
 
 /**
