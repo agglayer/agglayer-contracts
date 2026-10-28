@@ -5,17 +5,27 @@ import fs = require('fs');
 
 import * as dotenv from 'dotenv';
 import hre, { ethers, upgrades } from 'hardhat';
+import { Etherscan } from '@nomicfoundation/hardhat-verify/etherscan';
 import { AgglayerManager } from '../../typechain-types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const pathParameters = path.join(__dirname, './verifyRollup.json');
 
-const PROXY_CONTRACT = 'contracts/lib/PolygonTransparentProxy.sol:PolygonTransparentProxy';
+const DEFAULT_PROXY_CONTRACT = 'contracts/lib/PolygonTransparentProxy.sol:PolygonTransparentProxy';
+
+// Messages of hardhat-verify errors raised when the local proxy build does not match the deployed bytecode
+// (BuildInfoCompilerVersionMismatchError, CompilerVersionsMismatchError, DeployedBytecodeMismatchError).
+// Matched by message because hardhat plugin errors do not keep their class name
+const PROXY_MISMATCH_MESSAGES = ['is being compiled with', 'was compiled with solidity', "bytecode doesn't match"];
+const PROXY_MISMATCH_HINT =
+    'Hint: the proxy bytecode depends on the rollup manager version that created the rollup. See "Older rollups" in tools/verifyRollup/README.md';
 
 interface RollupEntry {
     rollupAddress?: string;
     rollupID?: number;
+    // Optional: fully qualified name of the proxy contract (overrides the global value)
+    proxyContract?: string;
     // Optional: implementation passed to the proxy constructor (defaults to the current ERC-1967 implementation)
     proxyConstructorImplementation?: string;
     verifyImplementation?: boolean;
@@ -25,6 +35,7 @@ interface RollupEntry {
 
 interface VerifyRollupParams {
     rollupManagerAddress?: string;
+    proxyContract?: string;
     verifyImplementation?: boolean;
     dryRun?: boolean;
     rollups: RollupEntry[];
@@ -51,15 +62,21 @@ async function main() {
         throw new Error('Parameter "rollups" must be a non-empty array');
     }
 
+    let etherscan: Etherscan | undefined;
     if (!dryRun) {
         checkEtherscanApiKey();
+        const chainConfig = await Etherscan.getCurrentChainConfig(
+            hre.network.name,
+            hre.network.provider,
+            hre.config.etherscan.customChains,
+        );
+        etherscan = Etherscan.fromChainConfig(hre.config.etherscan.apiKey, chainConfig);
     }
 
     const results: VerifyResult[] = [];
 
     for (const [index, entry] of params.rollups.entries()) {
-        let label =
-            entry.rollupID !== undefined && !entry.rollupAddress ? `rollupID ${entry.rollupID}` : `rollups[${index}]`;
+        let label = entry.rollupID !== undefined ? `rollupID ${entry.rollupID}` : `rollups[${index}]`;
         let rollupAddress: string;
         try {
             rollupAddress = await resolveRollupAddress(entry, params.rollupManagerAddress);
@@ -95,18 +112,25 @@ async function main() {
             results.push({ label, target: 'proxy', address: rollupAddress, status: 'failed', error });
             continue;
         }
-        results.push(
-            await verifyContract(
-                label,
-                'proxy',
-                {
-                    contract: PROXY_CONTRACT,
-                    address: rollupAddress,
-                    constructorArguments: [proxyImplementation, adminAddress, '0x'],
-                },
-                dryRun,
-            ),
+        const proxyResult = await verifyContract(
+            label,
+            'proxy',
+            {
+                contract: entry.proxyContract ?? params.proxyContract ?? DEFAULT_PROXY_CONTRACT,
+                address: rollupAddress,
+                constructorArguments: [proxyImplementation, adminAddress, '0x'],
+            },
+            dryRun,
+            etherscan,
         );
+        if (
+            proxyResult.status === 'failed' &&
+            PROXY_MISMATCH_MESSAGES.some((message) => proxyResult.error?.includes(message))
+        ) {
+            console.log(`[${label}] ${PROXY_MISMATCH_HINT}`);
+            proxyResult.error = `${proxyResult.error} ${PROXY_MISMATCH_HINT}`;
+        }
+        results.push(proxyResult);
 
         // Implementation verification
         const verifyImplementation = entry.verifyImplementation ?? params.verifyImplementation ?? true;
@@ -130,6 +154,7 @@ async function main() {
                     constructorArguments: entry.implementationConstructorArgs,
                 },
                 dryRun,
+                etherscan,
             ),
         );
     }
@@ -173,17 +198,25 @@ function checkEtherscanApiKey() {
 }
 
 /**
- * Resolve the rollup address from the entry: either directly or through the AgglayerManager
+ * Resolve the rollup address from the entry: either directly or through the AgglayerManager.
+ * If both "rollupAddress" and "rollupID" are set, they must match
  */
 async function resolveRollupAddress(entry: RollupEntry, rollupManagerAddress?: string): Promise<string> {
-    if (entry.rollupAddress !== undefined && entry.rollupAddress !== '') {
-        if (!ethers.isAddress(entry.rollupAddress)) {
-            throw new Error(`Invalid rollupAddress: ${entry.rollupAddress}`);
-        }
-        return entry.rollupAddress;
+    const hasRollupAddress = entry.rollupAddress !== undefined && entry.rollupAddress !== '';
+    if (hasRollupAddress && !ethers.isAddress(entry.rollupAddress)) {
+        throw new Error(`Invalid rollupAddress: ${entry.rollupAddress}`);
     }
     if (entry.rollupID === undefined) {
-        throw new Error('Either "rollupAddress" or "rollupID" must be set');
+        if (!hasRollupAddress) {
+            throw new Error('Either "rollupAddress" or "rollupID" must be set');
+        }
+        return entry.rollupAddress as string;
+    }
+    if (hasRollupAddress && rollupManagerAddress === undefined) {
+        console.log(
+            `WARNING: "rollupID" ${entry.rollupID} cannot be checked against "rollupAddress" ${entry.rollupAddress} because "rollupManagerAddress" is not set. Using "rollupAddress"`,
+        );
+        return entry.rollupAddress as string;
     }
     if (rollupManagerAddress === undefined || !ethers.isAddress(rollupManagerAddress)) {
         throw new Error('"rollupManagerAddress" must be a valid address when using "rollupID"');
@@ -196,6 +229,11 @@ async function resolveRollupAddress(entry: RollupEntry, rollupManagerAddress?: s
     if (rollupData.rollupContract === ethers.ZeroAddress) {
         throw new Error(`rollupID ${entry.rollupID} does not exist in AgglayerManager ${rollupManagerAddress}`);
     }
+    if (hasRollupAddress && rollupData.rollupContract.toLowerCase() !== (entry.rollupAddress as string).toLowerCase()) {
+        throw new Error(
+            `"rollupAddress" ${entry.rollupAddress} does not match rollupID ${entry.rollupID} contract ${rollupData.rollupContract} in AgglayerManager ${rollupManagerAddress}`,
+        );
+    }
     return rollupData.rollupContract;
 }
 
@@ -207,6 +245,7 @@ async function verifyContract(
     target: string,
     verifyArgs: { contract: string; address: string; constructorArguments: any[] },
     dryRun: boolean,
+    etherscan?: Etherscan,
 ): Promise<VerifyResult> {
     const result = { label, target, address: verifyArgs.address };
     if (dryRun) {
@@ -214,6 +253,11 @@ async function verifyContract(
         return { ...result, status: 'dry run' };
     }
     try {
+        // hardhat-verify only logs (does not throw) for already verified contracts, so check it beforehand
+        if (etherscan !== undefined && (await etherscan.isVerified(verifyArgs.address))) {
+            console.log(`[${label}] ${target} already verified: ${etherscan.getContractUrl(verifyArgs.address)}`);
+            return { ...result, status: 'already verified' };
+        }
         await hre.run('verify:verify', verifyArgs);
         console.log(`[${label}] ${target} verified`);
         return { ...result, status: 'verified' };
