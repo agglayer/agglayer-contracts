@@ -1,117 +1,77 @@
 # IAggOracleCommittee
-[Git Source](https://github.com/agglayer/agglayer-contracts/blob/c0e111af46ac2964bd5177034698d7e5e691f362/contracts/interfaces/IAggOracleCommittee.sol)
+[Git Source](https://github.com/agglayer/agglayer-contracts/blob/06dd0a111ee1f7d764543925e6fec987cb36ee61/contracts/interfaces/IAggOracleCommittee.sol)
+
+**Inherits:**
+[IAggOracleCommitteeErrors](/contracts/interfaces/IAggOracleCommittee.sol/interface.IAggOracleCommitteeErrors.md), [IAggOracleCommitteeEvents](/contracts/interfaces/IAggOracleCommittee.sol/interface.IAggOracleCommitteeEvents.md), [IVersion](/contracts/interfaces/IVersion.sol/interface.IVersion.md)
 
 **Title:**
 IAggOracleCommittee
 
-Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the AgglayerGERL2.
+Core interface for the AggOracleCommittee contract responsible for managing the insertion of GERs.
+
+This contract uses signature verification similar to Safe multisig for permissioned injection of GERs.
 
 
 ## Functions
 ### initialize
 
-Initializes the contract.
+Initializes the contract
 
 
 ```solidity
-function initialize(address _owner, address[] calldata _aggOracleMembers, uint64 _quorum) external;
+function initialize(
+    address _owner,
+    address _newProposer,
+    ValidatorInfo[] memory _newValidators,
+    uint256 _newThreshold
+) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_owner`|`address`|Owner of the contract, presumably a timelock|
-|`_aggOracleMembers`|`address[]`|Initial oracle members|
-|`_quorum`|`uint64`|Quorum required for consolidation|
+|`_owner`|`address`|Owner of the contract, presumably a multisig|
+|`_newProposer`|`address`|Address that can propose GER injections|
+|`_newValidators`|`ValidatorInfo[]`|Initial array of validator information|
+|`_newThreshold`|`uint256`|Number of signatures required for GER injection|
 
 
-### proposeGlobalExitRoot
+### injectGER
 
-Propose a global exit root.
-This function can only be called by an oracle member.
-If the quorum is reached, the GER is consolidated.
+Inject a GER with signature verification
 
 
 ```solidity
-function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external;
+function injectGER(bytes32 _globalExitRoot, bytes calldata _signatures) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`proposedGlobalExitRoot`|`bytes32`|Global exit root proposed|
+|`_globalExitRoot`|`bytes32`|The GER to inject|
+|`_signatures`|`bytes`|The signatures to verify|
 
 
-### consolidateGlobalExitRoot
+### updateAggOracleProposer
 
-Consolidate a global exit root that has reached quorum.
-This function it's meant to be called if the quorum was lowered, and there's a GER that has
-enough votes to be consolidated after updating it.
+Update the aggOracleProposer address
 
 
 ```solidity
-function consolidateGlobalExitRoot(bytes32 globalExitRoot) external;
+function updateAggOracleProposer(address _newProposer) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`globalExitRoot`|`bytes32`|Global exit root to consolidate|
-
-
-### addOracleMember
-
-Add an oracle member.
-Only the owner can call this function.
-
-
-```solidity
-function addOracleMember(address newOracleMember) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`newOracleMember`|`address`|Address of the new oracle member|
-
-
-### removeOracleMember
-
-Remove an oracle member.
-Only the owner can call this function.
-
-
-```solidity
-function removeOracleMember(address oracleMemberAddress, uint256 oracleMemberIndex) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`oracleMemberAddress`|`address`|Address of the oracle member to remove|
-|`oracleMemberIndex`|`uint256`|Index of the oracle member to remove|
-
-
-### updateQuorum
-
-Update the quorum value.
-Only the owner can call this function.
-
-
-```solidity
-function updateQuorum(uint64 newQuorum) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`newQuorum`|`uint64`|New quorum value|
+|`_newProposer`|`address`|New proposer address|
 
 
 ### transferGlobalExitRootUpdater
 
-Transfer the globalExitRootUpdater role.
-This is a two-step process; the pending globalExitRootUpdater must accept to finalize the process.
+Transfer the globalExitRootUpdater role
+
+This is a two-step process; the pending globalExitRootUpdater must accept to finalize the process
 
 
 ```solidity
@@ -126,234 +86,236 @@ function transferGlobalExitRootUpdater(address _newGlobalExitRootUpdater) extern
 
 ### acceptGlobalExitRootUpdater
 
-Accept the globalExitRootUpdater role.
+Accept the globalExitRootUpdater role
+
+This is the second step from a two-step process
 
 
 ```solidity
 function acceptGlobalExitRootUpdater() external;
 ```
 
-### getAggOracleMemberIndex
+### updateValidatorsAndThreshold
 
-Returns the index of an oracle member.
+Update the validators and threshold
 
 
 ```solidity
-function getAggOracleMemberIndex(address oracleMember) external view returns (uint256);
+function updateValidatorsAndThreshold(
+    RemoveValidatorInfo[] memory _validatorsToRemove,
+    ValidatorInfo[] memory _validatorsToAdd,
+    uint256 _newThreshold
+) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`oracleMember`|`address`|Oracle member address|
+|`_validatorsToRemove`|`RemoveValidatorInfo[]`|Array of validators to remove with their indices (MUST be in descending index order)|
+|`_validatorsToAdd`|`ValidatorInfo[]`|Array of new validators to add with their URLs|
+|`_newThreshold`|`uint256`|New threshold value|
 
 
-### getAllAggOracleMembers
+### verifyGER
 
-Returns all the oracle members.
-
-
-```solidity
-function getAllAggOracleMembers() external view returns (address[] memory);
-```
-
-### getAggOracleMembersCount
-
-Returns the number of oracle members.
+Verify a GER with signatures
 
 
 ```solidity
-function getAggOracleMembersCount() external view returns (uint256);
+function verifyGER(bytes32 _globalExitRoot, bytes calldata _signatures) external view returns (bool);
 ```
+**Parameters**
 
-### INITIAL_PROPOSED_GER
+|Name|Type|Description|
+|----|----|-----------|
+|`_globalExitRoot`|`bytes32`|The GER to verify|
+|`_signatures`|`bytes`|The signatures to verify|
 
-This value is reserved as an initial voted GER to mark an oracle address as active
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|True if the GER is valid|
+
+
+### getValidatorIndex
+
+Returns the index of a validator
 
 
 ```solidity
-function INITIAL_PROPOSED_GER() external view returns (bytes32);
+function getValidatorIndex(address _validator) external view returns (uint256);
 ```
+**Parameters**
 
-### globalExitRootManagerL2Sovereign
+|Name|Type|Description|
+|----|----|-----------|
+|`_validator`|`address`|Validator address|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The index of the validator|
+
+
+### getValidatorsInfo
+
+Returns all the validators with their information
+
+
+```solidity
+function getValidatorsInfo() external view returns (ValidatorInfo[] memory);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`ValidatorInfo[]`|Array of validator information|
+
+
+### getValidatorsCount
+
+Returns the number of validators
+
+
+```solidity
+function getValidatorsCount() external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The count of validators|
+
+
+### isValidator
+
+Returns if an address is a validator
+
+
+```solidity
+function isValidator(address _validator) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_validator`|`address`|The address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|True if the address is a validator|
+
+
+### agglayerGERL2
 
 Global exit root manager L2
 
 
 ```solidity
-function globalExitRootManagerL2Sovereign() external view returns (IAgglayerGERL2);
+function agglayerGERL2() external view returns (IAgglayerGERL2);
 ```
 
-### aggOracleMembers
+### validators
 
-Array of oracle members
+Array of validators
 
 
 ```solidity
-function aggOracleMembers(uint256 index) external view returns (address);
+function validators(uint256 index) external view returns (address);
 ```
 
-### quorum
+### threshold
 
-Number of reports that must match to consolidate a new rewards root (N/M)
+Threshold required for signature verification
 
 
 ```solidity
-function quorum() external view returns (uint64);
+function threshold() external view returns (uint256);
 ```
 
-### addressToLastProposedGER
+### validatorInfo
 
-Oracle member address --> current voted GER
+Mapping to track validator information
 
 
 ```solidity
-function addressToLastProposedGER(address oracleMember) external view returns (bytes32);
+function validatorInfo(address validator) external view returns (bool exists, string memory url);
 ```
 
-## Events
-### ProposedGlobalExitRoot
-Emitted when a global exit root is proposed
+### proposer
+
+Address that can propose GER injections
 
 
 ```solidity
-event ProposedGlobalExitRoot(bytes32 proposedGlobalExitRoot, address proposer);
+function proposer() external view returns (address);
 ```
 
-### ConsolidatedGlobalExitRoot
-Emitted when a global exit root is consolidated
+### injectedGERs
+
+Returns if a GER has already been injected by this contract
 
 
 ```solidity
-event ConsolidatedGlobalExitRoot(bytes32 consolidatedGlobalExitRoot);
+function injectedGERs(bytes32 globalExitRoot) external view returns (bool);
 ```
 
-### UpdateQuorum
-Emitted when the quorum is updated
+## Structs
+### ValidatorInfo
+Struct containing validator information
 
 
 ```solidity
-event UpdateQuorum(uint64 newQuorum);
+struct ValidatorInfo {
+    address addr;
+    string url;
+}
 ```
 
-### AddAggOracleMember
-Emitted when a new oracle member is added
+**Properties**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`addr`|`address`|The address of the validator|
+|`url`|`string`|The URL associated with the validator|
+
+### ValidatorInternalInfo
+Struct containing internal validator information
 
 
 ```solidity
-event AddAggOracleMember(address newOracleMember);
+struct ValidatorInternalInfo {
+    bool isValidator;
+    string url;
+}
 ```
 
-### RemoveAggOracleMember
-Emitted when an oracle member is removed
+**Properties**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`isValidator`|`bool`|Whether the address is a validator|
+|`url`|`string`|The URL associated with the validator|
+
+### RemoveValidatorInfo
+Struct to hold information for removing a validator
 
 
 ```solidity
-event RemoveAggOracleMember(address oracleMemberRemoved);
+struct RemoveValidatorInfo {
+    address addr;
+    uint256 index;
+}
 ```
 
-## Errors
-### QuorumCannotBeZero
-Thrown when the quorum value is zero.
+**Properties**
 
-
-```solidity
-error QuorumCannotBeZero();
-```
-
-### NotOracleMember
-Thrown when the caller is not an oracle member.
-
-
-```solidity
-error NotOracleMember();
-```
-
-### AlreadyOracleMember
-Thrown when the address is already an oracle member.
-
-
-```solidity
-error AlreadyOracleMember();
-```
-
-### OracleMemberIndexMismatch
-Thrown when the provided oracle member index does not match the address.
-
-
-```solidity
-error OracleMemberIndexMismatch();
-```
-
-### WasNotOracleMember
-Thrown when the address was not an oracle member.
-
-
-```solidity
-error WasNotOracleMember();
-```
-
-### OracleMemberNotFound
-Thrown when the oracle member is not found.
-
-
-```solidity
-error OracleMemberNotFound();
-```
-
-### InvalidProposedGER
-Thrown when the proposed GER is invalid (zero or reserved value).
-
-
-```solidity
-error InvalidProposedGER();
-```
-
-### OracleMemberCannotBeZero
-Thrown when the oracle member address is the zero address.
-
-
-```solidity
-error OracleMemberCannotBeZero();
-```
-
-### AlreadyVotedForThisGER
-Thrown when the oracle member has already voted for the proposed GER.
-
-
-```solidity
-error AlreadyVotedForThisGER();
-```
-
-### QuorumNotReached
-Thrown when the quorum has not been reached for a global exit root.
-
-
-```solidity
-error QuorumNotReached();
-```
-
-### GlobalExitRootManagerCannotBeZero
-Thrown when the global exit root manager address is the zero address.
-
-
-```solidity
-error GlobalExitRootManagerCannotBeZero();
-```
-
-### QuorumCannotBeGreaterThanAggOracleMembers
-Thrown when the quorum is greater than the number of oracle members.
-
-
-```solidity
-error QuorumCannotBeGreaterThanAggOracleMembers();
-```
-
-### OracleMemberIndexOutOfBounds
-Thrown when the oracle member index is out of bounds.
-
-
-```solidity
-error OracleMemberIndexOutOfBounds();
-```
+|Name|Type|Description|
+|----|----|-----------|
+|`addr`|`address`|The address of the validator to remove|
+|`index`|`uint256`|The index of the validator in the validators array|
 
