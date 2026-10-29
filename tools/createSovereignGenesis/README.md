@@ -47,6 +47,11 @@ cp ./tools/createSovereignGenesis/genesis-base.json.example ./tools/createSovere
   - `setTimelockParameters`: indicates if the timelock parameters are going to be changed
     - `timelockParameters.adminAddress`: address that will have all timelocks roles (ADMIN, PROPOSER, CANCELLER, EXECUTOR)
     - `timelockParameters.minDelay`: minimum delay set in the timelock smart contract
+  - `useAggOracleCommittee`: indicates if an `AggOracleCommittee` is deployed and set as the `globalExitRootUpdater` (then `globalExitRootUpdater` must not be set)
+    - `aggOracleOwner`: owner of the `AggOracleCommittee`
+    - `aggOracleProposer`: address authorized to inject GERs (the aggoracle)
+    - `aggOracleValidators`: array of validators `{ "addr": "0x...", "url": "..." }`. `url` is optional metadata and can be an empty string
+    - `aggOracleThreshold`: number of validator signatures required to inject a GER (`1 <= aggOracleThreshold <= aggOracleValidators.length <= 255`)
 - Optional parameters
   - `format`: choose genesis output format. Supported ones: `geth`
 
