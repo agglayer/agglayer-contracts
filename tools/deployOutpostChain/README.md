@@ -210,7 +210,7 @@ rollupID: 63   → hex: 0x0000003f → repeated 5×: 0x0000003f0000003f0000003f0
 
 ## Gas Token Configuration
 
-> ⚠️ **This tool only supports the [native L2 token](#native-l2-token-what-this-tool-deploys) configuration.** The [external token](#external-token-not-supported-by-this-tool) configuration is described below for reference but cannot be deployed with this tool. The gas token cannot be changed after the bridge is initialized without a contract upgrade (the bridge is a proxy owned via ProxyAdmin/Timelock), so choose before deploying.
+> ⚠️ **This tool only supports the [native L2 token](#native-l2-token-what-this-tool-deploys) configuration.** The [external token](#external-token-not-supported-by-this-tool) configuration is described below for reference but cannot be deployed with this tool. The gas token is fixed at initialization (see [Immutability](#immutability)), so choose before deploying.
 
 ### What the parameters mean
 
@@ -258,7 +258,7 @@ Implications:
 - **L1 ETH arrives as WETH (ERC20), not as gas**: users cannot pay gas with Agglayer-bridged ETH. They get native coin through the chain's own canonical/native bridge or the genesis allocation
 - **Two "ETH-like" assets on each side**: the native coin and WETH on the outpost; ETH and the wrapped native coin on L1. Users and UIs must pick the right one
 - **Choose the metadata carefully**: `tokenName`/`tokenSymbol`/`tokenDecimals` are what the wrapped native coin shows on every other chain. Amounts are bridged in the native coin's base unit without conversion, so `tokenDecimals` should match the native coin's decimals (`18`)
-- **Fixed at initialization (changing it needs a contract upgrade)**: see [Immutability](#immutability)
+- **Fixed at initialization**: see [Immutability](#immutability)
 
 ### External token (not supported by this tool)
 
@@ -270,7 +270,7 @@ An external token configuration declares the native coin to be the representatio
 Implications:
 
 - **The native coin is not the origin token**: it is created by the chain's own mechanisms (genesis, canonical bridge). For example, Base's ETH is not L1 ETH: it is backed by Base's canonical bridge, not by the Agglayer bridge. The Agglayer bridge would treat both as interchangeable
-- **The bridge acts as a liquidity pool**: claims of the origin token are paid with native coin from the bridge balance, so the bridge must be pre-funded with native coin. Claims revert with `EtherTransferFailed` while it is underfunded
+- **The bridge acts as a liquidity pool**: claims of the origin token are paid with native coin from the bridge balance, so the bridge must be pre-funded with native coin. Claims revert with `EtherTransferFailed` while it is underfunded. The bridge contracts have no `receive`/`fallback`, so a plain native transfer cannot fund it, and `bridgeAsset` of the native coin cannot either (the local balance tree blocks it in this configuration). The current tooling does not cover funding
 - **The local balance tree blocks bridging out**: the native coin counts as a token from another network, so bridging it out decreases its local balance tree entry. Both the bridge (`LocalBalanceTreeUnderflow`) and the pessimistic proof reject bridging out more than has been claimed in. Native coin obtained through other means (genesis, canonical bridge) cannot leave through the Agglayer until at least that amount has been claimed in
 - **Backing mismatch**: the origin network only holds what was deposited through the Agglayer bridge. Without the local balance tree check, bridging out native coin declared as ETH would ask the L1 Agglayer bridge to release ETH it never received
 
@@ -287,7 +287,7 @@ The OP stack's own custom gas token (CGT) settings configure the OP native bridg
 ### Further reading
 
 - Runbook: [Deploy outpost, Setup GasToken](https://github.com/agglayer/runbooks/blob/main/operations/deploy-outpost.md#setup-gastoken)
-- Protocol team docs: [Outposts](https://agglayer.github.io/protocol-team-docs/) and [Gas token](https://github.com/agglayer/protocol-team-docs/blob/main/docs/outposts/Gas-token.md)
+- Protocol team docs: [Outposts](https://agglayer.github.io/protocol-team-docs/outposts/) and [Gas token](https://agglayer.github.io/protocol-team-docs/outposts/Gas-token/)
 
 ## Usage
 
