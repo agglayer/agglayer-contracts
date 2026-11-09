@@ -26,7 +26,6 @@ The Bridge deployment involves 4 internal contracts that are automatically deplo
 
 - **WETH Token** - ERC20 representation of L1 ETH on this outpost chain (deployed via `_deployWrappedToken()` because the gas token is not ETH and no `sovereignWETHAddress` is provided). See [Gas Token Configuration](#gas-token-configuration)
 
-
 ## Features
 
 - ✅ **Standard Deployments**: Simple, straightforward contract deployments
@@ -211,7 +210,7 @@ rollupID: 63   → hex: 0x0000003f → repeated 5×: 0x0000003f0000003f0000003f0
 
 ## Gas Token Configuration
 
-> ⚠️ **This tool only supports the [native L2 token](#native-l2-token-what-this-tool-deploys) configuration.** The [external token](#external-token-not-supported-by-this-tool) configuration is described below for reference but cannot be deployed with this tool. The gas token cannot be changed after the bridge is initialized, so choose before deploying.
+> ⚠️ **This tool only supports the [native L2 token](#native-l2-token-what-this-tool-deploys) configuration.** The [external token](#external-token-not-supported-by-this-tool) configuration is described below for reference but cannot be deployed with this tool. The gas token cannot be changed after the bridge is initialized without a contract upgrade (the bridge is a proxy owned via ProxyAdmin/Timelock), so choose before deploying.
 
 ### What the parameters mean
 
@@ -249,7 +248,7 @@ The bridge manager can later point WETH to a different token with `setSovereignW
 
 ### Native L2 token (what this tool deploys)
 
-`gasTokenNetwork = rollupID` declares that the native coin **originates on the outpost**. For the Agglayer it is a new token, unrelated to ETH, even if the chain calls its coin "ETH". Example: on Base (bali rollup 63), the native coin is `(63, 0x0000003f0000003f0000003f0000003f0000003f)`, shown on other chains as the wrapped token described by its metadata (e.g. `baseETH`).
+`gasTokenNetwork = rollupID` declares that the native coin **originates on the outpost**. For the Agglayer it is a new token, unrelated to ETH, even if the chain calls its coin "ETH". Example: on the Base outpost on Bali (rollup 63), the native coin is `(63, 0x0000003f0000003f0000003f0000003f0000003f)`, shown on other chains as the wrapped token described by its metadata (e.g. `baseETH`).
 
 Implications:
 
@@ -259,7 +258,7 @@ Implications:
 - **L1 ETH arrives as WETH (ERC20), not as gas**: users cannot pay gas with Agglayer-bridged ETH. They get native coin through the chain's own canonical/native bridge or the genesis allocation
 - **Two "ETH-like" assets on each side**: the native coin and WETH on the outpost; ETH and the wrapped native coin on L1. Users and UIs must pick the right one
 - **Choose the metadata carefully**: `tokenName`/`tokenSymbol`/`tokenDecimals` are what the wrapped native coin shows on every other chain. Amounts are bridged in the native coin's base unit without conversion, so `tokenDecimals` should match the native coin's decimals (`18`)
-- **Fixed at initialization**: see [Immutability](#immutability)
+- **Fixed at initialization (changing it needs a contract upgrade)**: see [Immutability](#immutability)
 
 ### External token (not supported by this tool)
 
@@ -283,7 +282,7 @@ The OP stack's own custom gas token (CGT) settings configure the OP native bridg
 
 ### Immutability
 
-`initialize` can only be called once, by the implementation deployer (`reinitializer(3)` + `onlyDeployer`), and there is no setter for `gasTokenAddress`, `gasTokenNetwork` or `gasTokenMetadata`.
+`initialize` can only be called once, by the implementation deployer (`reinitializer(3)` + `onlyDeployer`), and there is no setter for `gasTokenAddress`, `gasTokenNetwork` or `gasTokenMetadata`. They cannot be changed after initialization without a contract upgrade (the bridge is a proxy owned via ProxyAdmin/Timelock).
 
 ### Further reading
 
@@ -310,7 +309,7 @@ Deploying with address: 0x1234567890123456789012345678901234567890
 Network: OutpostChain (Chain ID: 1001)
 Rollup ID: 1001
 🤖 Auto-calculated gas token address: 0x000003e9000003e9000003e9000003e9000003e9
-🤖 Auto-calculated gas token network: 1001 (using chainID)
+🤖 Auto-calculated gas token network: 1001 (using rollupID)
 🤖 Auto-calculated proxied tokens manager: timelock address (set during deployment)
 
 === Step 1: Deploying TimelockController (OpenZeppelin) ===
@@ -339,8 +338,6 @@ Rollup ID: 1001
 
 🎉 Deployment completed successfully!
 ```
-
-**Note**: the `Auto-calculated gas token network` log line prints the `chainID` value, but the bridge is initialized with `gasTokenNetwork = rollupID` (checked again in the verification step).
 
 **The script will:**
 

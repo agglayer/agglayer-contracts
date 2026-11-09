@@ -43,7 +43,7 @@ async function main() {
     // Log automatically calculated parameters
     const calculatedGasTokenAddress = deriveGasTokenAddress(deployParameters.network.rollupID);
     logger.info(`🤖 Auto-calculated gas token address: ${calculatedGasTokenAddress}`);
-    logger.info(`🤖 Auto-calculated gas token network: ${deployParameters.network.chainID} (using chainID)`);
+    logger.info(`🤖 Auto-calculated gas token network: ${deployParameters.network.rollupID} (using rollupID)`);
     logger.info(`🤖 Auto-calculated proxied tokens manager: timelock address (set during deployment)`);
 
     // Step 1: Deploy Timelock
