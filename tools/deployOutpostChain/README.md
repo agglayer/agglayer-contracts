@@ -117,8 +117,8 @@ The `deploy_parameters.json` file contains all deployment configuration grouped 
         "chainID": 1001, // EVM chain ID of the outpost
         "rollupID": 1001, // Agglayer network ID (rollup ID): bridge networkID and gas token derivation
         "networkName": "OutpostChain",
-        "tokenName": "baseETH", // Gas token metadata: name of the native coin
-        "tokenSymbol": "BETH", // Gas token metadata: symbol of the native coin
+        "tokenName": "outpostETH", // Gas token metadata: name of the native coin
+        "tokenSymbol": "OETH", // Gas token metadata: symbol of the native coin
         "tokenDecimals": 18 // Gas token metadata: decimals of the native coin
     }
 }
@@ -127,7 +127,7 @@ The `deploy_parameters.json` file contains all deployment configuration grouped 
 **Automated Parameters:**
 
 - 🤖 `gasTokenAddress`: **Auto-calculated** from `rollupID` by repeating it 5× to create a 160-bit address
-- 🤖 `gasTokenNetwork`: **Auto-set** to the `rollupID` value (not the `chainID`)
+- 🤖 `gasTokenNetwork`: **Auto-set** to the `rollupID` value
 - 🤖 `gasTokenMetadata`: **Auto-encoded** as `abi.encode(tokenName, tokenSymbol, tokenDecimals)`
 - 🤖 `sovereignWETHAddress`: **Auto-set** to `0x0` (with `sovereignWETHAddressIsNotMintable = false`), so the bridge deploys its own WETH token
 - 🤖 `proxiedTokensManager`: **Auto-set** to the Timelock contract address (proxy owner)
@@ -138,7 +138,6 @@ The `deploy_parameters.json` file contains all deployment configuration grouped 
 
 ```
 rollupID: 1001 → hex: 0x000003e9 → repeated 5×: 0x000003e9000003e9000003e9000003e9000003e9
-rollupID: 63   → hex: 0x0000003f → repeated 5×: 0x0000003f0000003f0000003f0000003f0000003f
 ```
 
 ### Timelock Configuration
@@ -228,8 +227,8 @@ Every token in the Agglayer is identified by the pair `(originNetwork, originTok
 ### How the tool sets them
 
 ```
-gasTokenAddress      = rollupID as 4-byte hex, repeated 5×   (e.g. 63 → 0x0000003f0000003f0000003f0000003f0000003f)
-gasTokenNetwork      = rollupID                              (the outpost's own network ID, not the EVM chainID)
+gasTokenAddress      = rollupID as 4-byte hex, repeated 5×   (e.g. 1001 → 0x000003e9000003e9000003e9000003e9000003e9)
+gasTokenNetwork      = rollupID                              (the outpost's own network ID)
 gasTokenMetadata     = abi.encode(network.tokenName, network.tokenSymbol, network.tokenDecimals)
 sovereignWETHAddress = 0x0, sovereignWETHAddressIsNotMintable = false
 ```
@@ -248,11 +247,11 @@ The bridge manager can later point WETH to a different token with `setSovereignW
 
 ### Native L2 token (what this tool deploys)
 
-`gasTokenNetwork = rollupID` declares that the native coin **originates on the outpost**. For the Agglayer it is a new token, unrelated to ETH, even if the chain calls its coin "ETH". Example: on the Base outpost on Bali (rollup 63), the native coin is `(63, 0x0000003f0000003f0000003f0000003f0000003f)`, shown on other chains as the wrapped token described by its metadata (e.g. `baseETH`).
+`gasTokenNetwork = rollupID` declares that the native coin **originates on the outpost**. For the Agglayer it is a new token, unrelated to ETH, even if the chain calls its coin "ETH". Example: on an outpost with rollupID 1001, the native coin is `(1001, 0x000003e9000003e9000003e9000003e9000003e9)`, shown on other chains as the wrapped token described by its metadata (e.g. `outpostETH`).
 
 Implications:
 
-- **Bridging the native coin out creates a wrapped token on the destination** (e.g. a wrapped baseETH ERC20 on L1), deployed with `gasTokenMetadata`. Bridging that wrapped token back burns it, and the claim on the outpost releases the locked native coin
+- **Bridging the native coin out creates a wrapped token on the destination** (e.g. a wrapped outpostETH ERC20 on L1), deployed with `gasTokenMetadata`. Bridging that wrapped token back burns it, and the claim on the outpost releases the locked native coin
 - **No liquidity pre-funding**: the native coin paid on claims is the native coin previously locked by bridging it out
 - **Not limited by the local balance tree**: the bridge's `localBalanceTree` and the pessimistic proof skip tokens whose origin network is the chain itself, so users can bridge out any amount of native coin they hold
 - **L1 ETH arrives as WETH (ERC20), not as gas**: users cannot pay gas with Agglayer-bridged ETH. They get native coin through the chain's own canonical/native bridge or the genesis allocation
@@ -269,7 +268,7 @@ An external token configuration declares the native coin to be the representatio
 
 Implications:
 
-- **The native coin is not the origin token**: it is created by the chain's own mechanisms (genesis, canonical bridge). For example, Base's ETH is not L1 ETH: it is backed by Base's canonical bridge, not by the Agglayer bridge. The Agglayer bridge would treat both as interchangeable
+- **The native coin is not the origin token**: it is created by the chain's own mechanisms (genesis, canonical bridge). For example, an outpost's ETH is not L1 ETH: it is backed by the outpost's canonical bridge, not by the Agglayer bridge. The Agglayer bridge would treat both as interchangeable
 - **The bridge acts as a liquidity pool**: claims of the origin token are paid with native coin from the bridge balance, so the bridge must be pre-funded with native coin. Claims revert with `EtherTransferFailed` while it is underfunded. The bridge contracts have no `receive`/`fallback`, so a plain native transfer cannot fund it, and `bridgeAsset` of the native coin cannot either (the local balance tree blocks it in this configuration). The current tooling does not cover funding
 - **The local balance tree blocks bridging out**: the native coin counts as a token from another network, so bridging it out decreases its local balance tree entry. Both the bridge (`LocalBalanceTreeUnderflow`) and the pessimistic proof reject bridging out more than has been claimed in. Native coin obtained through other means (genesis, canonical bridge) cannot leave through the Agglayer until at least that amount has been claimed in
 - **Backing mismatch**: the origin network only holds what was deposited through the Agglayer bridge. Without the local balance tree check, bridging out native coin declared as ETH would ask the L1 Agglayer bridge to release ETH it never received

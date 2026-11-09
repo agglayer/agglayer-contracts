@@ -331,7 +331,7 @@ async function deployBridgeL2SovereignChain(
     // Calculate automatic parameters for outpost chain
     const gasTokenAddress = deriveGasTokenAddress(deployParameters.network.rollupID);
     // Use rollupID as gasTokenNetwork: the native coin originates on this network (native L2 token), so bridging it out
-    // locks it in the bridge and is not constrained by the local balance tree. It must be the rollupID, not the chainID.
+    // locks it in the bridge and is not constrained by the local balance tree.
     const gasTokenNetwork = deployParameters.network.rollupID;
 
     // Prepare initialization call data
