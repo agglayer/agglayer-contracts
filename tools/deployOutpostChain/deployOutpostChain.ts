@@ -231,6 +231,13 @@ function validateDeploymentParameters() {
 
 /**
  * Derive gas token address from rollup ID by repeating it 5 times to get 160 bits
+ * e.g. rollupID 1001 (0x000003e9) -> 0x000003e9000003e9000003e9000003e9000003e9
+ * @dev The outpost native coin is configured as a native L2 token: (gasTokenNetwork = rollupID, gasTokenAddress = derived).
+ * The derived address is a convention, not a deployed contract: it only has to be non-zero (0x0 is reserved for ETH and
+ * forces gasTokenNetwork = 0 in AgglayerBridgeL2.initialize) and unique per chain.
+ * External token configurations (e.g. 0x0 / network 0 for ETH) are not supported by this tool. See README "Gas Token Configuration".
+ * @param rollupID Agglayer network ID (rollup ID) of the outpost
+ * @returns derived gas token address
  */
 function deriveGasTokenAddress(rollupID: number): string {
     // Convert rollupID to 32-bit hex (8 characters)
@@ -323,7 +330,9 @@ async function deployBridgeL2SovereignChain(
 
     // Calculate automatic parameters for outpost chain
     const gasTokenAddress = deriveGasTokenAddress(deployParameters.network.rollupID);
-    const gasTokenNetwork = deployParameters.network.rollupID; // Use rollupID as gasTokenNetwork
+    // Use rollupID as gasTokenNetwork: the native coin originates on this network (native L2 token), so bridging it out
+    // locks it in the bridge and is not constrained by the local balance tree. It must be the rollupID, not the chainID.
+    const gasTokenNetwork = deployParameters.network.rollupID;
 
     // Prepare initialization call data
     const gasTokenMetadata = ethers.AbiCoder.defaultAbiCoder().encode(
@@ -426,6 +435,8 @@ async function deployBridgeL2SovereignChain(
         ethers.ZeroAddress, // polygonRollupManager (not needed for sovereign chains)
         gasTokenMetadata,
         deployParameters.bridge.bridgeManager,
+        // sovereignWETHAddress = 0x0: since the gas token is not ETH, the bridge deploys its own WETH token
+        // (wrapped L1 ETH, origin network 0) during initialize
         ethers.ZeroAddress, // sovereignWETHAddress,
         false, // sovereignWETHAddressIsNotMintable,
         deployParameters.bridge.emergencyBridgePauser,
