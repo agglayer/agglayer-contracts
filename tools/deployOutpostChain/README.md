@@ -282,7 +282,7 @@ The OP stack's own custom gas token (CGT) settings configure the OP native bridg
 
 ### Immutability
 
-`initialize` can only be called once, by the implementation deployer (`reinitializer(3)` + `onlyDeployer`), and there is no setter for `gasTokenAddress`, `gasTokenNetwork` or `gasTokenMetadata`. They cannot be changed after initialization without a contract upgrade (the bridge is a proxy owned via ProxyAdmin/Timelock).
+`initialize` can only be called once, by the implementation deployer (`reinitializer(3)` and a `msg.sender == deployer` check, error `OnlyDeployer`), and there is no setter for `gasTokenAddress`, `gasTokenNetwork` or `gasTokenMetadata`. They cannot be changed after initialization without a contract upgrade (the bridge is a proxy owned via ProxyAdmin/Timelock).
 
 ### Further reading
 
