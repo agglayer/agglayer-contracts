@@ -566,7 +566,10 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
     /**
      * @notice Set the custom wrapper for weth
      * @notice If this function is called multiple times this will override the previous calls and only keep the last WETHToken.
-     * @notice WETH will not maintain legacy versions.Users easily should be able to unwrap the legacy WETH and unwrapp it with the new one.
+     * @notice WETH will not maintain legacy versions.
+     * @dev WARNING: Remapping WETH strands any balance of the previous WETHToken: `migrateLegacyToken` does not support it (reverts with `TokenNotMapped`)
+     * and `bridgeAsset` treats it as a token native to this network instead of mainnet ETH.
+     * The bridgeManager MUST NOT remap WETH while the previous WETHToken has a circulating supply. The action can be reverted by remapping back to the previous WETHToken.
      * @param sovereignWETHTokenAddress Address of the sovereign weth token
      * @param isNotMintable Flag to indicate if the wrapped token is not mintable
      */
@@ -943,6 +946,8 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
      * @notice Function to deploy an upgradeable wrapped token without having to claim asset. It is used to upgrade legacy tokens to the new upgradeable token. After deploying the token it is remapped to be the new functional wtoken
      * @notice This function can only be called once for each originNetwork/originTokenAddress pair because it deploys a deterministic contract with create2
      * @dev WARNING: It's assumed the legacy token has not been remapped.
+     * @dev WARNING: For WETH (originNetwork = 0, originTokenAddress = 0), the previous WETHToken balances are stranded, see `setSovereignWETHAddress`.
+     * The bridgeManager MUST NOT remap WETH while the previous WETHToken has a circulating supply.
      * @param originNetwork Origin network of the token
      * @param originTokenAddress Origin token address, address of the token at the origin network.
      * @param isNotMintable Flag to indicate if the proxied wrapped token is not mintable
