@@ -281,6 +281,15 @@ contract AggchainFEP is AggchainBase {
         _;
     }
 
+    /// @dev The aggchain manager holds every legacy admin permission (setTrustedSequencer, setTrustedSequencerURL, transferAdminRole).
+    ///      trustedSequencer is the optimistic mode signer and the op-succinct prover address, so it must not be controlled by the legacy admin.
+    modifier onlyAdmin() override {
+        if (aggchainManager != msg.sender) {
+            revert OnlyAggchainManager();
+        }
+        _;
+    }
+
     ////////////////////////////////////////////////////////////
     //                       Constructor                      //
     ////////////////////////////////////////////////////////////

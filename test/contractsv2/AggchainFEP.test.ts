@@ -4,6 +4,7 @@ import { ethers, upgrades } from 'hardhat';
 import { Address, AggchainFEP } from '../../typechain-types';
 import * as utilsFEP from '../../src/utils-aggchain-FEP';
 import * as utilsAggchain from '../../src/utils-common-aggchain';
+import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 describe('AggchainFEP', () => {
     let deployer: any;
@@ -1037,6 +1038,53 @@ describe('AggchainFEP', () => {
             rollupConfigHash: ethers.id('valid_rollup_hash'),
         });
         expect(invalidConfig).to.be.equal(false);
+    });
+
+    it('should gate the legacy admin functions by the aggchainManager', async () => {
+        const blockData = await ethers.provider.getBlock('latest');
+        const blockDataTimestamp = blockData?.timestamp;
+
+        const initParams = {
+            l2BlockTime: 1,
+            rollupConfigHash: ethers.id('rollupConfigHash'),
+            startingOutputRoot: ethers.id('startingOutputRoot'),
+            startingBlockNumber: 100,
+            startingTimestamp: blockDataTimestamp - 20,
+            submissionInterval: 5,
+            optimisticModeManager: optModeManager.address,
+            aggregationVkey: ethers.id('aggregationVkey'),
+            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
+        };
+
+        await aggchainFEPContract
+            .connect(rollupManagerSigner)
+            .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
+        await aggchainFEPContract
+            .connect(aggchainManager)
+            .initialize(
+                initParams,
+                [],
+                0,
+                useDefaultVkeys,
+                useDefaultSigners,
+                newAggchainVKey,
+                aggchainVKeySelector,
+                admin.address,
+                trustedSequencer.address,
+                gasTokenAddress,
+                urlSequencer,
+                networkName,
+                { gasPrice: 0 },
+            );
+        await aggchainFEPContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
+
+        // trustedSequencer is part of the aggchain params, so changing it changes the aggchain hash
+        const bytesAggchainData = utilsFEP.encodeAggchainDataFEP(aggchainVKeySelector, ethers.id('newStateRoot'), 105);
+        const aggchainHashBefore = await aggchainFEPContract.getAggchainHash(bytesAggchainData);
+
+        await checkLegacyAdminFunctionsGatedByAggchainManager(aggchainFEPContract);
+
+        expect(await aggchainFEPContract.getAggchainHash(bytesAggchainData)).to.not.equal(aggchainHashBefore);
     });
 
     it('should test initializeFromECDSAMultisig migration', async () => {

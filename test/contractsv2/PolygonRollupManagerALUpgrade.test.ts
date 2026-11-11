@@ -24,6 +24,7 @@ import {
 } from '../../src/utils-common-aggchain';
 import { NO_ADDRESS, AGGCHAIN_DEFAULT_VKEY_ROLE, AL_ADD_PP_ROUTE_ROLE, AL_MULTISIG_ROLE } from '../../src/constants';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
+import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 const randomPessimisticVKey = computeRandomBytes(32);
 
@@ -1120,6 +1121,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         );
 
         expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
+        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
         expect(await FEPRollupContract.getAggchainMultisigHash()).to.be.equal(aggchainMultisigHashECDSA);
         expect(await FEPRollupContract.threshold()).to.be.equal(thresholdECDSA);
         expect(await FEPRollupContract.getAggchainSigners()).to.be.deep.equal(signersECDSA);
@@ -1205,6 +1207,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // Verify the upgrade
         expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
+        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
     });
 
     it('should upgrade from Legacy FEP to new FEP', async () => {
@@ -1259,5 +1262,6 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
 
         // Verify the upgrade
         expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
+        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
     });
 });
