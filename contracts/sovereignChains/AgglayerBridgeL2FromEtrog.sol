@@ -41,6 +41,7 @@ contract AgglayerBridgeL2FromEtrog is AgglayerBridgeL2 {
 
     /**
      * @dev initializer function to set the initial values when the contract is upgraded from the Etrog version
+     * @dev It is not access controlled, so it must be called atomically with the upgrade (ProxyAdmin.upgradeAndCall)
      * @param _bridgeManager bridge manager address
      * @param _emergencyBridgePauser emergency bridge pauser address, allowed to be zero if the chain wants to disable the feature to stop the bridge
      * @param _emergencyBridgeUnpauser emergency bridge unpauser address, allowed to be zero if the chain wants to disable the feature to unpause the bridge
