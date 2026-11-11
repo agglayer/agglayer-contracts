@@ -16,6 +16,7 @@ contract EmergencyManager is IEmergencyManager {
     uint256[10] private __gap;
 
     // Indicates whether the emergency state is active or not
+    /// @dev AgglayerTimelock.getMinDelay() calls isEmergencyState() on the AgglayerManager on every schedule. It must never be removed or made to revert in the AgglayerManager, otherwise the timelock can not schedule any operation again
     bool public isEmergencyState;
 
     /**
