@@ -1385,6 +1385,82 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 
+    it('should revert updateRollup from StateTransition to ALGateway, initMigration must be used', async () => {
+        // Create rollup type validium
+        const validiumEtrogFactory = await ethers.getContractFactory('PolygonValidiumEtrog');
+        const validiumEtrogContract = await validiumEtrogFactory.deploy(
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            rollupManagerContract.target,
+        );
+        await validiumEtrogContract.waitForDeployment();
+        const rollupTypeIDValidium = 3;
+        await rollupManagerContract
+            .connect(timelock)
+            .addNewRollupType(
+                validiumEtrogContract.target,
+                verifierContract.target,
+                0,
+                VerifierType.StateTransition,
+                '0x0000000000000000000000000000000000000000000000000000000000000001',
+                'validium',
+                ethers.ZeroHash,
+            );
+
+        // Create a validium rollup with verified batches with bridges (lastLocalExitRoot != 0)
+        const rollupAddress = ethers.getCreateAddress({ from: rollupManagerContract.target as string, nonce: 1 });
+        await rollupManagerContract
+            .connect(admin)
+            .attachAggchainToAL(
+                rollupTypeIDValidium,
+                1000,
+                encodeInitializeBytesLegacy(
+                    admin.address,
+                    trustedSequencer.address,
+                    ethers.ZeroAddress,
+                    'http://zkevm-json-rpc:8123',
+                    'zkevm',
+                ),
+            );
+        const lastLocalExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000123';
+        await rollupManagerContract
+            .connect(trustedAggregator)
+            .verifyBatchesTrustedAggregator(
+                newCreatedRollupID,
+                0,
+                0,
+                1,
+                lastLocalExitRoot,
+                newStateRoot,
+                trustedAggregator.address,
+                new Array(24).fill(ethers.ZeroHash),
+            );
+
+        // updateRollup can not move a StateTransition rollup to ALGateway: it would skip the initMigration bootstrap
+        // and leave the rollup with lastLocalExitRoot != 0 and lastPessimisticRoot == 0, which no pessimistic proof can match
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()');
+        await expect(
+            rollupManagerContract.connect(timelock).updateRollup(rollupAddress, rollupTypeIDAlGateway, upgradeData),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'UpdateNotCompatible');
+
+        // Nor to a Pessimistic rollup type
+        await expect(
+            rollupManagerContract.connect(timelock).updateRollup(rollupAddress, rollupTypeIDPessimistic, '0x'),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'UpdateNotCompatible');
+
+        // initMigration is still the path to ALGateway
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .initMigration(newCreatedRollupID, rollupTypeIDAlGateway, upgradeData),
+        )
+            .to.emit(rollupManagerContract, 'InitMigration')
+            .withArgs(newCreatedRollupID, rollupTypeIDAlGateway);
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
+    });
+
     /**
      * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, seqAddress)
      * @param {String} oldAccInputHash - old accumulateInputHash
