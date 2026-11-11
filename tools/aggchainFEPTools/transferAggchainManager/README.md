@@ -24,8 +24,10 @@ cp ./tools/aggchainFEPTools/transferAggchainManager/parameters.json.example ./to
         - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
         - `Multisig`: If creating the rollup from a multisig, the script will output the calldata of the transaction to execute for creating the rollup
         - `Timelock`: If creating the rollup through a timelock, the script will output the execute and schedule data to send to the timelock contract
-    - `aggchainManagerPvk`: Not mandatory, used to send tx
-    - `newAggchainManagerPvk`: Not mandatory, used to send tx
+    - `newAggchainManager`: Mandatory, address that receives the role. It is never derived from keys
+    - `aggchainManagerPvk`: Only for `EOA`, key of the current role holder used to send the transfer tx
+    - `newAggchainManagerPvk`: Only for `EOA`, key used to send the accept tx. It must belong to `newAggchainManager`
+    - `Multisig` and `Timelock` only output the transfer data. The accept (`txAccept`) must be sent afterwards by `newAggchainManager`
     - `rollupAddress`: Address AggchainFEP contract
     - `timelockDelay(optional)`: timelock delay
     - `timelockSalt(optional)`: timelock salt
