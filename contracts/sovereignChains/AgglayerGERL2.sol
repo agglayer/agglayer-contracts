@@ -113,6 +113,7 @@ contract AgglayerGERL2 is
     /**
      * @notice Initialize contract
      * Note this initialize function is exactly the same as the last version, therefore no modifications needed
+     * @dev It is not access controlled, so when upgrading from a previous version it must be called atomically with the upgrade (ProxyAdmin.upgradeAndCall)
      * @param _globalExitRootUpdater setting the globalExitRootUpdater.
      * @param _globalExitRootRemover In case of initializing a chain with Full execution proofs, this address should be set to zero, otherwise, some malicious sequencer could insert invalid global exit roots, claim and go back and the execution would be correctly proved.
      */
