@@ -449,7 +449,7 @@ contract AgglayerBridge is
         uint256 amountWETH,
         bool forceUpdateGlobalExitRoot,
         bytes calldata metadata
-    ) external virtual ifNotEmergencyState {
+    ) external virtual ifNotEmergencyState nonReentrant {
         // If native token is ether, disable this function
         if (address(WETHToken) == address(0)) {
             revert NativeTokenIsEther();

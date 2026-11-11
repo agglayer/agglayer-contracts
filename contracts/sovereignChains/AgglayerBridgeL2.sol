@@ -598,7 +598,7 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
         address legacyTokenAddress,
         uint256 amount,
         bytes calldata permitData
-    ) external virtual {
+    ) external virtual nonReentrant {
         // Use permit if any
         if (permitData.length != 0) {
             _permit(legacyTokenAddress, permitData);
