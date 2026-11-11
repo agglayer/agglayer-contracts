@@ -900,11 +900,13 @@ contract AgglayerManager is
         uint32 rollupID = rollupAddressToID[address(rollupContract)];
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
         // Only allow update rollupVerifierType when updating to ALGateway
+        // StateTransition rollups must use initMigration to change their rollupVerifierType
         if (
-            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
-            VerifierType.ALGateway &&
             rollup.rollupVerifierType !=
-            rollupTypeMap[newRollupTypeID].rollupVerifierType
+            rollupTypeMap[newRollupTypeID].rollupVerifierType &&
+            (rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+                VerifierType.ALGateway ||
+                rollup.rollupVerifierType == VerifierType.StateTransition)
         ) {
             revert UpdateNotCompatible();
         }
