@@ -24,6 +24,7 @@ import {
 } from '../../src/utils-common-aggchain';
 
 import { encodeAggchainDataFEP, computeHashAggchainParamsFEP } from '../../src/utils-aggchain-FEP';
+import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 import { NO_ADDRESS, AGGCHAIN_DEFAULT_VKEY_ROLE, AL_ADD_PP_ROUTE_ROLE, AL_MULTISIG_ROLE } from '../../src/constants';
 
@@ -859,6 +860,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             .to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
             .to.emit(FEPRollupContract, 'OutputProposed')
             .withArgs(newStateRoot, 1, newl2BlockNumber, blockDataTimestamp);
+        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
     });
 
     it('should add existing rollup to FEP', async () => {

@@ -184,7 +184,7 @@ abstract contract PolygonConsensusBase is
         gasTokenAddress = _gasTokenAddress;
     }
 
-    modifier onlyAdmin() {
+    modifier onlyAdmin() virtual {
         if (admin != msg.sender) {
             revert OnlyAdmin();
         }
