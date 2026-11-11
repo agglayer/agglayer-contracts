@@ -36,6 +36,7 @@ contract AgglayerTimelock is TimelockController {
      *
      * This value can be changed by executing an operation that calls `updateDelay`.
      * If the Agglayer system is in emergency state, the minDelay will be 0 instead.
+     * Note that if agglayerManager.isEmergencyState() reverts, this function and therefore every schedule reverts
      */
     function getMinDelay() public view override returns (uint256 duration) {
         if (
