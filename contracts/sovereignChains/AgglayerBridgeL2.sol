@@ -792,6 +792,8 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
      * @notice Move the LET forward by adding new leaves in bulk
      * @dev Permissioned function by the GlobalExitRootRemover role
      * @dev Adds new leaves incrementally using structured data and validates against expected root as health check
+     * @dev Does not update the localBalanceTree nor apply the bridgeAsset checks. If the added leaves were never bridged on this chain,
+     * the localBalanceTree must be reconciled with setLocalBalanceTree before leaving the emergency state
      * @param newLeaves Array of leaf data to add to the current tree
      * @param expectedLER The expected root after adding all new leaves (health check)
      */
