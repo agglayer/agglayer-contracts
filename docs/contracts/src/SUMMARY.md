@@ -16,6 +16,8 @@
   - [❱ deployment](contracts/deployment/README.md)
     - [PolygonZkEVMDeployer](contracts/deployment/PolygonZkEVMDeployer.sol/contract.PolygonZkEVMDeployer.md)
   - [❱ interfaces](contracts/interfaces/README.md)
+    - [IAggOracleCommitteeEvents](contracts/interfaces/IAggOracleCommittee.sol/interface.IAggOracleCommitteeEvents.md)
+    - [IAggOracleCommitteeErrors](contracts/interfaces/IAggOracleCommittee.sol/interface.IAggOracleCommitteeErrors.md)
     - [IAggOracleCommittee](contracts/interfaces/IAggOracleCommittee.sol/interface.IAggOracleCommittee.md)
     - [IAggchainBaseEvents](contracts/interfaces/IAggchainBase.sol/interface.IAggchainBaseEvents.md)
     - [IAggchainBaseErrors](contracts/interfaces/IAggchainBase.sol/interface.IAggchainBaseErrors.md)

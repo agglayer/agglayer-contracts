@@ -177,8 +177,9 @@ function validateDeploymentParameters() {
         // If using AggOracleCommittee, validate its parameters
         const aggOracleParams = [
             'aggOracleCommittee.aggOracleOwner',
-            'aggOracleCommittee.aggOracleMembers',
-            'aggOracleCommittee.quorum',
+            'aggOracleCommittee.aggOracleProposer',
+            'aggOracleCommittee.aggOracleValidators',
+            'aggOracleCommittee.aggOracleThreshold',
         ];
         mandatoryParams.push(...aggOracleParams);
 
@@ -191,26 +192,49 @@ function validateDeploymentParameters() {
             throw new Error('globalExitRootUpdater should not be set when using AggOracleCommittee');
         }
 
-        // Validate oracle members
-        const nullifierAddress = {} as any;
-        deployParameters.aggOracleCommittee.aggOracleMembers.forEach((oracleMember: string) => {
-            if (!ethers.isAddress(oracleMember)) {
-                throw new Error(`aggOracleMembers ${oracleMember}: not a valid address`);
+        // Validate owner and proposer
+        const { aggOracleOwner, aggOracleProposer, aggOracleValidators, aggOracleThreshold } =
+            deployParameters.aggOracleCommittee;
+        [
+            ['aggOracleOwner', aggOracleOwner],
+            ['aggOracleProposer', aggOracleProposer],
+        ].forEach(([name, address]) => {
+            if (!ethers.isAddress(address) || address === ethers.ZeroAddress) {
+                throw new Error(`${name} ${address}: not a valid non-zero address`);
             }
-            // Check if address is not duplicated
-            if (nullifierAddress[oracleMember] !== undefined) {
-                throw new Error(`aggOracleMembers ${oracleMember}: duplicated address`);
-            }
-            nullifierAddress[oracleMember] = true;
         });
 
-        // Validate quorum
-        if (deployParameters.aggOracleCommittee.quorum < 1) {
-            throw new Error('quorum must be bigger than 0');
+        // Validate oracle validators
+        if (!Array.isArray(aggOracleValidators)) {
+            throw new Error('aggOracleValidators must be an array');
         }
-        if (deployParameters.aggOracleCommittee.quorum > deployParameters.aggOracleCommittee.aggOracleMembers.length) {
+        if (aggOracleValidators.length > 255) {
+            throw new Error(`aggOracleValidators must have at most 255 validators (${aggOracleValidators.length})`);
+        }
+        const nullifierAddress = {} as any;
+        aggOracleValidators.forEach((validator: { addr: string; url: string }) => {
+            if (!ethers.isAddress(validator?.addr) || validator.addr === ethers.ZeroAddress) {
+                throw new Error(`aggOracleValidators ${validator?.addr}: not a valid non-zero address`);
+            }
+            // The url is allowed to be empty
+            if (typeof validator.url !== 'string') {
+                throw new Error(`aggOracleValidators ${validator.addr}: url must be a string`);
+            }
+            // Check if address is not duplicated
+            const key = validator.addr.toLowerCase();
+            if (nullifierAddress[key] !== undefined) {
+                throw new Error(`aggOracleValidators ${validator.addr}: duplicated address`);
+            }
+            nullifierAddress[key] = true;
+        });
+
+        // Validate threshold
+        if (!Number.isInteger(aggOracleThreshold) || aggOracleThreshold < 1) {
+            throw new Error('aggOracleThreshold must be an integer bigger than 0');
+        }
+        if (aggOracleThreshold > aggOracleValidators.length) {
             throw new Error(
-                `quorum must be smaller or equal than the number of aggOracleCommittee members (${deployParameters.aggOracleCommittee.aggOracleMembers.length})`,
+                `aggOracleThreshold must be smaller or equal than the number of aggOracleCommittee validators (${aggOracleValidators.length})`,
             );
         }
 
@@ -569,8 +593,12 @@ async function deployAggOracleCommittee(
     // Prepare initialization call data
     const initializeData = AggOracleCommitteeFactory.interface.encodeFunctionData('initialize', [
         deployParameters.aggOracleCommittee.aggOracleOwner,
-        deployParameters.aggOracleCommittee.aggOracleMembers,
-        deployParameters.aggOracleCommittee.quorum,
+        deployParameters.aggOracleCommittee.aggOracleProposer,
+        deployParameters.aggOracleCommittee.aggOracleValidators.map((validator: { addr: string; url: string }) => [
+            validator.addr,
+            validator.url,
+        ]),
+        deployParameters.aggOracleCommittee.aggOracleThreshold,
     ]);
 
     const aggOracleProxy = await transparentProxyFactory.deploy(
@@ -631,8 +659,9 @@ function generateFinalOutput(outputJson: any, deployParams: any, actualGlobalExi
         configuration.aggOracleCommittee = {
             useAggOracleCommittee: true,
             aggOracleOwner: deployParams.aggOracleCommittee.aggOracleOwner,
-            aggOracleMembers: deployParams.aggOracleCommittee.aggOracleMembers,
-            quorum: deployParams.aggOracleCommittee.quorum,
+            aggOracleProposer: deployParams.aggOracleCommittee.aggOracleProposer,
+            aggOracleValidators: deployParams.aggOracleCommittee.aggOracleValidators,
+            aggOracleThreshold: deployParams.aggOracleCommittee.aggOracleThreshold,
         };
     }
 
@@ -1192,44 +1221,61 @@ async function verifyAggOracleCommitteeContract(deployConfig: any, outputJson: a
     }
     logger.info(`✅ AggOracleCommittee owner: ${owner}`);
 
-    // Verify quorum
-    const quorum = await aggOracle.quorum();
-    if (Number(quorum) !== deployConfig.aggOracleCommittee.quorum) {
+    // Verify proposer
+    const proposer = await aggOracle.proposer();
+    if (proposer.toLowerCase() !== deployConfig.aggOracleCommittee.aggOracleProposer.toLowerCase()) {
         throw new Error(
-            `AggOracleCommittee quorum mismatch. Expected: ${deployConfig.aggOracleCommittee.quorum}, Got: ${quorum}`,
+            `AggOracleCommittee proposer mismatch. Expected: ${deployConfig.aggOracleCommittee.aggOracleProposer}, Got: ${proposer}`,
         );
     }
-    logger.info(`✅ AggOracleCommittee quorum: ${quorum}`);
+    logger.info(`✅ AggOracleCommittee proposer: ${proposer}`);
 
-    // Verify aggOracleMembers (compare lengths and check if all expected members are present)
-    const expectedMembers = deployConfig.aggOracleCommittee.aggOracleMembers.map((member: string) =>
-        member.toLowerCase(),
-    );
-    const actualMembersCount = await aggOracle.getAggOracleMembersCount();
-
-    if (Number(actualMembersCount) !== expectedMembers.length) {
+    // Verify threshold
+    const threshold = await aggOracle.threshold();
+    if (Number(threshold) !== deployConfig.aggOracleCommittee.aggOracleThreshold) {
         throw new Error(
-            `AggOracleCommittee members length mismatch. Expected: ${expectedMembers.length}, Got: ${actualMembersCount}`,
+            `AggOracleCommittee threshold mismatch. Expected: ${deployConfig.aggOracleCommittee.aggOracleThreshold}, Got: ${threshold}`,
+        );
+    }
+    logger.info(`✅ AggOracleCommittee threshold: ${threshold}`);
+
+    // Verify validators (addresses and urls, in order)
+    const expectedValidators = deployConfig.aggOracleCommittee.aggOracleValidators;
+    const actualValidatorsCount = await aggOracle.getValidatorsCount();
+
+    if (Number(actualValidatorsCount) !== expectedValidators.length) {
+        throw new Error(
+            `AggOracleCommittee validators length mismatch. Expected: ${expectedValidators.length}, Got: ${actualValidatorsCount}`,
         );
     }
 
-    // Check each member individually
-    for (let i = 0; i < expectedMembers.length; i++) {
-        // eslint-disable-next-line no-await-in-loop
-        const actualMember = await aggOracle.aggOracleMembers(i);
-        if (!expectedMembers.includes(actualMember.toLowerCase())) {
+    const actualValidators = await aggOracle.getValidatorsInfo();
+    for (let i = 0; i < expectedValidators.length; i++) {
+        const { addr: actualAddr, url: actualUrl } = actualValidators[i];
+        if (actualAddr.toLowerCase() !== expectedValidators[i].addr.toLowerCase()) {
             throw new Error(
-                `AggOracleCommittee member at index ${i} not expected. Got: ${actualMember}, Expected one of: ${expectedMembers.join(', ')}`,
+                `AggOracleCommittee validator at index ${i} mismatch. Expected: ${expectedValidators[i].addr}, Got: ${actualAddr}`,
+            );
+        }
+        if (actualUrl !== expectedValidators[i].url) {
+            throw new Error(
+                `AggOracleCommittee validator url at index ${i} mismatch. Expected: ${expectedValidators[i].url}, Got: ${actualUrl}`,
             );
         }
     }
-    logger.info(`✅ AggOracleCommittee has ${actualMembersCount} members matching configuration`);
+    const registered = await Promise.all(
+        expectedValidators.map((v: { addr: string }) => aggOracle.isValidator(v.addr)),
+    );
+    if (registered.some((isRegistered: boolean) => !isRegistered)) {
+        throw new Error('AggOracleCommittee isValidator returned false for a configured validator');
+    }
+    logger.info(`✅ AggOracleCommittee has ${actualValidatorsCount} validators matching configuration`);
 
-    // Verify globalExitRootManagerL2Sovereign (immutable) and dependency
-    const gerManagerAddress = await aggOracle.globalExitRootManagerL2Sovereign();
+    // Verify agglayerGERL2 (immutable) and dependency
+    const gerManagerAddress = await aggOracle.agglayerGERL2();
     if (gerManagerAddress.toLowerCase() !== outputJson.globalExitRootManagerL2SovereignChainAddress.toLowerCase()) {
         throw new Error(
-            `AggOracleCommittee globalExitRootManagerL2Sovereign mismatch. Expected: ${outputJson.globalExitRootManagerL2SovereignChainAddress}, Got: ${gerManagerAddress}`,
+            `AggOracleCommittee agglayerGERL2 mismatch. Expected: ${outputJson.globalExitRootManagerL2SovereignChainAddress}, Got: ${gerManagerAddress}`,
         );
     }
     logger.info(`✅ AggOracleCommittee -> GER Manager: ${gerManagerAddress}`);

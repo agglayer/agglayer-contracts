@@ -1,6 +1,8 @@
 
 
 # Contents
+- [IAggOracleCommitteeEvents](IAggOracleCommittee.sol/interface.IAggOracleCommitteeEvents.md)
+- [IAggOracleCommitteeErrors](IAggOracleCommittee.sol/interface.IAggOracleCommitteeErrors.md)
 - [IAggOracleCommittee](IAggOracleCommittee.sol/interface.IAggOracleCommittee.md)
 - [IAggchainBaseEvents](IAggchainBase.sol/interface.IAggchainBaseEvents.md)
 - [IAggchainBaseErrors](IAggchainBase.sol/interface.IAggchainBaseErrors.md)

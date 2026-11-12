@@ -57,8 +57,8 @@ When `useAggOracleCommittee` is enabled:
 
 1. **AggOracleCommittee** is deployed with the pre-calculated GER Manager address
 2. **AggOracleCommittee address** becomes the `globalExitRootUpdater` for the GER Manager
-3. **Oracle members** can propose global exit roots that are consolidated when quorum is reached
-4. **Ownership** of the AggOracleCommittee is set to the specified `aggOracleOwner`
+3. **Oracle proposer** injects global exit roots that have been signed by the required threshold of oracle validators
+4. **Ownership** of the AggOracleCommittee is set directly to the specified `aggOracleOwner` during initialization (no `acceptOwnership` call is needed)
 
 **Without AggOracleCommittee:**
 
@@ -182,12 +182,13 @@ rollupID: 1001 → hex: 0x000003e9 → repeated 5×: 0x000003e9000003e9000003e90
     "aggOracleCommittee": {
         "useAggOracleCommittee": true, // Set to true to deploy AggOracleCommittee
         "aggOracleOwner": "0x...", // Owner of the AggOracleCommittee (usually timelock)
-        "aggOracleMembers": [
-            "0x...", // Oracle member 1
-            "0x...", // Oracle member 2
-            "0x..." // Oracle member N
+        "aggOracleProposer": "0x...", // Address authorized to propose GER injections
+        "aggOracleValidators": [
+            { "addr": "0x...", "url": "https://validator1.example.com" }, // Oracle validator 1
+            { "addr": "0x...", "url": "" }, // Oracle validator 2 (url may be empty)
+            { "addr": "0x...", "url": "https://validatorN.example.com" } // Oracle validator N
         ],
-        "quorum": 2 // Minimum number of oracle members needed to consolidate a GER
+        "aggOracleThreshold": 2 // Number of validator signatures required to inject a GER
     }
 }
 ```
@@ -195,14 +196,17 @@ rollupID: 1001 → hex: 0x000003e9 → repeated 5×: 0x000003e9000003e9000003e90
 **AggOracleCommittee Parameters:**
 
 - **`useAggOracleCommittee`**: Boolean flag to enable/disable AggOracleCommittee deployment
-- **`aggOracleOwner`**: Address that will own the AggOracleCommittee contract (can add/remove members, change quorum)
-- **`aggOracleMembers`**: Array of addresses that can propose global exit roots
-- **`quorum`**: Minimum number of oracle members that must vote for a GER to be consolidated
+- **`aggOracleOwner`**: Address that will own the AggOracleCommittee contract (can update the proposer, validators and threshold)
+- **`aggOracleProposer`**: Address authorized to propose GER injections
+- **`aggOracleValidators`**: Array of `{ addr, url }` objects. `addr` is a validator that signs GERs; `url` is an informational string that may be empty
+- **`aggOracleThreshold`**: Number of validator signatures required to inject a GER
 
 **Important Constraints:**
 
-- ✅ `quorum` must be ≥ 1 and ≤ number of `aggOracleMembers`
-- ✅ All `aggOracleMembers` addresses must be unique and valid
+- ✅ `aggOracleThreshold` must be ≥ 1 and ≤ number of `aggOracleValidators`
+- ✅ `aggOracleValidators` must contain at most 255 validators
+- ✅ All `aggOracleValidators` addresses must be unique, valid and non-zero
+- ✅ `aggOracleOwner` and `aggOracleProposer` must be valid non-zero addresses
 - ✅ When `useAggOracleCommittee` is `true`, **do not set** `globalExitRootUpdater`
 - ✅ When `useAggOracleCommittee` is `false`, `globalExitRootUpdater` **is required**
 
@@ -345,8 +349,12 @@ A JSON file `deploy_output_YYYY-MM-DD_HH-MM-SS.json` will be created with all de
             // Added when AggOracleCommittee is deployed
             "useAggOracleCommittee": true,
             "aggOracleOwner": "0x...",
-            "aggOracleMembers": ["0x...", "0x..."],
-            "quorum": 2
+            "aggOracleProposer": "0x...",
+            "aggOracleValidators": [
+                { "addr": "0x...", "url": "" },
+                { "addr": "0x...", "url": "" }
+            ],
+            "aggOracleThreshold": 2
         }
     }
 }
@@ -358,17 +366,17 @@ A JSON file `deploy_output_YYYY-MM-DD_HH-MM-SS.json` will be created with all de
 
 Use AggOracleCommittee when you want:
 
-- **Decentralized GER Management**: Multiple oracle members can propose global exit roots
-- **Consensus-Based Updates**: Require quorum of oracle members to consolidate GERs
-- **Governance Control**: Owner can add/remove oracle members and adjust quorum
+- **Decentralized GER Management**: Global exit roots are only injected with signatures from multiple oracle validators
+- **Threshold-Based Updates**: Require a threshold of oracle validator signatures to inject a GER
+- **Governance Control**: Owner can update the proposer, validators and threshold
 - **Security**: Prevents single point of failure for global exit root updates
 
 ### How AggOracleCommittee Works
 
-1. **Oracle Members** call `proposeGlobalExitRoot(bytes32 ger)` to vote for a GER
-2. **Quorum Reached**: When enough members vote for the same GER, it's automatically consolidated
-3. **GER Consolidation**: The GER is sent to the AgglayerGERL2
-4. **Owner Management**: Contract owner can add/remove members and change quorum
+1. **Oracle Validators** sign a GER off-chain
+2. **Proposer** calls `injectGER` with the GER and the signatures of exactly `aggOracleThreshold` validators, ordered by signer address
+3. **GER Injection**: Once the signatures are verified, the GER is inserted into the AgglayerGERL2
+4. **Owner Management**: Contract owner can update the proposer, the validators and the threshold
 
 ### Configuration Examples
 
@@ -379,8 +387,9 @@ Use AggOracleCommittee when you want:
     "aggOracleCommittee": {
         "useAggOracleCommittee": true,
         "aggOracleOwner": "0xTimelock...",
-        "aggOracleMembers": ["0xOracle1..."],
-        "quorum": 1
+        "aggOracleProposer": "0xProposer...",
+        "aggOracleValidators": [{ "addr": "0xOracle1...", "url": "" }],
+        "aggOracleThreshold": 1
     }
 }
 ```
@@ -392,8 +401,13 @@ Use AggOracleCommittee when you want:
     "aggOracleCommittee": {
         "useAggOracleCommittee": true,
         "aggOracleOwner": "0xTimelock...",
-        "aggOracleMembers": ["0xOracle1...", "0xOracle2...", "0xOracle3..."],
-        "quorum": 2
+        "aggOracleProposer": "0xProposer...",
+        "aggOracleValidators": [
+            { "addr": "0xOracle1...", "url": "" },
+            { "addr": "0xOracle2...", "url": "" },
+            { "addr": "0xOracle3...", "url": "" }
+        ],
+        "aggOracleThreshold": 2
     }
 }
 ```

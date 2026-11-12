@@ -28,8 +28,12 @@
         "minDelay": 3600
     },
     "useAggOracleCommittee": true,
-    "aggOracleCommittee": ["0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66", "0xb420EAAbFeFA05b39dE520f811325A463E023954"],
-    "quorum": 1,
     "aggOracleOwner": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
+    "aggOracleProposer": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66",
+    "aggOracleValidators": [
+        { "addr": "0x8576158a89648aA88B6036f47B8b74Fc0C2b5c66", "url": "https://validator-1.example.com" },
+        { "addr": "0xb420EAAbFeFA05b39dE520f811325A463E023954", "url": "" }
+    ],
+    "aggOracleThreshold": 1,
     "formatGenesis": "geth"
 }
