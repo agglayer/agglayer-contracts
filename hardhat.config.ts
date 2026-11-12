@@ -11,6 +11,8 @@ import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomicfoundation/hardhat-verify';
 import '@nomicfoundation/hardhat-ledger';
 
+// Public Hardhat mnemonic, used when MNEMONIC is not set. Convenient for local tests, but it applies to every network:
+// on live networks always set MNEMONIC or LEDGER_ACCOUNT, otherwise txs are signed and addresses derived from public keys
 const DEFAULT_MNEMONIC = 'test test test test test test test test test test test junk';
 const LEDGER_ACCOUNT = process.env.LEDGER_ACCOUNT ? [process.env.LEDGER_ACCOUNT] : undefined;
 
