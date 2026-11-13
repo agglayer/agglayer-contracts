@@ -58,7 +58,8 @@ Edit `manageRoles.json` with the following structure:
 - `STOP_EMERGENCY_ROLE` - Ability to stop emergency state
 - `EMERGENCY_COUNCIL_ROLE` - Ability to activate emergency state
 - `EMERGENCY_COUNCIL_ADMIN` - Manage emergency council
-- `TIMELOCK_ADMIN_ROLE` - Ability to manage timelock contract
+- `TIMELOCK_ADMIN_ROLE` - Ability to manage timelock contract (OZ 4 timelocks: `PolygonZkEVMTimelock`, `AgglayerTimelock`)
+- `DEFAULT_ADMIN_ROLE` - Ability to manage timelock contract (OZ 5 `TimelockController`, e.g. the outpost timelocks)
 - `PROPOSER_ROLE` - Ability to propose timelock operations
 - `EXECUTOR_ROLE` - Ability to execute timelock operations
 - `CANCELLER_ROLE` - Ability to cancel timelock operations
@@ -181,6 +182,7 @@ The output file contains:
 ## Notes
 
 - The script uses `scheduleBatch` and `executeBatch` for efficiency when managing multiple roles
+- When `TIMELOCK_ADMIN_ROLE` or `DEFAULT_ADMIN_ROLE` is used, the script reads the admin role of `target` on the selected `--network` and fails if it is not the one used: on an OZ 5 timelock, granting or revoking `TIMELOCK_ADMIN_ROLE` succeeds but does nothing
 - **You can mix grant and revoke operations in the same batch** - each role entry has its own action
 - All operations in a batch share the same salt and predecessor
 - The timelock delay applies to the entire batch
