@@ -134,6 +134,9 @@ Signs a prepared transaction using EIP-712 typed data.
 **Environment Variables:**
 - `SIGNER_INDEX`: Index of signer in hardhat config (default: 0)
 - `TX_INDEX`: Index of transaction to sign (default: latest)
+- `ALLOW_DELEGATECALL`: set to `true` to sign a DelegateCall to a target other than MultiSend / MultiSendCallOnly (refused by default)
+
+The tool prints the full calldata, and the EIP-712 domain hash and message hash to compare with the Ledger screen. The `description` comes from `transactions.json` and is not verified: check `To` and `Data`.
 
 **Output:**
 - Signatures are added to the transaction in `transactions.json`

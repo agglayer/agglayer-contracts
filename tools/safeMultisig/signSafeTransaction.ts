@@ -8,7 +8,8 @@
  *   npx hardhat run tools/safeMultisig/signSafeTransaction.ts --network mainnet
  *
  * Environment:
- *   SIGNER_INDEX    - Index of signer to use (default: 0)
+ *   SIGNER_INDEX       - Index of signer to use (default: 0)
+ *   ALLOW_DELEGATECALL - Set to true to sign a DelegateCall to a target other than MultiSend / MultiSendCallOnly
  */
 /* eslint-disable import/no-unresolved */
 import path = require('path');
@@ -19,6 +20,8 @@ import { logger } from '../../src/logger';
 import { checkParams } from '../../src/utils';
 import {
     EIP712_SAFE_TX_TYPE,
+    MULTI_SEND_ADDRESS,
+    MULTI_SEND_CALL_ONLY_ADDRESS,
     SAFE_ABI,
     SafeSignature,
     TransactionData,
@@ -85,7 +88,7 @@ async function main() {
     logger.info('Configuration:');
     logger.info(`  Safe Address: ${safeAddress}`);
     if (description) {
-        logger.info(`  Description:  ${description}`);
+        logger.info(`  Description:  ${description} (unverified label from the transactions file: check To and Data)`);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -131,12 +134,34 @@ async function main() {
     logger.info(`  Value:     ${safeTx.value}`);
     logger.info(`  Operation: ${safeTx.operation === 0 ? 'Call' : 'DelegateCall'}`);
     logger.info(`  Nonce:     ${safeTx.nonce}`);
-    logger.info(`  Data:      ${safeTx.data.length > 66 ? `${safeTx.data.slice(0, 66)}...` : safeTx.data}`);
+    logger.info(`  Data:      ${safeTx.data}`);
     logger.info('');
+
+    // A DelegateCall runs the target code in the Safe context: only MultiSend batches are expected
+    if (safeTx.operation !== 0) {
+        const isMultiSend = [MULTI_SEND_ADDRESS, MULTI_SEND_CALL_ONLY_ADDRESS]
+            .map((address) => address.toLowerCase())
+            .includes(safeTx.to.toLowerCase());
+        logger.warn(`⚠️  DelegateCall: ${safeTx.to} code runs with full control of the Safe`);
+        if (!isMultiSend && process.env.ALLOW_DELEGATECALL !== 'true') {
+            throw new Error(
+                `DelegateCall to ${safeTx.to}, which is not MultiSend / MultiSendCallOnly. Set ALLOW_DELEGATECALL=true to sign it anyway.`,
+            );
+        }
+        logger.warn('');
+    }
 
     // Calculate EIP-712 hash
     const txHash = calculateSafeTxHash(safeAddress, safeTx, chainId);
+    if (transaction.txHash && transaction.txHash.toLowerCase() !== txHash.toLowerCase()) {
+        throw new Error(
+            `Stored txHash ${transaction.txHash} does not match the transaction fields (${txHash}): the file was modified or the chain is wrong`,
+        );
+    }
     logger.info(`Transaction Hash: ${txHash}`);
+    // What a Ledger shows when signing Safe EIP-712 typed data
+    logger.info(`  Domain hash:  ${ethers.TypedDataEncoder.hashDomain({ verifyingContract: safeAddress, chainId })}`);
+    logger.info(`  Message hash: ${ethers.TypedDataEncoder.hashStruct('SafeTx', EIP712_SAFE_TX_TYPE, safeTx)}`);
     logger.info('');
 
     // ═══════════════════════════════════════════════════════════
