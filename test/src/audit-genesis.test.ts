@@ -280,7 +280,10 @@ describe('Tool auditGenesis', function () {
 
         expect(res.code, res.out).to.equal(0);
         expect(res.fails).to.deep.equal([]);
-        expect(res.warns).to.deep.equal([]);
+        // anvil does not compute the genesis block stateRoot
+        expect(res.warns).to.deep.equal([
+            '[WARN] L2 node reports an empty genesis block stateRoot: accounts or storage that are not in the genesis file can not be detected',
+        ]);
         expect(res.out).to.include('adminAddress is most probably an EOA since it has no bytecode');
         expect(res.out).to.include('Genesis timelock storage is exactly the expected one');
         expect(res.out).to.include('upgradeable proxies are administered by their expected admin');

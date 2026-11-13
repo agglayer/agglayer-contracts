@@ -7,7 +7,12 @@ import chalk from 'chalk';
 import yargs from 'yargs/yargs';
 import { getSafeCreation, getSafeInfo, SafeInfo } from './safe-inspector';
 import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG, TIMELOCK } from '../../src/constants';
-import { getTimelockRoleMemberSlot, initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
+import {
+    computeGenesisStateRoot,
+    EMPTY_TRIE_ROOT,
+    getTimelockRoleMemberSlot,
+    initializeTimelockStorage,
+} from '../../src/genesis/genesis-helpers';
 import safeContracts from '../createSovereignGenesis/safe-contracts.json';
 
 // ======= CONFIGURATION ======= //
@@ -1072,6 +1077,35 @@ async function auditSafeAdmin(
             'Genesis vs L2 genesis block',
             'FAIL',
             `${mismatches.length} genesis accounts do not match the L2 genesis block`,
+        );
+    }
+
+    // the stateRoot covers every account and slot: it also catches accounts or storage that are not in the genesis file
+    try {
+        const expectedStateRoot = computeGenesisStateRoot(accountsMap);
+        const genesisBlock = await l2Provider.send('eth_getBlockByNumber', ['0x0', false]);
+        const stateRoot = String(genesisBlock?.stateRoot).toLowerCase();
+        if (stateRoot === expectedStateRoot) {
+            check('Genesis vs L2 genesis block', 'PASS', 'L2 genesis block stateRoot is the genesis file state root');
+        } else if (stateRoot === EMPTY_TRIE_ROOT) {
+            // e.g. anvil does not compute the genesis state root
+            check(
+                'Genesis vs L2 genesis block',
+                'WARN',
+                'L2 node reports an empty genesis block stateRoot: accounts or storage that are not in the genesis file can not be detected',
+            );
+        } else {
+            check(
+                'Genesis vs L2 genesis block',
+                'FAIL',
+                `L2 genesis block stateRoot ${stateRoot} is NOT the genesis file state root ${expectedStateRoot}: the L2 genesis has accounts or storage that are not in the genesis file`,
+            );
+        }
+    } catch (e: any) {
+        check(
+            'Genesis vs L2 genesis block',
+            'FAIL',
+            `Error checking the L2 genesis block stateRoot: ${errorMessage(e)}`,
         );
     }
 
