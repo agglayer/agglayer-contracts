@@ -33,6 +33,13 @@ export const TIMELOCK = {
 };
 
 /// /////////////////////////////////
+///   POLYGON MULTISIG    ///////////
+/// /////////////////////////////////
+
+// Polygon multisig (Safe) on Ethereum mainnet: must never be a sovereign chain L2 timelock admin
+export const POLYGON_MULTISIG = '0x242daE44F5d8fb54B198D03a94dA45B5a4413e21';
+
+/// /////////////////////////////////
 ///   STORAGE CONSTANTS    //////////
 /// /////////////////////////////////
 

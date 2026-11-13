@@ -32,7 +32,11 @@ describe('Timelock storage util', () => {
 
         // Get utils storage and compare with the one computed
         const computedTimelockStorage = getStorageWrites(trace);
-        const utilsTimelockStorage = initializeTimelockStorage(minDelay, timelockAdminAddress, timelockContract.target);
+        const utilsTimelockStorage = initializeTimelockStorage(
+            minDelay,
+            timelockAdminAddress,
+            await timelockContract.getAddress(),
+        );
 
         expect(lodash.isEqual(computedTimelockStorage, utilsTimelockStorage)).to.be.equal(true);
     });
