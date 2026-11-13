@@ -44,6 +44,7 @@ async function main() {
         'EMERGENCY_COUNCIL_ROLE',
         'EMERGENCY_COUNCIL_ADMIN',
         'TIMELOCK_ADMIN_ROLE',
+        'DEFAULT_ADMIN_ROLE',
         'PROPOSER_ROLE',
         'EXECUTOR_ROLE',
         'CANCELLER_ROLE',
@@ -69,6 +70,32 @@ async function main() {
 
     // Start processing roles
     const { target, timelockDelay } = manageRolesParameters;
+
+    // The timelock admin role depends on the TimelockController version: TIMELOCK_ADMIN_ROLE on OZ 4
+    // (PolygonZkEVMTimelock, AgglayerTimelock), DEFAULT_ADMIN_ROLE on OZ 5 (outpost timelocks).
+    // Granting or revoking the wrong one succeeds on-chain but does nothing
+    const adminRoles = ['TIMELOCK_ADMIN_ROLE', 'DEFAULT_ADMIN_ROLE'];
+    const usedAdminRoles = manageRolesParameters.roles.filter((roleEntry: any) =>
+        adminRoles.includes(roleEntry.roleName),
+    );
+    if (usedAdminRoles.length > 0) {
+        const accessControl = new ethers.Contract(
+            target,
+            ['function getRoleAdmin(bytes32 role) view returns (bytes32)'],
+            ethers.provider,
+        );
+        const proposerRoleAdmin = await accessControl.getRoleAdmin(ethers.id('PROPOSER_ROLE'));
+        const expectedAdminRole =
+            proposerRoleAdmin === ethers.id('TIMELOCK_ADMIN_ROLE') ? 'TIMELOCK_ADMIN_ROLE' : 'DEFAULT_ADMIN_ROLE';
+        logger.info(`Admin role of the target ${target}: ${expectedAdminRole}`);
+        usedAdminRoles.forEach((roleEntry: any) => {
+            if (roleEntry.roleName !== expectedAdminRole) {
+                throw new Error(
+                    `${roleEntry.roleName} is not the admin role of the target ${target}: use ${expectedAdminRole}`,
+                );
+            }
+        });
+    }
     const salt = manageRolesParameters.timelockSalt || ethers.ZeroHash;
     const predecessor = ethers.ZeroHash;
 
@@ -94,7 +121,7 @@ async function main() {
         const roleEntry = manageRolesParameters.roles[i];
         const { action, roleName, account } = roleEntry;
 
-        const roleID = ethers.id(roleName);
+        const roleID = roleName === 'DEFAULT_ADMIN_ROLE' ? ethers.ZeroHash : ethers.id(roleName);
         const functionName = action === 'grant' ? 'grantRole' : 'revokeRole';
         const calldata = AgglayerTimelockFactory.interface.encodeFunctionData(functionName, [roleID, account]);
 
