@@ -19,7 +19,13 @@ import fs = require('fs');
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
 import { logger } from '../../src/logger';
-import { SAFE_ABI, TransactionData, buildSignatureBytes, loadTransactions } from './safeUtils';
+import {
+    SAFE_ABI,
+    TransactionData,
+    assertDelegateCallTargetHasCode,
+    buildSignatureBytes,
+    loadTransactions,
+} from './safeUtils';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -120,6 +126,10 @@ async function main() {
     // ═══════════════════════════════════════════════════════════
 
     const safeContract = await ethers.getContractAt(SAFE_ABI, safeAddress);
+
+    if (tx.safeTx.operation === 1) {
+        await assertDelegateCallTargetHasCode(tx.safeTx.to, 'DelegateCall target');
+    }
 
     // Check nonce
     const currentNonce = await safeContract.nonce();
