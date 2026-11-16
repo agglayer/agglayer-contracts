@@ -1,0 +1,34 @@
+# Fails if compiled-contracts/ does not match a fresh compilation of the sources.
+# Fix locally with: npx hardhat compile --force && ./copy-compiled-contracts.sh
+
+name: Compiled contracts drift check
+
+on:
+    push:
+        branches: [main, develop, feature/v12, feature/outposts]
+    pull_request:
+        branches: [main, develop, feature/v12, feature/outposts]
+
+permissions:
+    contents: read
+
+jobs:
+    compiled-contracts:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Use Node.js 22.x
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 22.x
+            - name: Checkout code
+              uses: actions/checkout@v3
+            - name: setup
+              run: npm ci
+            - name: compile
+              run: npx hardhat compile --force
+            - name: copy artifacts
+              run: ./copy-compiled-contracts.sh
+            - name: check drift
+              run: |
+                  git add -N compiled-contracts
+                  git diff --exit-code --stat compiled-contracts
