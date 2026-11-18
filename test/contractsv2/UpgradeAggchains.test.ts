@@ -173,7 +173,7 @@ describe('UpgradeAggchains', () => {
         expect(await upgradedFEP.threshold()).to.equal(1);
 
         // Verify version
-        expect(await upgradedFEP.version()).to.equal('v3.0.0');
+        expect(await upgradedFEP.version()).to.equal('v3.0.1');
         await checkLegacyAdminFunctionsGatedByAggchainManager(upgradedFEP);
     });
 
@@ -385,7 +385,7 @@ describe('UpgradeAggchains', () => {
         expect(await upgradedFEP.threshold()).to.equal(2);
 
         // Verify version
-        expect(await upgradedFEP.version()).to.equal('v3.0.0');
+        expect(await upgradedFEP.version()).to.equal('v3.0.1');
         await checkLegacyAdminFunctionsGatedByAggchainManager(upgradedFEP);
     });
 
