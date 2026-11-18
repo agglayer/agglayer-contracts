@@ -825,7 +825,7 @@ contract AgglayerManager is
      * @notice Upgrade an existing rollup from the rollup admin address
      * This address is able to update the rollup with more restrictions that the _UPDATE_ROLLUP_ROLE
      * @dev No initialization call by design: the rollup admin must not trigger initializers reserved to the rollup manager.
-     * Upgrades needing one (e.g. AggchainFEP.upgradeFromPreviousFEP) must use updateRollup. onlyAggchainManager initializers can still be called afterwards
+     * Upgrades needing one (e.g. AggchainBase.initAggchainManager) must use updateRollup. onlyAggchainManager initializers can still be called afterwards
      * @param rollupContract Rollup consensus proxy address
      * @param newRollupTypeID New rollupTypeID to upgrade to
      */
