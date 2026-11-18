@@ -68,8 +68,8 @@ contract AggchainFEP is AggchainBase {
     bytes2 public constant AGGCHAIN_TYPE = 0x0001;
 
     /// @notice Op L2OO Semantic version.
-    /// @custom:semver v3.0.0
-    string public constant AGGCHAIN_FEP_VERSION = "v3.0.0";
+    /// @custom:semver v3.1.0
+    string public constant AGGCHAIN_FEP_VERSION = "v3.1.0";
 
     /// @notice The genesis configuration name.
     bytes32 public constant GENESIS_CONFIG_NAME =
@@ -277,6 +277,15 @@ contract AggchainFEP is AggchainBase {
     modifier onlyOptimisticModeManager() {
         if (optimisticModeManager != msg.sender) {
             revert OnlyOptimisticModeManager();
+        }
+        _;
+    }
+
+    /// @dev The aggchain manager holds every legacy admin permission (setTrustedSequencer, setTrustedSequencerURL, transferAdminRole).
+    ///      trustedSequencer is the optimistic mode signer and the op-succinct prover address, so it must not be controlled by the legacy admin.
+    modifier onlyAdmin() override {
+        if (aggchainManager != msg.sender) {
+            revert OnlyAggchainManager();
         }
         _;
     }

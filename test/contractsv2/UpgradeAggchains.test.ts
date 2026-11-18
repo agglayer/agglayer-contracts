@@ -8,6 +8,7 @@ import {
     AggchainECDSAMultisig,
     Address,
 } from '../../typechain-types';
+import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 describe('UpgradeAggchains', () => {
     let pessimisticConsensus: PolygonPessimisticConsensus;
@@ -172,7 +173,8 @@ describe('UpgradeAggchains', () => {
         expect(await upgradedFEP.threshold()).to.equal(1);
 
         // Verify version
-        expect(await upgradedFEP.version()).to.equal('v3.0.0');
+        expect(await upgradedFEP.version()).to.equal('v3.1.0');
+        await checkLegacyAdminFunctionsGatedByAggchainManager(upgradedFEP);
     });
 
     it('should upgrade from PolygonPessimisticConsensus to AggchainECDSAMultisig', async () => {
@@ -383,7 +385,8 @@ describe('UpgradeAggchains', () => {
         expect(await upgradedFEP.threshold()).to.equal(2);
 
         // Verify version
-        expect(await upgradedFEP.version()).to.equal('v3.0.0');
+        expect(await upgradedFEP.version()).to.equal('v3.1.0');
+        await checkLegacyAdminFunctionsGatedByAggchainManager(upgradedFEP);
     });
 
     it('should test upgrade path with optimistic mode manager transfer', async () => {
