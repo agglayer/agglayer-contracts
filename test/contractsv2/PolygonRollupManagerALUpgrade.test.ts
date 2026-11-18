@@ -24,6 +24,7 @@ import {
 } from '../../src/utils-common-aggchain';
 import { NO_ADDRESS, AGGCHAIN_DEFAULT_VKEY_ROLE, AL_ADD_PP_ROUTE_ROLE, AL_MULTISIG_ROLE } from '../../src/constants';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
+import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 const randomPessimisticVKey = computeRandomBytes(32);
 
@@ -305,7 +306,7 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
             ),
         )
             .to.emit(rollupManagerContract, 'UpdateRollupManagerVersion')
-            .withArgs('v1.0.0');
+            .withArgs('v2.0.0');
 
         // check precalculated address
         expect(precalculateRollupManagerAddress).to.be.equal(rollupManagerContract.target);
@@ -1118,5 +1119,6 @@ describe('Polygon rollup manager aggregation layer v3 UPGRADED', () => {
         // Verify the upgrade
         expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
         expect(await FEPRollupContract.version()).to.be.equal('v3.1.0');
+        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
     });
 });
