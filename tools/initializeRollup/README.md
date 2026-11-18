@@ -65,7 +65,8 @@ cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRol
         - `threshold`: Number. Minimum number of signatures required for multisig operations (required if useDefaultSigners is false).
         - `initOwnedAggchainVKey`: String. Owned verification key for the aggchain.
         - `initAggchainVKeySelector`: String. Selector for the aggchain verification key.
-        - `vKeyManager`: Address. Manager address for verification keys.
+
+> `AggchainFEP` can not be initialized from a legacy consensus (`PolygonPessimisticConsensus`, `PolygonZkEVMEtrog`, `PolygonValidiumEtrog`). The route is legacy -> `AggchainECDSAMultisig` (`migrateFromLegacyConsensus`) -> `AggchainFEP` (`initializeFromECDSAMultisig`, which only needs `initParams`, `useDefaultVkeys`, `initOwnedAggchainVKey` and `initAggchainVKeySelector`).
 
 **Example SignerInfo Structure:**
 
