@@ -1,14 +1,15 @@
 {
     "globalExitRootManagerL2SovereignAddress": "0x0000000000000000000000000000000000000000",
     "ownerAddress": "0x0000000000000000000000000000000000000000",
-    "aggOracleMembers": [
-        "0x0000000000000000000000000000000000000001",
-        "0x0000000000000000000000000000000000000002",
-        "0x0000000000000000000000000000000000000003"
+    "proposerAddress": "0x0000000000000000000000000000000000000000",
+    "validators": [
+        { "addr": "0x0000000000000000000000000000000000000001", "url": "https://validator-1.example.com" },
+        { "addr": "0x0000000000000000000000000000000000000002", "url": "https://validator-2.example.com" },
+        { "addr": "0x0000000000000000000000000000000000000003", "url": "" }
     ],
-    "quorum": 2,
+    "threshold": 2,
     "maxFeePerGas": "",
     "maxPriorityFeePerGas": "",
     "multiplierGas": "",
     "deployerPvtKey": ""
-} 
+}

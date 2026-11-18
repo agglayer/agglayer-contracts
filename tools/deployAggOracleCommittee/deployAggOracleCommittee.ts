@@ -20,15 +20,47 @@ async function main() {
     const mandatoryUpgradeParameters = [
         'globalExitRootManagerL2SovereignAddress',
         'ownerAddress',
-        'aggOracleMembers',
-        'quorum',
+        'proposerAddress',
+        'validators',
+        'threshold',
     ];
     checkParams(deployParameters, mandatoryUpgradeParameters);
-    const { globalExitRootManagerL2SovereignAddress, ownerAddress, aggOracleMembers, quorum } = deployParameters;
+    const { globalExitRootManagerL2SovereignAddress, ownerAddress, proposerAddress, validators, threshold } =
+        deployParameters;
 
     // Check zero address for globalExitRootManagerL2Sovereign
     if (globalExitRootManagerL2SovereignAddress === ethers.ZeroAddress) {
         throw new Error('globalExitRootManagerL2SovereignAddress cannot be zero address');
+    }
+
+    // Check owner and proposer
+    for (const [name, value] of Object.entries({ ownerAddress, proposerAddress })) {
+        if (!ethers.isAddress(value) || value === ethers.ZeroAddress) {
+            throw new Error(`${name} must be a valid non-zero address`);
+        }
+    }
+
+    // Check validators: valid non-zero addresses, no duplicates and a string url (can be empty)
+    if (!Array.isArray(validators) || validators.length === 0 || validators.length > 255) {
+        throw new Error('validators must be an array with between 1 and 255 validators');
+    }
+    const seenValidators = {};
+    for (const validator of validators) {
+        if (!ethers.isAddress(validator.addr) || validator.addr === ethers.ZeroAddress) {
+            throw new Error(`validator ${validator.addr}: not a valid non-zero address`);
+        }
+        if (seenValidators[validator.addr.toLowerCase()] !== undefined) {
+            throw new Error(`validator ${validator.addr}: duplicated address`);
+        }
+        seenValidators[validator.addr.toLowerCase()] = true;
+        if (typeof validator.url !== 'string') {
+            throw new Error(`validator ${validator.addr}: url must be a string (it can be empty)`);
+        }
+    }
+
+    // Check threshold: 1 <= threshold <= validators
+    if (!Number.isInteger(threshold) || threshold < 1 || threshold > validators.length) {
+        throw new Error(`threshold must be an integer between 1 and the number of validators (${validators.length})`);
     }
 
     // Load provider
@@ -47,7 +79,7 @@ async function main() {
     const aggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee', deployer);
     const aggOracleCommitteeContract = await upgrades.deployProxy(
         aggOracleCommitteeFactory,
-        [ownerAddress, aggOracleMembers, quorum],
+        [ownerAddress, proposerAddress, validators, threshold],
         {
             constructorArgs: [globalExitRootManagerL2SovereignAddress],
             unsafeAllow: ['constructor', 'state-variable-immutable'],
@@ -72,37 +104,41 @@ async function main() {
         aggOracleCommitteeContract.target,
     ) as AggOracleCommittee;
     // Check already initialized
-    await expect(aggOracleCommittee.initialize(ownerAddress, aggOracleMembers, quorum)).to.be.revertedWithCustomError(
-        aggOracleCommitteeContract,
-        'InvalidInitialization',
-    );
+    await expect(
+        aggOracleCommittee.initialize(ownerAddress, proposerAddress, validators, threshold),
+    ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidInitialization');
 
     // Check initializer params
     // Check owner
     const contractOwner = await aggOracleCommittee.owner();
     expect(contractOwner).to.be.equal(ownerAddress);
 
-    // Check quorum
-    const contractQuorum = await aggOracleCommittee.quorum();
-    expect(contractQuorum).to.be.equal(BigInt(quorum));
+    // Check no pending owner
+    expect(await aggOracleCommittee.pendingOwner()).to.be.equal(ethers.ZeroAddress);
 
-    // Check oracle members
-    const contractOracleMembers = await aggOracleCommittee.getAllAggOracleMembers();
-    expect(contractOracleMembers.length).to.be.equal(aggOracleMembers.length);
-    for (let i = 0; i < aggOracleMembers.length; i++) {
-        expect(contractOracleMembers[i]).to.be.equal(aggOracleMembers[i]);
-        // Also check that the oracle member is properly initialized
-        const lastProposedGER = await aggOracleCommittee.addressToLastProposedGER(aggOracleMembers[i]);
-        expect(lastProposedGER).to.be.equal(await aggOracleCommittee.INITIAL_PROPOSED_GER());
+    // Check proposer
+    expect(await aggOracleCommittee.proposer()).to.be.equal(proposerAddress);
+
+    // Check threshold
+    const contractThreshold = await aggOracleCommittee.threshold();
+    expect(contractThreshold).to.be.equal(BigInt(threshold));
+
+    // Check validators
+    const contractValidators = await aggOracleCommittee.getValidatorsInfo();
+    expect(contractValidators.length).to.be.equal(validators.length);
+    for (let i = 0; i < validators.length; i++) {
+        expect(contractValidators[i].addr).to.be.equal(ethers.getAddress(validators[i].addr));
+        expect(contractValidators[i].url).to.be.equal(validators[i].url);
+        expect(await aggOracleCommittee.isValidator(validators[i].addr)).to.be.equal(true);
     }
 
-    // Check globalExitRootManagerL2Sovereign
-    const contractGlobalExitRootManager = await aggOracleCommittee.globalExitRootManagerL2Sovereign();
-    expect(contractGlobalExitRootManager).to.be.equal(globalExitRootManagerL2SovereignAddress);
+    // Check agglayerGERL2
+    const contractAgglayerGERL2 = await aggOracleCommittee.agglayerGERL2();
+    expect(contractAgglayerGERL2).to.be.equal(globalExitRootManagerL2SovereignAddress);
 
-    // Check members count
-    const membersCount = await aggOracleCommittee.getAggOracleMembersCount();
-    expect(membersCount).to.be.equal(BigInt(aggOracleMembers.length));
+    // Check validators count
+    const validatorsCount = await aggOracleCommittee.getValidatorsCount();
+    expect(validatorsCount).to.be.equal(BigInt(validators.length));
 
     // Compute output
     const outputJson = {
@@ -113,8 +149,9 @@ async function main() {
         proxyAdminOwnerAddress,
         aggOracleOwnerAddress: ownerAddress,
         globalExitRootManagerL2SovereignAddress,
-        aggOracleMembers,
-        quorum,
+        proposerAddress,
+        validators,
+        threshold,
     };
 
     fs.writeFileSync(pathOutput, JSON.stringify(outputJson, null, 1));
