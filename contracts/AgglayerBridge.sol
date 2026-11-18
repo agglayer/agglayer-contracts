@@ -62,7 +62,7 @@ contract AgglayerBridge is
     uint256 internal constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
 
     // Current bridge version
-    string internal constant BRIDGE_VERSION = "v1.1.0";
+    string internal constant BRIDGE_VERSION = "v1.1.1";
 
     // Network identifier
     uint32 public networkID;

@@ -18,7 +18,7 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
     address private immutable deployer;
 
     // Current bridge version
-    string internal constant BRIDGE_SOVEREIGN_VERSION = "v1.2.0";
+    string internal constant BRIDGE_SOVEREIGN_VERSION = "v1.2.1";
 
     // Struct to represent leaf data for forwardLET function
     struct LeafData {
