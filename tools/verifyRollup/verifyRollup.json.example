@@ -1,0 +1,22 @@
+{
+    "rollupManagerAddress": "<AgglayerManager address>",
+    "proxyContract": "contracts/lib/PolygonTransparentProxy.sol:PolygonTransparentProxy",
+    "verifyImplementation": true,
+    "dryRun": false,
+    "rollups": [
+        {
+            "rollupAddress": "<rollup proxy address>"
+        },
+        {
+            "rollupID": 1,
+            "implementationContract": "contracts/aggchains/AggchainFEP.sol:AggchainFEP",
+            "implementationConstructorArgs": [
+                "<globalExitRootManager address>",
+                "<pol address>",
+                "<bridge address>",
+                "<AgglayerManager address>",
+                "<aggLayerGateway address>"
+            ]
+        }
+    ]
+}

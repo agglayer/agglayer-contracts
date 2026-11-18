@@ -32,6 +32,7 @@ Tools will be documented as they are used. If you use a tool, update this file w
 | `initMigration/` | Initialize migration |
 | `obsoleteRollupType/` | Mark a rollup type as obsolete |
 | `verify-etherscan/` | Verify contracts on Etherscan |
+| `verifyRollup/` | Verify rollup proxies (`PolygonTransparentProxy`) and optionally their implementations on Etherscan |
 | `aggchainFEPTools/` | AggchainFEP-specific operations |
 | `aggLayerGatewayTools/` | AgglayerGateway operations |
 | `createSovereignGenesis/` | Create sovereign chain genesis |
