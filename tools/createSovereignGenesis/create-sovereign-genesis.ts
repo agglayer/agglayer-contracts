@@ -78,10 +78,10 @@ async function main() {
 
     if (createGenesisSovereignParams.useAggOracleCommittee === true) {
         if (
-            createGenesisSovereignParams.aggOracleCommittee === undefined ||
-            createGenesisSovereignParams.aggOracleCommittee === ''
+            createGenesisSovereignParams.aggOracleValidators === undefined ||
+            createGenesisSovereignParams.aggOracleValidators === ''
         ) {
-            logger.error('useAggOracleCommittee is set to true but missing parameter aggOracleCommittee');
+            logger.error('useAggOracleCommittee is set to true but missing parameter aggOracleValidators');
             process.exit(1);
         }
         if (
@@ -93,37 +93,62 @@ async function main() {
             process.exit(1);
         }
 
-        // Check all aggOracleCommittee parameters
+        if (
+            createGenesisSovereignParams.aggOracleValidators.length === 0 ||
+            createGenesisSovereignParams.aggOracleValidators.length > 255
+        ) {
+            logger.error('aggOracleValidators must have between 1 and 255 validators');
+            process.exit(1);
+        }
+
+        // Check all aggOracleValidators parameters
         const nullifierAddress = {} as any;
 
-        createGenesisSovereignParams.aggOracleCommittee.forEach((aggOracleCommittee) => {
-            if (ethers.isAddress(aggOracleCommittee) === false) {
-                logger.error(`aggOracleCommittees ${aggOracleCommittee}: not a valid address`);
+        createGenesisSovereignParams.aggOracleValidators.forEach((aggOracleValidator) => {
+            if (ethers.isAddress(aggOracleValidator.addr) === false || aggOracleValidator.addr === ethers.ZeroAddress) {
+                logger.error(`aggOracleValidators ${aggOracleValidator.addr}: not a valid non-zero address`);
                 process.exit(1);
             } else {
                 // check if address is not duplicated
-                if (nullifierAddress[aggOracleCommittee] !== undefined) {
-                    logger.error(`aggOracleCommittees ${aggOracleCommittee}: duplicated address`);
+                if (nullifierAddress[aggOracleValidator.addr.toLowerCase()] !== undefined) {
+                    logger.error(`aggOracleValidators ${aggOracleValidator.addr}: duplicated address`);
                     process.exit(1);
                 } else {
-                    nullifierAddress[aggOracleCommittee] = true;
+                    nullifierAddress[aggOracleValidator.addr.toLowerCase()] = true;
                 }
+            }
+            if (typeof aggOracleValidator.url !== 'string') {
+                logger.error(`aggOracleValidators ${aggOracleValidator.addr}: url must be a string (it can be empty)`);
+                process.exit(1);
             }
         });
 
-        if (createGenesisSovereignParams.quorum === undefined || createGenesisSovereignParams.quorum < 1) {
-            logger.error('quorum must exist and be bigger than 0');
+        if (
+            !Number.isInteger(createGenesisSovereignParams.aggOracleThreshold) ||
+            createGenesisSovereignParams.aggOracleThreshold < 1
+        ) {
+            logger.error('aggOracleThreshold must exist and be bigger than 0');
             process.exit(1);
         }
 
-        if (createGenesisSovereignParams.quorum > createGenesisSovereignParams.aggOracleCommittee.length) {
+        if (createGenesisSovereignParams.aggOracleThreshold > createGenesisSovereignParams.aggOracleValidators.length) {
             logger.error(
-                `quorum must be smaller or equal than the number of aggOracleCommittee members (${createGenesisSovereignParams.aggOracleCommittee.length})`,
+                `aggOracleThreshold must be smaller or equal than the number of aggOracleValidators (${createGenesisSovereignParams.aggOracleValidators.length})`,
             );
             process.exit(1);
         }
-        if (!ethers.isAddress(createGenesisSovereignParams.aggOracleOwner)) {
+        if (
+            !ethers.isAddress(createGenesisSovereignParams.aggOracleOwner) ||
+            createGenesisSovereignParams.aggOracleOwner === ethers.ZeroAddress
+        ) {
             logger.error('aggOracleOwner must be set');
+            process.exit(1);
+        }
+        if (
+            !ethers.isAddress(createGenesisSovereignParams.aggOracleProposer) ||
+            createGenesisSovereignParams.aggOracleProposer === ethers.ZeroAddress
+        ) {
+            logger.error('aggOracleProposer must be set');
             process.exit(1);
         }
     } else {
@@ -252,9 +277,10 @@ async function main() {
         emergencyBridgeUnpauser: createGenesisSovereignParams.emergencyBridgeUnpauser,
         proxiedTokensManager: createGenesisSovereignParams.proxiedTokensManager,
         useAggOracleCommittee: createGenesisSovereignParams.useAggOracleCommittee,
-        aggOracleCommittee: createGenesisSovereignParams.aggOracleCommittee,
-        quorum: createGenesisSovereignParams.quorum,
         aggOracleOwner: createGenesisSovereignParams.aggOracleOwner,
+        aggOracleProposer: createGenesisSovereignParams.aggOracleProposer,
+        aggOracleValidators: createGenesisSovereignParams.aggOracleValidators,
+        aggOracleThreshold: createGenesisSovereignParams.aggOracleThreshold,
     };
 
     logger.info('Update genesis-base to the SovereignContracts');
