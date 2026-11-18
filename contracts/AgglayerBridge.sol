@@ -62,7 +62,7 @@ contract AgglayerBridge is
     uint256 internal constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
 
     // Current bridge version
-    string internal constant BRIDGE_VERSION = "v1.1.0";
+    string internal constant BRIDGE_VERSION = "v1.1.1";
 
     // Network identifier
     uint32 public networkID;
@@ -449,7 +449,7 @@ contract AgglayerBridge is
         uint256 amountWETH,
         bool forceUpdateGlobalExitRoot,
         bytes calldata metadata
-    ) external virtual ifNotEmergencyState {
+    ) external virtual ifNotEmergencyState nonReentrant {
         // If native token is ether, disable this function
         if (address(WETHToken) == address(0)) {
             revert NativeTokenIsEther();
