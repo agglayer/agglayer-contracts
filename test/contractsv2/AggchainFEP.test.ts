@@ -297,7 +297,7 @@ describe('AggchainFEP', () => {
             ),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
-        expect(await aggchainFEPContract.version()).to.be.equal('v3.0.1');
+        expect(await aggchainFEPContract.version()).to.be.equal('v3.1.0');
     });
 
     it('should check the v1 initialized parameters', async () => {

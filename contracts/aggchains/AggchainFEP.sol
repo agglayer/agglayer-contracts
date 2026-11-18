@@ -68,8 +68,8 @@ contract AggchainFEP is AggchainBase {
     bytes2 public constant AGGCHAIN_TYPE = 0x0001;
 
     /// @notice Op L2OO Semantic version.
-    /// @custom:semver v3.0.1
-    string public constant AGGCHAIN_FEP_VERSION = "v3.0.1";
+    /// @custom:semver v3.1.0
+    string public constant AGGCHAIN_FEP_VERSION = "v3.1.0";
 
     /// @notice The genesis configuration name.
     bytes32 public constant GENESIS_CONFIG_NAME =
