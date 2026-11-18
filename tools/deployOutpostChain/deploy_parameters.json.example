@@ -23,10 +23,17 @@
     "aggOracleCommittee": {
         "useAggOracleCommittee": false,
         "aggOracleOwner": "0xYourAggOracleOwnerAddress",
-        "aggOracleMembers": [
-            "0xYourOracleMember1Address",
-            "0xYourOracleMember2Address"
+        "aggOracleProposer": "0xYourAggOracleProposerAddress",
+        "aggOracleValidators": [
+            {
+                "addr": "0xYourOracleValidator1Address",
+                "url": "https://validator1.example.com"
+            },
+            {
+                "addr": "0xYourOracleValidator2Address",
+                "url": ""
+            }
         ],
-        "quorum": 1
+        "aggOracleThreshold": 1
     }
 }

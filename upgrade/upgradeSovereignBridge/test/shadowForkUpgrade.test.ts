@@ -17,7 +17,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 async function main() {
     // Assert upgrade version
-    const BRIDGE_L2_EXPECTED_VERSION = 'v1.2.0';
+    const BRIDGE_L2_EXPECTED_VERSION = 'v1.2.1';
 
     const mandatoryParameters = ['timelockAdminAddress', 'rpc'];
     checkParams((upgradeParams as any).forkParams, mandatoryParameters);

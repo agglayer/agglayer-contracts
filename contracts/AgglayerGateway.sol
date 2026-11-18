@@ -176,6 +176,7 @@ contract AgglayerGateway is
 
     /**
      * @notice Upgrade initializer to add multisig functionality to existing deployment.
+     * @dev It is not access controlled, so it must be called atomically with the upgrade (ProxyAdmin.upgradeAndCall)
      * @param multisigRole The address of the multisig role. Can manage multisig signers and threshold.
      * @param signersToAdd Array of signers to add with their URLs
      * @param newThreshold New threshold value

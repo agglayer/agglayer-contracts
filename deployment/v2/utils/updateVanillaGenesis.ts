@@ -373,8 +373,9 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         // Initialize aggOracle Manager
         const initializeAggOracleCommittee = aggOracleCommitteeFactory.interface.encodeFunctionData('initialize', [
             initializeParams.aggOracleOwner,
-            initializeParams.aggOracleCommittee,
-            initializeParams.quorum,
+            initializeParams.aggOracleProposer,
+            initializeParams.aggOracleValidators,
+            initializeParams.aggOracleThreshold,
         ]);
 
         const proxyAdminAddress = genesis.genesis.find(function (obj) {
@@ -771,39 +772,51 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
             sovereignContractObj.storage['0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00'],
         ).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
 
-        // Storage slot 0 check
+        // Storage slot 0 check: validators array length
         expect(
             sovereignContractObj.storage['0x0000000000000000000000000000000000000000000000000000000000000000'],
-        ).to.equal(toPaddedHex32(initializeParams.aggOracleCommittee.length));
+        ).to.equal(toPaddedHex32(initializeParams.aggOracleValidators.length));
 
-        // Storage slot 1 check
+        // Storage slot 1 check: threshold
         expect(
             sovereignContractObj.storage['0x0000000000000000000000000000000000000000000000000000000000000001'],
-        ).to.equal(toPaddedHex32(initializeParams.quorum));
+        ).to.equal(toPaddedHex32(initializeParams.aggOracleThreshold));
 
-        // Check aggOracleMembers array storage slots
-        if (initializeParams.aggOracleCommittee && Array.isArray(initializeParams.aggOracleCommittee)) {
-            // The dynamic array is stored at slot 0 (aggOracleMembers)
-            // Length is at slot 0, elements start at keccak256(0)
-            const keccakSlot0 = ethers.keccak256(ethers.zeroPadValue('0x00', 32));
-            for (let i = 0; i < initializeParams.aggOracleCommittee.length; i++) {
-                const memberAddress = initializeParams.aggOracleCommittee[i];
-                // Compute slot: keccak256(0) + i
-                const slot = ethers.toBeHex(BigInt(keccakSlot0) + BigInt(i), 32);
-                expect(sovereignContractObj.storage[slot]).to.include(memberAddress.toLowerCase().slice(2));
-            }
+        // Storage slot 3 check: proposer
+        expect(
+            sovereignContractObj.storage['0x0000000000000000000000000000000000000000000000000000000000000003'],
+        ).to.include(initializeParams.aggOracleProposer.toLowerCase().slice(2));
 
-            // Storage slot 2: mapping(address => bytes32) public addressToLastProposedGER;
-            // For each address, the mapping slot is keccak256(pad32(address) ++ pad32(2))
-            // All should point to INITIAL_PROPOSED_GER = bytes32(uint256(1))
-            const INITIAL_PROPOSED_GER = ethers.zeroPadValue('0x01', 32);
-            for (let i = 0; i < initializeParams.aggOracleCommittee.length; i++) {
-                const memberAddress = initializeParams.aggOracleCommittee[i];
-                // mapping(address => bytes32) at slot 2: keccak256(pad32(address) ++ pad32(2))
-                const paddedAddress = ethers.zeroPadValue(memberAddress, 32);
-                const paddedSlot = ethers.zeroPadValue('0x02', 32);
-                const mappingSlot = ethers.keccak256(ethers.concat([paddedAddress, paddedSlot]));
-                expect(sovereignContractObj.storage[mappingSlot]).to.equal(INITIAL_PROPOSED_GER);
+        // Check validators array storage slots
+        // The dynamic array is stored at slot 0 (validators)
+        // Length is at slot 0, elements start at keccak256(0)
+        const keccakSlot0 = ethers.keccak256(ethers.zeroPadValue('0x00', 32));
+        for (let i = 0; i < initializeParams.aggOracleValidators.length; i++) {
+            const validator = initializeParams.aggOracleValidators[i];
+            // Compute slot: keccak256(0) + i
+            const slot = ethers.toBeHex(BigInt(keccakSlot0) + BigInt(i), 32);
+            expect(sovereignContractObj.storage[slot]).to.include(validator.addr.toLowerCase().slice(2));
+
+            // Storage slot 2: mapping(address => ValidatorInternalInfo { bool isValidator; string url }) public validatorInfo;
+            // For each address, the struct slot is keccak256(pad32(address) ++ pad32(2))
+            const paddedAddress = ethers.zeroPadValue(validator.addr, 32);
+            const paddedSlot = ethers.zeroPadValue('0x02', 32);
+            const structSlot = BigInt(ethers.keccak256(ethers.concat([paddedAddress, paddedSlot])));
+            // isValidator at the struct slot
+            expect(sovereignContractObj.storage[ethers.toBeHex(structSlot, 32)]).to.equal(toPaddedHex32(1));
+            // url at the struct slot + 1: empty strings are not stored, short strings (< 32 bytes) are stored
+            // left-aligned with length * 2 in the lowest byte, long strings store length * 2 + 1
+            const urlBytes = ethers.toUtf8Bytes(validator.url);
+            const urlSlotValue = sovereignContractObj.storage[ethers.toBeHex(structSlot + 1n, 32)];
+            if (urlBytes.length === 0) {
+                expect(urlSlotValue).to.equal(undefined);
+            } else if (urlBytes.length < 32) {
+                const expectedValue = new Uint8Array(32);
+                expectedValue.set(urlBytes);
+                expectedValue[31] = urlBytes.length * 2;
+                expect(urlSlotValue).to.equal(ethers.hexlify(expectedValue));
+            } else {
+                expect(urlSlotValue).to.equal(toPaddedHex32(urlBytes.length * 2 + 1));
             }
         }
 
@@ -812,6 +825,12 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         expect(
             sovereignContractObj.storage['0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300'],
         ).to.include(toPaddedHex32(initializeParams.aggOracleOwner));
+
+        // Storage slot 0x237e158222e3e6968b72b9db0d8043aacf074ad9f650f0d1606b4d82ee432c00 check
+        // Pending owner slot OZ (Ownable2Step): must be empty
+        expect(
+            sovereignContractObj.storage['0x237e158222e3e6968b72b9db0d8043aacf074ad9f650f0d1606b4d82ee432c00'],
+        ).to.equal(undefined);
     }
 
     // Create a new zkEVM to generate a genesis an empty system address storage

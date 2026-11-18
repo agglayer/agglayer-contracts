@@ -3,131 +3,177 @@
 pragma solidity 0.8.28;
 
 import {IAgglayerGERL2} from "./IAgglayerGERL2.sol";
+import {IVersion} from "./IVersion.sol";
+
+/**
+ * @title IAggOracleCommitteeEvents
+ * @notice Events emitted by AggOracleCommittee implementations
+ */
+interface IAggOracleCommitteeEvents {
+    /// @notice Emitted when a GER is injected
+    event GERInjected(bytes32 indexed globalExitRoot);
+
+    /// @notice Emitted when a GER already set in the AgglayerGERL2 by another updater is marked as injected,
+    ///         without being inserted again
+    event GERMarkedAsInjected(bytes32 indexed globalExitRoot);
+
+    /// @notice Emitted when the aggOracleProposer is updated
+    event UpdateAggOracleProposer(address indexed newProposer);
+
+    /// @notice Emitted when validators and threshold are updated
+    event ValidatorsAndThresholdUpdated(
+        address[] validators,
+        uint256 threshold
+    );
+}
+
+/**
+ * @title IAggOracleCommitteeErrors
+ * @notice Error definitions for AggOracleCommittee implementations
+ */
+interface IAggOracleCommitteeErrors {
+    /// @notice Thrown when the AgglayerGERL2 address is zero
+    error AgglayerGERL2CannotBeZero();
+
+    /// @notice Thrown when the owner address is zero
+    error OwnerCannotBeZero();
+
+    /// @notice Thrown when the proposer address is zero
+    error ProposerCannotBeZero();
+
+    /// @notice Thrown when the caller is not the oracle proposer
+    error OnlyAggOracleProposerCanCall();
+
+    /// @notice Thrown when a GER is zero
+    error GERCannotBeZero();
+
+    /// @notice Thrown when a GER has already been injected by this contract
+    error GERAlreadyInjected();
+
+    /// @notice Thrown when the validator address is zero
+    error ValidatorCannotBeZero();
+
+    /// @notice Thrown when the validator address is this contract
+    error ValidatorCannotBeThisContract();
+
+    /// @notice Thrown when the address is already a validator
+    error ValidatorAlreadyExists();
+
+    /// @notice Thrown when the validator index is out of bounds
+    error ValidatorIndexOutOfBounds();
+
+    /// @notice Thrown when the validator index doesn't match the address
+    error ValidatorIndexMismatch();
+
+    /// @notice Thrown when the number of validators exceeds MAX_VALIDATORS
+    error TooManyValidators();
+
+    /// @notice Thrown when threshold is greater than the number of validators
+    error ThresholdCannotBeGreaterThanValidators();
+
+    /// @notice Thrown when threshold is zero
+    error ThresholdCannotBeZero();
+
+    /// @notice Thrown when indices are not in descending order
+    error IndicesNotInDescendingOrder();
+
+    /// @notice Thrown when the signatures length is not exactly threshold * 65 bytes
+    error InvalidSignaturesLength();
+
+    /// @notice Thrown when a validator does not exist
+    error ValidatorDoesNotExist();
+
+    /// @notice Thrown when validators are not ordered
+    error ValidatorsNotOrdered();
+
+    /// @notice Thrown when a validator is not found
+    error ValidatorNotFound();
+
+    /// @notice Thrown when trying to renounce ownership
+    error RenounceOwnershipDisabled();
+}
 
 /**
  * @title IAggOracleCommittee
- * @notice Interface for the AggOracleCommittee contract responsible for managing the insertion of GERs into the AgglayerGERL2.
+ * @notice Core interface for the AggOracleCommittee contract responsible for managing the insertion of GERs.
+ * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs.
  */
-interface IAggOracleCommittee {
-    // Custom errors
-
-    /// @notice Thrown when the quorum value is zero.
-    error QuorumCannotBeZero();
-
-    /// @notice Thrown when the caller is not an oracle member.
-    error NotOracleMember();
-
-    /// @notice Thrown when the address is already an oracle member.
-    error AlreadyOracleMember();
-
-    /// @notice Thrown when the provided oracle member index does not match the address.
-    error OracleMemberIndexMismatch();
-
-    /// @notice Thrown when the address was not an oracle member.
-    error WasNotOracleMember();
-
-    /// @notice Thrown when the oracle member is not found.
-    error OracleMemberNotFound();
-
-    /// @notice Thrown when the proposed GER is invalid (zero or reserved value).
-    error InvalidProposedGER();
-
-    /// @notice Thrown when the oracle member address is the zero address.
-    error OracleMemberCannotBeZero();
-
-    /// @notice Thrown when the oracle member has already voted for the proposed GER.
-    error AlreadyVotedForThisGER();
-
-    /// @notice Thrown when the quorum has not been reached for a global exit root.
-    error QuorumNotReached();
-
-    /// @notice Thrown when the global exit root manager address is the zero address.
-    error GlobalExitRootManagerCannotBeZero();
-
-    // Events
-
-    /// @dev Emitted when a global exit root is proposed
-    event ProposedGlobalExitRoot(
-        bytes32 proposedGlobalExitRoot,
-        address proposer
-    );
-
-    /// @notice Thrown when the quorum is greater than the number of oracle members.
-    error QuorumCannotBeGreaterThanAggOracleMembers();
-
-    /// @notice Thrown when the oracle member index is out of bounds.
-    error OracleMemberIndexOutOfBounds();
-
-    /// @dev Emitted when a global exit root is consolidated
-    event ConsolidatedGlobalExitRoot(bytes32 consolidatedGlobalExitRoot);
-
-    /// @dev Emitted when the quorum is updated
-    event UpdateQuorum(uint64 newQuorum);
-
-    /// @dev Emitted when a new oracle member is added
-    event AddAggOracleMember(address newOracleMember);
-
-    /// @dev Emitted when an oracle member is removed
-    event RemoveAggOracleMember(address oracleMemberRemoved);
-
-    // External functions
+interface IAggOracleCommittee is
+    IAggOracleCommitteeErrors,
+    IAggOracleCommitteeEvents,
+    IVersion
+{
+    ////////////////////
+    // Structs
+    ////////////////////
 
     /**
-     * @notice Initializes the contract.
-     * @param _owner Owner of the contract, presumably a timelock
-     * @param _aggOracleMembers Initial oracle members
-     * @param _quorum Quorum required for consolidation
+     * @notice Struct containing validator information
+     * @param addr The address of the validator
+     * @param url The URL associated with the validator
+     */
+    struct ValidatorInfo {
+        address addr;
+        string url;
+    }
+
+    /**
+     * @notice Struct containing internal validator information
+     * @param isValidator Whether the address is a validator
+     * @param url The URL associated with the validator
+     */
+    struct ValidatorInternalInfo {
+        bool isValidator;
+        string url;
+    }
+
+    /**
+     * @notice Struct to hold information for removing a validator
+     * @param addr The address of the validator to remove
+     * @param index The index of the validator in the validators array
+     */
+    struct RemoveValidatorInfo {
+        address addr;
+        uint256 index;
+    }
+
+    ////////////////////
+    // External Functions
+    ////////////////////
+
+    /**
+     * @notice Initializes the contract
+     * @param _owner Owner of the contract, presumably a multisig
+     * @param _newProposer Address that can propose GER injections
+     * @param _newValidators Initial array of validator information
+     * @param _newThreshold Number of signatures required for GER injection
      */
     function initialize(
         address _owner,
-        address[] calldata _aggOracleMembers,
-        uint64 _quorum
+        address _newProposer,
+        ValidatorInfo[] memory _newValidators,
+        uint256 _newThreshold
     ) external;
 
     /**
-     * @notice Propose a global exit root.
-     * This function can only be called by an oracle member.
-     * If the quorum is reached, the GER is consolidated.
-     * @param proposedGlobalExitRoot Global exit root proposed
+     * @notice Inject a GER with signature verification
+     * @param _globalExitRoot The GER to inject
+     * @param _signatures The signatures to verify
      */
-    function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external;
-
-    /**
-     * @notice Consolidate a global exit root that has reached quorum.
-     * This function it's meant to be called if the quorum was lowered, and there's a GER that has
-     * enough votes to be consolidated after updating it.
-     * @param globalExitRoot Global exit root to consolidate
-     */
-    function consolidateGlobalExitRoot(bytes32 globalExitRoot) external;
-
-    /**
-     * @notice Add an oracle member.
-     * Only the owner can call this function.
-     * @param newOracleMember Address of the new oracle member
-     */
-    function addOracleMember(address newOracleMember) external;
-
-    /**
-     * @notice Remove an oracle member.
-     * Only the owner can call this function.
-     * @param oracleMemberAddress Address of the oracle member to remove
-     * @param oracleMemberIndex Index of the oracle member to remove
-     */
-    function removeOracleMember(
-        address oracleMemberAddress,
-        uint256 oracleMemberIndex
+    function injectGER(
+        bytes32 _globalExitRoot,
+        bytes calldata _signatures
     ) external;
 
     /**
-     * @notice Update the quorum value.
-     * Only the owner can call this function.
-     * @param newQuorum New quorum value
+     * @notice Update the aggOracleProposer address
+     * @param _newProposer New proposer address
      */
-    function updateQuorum(uint64 newQuorum) external;
+    function updateAggOracleProposer(address _newProposer) external;
 
     /**
-     * @notice Transfer the globalExitRootUpdater role.
-     * This is a two-step process; the pending globalExitRootUpdater must accept to finalize the process.
+     * @notice Transfer the globalExitRootUpdater role
+     * @dev This is a two-step process; the pending globalExitRootUpdater must accept to finalize the process
      * @param _newGlobalExitRootUpdater Address of the new globalExitRootUpdater
      */
     function transferGlobalExitRootUpdater(
@@ -135,47 +181,87 @@ interface IAggOracleCommittee {
     ) external;
 
     /**
-     * @notice Accept the globalExitRootUpdater role.
+     * @notice Accept the globalExitRootUpdater role
+     * @dev This is the second step from a two-step process
      */
     function acceptGlobalExitRootUpdater() external;
 
     /**
-     * @notice Returns the index of an oracle member.
-     * @param oracleMember Oracle member address
+     * @notice Update the validators and threshold
+     * @param _validatorsToRemove Array of validators to remove with their indices (MUST be in descending index order)
+     * @param _validatorsToAdd Array of new validators to add with their URLs
+     * @param _newThreshold New threshold value
      */
-    function getAggOracleMemberIndex(
-        address oracleMember
+    function updateValidatorsAndThreshold(
+        RemoveValidatorInfo[] memory _validatorsToRemove,
+        ValidatorInfo[] memory _validatorsToAdd,
+        uint256 _newThreshold
+    ) external;
+
+    ////////////////////
+    // View Functions
+    ////////////////////
+
+    /**
+     * @notice Verify a GER with signatures
+     * @param _globalExitRoot The GER to verify
+     * @param _signatures The signatures to verify
+     * @return True if the GER is valid
+     */
+    function verifyGER(
+        bytes32 _globalExitRoot,
+        bytes calldata _signatures
+    ) external view returns (bool);
+
+    /**
+     * @notice Returns the index of a validator
+     * @param _validator Validator address
+     * @return The index of the validator
+     */
+    function getValidatorIndex(
+        address _validator
     ) external view returns (uint256);
 
     /**
-     * @notice Returns all the oracle members.
+     * @notice Returns all the validators with their information
+     * @return Array of validator information
      */
-    function getAllAggOracleMembers() external view returns (address[] memory);
+    function getValidatorsInfo() external view returns (ValidatorInfo[] memory);
 
     /**
-     * @notice Returns the number of oracle members.
+     * @notice Returns the number of validators
+     * @return The count of validators
      */
-    function getAggOracleMembersCount() external view returns (uint256);
+    function getValidatorsCount() external view returns (uint256);
 
-    // Public state variables (as getters)
+    /**
+     * @notice Returns if an address is a validator
+     * @param _validator The address to check
+     * @return True if the address is a validator
+     */
+    function isValidator(address _validator) external view returns (bool);
 
-    /// @notice This value is reserved as an initial voted GER to mark an oracle address as active
-    function INITIAL_PROPOSED_GER() external view returns (bytes32);
+    ////////////////////
+    // Public State Variables
+    ////////////////////
 
     /// @notice Global exit root manager L2
-    function globalExitRootManagerL2Sovereign()
-        external
-        view
-        returns (IAgglayerGERL2);
+    function agglayerGERL2() external view returns (IAgglayerGERL2);
 
-    /// @notice Array of oracle members
-    function aggOracleMembers(uint256 index) external view returns (address);
+    /// @notice Array of validators
+    function validators(uint256 index) external view returns (address);
 
-    /// @notice Number of reports that must match to consolidate a new rewards root (N/M)
-    function quorum() external view returns (uint64);
+    /// @notice Threshold required for signature verification
+    function threshold() external view returns (uint256);
 
-    /// @notice Oracle member address --> current voted GER
-    function addressToLastProposedGER(
-        address oracleMember
-    ) external view returns (bytes32);
+    /// @notice Mapping to track validator information
+    function validatorInfo(
+        address validator
+    ) external view returns (bool exists, string memory url);
+
+    /// @notice Address that can propose GER injections
+    function proposer() external view returns (address);
+
+    /// @notice Returns if a GER has already been injected by this contract
+    function injectedGERs(bytes32 globalExitRoot) external view returns (bool);
 }
