@@ -2,362 +2,557 @@
 
 pragma solidity 0.8.28;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable5/access/Ownable2StepUpgradeable.sol";
+import {ECDSA} from "@openzeppelin/contracts5/utils/cryptography/ECDSA.sol";
 import {IAgglayerGERL2} from "../interfaces/IAgglayerGERL2.sol";
 import {IAggOracleCommittee} from "../interfaces/IAggOracleCommittee.sol";
+import {IVersion} from "../interfaces/IVersion.sol";
 
 /**
  * @title AggOracleCommittee
- * @notice Contract responsible for managing the insertion of GERs into the AgglayerGERL2.
+ * @notice Contract responsible for managing the insertion of GERs (Global Exit Roots)
+ * @notice Proposer-validator management is the same as the one implemented in the AggchainSigners contract, with one minor modification:
+ *         the `url` of a validator is allowed to be empty. This contract is deployed on L2, therefore gas costs are not an issue.
+ * @dev This contract uses signature verification similar to Safe multisig for permissioned injection of GERs.
+ *      It implements a threshold-based multi-signature scheme where a minimum number of oracle validators must sign
+ *      each GER injection before it can be executed.
+ *      Ownership is transferred in two steps: the new owner must accept it.
  */
-contract AggOracleCommittee is IAggOracleCommittee, OwnableUpgradeable {
-    /**
-     * @notice Struct to store votes for GERs
-     * @param votes Current number of votes for this report
-     * @param timestamp Timestamp when the report was first proposed
-     */
-    struct Report {
-        uint64 votes;
-        uint64 timestamp;
-    }
+contract AggOracleCommittee is
+    Ownable2StepUpgradeable,
+    IVersion,
+    IAggOracleCommittee
+{
+    ////////////////////
+    // Immutables & Constants
+    ////////////////////
 
-    // Version
-    string public constant VERSION = "v1.0.0";
+    /// @notice Version constant
+    string public constant VERSION_AGG_ORACLE_COMMITTEE = "v2.0.0";
 
-    // This value is reserved as an initial voted GER to mark an oracle address as active
-    bytes32 public constant INITIAL_PROPOSED_GER = bytes32(uint256(1));
-    // 0x0000000000000000000000000000000000000000000000000000000000000001;
+    /// @notice Maximum number of oracle validators
+    uint256 public constant MAX_VALIDATORS = 255;
 
-    // Global exit root manager L2
+    /// @notice Global exit root manager L2 - manages the GER tree
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAgglayerGERL2 public immutable globalExitRootManagerL2Sovereign;
+    IAgglayerGERL2 public immutable agglayerGERL2;
 
-    // This array is used only to easily get the current oracle members' information
-    address[] public aggOracleMembers;
+    ////////////////////
+    // Storage
+    ////////////////////
 
-    // Number of reports that must match to consolidate a new rewards root (N/M)
-    uint64 public quorum;
+    /// @notice Array of oracle validator addresses
+    address[] public validators;
 
-    // Oracle member address --> current voted GER
-    mapping(address => bytes32) public addressToLastProposedGER;
+    /// @notice Number of signatures required to inject a GER
+    uint256 public threshold;
 
-    // GER --> Report(votes)
-    mapping(bytes32 => Report) public proposedGERToReport;
+    /// @notice Mapping to track if an address is an authorized oracle validator
+    mapping(address => ValidatorInternalInfo) public validatorInfo;
+
+    /// @notice Address authorized to propose GER injections
+    address public proposer;
+
+    /// @notice GERs already processed by this contract (inserted, or marked because they were already set in the
+    ///         AgglayerGERL2). A processed GER can never be injected again, even if it is later removed from the
+    ///         AgglayerGERL2, so its validator signatures can not be replayed.
+    /// @dev A GER inserted by another updater and removed before this contract processed it is not tracked here:
+    ///      validators must not sign a GER that has been removed from the AgglayerGERL2
+    mapping(bytes32 => bool) public injectedGERs;
+
+    /// @dev This empty reserved space is put in place to allow future versions to add new
+    /// variables without shifting down storage in the inheritance chain.
+    // slither-disable-next-line unused-state,naming-convention
+    uint256[45] private __gap;
+
+    ////////////////////
+    // Modifiers
+    ////////////////////
 
     /**
-     * @notice Disables initializers on the implementation, following best practices.
+     * @notice Modifier to restrict access to the oracle proposer
+     * @dev Reverts if the caller is not the designated oracle proposer
      */
-    constructor(IAgglayerGERL2 globalExitRootManager) {
-        require(
-            address(globalExitRootManager) != address(0),
-            GlobalExitRootManagerCannotBeZero()
-        );
-
-        globalExitRootManagerL2Sovereign = globalExitRootManager;
-        _disableInitializers();
-    }
-
-    /**
-     * @notice Initializes the contract.
-     * @param _owner Owner of the contract, presumably a timelock
-     * @param _aggOracleMembers Initial oracle members
-     * @param _quorum Quorum required for consolidation
-     */
-    function initialize(
-        address _owner,
-        address[] calldata _aggOracleMembers,
-        uint64 _quorum
-    ) external initializer {
-        require(_quorum != 0, QuorumCannotBeZero());
-
-        require(
-            _quorum <= _aggOracleMembers.length,
-            QuorumCannotBeGreaterThanAggOracleMembers()
-        );
-
-        // Set initialization parameters
-        quorum = _quorum;
-
-        // Add oracle members
-        for (uint256 i = 0; i < _aggOracleMembers.length; i++) {
-            _addOracleMember(_aggOracleMembers[i]);
+    modifier onlyAggOracleProposer() {
+        if (msg.sender != proposer) {
+            revert OnlyAggOracleProposerCanCall();
         }
-
-        // Initialize OpenZeppelin OwnableUpgradeable
-        __Ownable_init(_owner);
-
-        // Emit event
-        emit UpdateQuorum(_quorum);
+        _;
     }
 
     ////////////////////
-    // Oracle functions
-    ///////////////////
+    // Constructor
+    ////////////////////
 
     /**
-     * @notice Propose a global exit root.
-     * This function can only be called by an oracle member.
-     * If the quorum is reached, the GER is consolidated.
-     * @notice In exceptional cases, GER could be removed using the removeGlobalExitRoots functionality.
-     * This contract does not allow easily voting for a GER that was removed. However, in those exceptional cases,
-     * the bridge will be paused and damages should be assessed. Once the bridge is unpaused,
-     * oracles should naturally converge on a new GER.
-     * Since new GERs contain previous GERs information, this behaviour is acceptable.
-     * Therefore, the complexity added by allowing voting for a removed GER is not worth it.
-     * @param proposedGlobalExitRoot Global exit root proposed.
+     * @notice Contract constructor
+     * @dev Disables initializers on the implementation contract following proxy pattern best practices
+     * @param _agglayerGERL2 Address of the Agglayer Global Exit Root manager L2
      */
-    function proposeGlobalExitRoot(bytes32 proposedGlobalExitRoot) external {
-        // Check if the proposed GER it's not any of the reserved values
-        require(
-            proposedGlobalExitRoot != INITIAL_PROPOSED_GER &&
-                proposedGlobalExitRoot != bytes32(0),
-            InvalidProposedGER()
-        );
-
-        // Check the last voted report
-        bytes32 lastProposedGER = addressToLastProposedGER[msg.sender];
-
-        // Check if it's a valid oracle member
-        require(lastProposedGER != bytes32(0), NotOracleMember());
-
-        // Check if the proposed GER is not the same as the last voted report
-        require(
-            lastProposedGER != proposedGlobalExitRoot,
-            AlreadyVotedForThisGER()
-        );
-
-        // If it's not the initial report hash, check last report voted
-        if (lastProposedGER != INITIAL_PROPOSED_GER) {
-            Report storage lastVotedReport = proposedGERToReport[
-                lastProposedGER
-            ];
-
-            // Subtract a vote on the last voted report
-            // That report could have 0 votes because:
-            // - The report was already consolidated
-            // - Were subtracted all the votes from that report
-            if (lastVotedReport.votes > 0) {
-                unchecked {
-                    lastVotedReport.votes--;
-                }
-            }
+    constructor(IAgglayerGERL2 _agglayerGERL2) {
+        if (address(_agglayerGERL2) == address(0)) {
+            revert AgglayerGERL2CannotBeZero();
         }
 
-        Report memory currentVotedReport = proposedGERToReport[
-            proposedGlobalExitRoot
-        ];
+        agglayerGERL2 = _agglayerGERL2;
+        _disableInitializers();
+    }
 
-        // Check if it's a new report
-        if (currentVotedReport.timestamp == 0) {
-            // It's a new report, set slot and votes
-            currentVotedReport.timestamp = uint64(block.timestamp);
-            currentVotedReport.votes = 1;
-        } else {
-            // It's an existing report, add a new vote
-            currentVotedReport.votes++;
+    ////////////////////
+    // Initializer
+    ////////////////////
+
+    /**
+     * @notice Initializes the contract with initial configuration
+     * @dev Can only be called once due to initializer modifier. Sets up the owner, validators, threshold, and proposer
+     * @param _owner Owner of the contract, presumably a multisig for governance
+     * @param _newProposer Address authorized to propose GER injections
+     * @param _newValidators Initial array of oracle validator addresses
+     * @param _newThreshold Number of signatures required for GER injection
+     */
+    function initialize(
+        address _owner,
+        address _newProposer,
+        ValidatorInfo[] memory _newValidators,
+        uint256 _newThreshold
+    ) external initializer {
+        // Validate owner is not zero address
+        if (_owner == address(0)) {
+            revert OwnerCannotBeZero();
         }
 
-        // Emit Submit report before check the quorum
-        emit ProposedGlobalExitRoot(proposedGlobalExitRoot, msg.sender);
+        // Initialize ownership
+        __Ownable_init(_owner);
+        __Ownable2Step_init();
 
-        // Check if it reaches the quorum
-        // Note that addressToLastProposedGER is not updated in case consoldiation happens
-        // Since the mapping used to keep track which report an oracle is voting currently,
-        // to avoid double voting, if it's consolidated is not worth to update it.
-        // Therefore can happen that an oracle always "consolidates" reports and keeps the INITIAL_PROPOSED_GER
-        if (currentVotedReport.votes >= quorum) {
-            _consolidateGlobalExitRoot(proposedGlobalExitRoot);
-        } else {
-            // Store submitted report with a new added vote
-            proposedGERToReport[proposedGlobalExitRoot] = currentVotedReport;
+        // Set the proposer, validated in the internal function _updateAggOracleProposer
+        _updateAggOracleProposer(_newProposer);
 
-            // Store voted report hash
-            addressToLastProposedGER[msg.sender] = proposedGlobalExitRoot;
-        }
-    }
-
-    /**
-     * @notice Consolidate a global exit root that has reached quorum.
-     * This function it's meant to be called if the quorum was lowered, and there's a GER that has
-     * enough votes to be consolidated after updating it. Otherwise the consolidation happens automatically.
-     * @param globalExitRoot Global exit root to consolidate
-     */
-    function consolidateGlobalExitRoot(bytes32 globalExitRoot) external {
-        Report memory currentVotedReport = proposedGERToReport[globalExitRoot];
-
-        // Global exit root must have reached the quorum
-        // Notice that quorum cannot be 0
-        require(currentVotedReport.votes >= quorum, QuorumNotReached());
-
-        _consolidateGlobalExitRoot(globalExitRoot);
-    }
-
-    /**
-     * @notice Internal function to consolidate a global exit root.
-     * @param globalExitRoot Global exit root to consolidate
-     */
-    function _consolidateGlobalExitRoot(bytes32 globalExitRoot) internal {
-        // Delete the report
-        delete proposedGERToReport[globalExitRoot];
-
-        // Consolidate report
-        globalExitRootManagerL2Sovereign.insertGlobalExitRoot(globalExitRoot);
-        emit ConsolidatedGlobalExitRoot(globalExitRoot);
-    }
-
-    ////////////////////////
-    // Owner functions
-    ////////////////////////
-
-    /**
-     * @notice Add an oracle member.
-     * Only the owner can call this function.
-     * @param newOracleMember Address of the new oracle member
-     */
-    function addOracleMember(address newOracleMember) external onlyOwner {
-        _addOracleMember(newOracleMember);
-    }
-
-    /**
-     * @notice Internal function to add an oracle member.
-     * @param newOracleMember Address of the new oracle member
-     */
-    function _addOracleMember(address newOracleMember) internal {
-        require(newOracleMember != address(0), OracleMemberCannotBeZero());
-
-        require(
-            addressToLastProposedGER[newOracleMember] == bytes32(0),
-            AlreadyOracleMember()
+        // threshold and validators are validated in the internal function _updateValidatorsAndThreshold
+        _updateValidatorsAndThreshold(
+            new RemoveValidatorInfo[](0), // No validators to remove
+            _newValidators,
+            _newThreshold
         );
-
-        // Add oracle member
-        addressToLastProposedGER[newOracleMember] = INITIAL_PROPOSED_GER;
-
-        // Add oracle member to the oracleMembers array
-        aggOracleMembers.push(newOracleMember);
-
-        emit AddAggOracleMember(newOracleMember);
     }
 
+    ////////////////////
+    // Oracle Proposer Functions
+    ////////////////////
+
     /**
-     * @notice Remove an oracle member.
-     * Only the owner can call this function.
-     * @param oracleMemberAddress Address of the oracle member to remove
-     * @param oracleMemberIndex Index of the oracle member to remove
+     * @notice Inject a Global Exit Root (GER) with signature verification
+     * @dev The GER must be signed by exactly `threshold` oracle validators
+     *      Signatures must be ordered by signer address in ascending order to prevent duplicates
+     *      A GER can only be processed once: once processed, it can never be injected again, even if it is later
+     *      removed from the AgglayerGERL2 (see `injectedGERs` for the GERs this guarantee does not cover)
+     *      If the GER is already set in the AgglayerGERL2 (e.g. by a previous updater), it is only marked as injected
+     * @param _globalExitRoot The global exit root to inject into the GER manager
+     * @param _signatures Concatenated signatures for the global exit root (65 bytes per signature: r+s+v)
      */
-    function removeOracleMember(
-        address oracleMemberAddress,
-        uint256 oracleMemberIndex
-    ) external onlyOwner {
-        require(
-            oracleMemberIndex < aggOracleMembers.length,
-            OracleMemberIndexOutOfBounds()
-        );
+    // slither-disable-next-line reentrancy-events (only view call to the trusted immutable agglayerGERL2 before the events)
+    function injectGER(
+        bytes32 _globalExitRoot,
+        bytes calldata _signatures
+    ) external onlyAggOracleProposer {
+        // Validate the GER
+        _validateGER(_globalExitRoot, _signatures);
 
-        bytes32 lastVotedReportHash = addressToLastProposedGER[
-            oracleMemberAddress
-        ];
+        // Mark the GER as injected before any external call
+        injectedGERs[_globalExitRoot] = true;
 
-        require(lastVotedReportHash != bytes32(0), WasNotOracleMember());
-
-        require(
-            aggOracleMembers[oracleMemberIndex] == oracleMemberAddress,
-            OracleMemberIndexMismatch()
-        );
-
-        // If it's not the initial report hash, check last report voted
-        if (lastVotedReportHash != INITIAL_PROPOSED_GER) {
-            Report storage lastVotedReport = proposedGERToReport[
-                lastVotedReportHash
-            ];
-
-            // Subtract a vote of this oracle member
-            // If the votes == 0, that report was already consolidated
-            if (lastVotedReport.votes > 0) {
-                unchecked {
-                    lastVotedReport.votes--;
-                }
-            }
+        // If the GER was already set by another updater, only mark it: skipping the insertion avoids a revert
+        // that would roll back the mark
+        if (agglayerGERL2.globalExitRootMap(_globalExitRoot) != 0) {
+            emit GERMarkedAsInjected(_globalExitRoot);
+            return;
         }
 
-        // Remove oracle member
-        addressToLastProposedGER[oracleMemberAddress] = bytes32(0);
+        emit GERInjected(_globalExitRoot);
 
-        // Remove the oracle member from the aggOracleMembers array
-        aggOracleMembers[oracleMemberIndex] = aggOracleMembers[
-            aggOracleMembers.length - 1
-        ];
-        aggOracleMembers.pop();
-
-        emit RemoveAggOracleMember(oracleMemberAddress);
+        // Insert the GER into the global exit root manager
+        agglayerGERL2.insertGlobalExitRoot(_globalExitRoot);
     }
 
+    ////////////////////
+    // Owner Functions
+    ////////////////////
+
     /**
-     * @notice Update the quorum value.
-     * Only the owner can call this function.
-     * It is expected that the quorum and the oracle member will be updated atomically from a smart contract.
-     * @param newQuorum New quorum value
+     * @notice Update the oracle proposer address
+     * @dev Only callable by the contract owner. Proposer address cannot be zero
+     * @param _newProposer New proposer address
      */
-    function updateQuorum(uint64 newQuorum) external onlyOwner {
-        require(newQuorum != 0, QuorumCannotBeZero());
-
-        quorum = newQuorum;
-        emit UpdateQuorum(newQuorum);
+    function updateAggOracleProposer(address _newProposer) external onlyOwner {
+        _updateAggOracleProposer(_newProposer);
     }
 
     /**
-     * @notice Transfer the globalExitRootUpdater role.
-     * This is a two-step process; the pending globalExitRootUpdater must accept to finalize the process.
+     * @notice Transfer the globalExitRootUpdater role to a new address
+     * @dev Only callable by the contract owner. This is step 1 of a two-step transfer process
      * @param _newGlobalExitRootUpdater Address of the new globalExitRootUpdater
      */
     function transferGlobalExitRootUpdater(
         address _newGlobalExitRootUpdater
     ) external onlyOwner {
-        globalExitRootManagerL2Sovereign.transferGlobalExitRootUpdater(
-            _newGlobalExitRootUpdater
+        agglayerGERL2.transferGlobalExitRootUpdater(_newGlobalExitRootUpdater);
+    }
+
+    /**
+     * @notice Accept the globalExitRootUpdater role
+     * @dev Only callable by the contract owner. This is step 2 of a two-step transfer process
+     */
+    function acceptGlobalExitRootUpdater() external onlyOwner {
+        agglayerGERL2.acceptGlobalExitRootUpdater();
+    }
+
+    /**
+     * @notice Update the validators and threshold
+     * @dev Only callable by the contract owner. Validators and threshold are updated in a single transaction
+     * @param _validatorsToRemove Array of validators to remove with their indices (MUST be in descending index order)
+     * @param _validatorsToAdd Array of new validators to add with their URLs
+     * @param _newThreshold New threshold value
+     */
+    function updateValidatorsAndThreshold(
+        RemoveValidatorInfo[] memory _validatorsToRemove,
+        ValidatorInfo[] memory _validatorsToAdd,
+        uint256 _newThreshold
+    ) external onlyOwner {
+        _updateValidatorsAndThreshold(
+            _validatorsToRemove,
+            _validatorsToAdd,
+            _newThreshold
         );
     }
 
     /**
-     * @notice Accept the globalExitRootUpdater role.
-     * This is the second step from a two-step process. Previously transferGlobalExitRootUpdater must have been called targeting this address.
+     * @notice Renouncing ownership is disabled
+     * @dev Without an owner, validators, threshold and proposer could never be updated again
      */
-    function acceptGlobalExitRootUpdater() external onlyOwner {
-        globalExitRootManagerL2Sovereign.acceptGlobalExitRootUpdater();
+    function renounceOwnership() public pure override {
+        revert RenounceOwnershipDisabled();
     }
 
-    ///////////////////
-    // View functions
-    ///////////////////
+    ////////////////////
+    // Internal Functions
+    ////////////////////
 
     /**
-     * @notice Returns the index of an oracle member.
-     * @param oracleMember Oracle member address
+     * @notice Internal function to update the oracle proposer
+     * @dev Validates that the proposer is not the zero address
+     * @param _newProposer New proposer address
      */
-    function getAggOracleMemberIndex(
-        address oracleMember
-    ) external view returns (uint256) {
-        for (uint256 i = 0; i < aggOracleMembers.length; ++i) {
-            if (aggOracleMembers[i] == oracleMember) {
-                return i;
+    function _updateAggOracleProposer(address _newProposer) internal {
+        // Validate proposer is not zero address
+        if (_newProposer == address(0)) {
+            revert ProposerCannotBeZero();
+        }
+
+        proposer = _newProposer;
+        emit UpdateAggOracleProposer(_newProposer);
+    }
+
+    /**
+     * @notice Internal function to add an oracle validator
+     * @dev Validates that the address is not zero, not this contract and not already a validator
+     * @param _newValidator Address of the new validator
+     * @param _url URL of the validator
+     */
+    function _addValidator(address _newValidator, string memory _url) internal {
+        // Validate address is not zero
+        if (_newValidator == address(0)) {
+            revert ValidatorCannotBeZero();
+        }
+
+        // Validate address is not this contract
+        if (_newValidator == address(this)) {
+            revert ValidatorCannotBeThisContract();
+        }
+
+        // Validate address is not already a validator
+        if (validatorInfo[_newValidator].isValidator) {
+            revert ValidatorAlreadyExists();
+        }
+
+        // Add validator to array
+        validators.push(_newValidator);
+        // Add validator to mapping
+        validatorInfo[_newValidator] = ValidatorInternalInfo({
+            isValidator: true,
+            url: _url
+        });
+    }
+
+    /**
+     * @notice Internal function to remove an existing oracle validator
+     * @dev Uses swap-and-pop pattern for gas-efficient removal
+     * @param _oracleValidatorAddress Address of the oracle validator to remove
+     * @param _oracleValidatorIndex Index of the validator in the validators array
+     */
+    function _removeValidator(
+        address _oracleValidatorAddress,
+        uint256 _oracleValidatorIndex
+    ) internal {
+        // cache array length
+        uint256 validatorsLength = validators.length;
+
+        // Validate index is within bounds
+        if (_oracleValidatorIndex >= validatorsLength) {
+            revert ValidatorIndexOutOfBounds();
+        }
+
+        // Validate address is a current validator
+        if (validators[_oracleValidatorIndex] != _oracleValidatorAddress) {
+            revert ValidatorIndexMismatch();
+        }
+
+        // Remove validator status
+        // use delete to remove from mapping
+        delete validatorInfo[_oracleValidatorAddress];
+
+        // Remove from array using swap-and-pop pattern
+        validators[_oracleValidatorIndex] = validators[validatorsLength - 1];
+        validators.pop();
+    }
+
+    /**
+     * @notice Internal function to update the threshold
+     * @dev Same rule as a Safe wallet: 1 <= threshold <= number of validators.
+     *      This also forces at least one validator to exist
+     * @param _newThreshold New threshold value
+     */
+    function _updateThreshold(uint256 _newThreshold) internal {
+        // Validate threshold is not zero
+        if (_newThreshold == 0) {
+            revert ThresholdCannotBeZero();
+        }
+
+        // Validate threshold doesn't exceed number of validators
+        if (_newThreshold > validators.length) {
+            revert ThresholdCannotBeGreaterThanValidators();
+        }
+
+        threshold = _newThreshold;
+    }
+
+    /**
+     * @notice Internal function to update validators (added and/or removed) and the threshold
+     * @dev Removes validators first (in descending index order), then adds new validators, then updates the threshold
+     * @param _validatorsToRemove Array of validators to remove with their indices (MUST be in descending index order)
+     * @param _validatorsToAdd Array of new validators to add with their URLs
+     * @param _newThreshold New threshold value
+     */
+    function _updateValidatorsAndThreshold(
+        RemoveValidatorInfo[] memory _validatorsToRemove,
+        ValidatorInfo[] memory _validatorsToAdd,
+        uint256 _newThreshold
+    ) internal {
+        // Validate descending order of indices for removal to avoid index shifting issues
+        // When removing multiple validators, we must process them from highest index to lowest
+        if (_validatorsToRemove.length > 1) {
+            for (uint256 i = 0; i < _validatorsToRemove.length - 1; i++) {
+                if (
+                    _validatorsToRemove[i].index <=
+                    _validatorsToRemove[i + 1].index
+                ) {
+                    revert IndicesNotInDescendingOrder();
+                }
             }
         }
 
-        // In case the oracle member does not exist, revert
-        revert OracleMemberNotFound();
+        // Remove validators (in descending index order to avoid index shifting issues)
+        for (uint256 i = 0; i < _validatorsToRemove.length; i++) {
+            _removeValidator(
+                _validatorsToRemove[i].addr,
+                _validatorsToRemove[i].index
+            );
+        }
+
+        // Add new validators
+        for (uint256 i = 0; i < _validatorsToAdd.length; i++) {
+            _addValidator(_validatorsToAdd[i].addr, _validatorsToAdd[i].url);
+        }
+
+        // Validate the number of validators does not exceed the maximum
+        if (validators.length > MAX_VALIDATORS) {
+            revert TooManyValidators();
+        }
+
+        _updateThreshold(_newThreshold);
+
+        emit ValidatorsAndThresholdUpdated(validators, threshold);
     }
 
     /**
-     * @notice Returns all the oracle members.
+     * @notice Build message hash for GER verification
+     * @dev Virtual function to allow for different hashing schemes in derived contracts
+     * @param _globalExitRoot The GER to build message for
+     * @return The message hash to be signed by oracle validators
      */
-    function getAllAggOracleMembers() external view returns (address[] memory) {
-        return aggOracleMembers;
+    function _buildGERMessage(
+        bytes32 _globalExitRoot
+    ) internal pure virtual returns (bytes32) {
+        return keccak256(abi.encodePacked(_globalExitRoot));
     }
 
     /**
-     * @notice Returns the number of oracle members.
+     * @notice Validate a GER
+     * @dev Validates the GER is not zero, has not been injected before and builds the message hash to verify
+     * @param _globalExitRoot The GER to validate
+     * @param _signatures The signatures to verify
      */
-    function getAggOracleMembersCount() external view returns (uint256) {
-        return aggOracleMembers.length;
+    function _validateGER(
+        bytes32 _globalExitRoot,
+        bytes calldata _signatures
+    ) internal view {
+        // Validate GER is not zero
+        if (_globalExitRoot == bytes32(0)) {
+            revert GERCannotBeZero();
+        }
+
+        // Validate GER has not been injected before
+        if (injectedGERs[_globalExitRoot]) {
+            revert GERAlreadyInjected();
+        }
+
+        // Build the message hash to verify
+        bytes32 messageHash = _buildGERMessage(_globalExitRoot);
+
+        // Verify required number of valid signatures
+        _verifySignatures(messageHash, _signatures);
+    }
+
+    /**
+     * @notice Verify signatures meet the threshold requirement
+     * @notice Heavily based on the Safe multisig implementation: https://github.com/safe-fndn/safe-smart-account/blob/v1.5.0/contracts/Safe.sol#L287
+     * @dev Implements signature verification similar to Safe multisig
+     *      - Expects tightly packed signatures (r, s, v) where v is 27 or 28
+     *      - Requires exactly `threshold` number of signatures
+     *      - Signers must be in ascending address order to prevent duplicate signatures
+     *      - ECDSA.recover reverts on invalid signatures and malleable (high-s) signatures
+     * @param _messageHash The message hash that was signed
+     * @param _signatures Concatenated signatures (65 bytes each: 32 bytes r + 32 bytes s + 1 byte v)
+     */
+    function _verifySignatures(
+        bytes32 _messageHash,
+        bytes calldata _signatures
+    ) internal view {
+        // cache threshold
+        uint256 currentThreshold = threshold;
+
+        // Validate signatures length is exactly threshold * 65 bytes
+        if (_signatures.length != currentThreshold * 65) {
+            revert InvalidSignaturesLength();
+        }
+
+        address lastValidator = address(0);
+        address currentValidator;
+
+        // Verify each required signature
+        for (uint256 i = 0; i < currentThreshold; i++) {
+            // Recover the signer address from the i-th 65 bytes signature (r, s, v)
+            currentValidator = ECDSA.recover(
+                _messageHash,
+                _signatures[i * 65:(i + 1) * 65]
+            );
+
+            // Validate signer is an authorized oracle validator
+            if (!validatorInfo[currentValidator].isValidator) {
+                revert ValidatorDoesNotExist();
+            }
+
+            // Validate signers are in ascending order (prevents duplicate signatures)
+            if (currentValidator <= lastValidator) {
+                revert ValidatorsNotOrdered();
+            }
+
+            lastValidator = currentValidator;
+        }
+    }
+
+    ////////////////////
+    // View Functions
+    ////////////////////
+
+    /**
+     * @notice Verify a GER with signatures without injecting it
+     * @dev Reverts if the GER or the signatures are not valid
+     * @param _globalExitRoot The GER to verify
+     * @param _signatures The signatures to verify
+     * @return True if the GER is valid
+     */
+    function verifyGER(
+        bytes32 _globalExitRoot,
+        bytes calldata _signatures
+    ) external view returns (bool) {
+        _validateGER(_globalExitRoot, _signatures);
+        return true;
+    }
+
+    /**
+     * @notice Returns the index of an oracle validator in the validators array
+     * @dev Reverts if the validator is not found. Used for off-chain index lookups
+     * @param _validator Oracle validator address to search for
+     * @return The index of the oracle validator
+     */
+    function getValidatorIndex(
+        address _validator
+    ) external view returns (uint256) {
+        uint256 validatorsLength = validators.length;
+        for (uint256 i = 0; i < validatorsLength; ++i) {
+            if (validators[i] == _validator) {
+                return i;
+            }
+        }
+        revert ValidatorNotFound();
+    }
+
+    /**
+     * @notice Returns all oracle validators with their information
+     * @dev Returns a memory copy of the validators array along with their URLs
+     * @return Array of all oracle validators information
+     */
+    function getValidatorsInfo()
+        external
+        view
+        returns (ValidatorInfo[] memory)
+    {
+        uint256 validatorsLength = validators.length;
+        ValidatorInfo[] memory validatorInfos = new ValidatorInfo[](
+            validatorsLength
+        );
+        for (uint256 i = 0; i < validatorsLength; i++) {
+            validatorInfos[i] = ValidatorInfo({
+                addr: validators[i],
+                url: validatorInfo[validators[i]].url
+            });
+        }
+        return validatorInfos;
+    }
+
+    /**
+     * @notice Returns the total number of oracle validators
+     * @dev More gas-efficient than calling getValidatorsInfo() for just the count
+     * @return The count of oracle validators
+     */
+    function getValidatorsCount() external view returns (uint256) {
+        return validators.length;
+    }
+
+    /**
+     * @notice Returns the version of the contract
+     * @return The version of the contract
+     */
+    function version() external pure returns (string memory) {
+        return VERSION_AGG_ORACLE_COMMITTEE;
+    }
+
+    /**
+     * @notice Returns if an address is a validator
+     * @param _validator The address to check
+     * @return True if the address is a validator
+     */
+    function isValidator(address _validator) external view returns (bool) {
+        return validatorInfo[_validator].isValidator;
     }
 }
