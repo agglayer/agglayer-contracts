@@ -176,6 +176,24 @@ describe('Test vectors aggchain FEP', () => {
                     },
                 );
 
+            // legacy consensus goes through AggchainECDSAMultisig before AggchainFEP
+            const aggchainECDSAMultisigFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+            ppConsensusContract = await upgrades.upgradeProxy(
+                ppConsensusContract.target,
+                aggchainECDSAMultisigFactory,
+                {
+                    constructorArgs: [
+                        gerManagerAddress,
+                        polTokenAddress,
+                        bridgeAddress,
+                        rollupManagerAddress,
+                        aggLayerGatewayAddress,
+                    ],
+                    unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
+                },
+            );
+            await ppConsensusContract.connect(rollupManagerSigner).migrateFromLegacyConsensus({ gasPrice: 0 });
+
             // upgrade to aggchainFEP (reinitialize)
             ppConsensusContract = await upgrades.upgradeProxy(ppConsensusContract.target, aggchainFEPFactory, {
                 constructorArgs: [
@@ -195,22 +213,19 @@ describe('Test vectors aggchain FEP', () => {
                 ],
             });
 
-            // Initialize FEP from PessimisticConsensus with direct parameters
-            await ppConsensusContract
-                .connect(rollupManagerSigner)
-                .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
-
-            // Cast to AggchainFEP type for the initialization
+            // Initialize FEP from AggchainECDSAMultisig with direct parameters (aggchainManager is the admin)
             const ppConsensusAsFEP = ppConsensusContract as unknown as AggchainFEP;
-            await ppConsensusAsFEP.connect(aggchainManager).initializeFromLegacyConsensus(
-                data.initParams,
-                data.useDefaultVkeys,
-                data.useDefaultSigners,
+            await ppConsensusAsFEP
+                .connect(admin)
+                .initializeFromECDSAMultisig(
+                    data.initParams,
+                    data.useDefaultVkeys,
+                    data.initOwnedAggchainVKey,
+                    data.initAggchainVKeySelector,
+                    { gasPrice: 0 },
+                );
+            expect(await ppConsensusAsFEP.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(
                 data.initOwnedAggchainVKey,
-                data.initAggchainVKeySelector,
-                [], // No signers to add initially
-                0, // Threshold of 0 initially
-                { gasPrice: 0 },
             );
 
             // check initializeBytesAggchain
