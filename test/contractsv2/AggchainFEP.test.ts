@@ -300,7 +300,7 @@ describe('AggchainFEP', () => {
         expect(await aggchainFEPContract.version()).to.be.equal('v3.1.0');
     });
 
-    it('should check the v1 initialized parameters', async () => {
+    it('should not allow initializing a legacy consensus contract upgraded directly to FEP', async () => {
         const networkID = 1;
 
         // Deploy previous ECDSA pessimistic contract
@@ -340,6 +340,19 @@ describe('AggchainFEP', () => {
         // New interface according to the new implemention
         aggchainFEPContract = aggchainFEPFactory.attach(PolygonPPConsensusContract.target) as unknown as AggchainFEP;
 
+        // Removed legacy entry points must not be part of the ABI anymore
+        expect(aggchainFEPFactory.interface.getFunction('initializeFromLegacyConsensus')).to.be.equal(null);
+        expect(aggchainFEPFactory.interface.getFunction('upgradeFromPreviousFEP')).to.be.equal(null);
+
+        // Raw calldata with the old initializeFromLegacyConsensus selector must revert (no fallback)
+        const legacyInitSelector = ethers
+            .id(
+                'initializeFromLegacyConsensus((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bool,bytes32,bytes4,(address,string)[],uint256)',
+            )
+            .slice(0, 10);
+        await expect(aggchainManager.sendTransaction({ to: aggchainFEPContract.target, data: legacyInitSelector })).to
+            .be.reverted;
+
         // Define the struct values
         const initParams = {
             l2BlockTime: 10,
@@ -353,60 +366,12 @@ describe('AggchainFEP', () => {
             rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
         };
 
-        // Initialize parameters will be passed directly to the contract
-        // initializeFromLegacyConsensus function uses similar parameters
-
         await aggchainFEPContract
             .connect(rollupManagerSigner)
             .initAggchainManager(aggchainManager.address, { gasPrice: 0 });
 
-        // For v1, we use initializeFromLegacyConsensus
-        await aggchainFEPContract.connect(aggchainManager).initializeFromLegacyConsensus(
-            initParams,
-            useDefaultVkeys,
-            useDefaultSigners,
-            newAggchainVKey,
-            aggchainVKeySelector,
-            [], // No signers to add initially
-            0, // Threshold of 0 initially
-            { gasPrice: 0 },
-        );
-
-        // check all SC storage slots are correctly initialized
-        // aggchain
-        expect(await aggchainFEPContract.aggchainManager()).to.be.equal(aggchainManager.address);
-        expect(await aggchainFEPContract.l2BlockTime()).to.be.equal(initParams.l2BlockTime);
-        expect(await aggchainFEPContract.submissionInterval()).to.be.equal(initParams.submissionInterval);
-
-        // These parameters are now stored in opSuccinctConfigs
-        const GENESIS_CONFIG_NAME = ethers.id('opsuccinct_genesis');
-        const genesisConfig = await aggchainFEPContract.opSuccinctConfigs(GENESIS_CONFIG_NAME);
-        expect(genesisConfig.rollupConfigHash).to.be.equal(initParams.rollupConfigHash);
-        expect(genesisConfig.aggregationVkey).to.be.equal(initParams.aggregationVkey);
-        expect(genesisConfig.rangeVkeyCommitment).to.be.equal(initParams.rangeVkeyCommitment);
-
-        expect(await aggchainFEPContract.optimisticModeManager()).to.be.equal(initParams.optimisticModeManager);
-        expect(await aggchainFEPContract.latestOutputIndex()).to.be.equal(0);
-        expect(await aggchainFEPContract.nextOutputIndex()).to.be.equal(1);
-
-        const l2Output = await aggchainFEPContract.getL2Output(0);
-        expect(l2Output.outputRoot).to.be.equal(initParams.startingOutputRoot);
-        expect(l2Output.timestamp).to.be.equal(initParams.startingTimestamp);
-        expect(l2Output.l2BlockNumber).to.be.equal(initParams.startingBlockNumber);
-
-        // aggchainBase
-        expect(await aggchainFEPContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
-        expect(await aggchainFEPContract.useDefaultVkeys()).to.be.equal(useDefaultVkeys);
-        expect(await aggchainFEPContract.ownedAggchainVKeys(aggchainVKeySelector)).to.be.equal(newAggchainVKey);
-
-        // PolygonConsensusBase
-        expect(await aggchainFEPContract.admin()).to.be.equal(admin.address);
-        expect(await aggchainFEPContract.trustedSequencer()).to.be.equal(trustedSequencer.address);
-        expect(await aggchainFEPContract.gasTokenAddress()).to.be.equal(gasTokenAddress);
-        expect(await aggchainFEPContract.trustedSequencerURL()).to.be.equal(urlSequencer);
-        expect(await aggchainFEPContract.networkName()).to.be.equal(networkName);
-
-        // try to initialize again
+        // Legacy consensus (initializer version 1) cannot be initialized as FEP with the remaining entry points:
+        // the route is legacy -> AggchainECDSAMultisig -> AggchainFEP (initializeFromECDSAMultisig)
         await expect(
             aggchainFEPContract.connect(aggchainManager).initialize(
                 initParams,
@@ -423,7 +388,15 @@ describe('AggchainFEP', () => {
                 networkName,
                 { gasPrice: 0 },
             ),
-        ).to.be.revertedWith('Initializable: contract is already initialized');
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'InvalidInitializer');
+
+        await expect(
+            aggchainFEPContract
+                .connect(aggchainManager)
+                .initializeFromECDSAMultisig(initParams, useDefaultVkeys, newAggchainVKey, aggchainVKeySelector, {
+                    gasPrice: 0,
+                }),
+        ).to.be.revertedWithCustomError(aggchainFEPContract, 'InvalidInitializer');
     });
 
     it('should check getAggchainHash', async () => {
@@ -1135,33 +1108,6 @@ describe('AggchainFEP', () => {
                 { gasPrice: 0 },
             ),
         ).to.be.revertedWithCustomError(freshFEPContract, 'InvalidInitializer');
-    });
-
-    it('should test upgradeFromPreviousFEP function', async () => {
-        // Deploy a fresh contract for testing upgrade
-        const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
-        const upgradeFEPContract = await upgrades.deployProxy(aggchainFEPFactory, [], {
-            initializer: false,
-            constructorArgs: [
-                gerManagerAddress,
-                polTokenAddress,
-                bridgeAddress,
-                rollupManagerAddress,
-                agglayerGatewayAddress,
-            ],
-            unsafeAllow: ['constructor', 'state-variable-immutable', 'missing-initializer-call'],
-        });
-        await upgradeFEPContract.waitForDeployment();
-
-        // Set up the contract
-        await upgradeFEPContract.connect(rollupManagerSigner).initAggchainManager(admin.address, { gasPrice: 0 });
-
-        // The upgradeFromPreviousFEP function expects the contract to be at version 2
-        // but have certain old FEP state. Since we can't easily get to that state,
-        // we'll test that it properly reverts (it will revert with SignerCannotBeZero
-        // because it tries to add trustedSequencer as signer but it's not set)
-        await expect(upgradeFEPContract.connect(rollupManagerSigner).upgradeFromPreviousFEP({ gasPrice: 0 })).to.be
-            .reverted;
     });
 
     it('should test initialize edge cases and error conditions', async () => {

@@ -24,7 +24,6 @@ import {
 } from '../../src/utils-common-aggchain';
 
 import { encodeAggchainDataFEP, computeHashAggchainParamsFEP } from '../../src/utils-aggchain-FEP';
-import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 import { NO_ADDRESS, AGGCHAIN_DEFAULT_VKEY_ROLE, AL_ADD_PP_ROUTE_ROLE, AL_MULTISIG_ROLE } from '../../src/constants';
 
@@ -634,7 +633,7 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             .withArgs(newStateRoot, 1, newl2BlockNumber, blockDataTimestamp);
     });
 
-    it('should create a rollup with pessimistic consensus and upgrade it to aggchainFEP', async () => {
+    it('should create a rollup with pessimistic consensus and upgrade it to aggchainFEP through ECDSA multisig', async () => {
         // Deploy pessimistic consensus contract
         const ppConsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
 
@@ -712,6 +711,40 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
                 trustedAggregator.address,
             );
 
+        // Legacy consensus can not be upgraded directly to FEP: it goes Pessimistic -> ECDSA multisig -> FEP
+        // Create rollup type ECDSA multisig
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const aggchainECDSAImplementationContract = await aggchainECDSAFactory.deploy(
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            rollupManagerContract.target,
+            aggLayerGatewayContract.target,
+        );
+        const rollupTypeECDSAId = Number(await rollupManagerContract.rollupTypeCount()) + 1;
+        await rollupManagerContract.connect(timelock).addNewRollupType(
+            aggchainECDSAImplementationContract.target,
+            ethers.ZeroAddress, // verifier
+            0, // fork id
+            VerifierType.ALGateway,
+            ethers.ZeroHash, // genesis
+            '', // description
+            ethers.ZeroHash, // programVKey
+        );
+
+        // Update the rollup to ECDSA multisig: aggchainManager = admin, signers = [trustedSequencer], threshold = 1
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .updateRollup(
+                    pessimisticRollupContract.target,
+                    rollupTypeECDSAId,
+                    aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()'),
+                ),
+        )
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(pessimisticRollupID, rollupTypeECDSAId, 0 /* lastVerifiedBatch */);
+
         // Create rollup type FEP
         const rollupTypeFEPId = await createFEPRollupType();
         // Update the rollup to FEP and initialize the new rollup type
@@ -735,44 +768,40 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
         // Initialize parameters will be passed directly to the contract
         // Note: Wrong aggchain type will be tested with '0x00010002' selector
 
-        const upgradeData = aggchainFEPFactory.interface.encodeFunctionData('initAggchainManager(address)', [
-            aggchainManager.address,
-        ]);
-
         await expect(
             rollupManagerContract
                 .connect(timelock)
-                .updateRollup(pessimisticRollupContract.target, rollupTypeFEPId, upgradeData),
+                .updateRollup(pessimisticRollupContract.target, rollupTypeFEPId, '0x'),
         )
             .to.emit(rollupManagerContract, 'UpdateRollup')
             .withArgs(pessimisticRollupID, rollupTypeFEPId, 0 /* lastVerifiedBatch */);
         const FEPRollupContract = aggchainFEPFactory.attach(pessimisticRollupContract.target);
 
+        // aggchainManager was set to the admin by the ECDSA multisig migration
         const aggchainManagerSC = await FEPRollupContract.aggchainManager();
-        expect(aggchainManagerSC).to.be.equal(aggchainManager.address);
+        expect(aggchainManagerSC).to.be.equal(admin.address);
 
         // initialize the FEP aggchain - test wrong aggchain type
         await expect(
-            FEPRollupContract.connect(aggchainManager).initializeFromLegacyConsensus(
+            FEPRollupContract.connect(admin).initializeFromECDSAMultisig(
                 initParams,
                 false, // useDefaultVkeys (set to false to test aggchain type validation)
-                false, // useDefaultSigners
                 ethers.ZeroHash, // ownedAggchainVKey
                 '0x00010002', // aggchainVkeySelector (wrong type - should be 0x0001 for FEP)
-                [], // No signers to add initially
-                0, // Threshold of 0 initially
             ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'InvalidAggchainType');
 
-        await FEPRollupContract.connect(aggchainManager).initializeFromLegacyConsensus(
+        await FEPRollupContract.connect(admin).initializeFromECDSAMultisig(
             initParams,
             false, // useDefaultVkeys (set to false to avoid needing gateway vkey)
-            false, // useDefaultSigners
             ethers.id('ownedAggchainVKey'), // ownedAggchainVKey
             '0x00010001', // aggchainVkeySelector (valid FEP selector)
-            [], // No signers to add initially
-            0, // Threshold of 0 initially
         );
+
+        // Signers from the ECDSA multisig migration are preserved
+        expect(await FEPRollupContract.getAggchainSigners()).to.be.deep.equal([trustedSequencer.address]);
+        expect(await FEPRollupContract.threshold()).to.be.equal(1);
+        expect(await FEPRollupContract.version()).to.be.equal('v3.1.0');
 
         // Try update rollup by rollupAdmin but trigger UpdateToOldRollupTypeID
         // Create a new pessimistic rollup type
@@ -834,11 +863,8 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             ),
         ).to.be.revertedWithCustomError(FEPRollupContract, 'AggchainVKeyNotFound');
 
-        // Initialize signers hash with empty signers to move past the signers hash check
-        await FEPRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
-
         // Create CUSTOM_DATA_FEP with the correct selector that was used during initialization
-        const correctSelector = '0x00010001'; // This matches what was used in initializeFromLegacyConsensus
+        const correctSelector = '0x00010001'; // This matches what was used in initializeFromECDSAMultisig
         const CUSTOM_DATA_FEP_CORRECT = encodeAggchainDataFEP(correctSelector, newStateRoot, newl2BlockNumber);
 
         // verify pessimist proof with the new FEP rollup
@@ -860,7 +886,6 @@ describe('Polygon rollup manager aggregation layer v3: FEP', () => {
             .to.emit(rollupManagerContract, 'VerifyBatchesTrustedAggregator')
             .to.emit(FEPRollupContract, 'OutputProposed')
             .withArgs(newStateRoot, 1, newl2BlockNumber, blockDataTimestamp);
-        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
     });
 
     it('should add existing rollup to FEP', async () => {

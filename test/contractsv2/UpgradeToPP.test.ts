@@ -19,8 +19,6 @@ import {
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
 import { AL_MULTISIG_ROLE } from '../../src/constants';
-import { encodeAggchainDataFEP } from '../../src/utils-aggchain-FEP';
-import { checkLegacyAdminFunctionsGatedByAggchainManager } from './helpers/helpers-aggchain-fep';
 
 const MerkleTreeBridge = MTBridge;
 const { getLeafValue } = mtBridgeUtils;
@@ -1388,37 +1386,76 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 
-    it('should create rollup type validium & migrate to AggchainFEP', async () => {
-        const signers = await ethers.getSigners();
-        const aggchainManager = signers[8];
-        const optimisticModeManager = signers[9];
+    it('should create rollup type zkevm etrog & migrate to ALGateway ECDSA multisig & update to FEP', async () => {
+        // Create etrog state transition chain
+        const urlSequencer = 'http://zkevm-json-rpc:8123';
+        const chainID = 1000;
+        const networkName = 'zkevm';
+        const forkID = 0;
+        const genesisRandom = '0x0000000000000000000000000000000000000000000000000000000000000001';
+        const rollupVerifierType = 0;
+        const description = 'zkevm test';
+        const programVKey = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        const gasTokenAddress = ethers.ZeroAddress;
 
-        // Create rollup type validium
-        const validiumEtrogFactory = await ethers.getContractFactory('PolygonValidiumEtrog');
-        const validiumEtrogContract = await validiumEtrogFactory.deploy(
+        // Create zkEVM implementation
+        const PolygonZKEVMV2Factory = await ethers.getContractFactory('PolygonZkEVMEtrog');
+        const PolygonZKEVMV2Contract = await PolygonZKEVMV2Factory.deploy(
             polygonZkEVMGlobalExitRoot.target,
             polTokenContract.target,
             polygonZkEVMBridgeContract.target,
             rollupManagerContract.target,
         );
-        await validiumEtrogContract.waitForDeployment();
+        await PolygonZKEVMV2Contract.waitForDeployment();
 
-        const rollupTypeIDValidium = 3;
+        // Create new rollup type zkevm etrog
+        const newRollupTypeID = 3;
+        await rollupManagerContract
+            .connect(timelock)
+            .addNewRollupType(
+                PolygonZKEVMV2Contract.target,
+                verifierContract.target,
+                forkID,
+                rollupVerifierType,
+                genesisRandom,
+                description,
+                programVKey,
+            );
+
+        // Create rollup: batch 1 (initial batch) is sequenced
+        const newSequencedBatch = 1;
+        const initializeBytesLegacy = encodeInitializeBytesLegacy(
+            admin.address,
+            trustedSequencer.address,
+            gasTokenAddress,
+            urlSequencer,
+            networkName,
+        );
+        const rollupAddress = ethers.getCreateAddress({
+            from: rollupManagerContract.target as string,
+            nonce: 1,
+        });
         await expect(
-            rollupManagerContract
-                .connect(timelock)
-                .addNewRollupType(
-                    validiumEtrogContract.target,
-                    verifierContract.target,
-                    0,
-                    VerifierType.StateTransition,
-                    '0x0000000000000000000000000000000000000000000000000000000000000001',
-                    'validium',
-                    ethers.ZeroHash,
-                ),
-        ).to.emit(rollupManagerContract, 'AddNewRollupType');
+            rollupManagerContract.connect(admin).attachAggchainToAL(newRollupTypeID, chainID, initializeBytesLegacy),
+        )
+            .to.emit(rollupManagerContract, 'CreateNewRollup')
+            .withArgs(newCreatedRollupID, newRollupTypeID, rollupAddress, chainID, gasTokenAddress);
 
-        // Create rollup type AggchainFEP
+        // Verify all sequenced batches
+        const newLocalExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000123';
+        const zkProofFFlonk = new Array(24).fill(ethers.ZeroHash);
+        await rollupManagerContract.connect(trustedAggregator).verifyBatchesTrustedAggregator(
+            newCreatedRollupID,
+            0, // pendingState
+            0, // currentVerifiedBatch
+            newSequencedBatch,
+            newLocalExitRoot,
+            newStateRoot,
+            trustedAggregator.address,
+            zkProofFFlonk,
+        );
+
+        // Create FEP rollup type
         const aggchainFEPFactory = await ethers.getContractFactory('AggchainFEP');
         const aggchainFEPImplementation = await aggchainFEPFactory.deploy(
             polygonZkEVMGlobalExitRoot.target,
@@ -1428,114 +1465,66 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             await rollupManagerContract.aggLayerGateway(),
         );
         await aggchainFEPImplementation.waitForDeployment();
-
         const rollupTypeIDFEP = 4;
+        await rollupManagerContract.connect(timelock).addNewRollupType(
+            aggchainFEPImplementation.target,
+            ethers.ZeroAddress, // verifier
+            0, // fork id
+            VerifierType.ALGateway,
+            ethers.ZeroHash, // genesis
+            '', // description
+            ethers.ZeroHash, // programVKey
+        );
+
+        const initParams = {
+            l2BlockTime: 2,
+            rollupConfigHash: computeRandomBytes(32),
+            startingOutputRoot: computeRandomBytes(32),
+            startingBlockNumber: 100,
+            startingTimestamp: (await ethers.provider.getBlock('latest'))?.timestamp || 0,
+            submissionInterval: 100,
+            optimisticModeManager: admin.address,
+            aggregationVkey: computeRandomBytes(32),
+            rangeVkeyCommitment: computeRandomBytes(32),
+        };
+
+        // A state transition chain can not be migrated directly to FEP: initializeFromLegacyConsensus no longer exists
+        const legacyInitializeFEPData = new ethers.Interface([
+            'function initializeFromLegacyConsensus((uint256,bytes32,bytes32,uint256,uint256,uint256,address,bytes32,bytes32),bool,bool,bytes32,bytes4,(address,string)[],uint256)',
+        ]).encodeFunctionData('initializeFromLegacyConsensus', [
+            Object.values(initParams),
+            false, // useDefaultVkeys
+            false, // useDefaultSigners
+            ethers.ZeroHash, // initOwnedAggchainVKey
+            '0x00010001', // initAggchainVKeySelector
+            [], // signersToAdd
+            0, // newThreshold
+        ]);
         await expect(
             rollupManagerContract
                 .connect(timelock)
-                .addNewRollupType(
-                    aggchainFEPImplementation.target,
-                    ethers.ZeroAddress,
-                    0,
-                    VerifierType.ALGateway,
-                    ethers.ZeroHash,
-                    'FEP',
-                    ethers.ZeroHash,
-                ),
-        ).to.emit(rollupManagerContract, 'AddNewRollupType');
+                .initMigration(newCreatedRollupID, rollupTypeIDFEP, legacyInitializeFEPData),
+        ).to.be.reverted;
 
-        // Create the validium rollup
-        const chainID = 1000;
-        const rollupAddress = ethers.getCreateAddress({
-            from: rollupManagerContract.target as string,
-            nonce: 1,
-        });
+        // Step 1: initMigration to ALGateway ECDSA multisig
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()');
         await expect(
             rollupManagerContract
-                .connect(admin)
-                .attachAggchainToAL(
-                    rollupTypeIDValidium,
-                    chainID,
-                    encodeInitializeBytesLegacy(
-                        admin.address,
-                        trustedSequencer.address,
-                        ethers.ZeroAddress,
-                        'http://zkevm-json-rpc:8123',
-                        'zkevm',
-                    ),
-                ),
-        )
-            .to.emit(rollupManagerContract, 'CreateNewRollup')
-            .withArgs(newCreatedRollupID, rollupTypeIDValidium, rollupAddress, chainID, ethers.ZeroAddress);
-
-        // Verify the initial batch so every sequenced batch is verified
-        const newLocalExitRoot = '0x0000000000000000000000000000000000000000000000000000000000000123';
-        await rollupManagerContract
-            .connect(trustedAggregator)
-            .verifyBatchesTrustedAggregator(
-                newCreatedRollupID,
-                0,
-                0,
-                1,
-                newLocalExitRoot,
-                newStateRoot,
-                trustedAggregator.address,
-                new Array(24).fill(ethers.ZeroHash),
-            );
-
-        // Migrate to AggchainFEP
-        const upgradeData = aggchainFEPFactory.interface.encodeFunctionData('initAggchainManager(address)', [
-            aggchainManager.address,
-        ]);
-        await expect(
-            rollupManagerContract.connect(timelock).initMigration(newCreatedRollupID, rollupTypeIDFEP, upgradeData),
+                .connect(timelock)
+                .initMigration(newCreatedRollupID, rollupTypeIDAlGateway, upgradeData),
         )
             .to.emit(rollupManagerContract, 'InitMigration')
-            .withArgs(newCreatedRollupID, rollupTypeIDFEP)
+            .withArgs(newCreatedRollupID, rollupTypeIDAlGateway)
             .to.emit(rollupManagerContract, 'UpdateRollup')
-            .withArgs(newCreatedRollupID, rollupTypeIDFEP, 1);
-        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
+            .withArgs(newCreatedRollupID, rollupTypeIDAlGateway, newSequencedBatch);
 
-        const FEPRollupContract = aggchainFEPFactory.attach(rollupAddress) as AggchainFEP;
-        expect(await FEPRollupContract.aggchainManager()).to.be.equal(aggchainManager.address);
-
-        const currentTimestamp = Number((await ethers.provider.getBlock('latest'))?.timestamp);
-        const initParams = {
-            l2BlockTime: 1,
-            rollupConfigHash: ethers.id('rollupConfigHash'),
-            startingOutputRoot: ethers.id('startingOutputRoot'),
-            startingBlockNumber: 100,
-            startingTimestamp: currentTimestamp - 1000,
-            submissionInterval: 5,
-            optimisticModeManager: optimisticModeManager.address,
-            aggregationVkey: ethers.id('aggregationVkey'),
-            rangeVkeyCommitment: ethers.id('rangeVkeyCommitment'),
-        };
-        const fepVKeySelector = '0x00010001';
-        await FEPRollupContract.connect(aggchainManager).initializeFromLegacyConsensus(
-            initParams,
-            false, // useDefaultVkeys
-            false, // useDefaultSigners
-            ethers.id('ownedAggchainVKey'),
-            fepVKeySelector,
-            [],
-            0,
-        );
-
-        // Legacy state is preserved
-        expect(await FEPRollupContract.admin()).to.be.equal(admin.address);
-        expect(await FEPRollupContract.trustedSequencer()).to.be.equal(trustedSequencer.address);
-        expect(await FEPRollupContract.networkName()).to.be.equal('zkevm');
-
-        await checkLegacyAdminFunctionsGatedByAggchainManager(FEPRollupContract);
-
-        // Complete the migration with the first pessimistic proof
-        await FEPRollupContract.connect(aggchainManager).updateSignersAndThreshold([], [], 0);
+        // Complete migration with a pessimistic proof bootstrapping the last LER
         const rollupData = await rollupManagerContract.rollupIDToRollupDataV2Deserialized(newCreatedRollupID);
         const lastLER = rollupData[4];
         const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
-        const proofWithSelector = `${PESSIMISTIC_SELECTOR}${computeRandomBytes(128).slice(2)}`;
-
+        const newPPRoot = computeRandomBytes(32);
+        const proofWithSelector = `${PESSIMISTIC_SELECTOR}00`;
         await expect(
             rollupManagerContract
                 .connect(trustedAggregator)
@@ -1543,16 +1532,57 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                     newCreatedRollupID,
                     lastL1InfoTreeLeafCount,
                     lastLER,
-                    computeRandomBytes(32),
+                    newPPRoot,
                     proofWithSelector,
-                    encodeAggchainDataFEP(fepVKeySelector, ethers.id('newOutputRoot'), 105),
+                    CUSTOM_DATA_ECDSA,
                 ),
         )
             .to.emit(rollupManagerContract, 'CompletedMigration')
-            .withArgs(newCreatedRollupID)
-            .to.emit(FEPRollupContract, 'OutputProposed');
-
+            .withArgs(newCreatedRollupID);
         expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
+
+        const ECDSARollupContract = aggchainECDSAFactory.attach(rollupAddress) as AggchainECDSAMultisig;
+        expect(await ECDSARollupContract.aggchainManager()).to.be.equal(admin.address);
+        expect(await ECDSARollupContract.getAggchainSigners()).to.be.deep.equal([trustedSequencer.address]);
+        expect(await ECDSARollupContract.threshold()).to.be.equal(1);
+        const aggchainMultisigHashECDSA = await ECDSARollupContract.getAggchainMultisigHash();
+
+        // Step 2: update to FEP and initialize from ECDSA multisig
+        await expect(rollupManagerContract.connect(timelock).updateRollup(rollupAddress, rollupTypeIDFEP, '0x'))
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(newCreatedRollupID, rollupTypeIDFEP, newSequencedBatch);
+
+        const FEPRollupContract = aggchainFEPFactory.attach(rollupAddress) as AggchainFEP;
+        const ownedAggchainVKey = computeRandomBytes(32);
+        await FEPRollupContract.connect(admin).initializeFromECDSAMultisig(
+            initParams,
+            false, // useDefaultVkeys
+            ownedAggchainVKey,
+            '0x00010001', // aggchainVKeySelector for FEP
+        );
+
+        // Check FEP state
+        expect(await FEPRollupContract.version()).to.be.equal('v3.1.0');
+        expect(await FEPRollupContract.selectedOpSuccinctConfigName()).to.be.equal(ethers.id('opsuccinct_genesis'));
+        expect(await FEPRollupContract.latestOutputIndex()).to.be.equal(0);
+        const l2Output = await FEPRollupContract.getL2Output(0);
+        expect(l2Output.outputRoot).to.be.equal(initParams.startingOutputRoot);
+        expect(l2Output.l2BlockNumber).to.be.equal(initParams.startingBlockNumber);
+        expect(await FEPRollupContract.ownedAggchainVKeys('0x00010001')).to.be.equal(ownedAggchainVKey);
+
+        // Legacy consensus and ECDSA multisig state preserved
+        expect(await FEPRollupContract.admin()).to.be.equal(admin.address);
+        expect(await FEPRollupContract.trustedSequencer()).to.be.equal(trustedSequencer.address);
+        expect(await FEPRollupContract.trustedSequencerURL()).to.be.equal(urlSequencer);
+        expect(await FEPRollupContract.networkName()).to.be.equal(networkName);
+        expect(await FEPRollupContract.aggchainManager()).to.be.equal(admin.address);
+        expect(await FEPRollupContract.getAggchainSigners()).to.be.deep.equal([trustedSequencer.address]);
+        expect(await FEPRollupContract.threshold()).to.be.equal(1);
+        expect(await FEPRollupContract.getAggchainMultisigHash()).to.be.equal(aggchainMultisigHashECDSA);
+
+        const rollupDataFEP = await rollupManagerContract.rollupIDToRollupDataV2Deserialized(newCreatedRollupID);
+        expect(rollupDataFEP[8]).to.be.equal(rollupTypeIDFEP);
+        expect(rollupDataFEP[9]).to.be.equal(VerifierType.ALGateway);
     });
 
     it('should revert updateRollup from StateTransition to ALGateway, initMigration must be used', async () => {
