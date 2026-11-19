@@ -31,6 +31,7 @@ import {
     encodeRemoveOwner,
     encodeChangeThreshold,
     encodeMultiSendCallOnly,
+    assertDelegateCallTargetHasCode,
     getNextNonce,
     getTransactionsForSafe,
     loadTransactions,
@@ -281,6 +282,7 @@ async function main() {
         logger.info(`  MultiSend Address: ${MULTI_SEND_CALL_ONLY_ADDRESS}`);
         logger.info('');
 
+        await assertDelegateCallTargetHasCode(MULTI_SEND_CALL_ONLY_ADDRESS, 'MultiSendCallOnly');
         const multiSendData = encodeMultiSendCallOnly(operations.map((op) => op.tx));
 
         safeTx = buildSafeTransaction({

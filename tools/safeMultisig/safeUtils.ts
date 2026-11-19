@@ -348,6 +348,21 @@ export function encodeMultiSendTransactions(transactions: MetaTransaction[]): st
 }
 
 /**
+ * Throws if `address` has no code on the connected network
+ * A Safe DELEGATECALL to an address without code succeeds and does nothing (e.g. MultiSend not deployed on that chain)
+ * @param address - Address that the Safe will delegatecall
+ * @param label - Name used in the error message
+ */
+export async function assertDelegateCallTargetHasCode(address: string, label: string): Promise<void> {
+    const code = await ethers.provider.getCode(address);
+    if (code === '0x') {
+        throw new Error(
+            `${label} ${address} has no code on this network: a Safe delegatecall to it would succeed without doing anything`,
+        );
+    }
+}
+
+/**
  * Encodes a MultiSendCallOnly call for Safe 1.3.0+
  *
  * MultiSendCallOnly only supports CALL operations (no delegatecall).

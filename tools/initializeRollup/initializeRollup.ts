@@ -188,35 +188,9 @@ async function main() {
             initializeTx = await aggchainContract.migrateFromLegacyConsensus.populateTransaction();
             callableByAggchainManager = false;
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-            if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
-                throw new Error(
-                    `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
-                );
-            }
-
-            // check mandatory params in aggchainParams
-            const mandatoryAggchainParams = [
-                'initParams',
-                'signers',
-                'threshold',
-                'useDefaultVkeys',
-                'useDefaultSigners',
-                'initOwnedAggchainVKey',
-                'initAggchainVKeySelector',
-                'vKeyManager',
-            ];
-            checkParams(aggchainParams, mandatoryAggchainParams);
-
-            // Initialize FEP from pessimistic consensus with direct parameters
-            initializeTx = await aggchainContract.initializeFromLegacyConsensus.populateTransaction(
-                aggchainParams.initParams,
-                aggchainParams.signers,
-                aggchainParams.threshold,
-                aggchainParams.useDefaultVkeys,
-                aggchainParams.useDefaultSigners,
-                aggchainParams.initOwnedAggchainVKey,
-                aggchainParams.initAggchainVKeySelector,
-                aggchainParams.vKeyManager,
+            throw new Error(
+                `Aggchain ${consensusContractName} can no longer be initialized from a legacy consensus (initializeFromLegacyConsensus was removed). ` +
+                    `Migrate first to ${AGGCHAIN_CONTRACT_NAMES.ECDSA} (migrateFromLegacyConsensus), then update the rollup to ${consensusContractName} and initialize it with initializeFromECDSAMultisig`,
             );
         } else {
             throw new Error(`Aggchain ${consensusContractName} not supported`);
