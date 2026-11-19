@@ -111,6 +111,8 @@ async function main() {
 
     // Build the initialization transaction based on the consensus contract type and initialization state
     let initializeTx;
+    // false when the initializer is onlyRollupManager: its calldata is upgrade data for the rollup manager, not a call
+    let callableByAggchainManager = true;
     const aggchainManager = await aggchainContract.aggchainManager();
 
     if (initializedValue === 0) {
@@ -184,36 +186,11 @@ async function main() {
             }
             // Migrate from pessimistic consensus to ECDSA Multisig
             initializeTx = await aggchainContract.migrateFromLegacyConsensus.populateTransaction();
+            callableByAggchainManager = false;
         } else if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.FEP) {
-            if (type === transactionTypes.EOA && deployer.address !== aggchainManager) {
-                throw new Error(
-                    `Caller ${deployer.address} is not the aggchainManager ${aggchainManager}, cannot initialize from EOA`,
-                );
-            }
-
-            // check mandatory params in aggchainParams
-            const mandatoryAggchainParams = [
-                'initParams',
-                'signers',
-                'threshold',
-                'useDefaultVkeys',
-                'useDefaultSigners',
-                'initOwnedAggchainVKey',
-                'initAggchainVKeySelector',
-                'vKeyManager',
-            ];
-            checkParams(aggchainParams, mandatoryAggchainParams);
-
-            // Initialize FEP from pessimistic consensus with direct parameters
-            initializeTx = await aggchainContract.initializeFromLegacyConsensus.populateTransaction(
-                aggchainParams.initParams,
-                aggchainParams.signers,
-                aggchainParams.threshold,
-                aggchainParams.useDefaultVkeys,
-                aggchainParams.useDefaultSigners,
-                aggchainParams.initOwnedAggchainVKey,
-                aggchainParams.initAggchainVKeySelector,
-                aggchainParams.vKeyManager,
+            throw new Error(
+                `Aggchain ${consensusContractName} can no longer be initialized from a legacy consensus (initializeFromLegacyConsensus was removed). ` +
+                    `Migrate first to ${AGGCHAIN_CONTRACT_NAMES.ECDSA} (migrateFromLegacyConsensus), then update the rollup to ${consensusContractName} and initialize it with initializeFromECDSAMultisig`,
             );
         } else {
             throw new Error(`Aggchain ${consensusContractName} not supported`);
@@ -253,8 +230,10 @@ async function main() {
         const salt = initializeRollupParameters.timelockSalt || ethers.ZeroHash;
         const predecessor = ethers.ZeroHash;
         const timelockContractFactory = await ethers.getContractFactory('PolygonZkEVMTimelock', deployer);
+        // The aggchain initializers are onlyAggchainManager: the timelock must be the aggchainManager
+        logger.info(`The timelock must be the aggchainManager of the aggchain: ${aggchainManager}`);
         const operation = genOperation(
-            rollupManagerAddress,
+            rollup.rollupContract,
             0, // value
             initializeAggchainTxData,
             predecessor, // predecessor
@@ -293,15 +272,15 @@ async function main() {
             objectDecoded[currentParam.name] = timelockTx?.args[i];
 
             if (currentParam.name === 'data') {
-                const decodedRollupManagerData = PolygonRollupManagerFactory.interface.parseTransaction({
+                const decodedAggchainData = polygonConsensusFactory.interface.parseTransaction({
                     data: timelockTx?.args[i],
                 });
-                const objectDecodedData = {};
-                const paramsArrayData = decodedRollupManagerData?.fragment.inputs;
+                const objectDecodedData = { function: decodedAggchainData?.signature };
+                const paramsArrayData = decodedAggchainData?.fragment.inputs;
 
                 for (let j = 0; j < paramsArrayData?.length; j++) {
                     const currentParamData = paramsArrayData[j];
-                    objectDecodedData[currentParamData.name] = decodedRollupManagerData?.args[j];
+                    objectDecodedData[currentParamData.name] = decodedAggchainData?.args[j];
                 }
                 objectDecoded.decodedData = objectDecodedData;
             }
@@ -314,6 +293,14 @@ async function main() {
     } else if (type === transactionTypes.MULTISIG) {
         logger.info('Creating calldata for initialization from multisig...');
         outputJson.txInitializeAggchain = initializeAggchainTxData;
+        if (callableByAggchainManager) {
+            // to be sent by the aggchainManager to the aggchain
+            outputJson.to = rollup.rollupContract;
+            outputJson.aggchainManager = aggchainManager;
+        } else {
+            outputJson.note =
+                'onlyRollupManager initializer: use txInitializeAggchain as upgrade data in AgglayerManager initMigration/updateRollup';
+        }
         fs.writeFileSync(destPath, JSON.stringify(outputJson, null, 1));
         logger.info(`Finished script, output saved at: ${destPath}`);
         process.exit(0);
