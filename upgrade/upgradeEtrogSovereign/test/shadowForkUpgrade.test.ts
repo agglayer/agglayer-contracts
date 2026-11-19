@@ -28,7 +28,7 @@ const LBT_FILE_PATH = path.join(__dirname, '../LBT.json');
 
 async function main() {
     // Assert upgrade version
-    const BRIDGE_SOVEREIGN_VERSION = 'v1.2.0';
+    const BRIDGE_SOVEREIGN_VERSION = 'v1.2.1';
     const GER_VERSION = 'v1.0.0';
     const mandatoryParameters = ['timelockAdminAddress', 'rpc'];
     checkParams(upgradeParams.forkParams, mandatoryParameters);
