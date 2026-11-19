@@ -128,6 +128,8 @@ The script also logs detailed information to the console:
 
 ### Run Tests
 
+Tests fork Ethereum mainnet at a past block, so `MAINNET_PROVIDER` (`.env`) must be an **archive** RPC:
+
 ```bash
 forge test --match-contract ObsoleteRollupTypeTest -vv
 ```

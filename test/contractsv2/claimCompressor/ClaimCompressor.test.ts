@@ -49,7 +49,6 @@ describe('Claim Compressor Contract', () => {
     const tokenName = 'Matic Token';
     const tokenSymbol = 'MATIC';
     const decimals = 18;
-    const tokenInitialBalance = ethers.parseEther('20000000');
     const metadataToken = ethers.AbiCoder.defaultAbiCoder().encode(
         ['string', 'string', 'uint8'],
         [tokenName, tokenSymbol, decimals],
@@ -58,14 +57,13 @@ describe('Claim Compressor Contract', () => {
 
     const LEAF_TYPE_ASSET = 0;
 
-    let deployer: any;
     let rollupManager: any;
     let acc1: any;
     let bridge: any;
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, rollupManager, acc1, bridge] = await ethers.getSigners();
+        [, rollupManager, acc1, bridge] = await ethers.getSigners();
 
         // deploy receiver
         const BridgeReceiverFactory = await ethers.getContractFactory('BridgeReceiverMock');
@@ -82,7 +80,7 @@ describe('Claim Compressor Contract', () => {
         const polygonZkEVMBridgeFactory = await ethers.getContractFactory('AgglayerBridge');
         polygonZkEVMBridgeContract = (await upgrades.deployProxy(polygonZkEVMBridgeFactory, [], {
             initializer: false,
-            unsafeAllow: ['constructor'],
+            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call'],
         })) as unknown as AgglayerBridge;
 
         // deploy global exit root manager
@@ -99,15 +97,6 @@ describe('Claim Compressor Contract', () => {
             polygonZkEVMGlobalExitRoot.target,
             rollupManager.address,
             '0x',
-        );
-
-        // deploy token
-        const maticTokenFactory = await ethers.getContractFactory('ERC20PermitMock');
-        polTokenContract = await maticTokenFactory.deploy(
-            tokenName,
-            tokenSymbol,
-            deployer.address,
-            tokenInitialBalance,
         );
     });
 
@@ -472,6 +461,7 @@ describe('Claim Compressor Contract', () => {
             gasLimit: 200000,
             gasPrice: ethers.parseUnits('10', 'gwei'),
             chainId: 5,
+            type: 0,
         };
 
         const txSigned = await newWallet.signTransaction(tx);
@@ -581,6 +571,7 @@ describe('Claim Compressor Contract', () => {
                 gasLimit: 200000,
                 gasPrice: ethers.parseUnits('10', 'gwei'),
                 chainId: 5,
+                type: 0,
             };
 
             // eslint-disable-next-line no-await-in-loop

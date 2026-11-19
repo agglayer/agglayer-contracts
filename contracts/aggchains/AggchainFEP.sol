@@ -68,8 +68,8 @@ contract AggchainFEP is AggchainBase {
     bytes2 public constant AGGCHAIN_TYPE = 0x0001;
 
     /// @notice Op L2OO Semantic version.
-    /// @custom:semver v3.0.0
-    string public constant AGGCHAIN_FEP_VERSION = "v3.0.0";
+    /// @custom:semver v3.1.0
+    string public constant AGGCHAIN_FEP_VERSION = "v3.1.0";
 
     /// @notice The genesis configuration name.
     bytes32 public constant GENESIS_CONFIG_NAME =
@@ -98,13 +98,16 @@ contract AggchainFEP is AggchainBase {
     uint256 public l2BlockTime;
 
     /// @notice The verification key of the aggregation SP1 program.
+    /// @dev Deprecated: only written by FEP v2, superseded by opSuccinctConfigs. Kept for storage layout.
     bytes32 public aggregationVkey;
 
     /// @notice The 32 byte commitment to the BabyBear representation of the verification key of the range SP1 program. Specifically,
     /// this verification key is the output of converting the [u32; 8] range BabyBear verification key to a [u8; 32] array.
+    /// @dev Deprecated: only written by FEP v2, superseded by opSuccinctConfigs. Kept for storage layout.
     bytes32 public rangeVkeyCommitment;
 
     /// @notice The hash of the chain's rollup configuration
+    /// @dev Deprecated: only written by FEP v2, superseded by opSuccinctConfigs. Kept for storage layout.
     bytes32 public rollupConfigHash;
 
     /// @notice Activate optimistic mode. When true, the chain can bypass the state transition verification
@@ -281,6 +284,15 @@ contract AggchainFEP is AggchainBase {
         _;
     }
 
+    /// @dev The aggchain manager holds every legacy admin permission (setTrustedSequencer, setTrustedSequencerURL, transferAdminRole).
+    ///      trustedSequencer is the optimistic mode signer and the op-succinct prover address, so it must not be controlled by the legacy admin.
+    modifier onlyAdmin() override {
+        if (aggchainManager != msg.sender) {
+            revert OnlyAggchainManager();
+        }
+        _;
+    }
+
     ////////////////////////////////////////////////////////////
     //                       Constructor                      //
     ////////////////////////////////////////////////////////////
@@ -383,64 +395,6 @@ contract AggchainFEP is AggchainBase {
     }
 
     /**
-     * @notice Initialize function for upgrade from PolygonPessimisticConsensus or PolygonRollupBaseEtrog
-     * @custom:security Only initializes FEP and AggchainBase params, not PolygonConsensusBase
-     * @param _initParams The initialization parameters for FEP
-     * @param _useDefaultVkeys Whether to use default verification keys from gateway
-     * @param _useDefaultSigners Whether to use default signers from gateway
-     * @param _initOwnedAggchainVKey The owned aggchain verification key
-     * @param _initAggchainVKeySelector The aggchain verification key selector
-     * @param _signersToAdd Array of signers to add to the multisig
-     * @param _newThreshold New threshold for multisig operations
-     */
-    function initializeFromLegacyConsensus(
-        InitParams memory _initParams,
-        bool _useDefaultVkeys,
-        bool _useDefaultSigners,
-        bytes32 _initOwnedAggchainVKey,
-        bytes4 _initAggchainVKeySelector,
-        SignerInfo[] memory _signersToAdd,
-        uint256 _newThreshold
-    ) external onlyAggchainManager getInitializedVersion reinitializer(3) {
-        if (_initializerVersion != 1) {
-            revert InvalidInitializer();
-        }
-
-        // Check the use default vkeys is consistent
-        _validateVKeysConsistency(
-            _useDefaultVkeys,
-            _initAggchainVKeySelector,
-            _initOwnedAggchainVKey,
-            AGGCHAIN_TYPE
-        );
-
-        // init FEP params
-        _initializeAggchain(_initParams);
-
-        // Set aggchainBase variables
-        _initializeAggchainBase(
-            _useDefaultVkeys,
-            _useDefaultSigners,
-            _initOwnedAggchainVKey,
-            _initAggchainVKeySelector
-        );
-
-        // Check the used default signers is consistent
-        if (_useDefaultSigners) {
-            if (_signersToAdd.length != 0 || threshold != 0) {
-                revert ConflictingDefaultSignersConfiguration();
-            }
-        } else {
-            // update signers and threshold
-            _updateSignersAndThreshold(
-                new RemoveSignerInfo[](0), // No signers to remove
-                _signersToAdd,
-                _newThreshold
-            );
-        }
-    }
-
-    /**
      * @notice Initialize function for upgrade from AggchainECDSAMultisig to AggchainFEP
      * @custom:security Only initializes FEP specific parameters, assumes base and consensus are already initialized
      * @dev Used when transitioning from ECDSA multisig to FEP verification
@@ -478,53 +432,6 @@ contract AggchainFEP is AggchainBase {
 
         // init FEP params
         _initializeAggchain(_initParams);
-    }
-
-    /**
-     * @notice Upgrade function from a previous FEP version
-     * @custom:security Migrates existing FEP configuration to new format with genesis config and multisig
-     * @dev Preserves existing configuration by moving it to genesis config slot
-     */
-    function upgradeFromPreviousFEP()
-        external
-        onlyRollupManager
-        getInitializedVersion
-        reinitializer(3)
-    {
-        // Check that the aggchainMultisigHash is not set
-        if (_initializerVersion != 2 || aggchainMultisigHash != bytes32(0)) {
-            revert InvalidInitializer();
-        }
-
-        // Add existing configuration to genesis for backward compatibility
-        opSuccinctConfigs[GENESIS_CONFIG_NAME] = OpSuccinctConfig({
-            aggregationVkey: aggregationVkey,
-            rangeVkeyCommitment: rangeVkeyCommitment,
-            rollupConfigHash: rollupConfigHash
-        });
-        selectedOpSuccinctConfigName = GENESIS_CONFIG_NAME;
-
-        // emit OP succinct config events
-        emit OpSuccinctConfigUpdated(
-            GENESIS_CONFIG_NAME,
-            aggregationVkey,
-            rangeVkeyCommitment,
-            rollupConfigHash
-        );
-
-        emit OpSuccinctConfigSelected(GENESIS_CONFIG_NAME);
-
-        // set signer to trustedSequencer and threshold to 1
-        // handle trustedSequencerURL as empty string
-        if (bytes(trustedSequencerURL).length == 0) {
-            _addSignerInternal(trustedSequencer, "NO_URL"); // cannot be empty string
-        } else {
-            _addSignerInternal(trustedSequencer, trustedSequencerURL);
-        }
-        threshold = 1;
-
-        // update aggchainMultisigHash
-        _updateAggchainMultisigHash();
     }
 
     /**
