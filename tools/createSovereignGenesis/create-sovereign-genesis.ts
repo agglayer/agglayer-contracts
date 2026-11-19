@@ -16,8 +16,9 @@ import { initializeTimelockStorage } from '../../src/genesis/genesis-helpers';
 import { checkParams, getGitInfo } from '../../src/utils';
 import { logger } from '../../src/logger';
 import { formatGenesis } from './helpers';
+import { addSAFEBytecode } from './helpers-safe';
 import { checkBridgeAddress } from '../utils';
-import { GENESIS_CONTRACT_NAMES } from '../../src/constants';
+import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG } from '../../src/constants';
 // read files
 import genesisBase from './genesis-base.json';
 import createGenesisSovereignParams from './create-genesis-sovereign-params.json';
@@ -78,10 +79,10 @@ async function main() {
 
     if (createGenesisSovereignParams.useAggOracleCommittee === true) {
         if (
-            createGenesisSovereignParams.aggOracleCommittee === undefined ||
-            createGenesisSovereignParams.aggOracleCommittee === ''
+            createGenesisSovereignParams.aggOracleValidators === undefined ||
+            createGenesisSovereignParams.aggOracleValidators === ''
         ) {
-            logger.error('useAggOracleCommittee is set to true but missing parameter aggOracleCommittee');
+            logger.error('useAggOracleCommittee is set to true but missing parameter aggOracleValidators');
             process.exit(1);
         }
         if (
@@ -93,37 +94,62 @@ async function main() {
             process.exit(1);
         }
 
-        // Check all aggOracleCommittee parameters
+        if (
+            createGenesisSovereignParams.aggOracleValidators.length === 0 ||
+            createGenesisSovereignParams.aggOracleValidators.length > 255
+        ) {
+            logger.error('aggOracleValidators must have between 1 and 255 validators');
+            process.exit(1);
+        }
+
+        // Check all aggOracleValidators parameters
         const nullifierAddress = {} as any;
 
-        createGenesisSovereignParams.aggOracleCommittee.forEach((aggOracleCommittee) => {
-            if (ethers.isAddress(aggOracleCommittee) === false) {
-                logger.error(`aggOracleCommittees ${aggOracleCommittee}: not a valid address`);
+        createGenesisSovereignParams.aggOracleValidators.forEach((aggOracleValidator) => {
+            if (ethers.isAddress(aggOracleValidator.addr) === false || aggOracleValidator.addr === ethers.ZeroAddress) {
+                logger.error(`aggOracleValidators ${aggOracleValidator.addr}: not a valid non-zero address`);
                 process.exit(1);
             } else {
                 // check if address is not duplicated
-                if (nullifierAddress[aggOracleCommittee] !== undefined) {
-                    logger.error(`aggOracleCommittees ${aggOracleCommittee}: duplicated address`);
+                if (nullifierAddress[aggOracleValidator.addr.toLowerCase()] !== undefined) {
+                    logger.error(`aggOracleValidators ${aggOracleValidator.addr}: duplicated address`);
                     process.exit(1);
                 } else {
-                    nullifierAddress[aggOracleCommittee] = true;
+                    nullifierAddress[aggOracleValidator.addr.toLowerCase()] = true;
                 }
+            }
+            if (typeof aggOracleValidator.url !== 'string') {
+                logger.error(`aggOracleValidators ${aggOracleValidator.addr}: url must be a string (it can be empty)`);
+                process.exit(1);
             }
         });
 
-        if (createGenesisSovereignParams.quorum === undefined || createGenesisSovereignParams.quorum < 1) {
-            logger.error('quorum must exist and be bigger than 0');
+        if (
+            !Number.isInteger(createGenesisSovereignParams.aggOracleThreshold) ||
+            createGenesisSovereignParams.aggOracleThreshold < 1
+        ) {
+            logger.error('aggOracleThreshold must exist and be bigger than 0');
             process.exit(1);
         }
 
-        if (createGenesisSovereignParams.quorum > createGenesisSovereignParams.aggOracleCommittee.length) {
+        if (createGenesisSovereignParams.aggOracleThreshold > createGenesisSovereignParams.aggOracleValidators.length) {
             logger.error(
-                `quorum must be smaller or equal than the number of aggOracleCommittee members (${createGenesisSovereignParams.aggOracleCommittee.length})`,
+                `aggOracleThreshold must be smaller or equal than the number of aggOracleValidators (${createGenesisSovereignParams.aggOracleValidators.length})`,
             );
             process.exit(1);
         }
-        if (!ethers.isAddress(createGenesisSovereignParams.aggOracleOwner)) {
+        if (
+            !ethers.isAddress(createGenesisSovereignParams.aggOracleOwner) ||
+            createGenesisSovereignParams.aggOracleOwner === ethers.ZeroAddress
+        ) {
             logger.error('aggOracleOwner must be set');
+            process.exit(1);
+        }
+        if (
+            !ethers.isAddress(createGenesisSovereignParams.aggOracleProposer) ||
+            createGenesisSovereignParams.aggOracleProposer === ethers.ZeroAddress
+        ) {
+            logger.error('aggOracleProposer must be set');
             process.exit(1);
         }
     } else {
@@ -133,19 +159,43 @@ async function main() {
         }
     }
 
-    if (createGenesisSovereignParams.setTimelockParameters === true) {
-        // check timelock parameters
-        if (
-            createGenesisSovereignParams.timelockParameters === undefined ||
-            createGenesisSovereignParams.timelockParameters === ''
-        ) {
-            logger.error('setTimelockParameters is set to true but missing parameter timelockParameters');
-            process.exit(1);
-        }
+    // timelock parameters must always be set, otherwise the genesis-base timelock roles would be kept
+    if (createGenesisSovereignParams.setTimelockParameters !== true) {
+        logger.error('setTimelockParameters must be set to true');
+        process.exit(1);
+    }
 
-        const paramsTimelockParameters = ['adminAddress', 'minDelay'];
+    // check timelock parameters
+    if (
+        createGenesisSovereignParams.timelockParameters === undefined ||
+        createGenesisSovereignParams.timelockParameters === ''
+    ) {
+        logger.error('setTimelockParameters is set to true but missing parameter timelockParameters');
+        process.exit(1);
+    }
 
-        checkParams(createGenesisSovereignParams.timelockParameters, paramsTimelockParameters);
+    const paramsTimelockParameters = ['adminAddress', 'minDelay'];
+
+    // check adminAddress is a valid address
+    checkParams(createGenesisSovereignParams.timelockParameters, paramsTimelockParameters, true);
+
+    // Polygon multisig must never be the timelock admin of a sovereign chain
+    if (createGenesisSovereignParams.timelockParameters.adminAddress.toLowerCase() === POLYGON_MULTISIG.toLowerCase()) {
+        logger.error(`timelockParameters.adminAddress must not be the Polygon multisig (${POLYGON_MULTISIG})`);
+        process.exit(1);
+    }
+
+    // nobody could ever propose an L2 upgrade: upgrades locked forever
+    const genesisBaseTimelock = genesisBase.genesis.find(
+        (obj: any) => obj.contractName === GENESIS_CONTRACT_NAMES.POLYGON_TIMELOCK,
+    );
+    const adminAddressLower = createGenesisSovereignParams.timelockParameters.adminAddress.toLowerCase();
+    if (
+        adminAddressLower === ethers.ZeroAddress ||
+        (genesisBaseTimelock !== undefined && adminAddressLower === genesisBaseTimelock.address.toLowerCase())
+    ) {
+        logger.error('timelockParameters.adminAddress must not be the zero address nor the timelock itself');
+        process.exit(1);
     }
 
     /// //////////////////////////////////////////
@@ -252,9 +302,10 @@ async function main() {
         emergencyBridgeUnpauser: createGenesisSovereignParams.emergencyBridgeUnpauser,
         proxiedTokensManager: createGenesisSovereignParams.proxiedTokensManager,
         useAggOracleCommittee: createGenesisSovereignParams.useAggOracleCommittee,
-        aggOracleCommittee: createGenesisSovereignParams.aggOracleCommittee,
-        quorum: createGenesisSovereignParams.quorum,
         aggOracleOwner: createGenesisSovereignParams.aggOracleOwner,
+        aggOracleProposer: createGenesisSovereignParams.aggOracleProposer,
+        aggOracleValidators: createGenesisSovereignParams.aggOracleValidators,
+        aggOracleThreshold: createGenesisSovereignParams.aggOracleThreshold,
     };
 
     logger.info('Update genesis-base to the SovereignContracts');
@@ -325,6 +376,10 @@ async function main() {
         timelockContractInfo.storage = storageTimelock;
     }
 
+    // add Safe deterministic deployment factories, Safe v1.3.0 & Safe v1.4.1-3 contracts
+    logger.info('Add Safe contracts');
+    finalGenesis = addSAFEBytecode(finalGenesis);
+
     // regenerate root with the zkEVM root
     const poseidon = await getPoseidon();
     const { F } = poseidon;
@@ -375,6 +430,7 @@ async function main() {
     const gitInfo = getGitInfo();
     outputJson.gitInfo = gitInfo;
     outputJson.network = hardhatArguments.network;
+    outputJson.l1ChainID = Number((await ethers.provider.getNetwork()).chainId);
     outputJson.rollupManagerAddress = createGenesisSovereignParams.rollupManagerAddress;
     outputJson.RollupManagerInfo = RollupManagerInfo;
     outputJson.gasTokenAddress = gasTokenAddress;
@@ -429,6 +485,25 @@ async function main() {
     logger.info('Output saved at:');
     logger.info(`   output genesis: ${pathOutputGenesisJson}`);
     logger.info(`   output info   : ${pathOutputJson}`);
+
+    // warn about the timelock admin, it controls all the L2 upgrades
+    const timelockAdminWarning = [
+        '',
+        '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+        '!!!                               WARNING                                    !!!',
+        '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+        `   timelockParameters.adminAddress: ${createGenesisSovereignParams.timelockParameters.adminAddress}`,
+        `   timelockParameters.minDelay    : ${createGenesisSovereignParams.timelockParameters.minDelay}`,
+        '',
+        '   This address gets ALL the L2 timelock roles (ADMIN, PROPOSER, EXECUTOR, CANCELLER).',
+        '   The L2 timelock owns the ProxyAdmin: it is the ONLY way to perform L2 upgrades',
+        '   (bridge, global exit root, ...).',
+        '   -> You MUST control this address on the L2.',
+        '   -> If it is a Safe: DOUBLE CHECK its initial configuration on the L2',
+        '      (owners, threshold, version, chain where it is deployed).',
+        '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+    ];
+    timelockAdminWarning.forEach((line) => logger.warn(line));
 }
 
 main().catch((e) => {

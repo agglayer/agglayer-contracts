@@ -11,20 +11,79 @@ describe('AggOracleCommittee tests', () => {
 
     let deployer: any;
     let owner: any;
-    let oracle1: any;
-    let oracle2: any;
-    let oracle3: any;
-    let oracle4: any;
-    let notOracle: any;
+    let proposer: any;
+    let notOwner: any;
     let bridge: any;
     let newGlobalExitRootUpdater: any;
 
-    const INITIAL_PROPOSED_GER = ethers.solidityPacked(['uint256'], [1]);
+    // validators are random wallets: they only sign off-chain, they never send transactions
+    let validator1: any;
+    let validator2: any;
+    let validator3: any;
+    let validator4: any;
+    let notValidator: any;
+
+    // secp256k1 curve order, used to build malleable (high-s) signatures
+    const SECP256K1_N = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+
+    /**
+     * Builds the validator info array expected by the contract
+     */
+    function toValidatorInfo(wallets: any[], url = '') {
+        return wallets.map((w) => ({ addr: w.address, url }));
+    }
+
+    /**
+     * Sorts wallets by address in ascending order, as required by the signature verification
+     */
+    function sortByAddress(wallets: any[]) {
+        return [...wallets].sort((a, b) => (BigInt(a.address) < BigInt(b.address) ? -1 : 1));
+    }
+
+    /**
+     * Message signed by the validators: keccak256(abi.encodePacked(globalExitRoot))
+     */
+    function buildGERMessage(globalExitRoot: string) {
+        return ethers.solidityPackedKeccak256(['bytes32'], [globalExitRoot]);
+    }
+
+    /**
+     * Signs the GER message with every wallet (no sorting) and returns the packed signatures (r, s, v)
+     */
+    function signGER(globalExitRoot: string, wallets: any[]) {
+        const messageHash = buildGERMessage(globalExitRoot);
+        return ethers.concat(wallets.map((w) => w.signingKey.sign(messageHash).serialized));
+    }
+
+    /**
+     * Signs the GER message with the wallets sorted by address
+     */
+    function signGERSorted(globalExitRoot: string, wallets: any[]) {
+        return signGER(globalExitRoot, sortByAddress(wallets));
+    }
+
+    async function initializeDefault(wallets: any[], threshold: number) {
+        await aggOracleCommitteeContract.initialize(
+            owner.address,
+            proposer.address,
+            toValidatorInfo(wallets, 'https://validator.url'),
+            threshold,
+        );
+    }
+
+    async function setCommitteeAsGERUpdater() {
+        await globalExitRootManagerContract.transferGlobalExitRootUpdater(aggOracleCommitteeContract.target);
+        await aggOracleCommitteeContract.connect(owner).acceptGlobalExitRootUpdater();
+    }
 
     beforeEach('Deploy contracts', async () => {
         // load signers
-        [deployer, owner, oracle1, oracle2, oracle3, oracle4, notOracle, bridge, newGlobalExitRootUpdater] =
-            await ethers.getSigners();
+        [deployer, owner, proposer, notOwner, bridge, newGlobalExitRootUpdater] = await ethers.getSigners();
+
+        // create validators
+        [validator1, validator2, validator3, validator4, notValidator] = [0, 1, 2, 3, 4].map(() =>
+            ethers.Wallet.createRandom(),
+        );
 
         // deploy global exit root manager
         const GlobalExitRootManagerL2SovereignChainFactory = await ethers.getContractFactory('AgglayerGERL2');
@@ -48,369 +107,843 @@ describe('AggOracleCommittee tests', () => {
     });
 
     describe('Deployment and Initialization', () => {
-        it('Should initialize with correct parameters', async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address];
-
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
-
-            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
-            expect(await aggOracleCommitteeContract.quorum()).to.equal(quorum);
-            expect(await aggOracleCommitteeContract.getAggOracleMembersCount()).to.equal(2);
-            expect(await aggOracleCommitteeContract.addressToLastProposedGER(oracle1.address)).to.equal(
-                INITIAL_PROPOSED_GER,
-            );
-            expect(await aggOracleCommitteeContract.addressToLastProposedGER(oracle2.address)).to.equal(
-                INITIAL_PROPOSED_GER,
+        it('Should fail to deploy with zero AgglayerGERL2 address', async () => {
+            const AggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee');
+            await expect(AggOracleCommitteeFactory.deploy(ethers.ZeroAddress)).to.be.revertedWithCustomError(
+                AggOracleCommitteeFactory,
+                'AgglayerGERL2CannotBeZero',
             );
         });
 
-        it('Should fail to initialize with zero quorum', async () => {
-            const quorum = 0;
-            const oracleMembers = [oracle1.address];
+        it('Should disable initializers on the implementation', async () => {
+            const AggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee');
+            const implementation = await AggOracleCommitteeFactory.deploy(globalExitRootManagerContract.target);
 
-            await expect(aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum)).to.be.reverted;
+            await expect(
+                implementation.initialize(owner.address, proposer.address, toValidatorInfo([validator1]), 1),
+            ).to.be.revertedWithCustomError(implementation, 'InvalidInitialization');
+        });
+
+        it('Should initialize with correct parameters', async () => {
+            const threshold = 2;
+            const validators = [validator1, validator2, validator3];
+
+            await expect(
+                aggOracleCommitteeContract.initialize(
+                    owner.address,
+                    proposer.address,
+                    toValidatorInfo(validators, 'https://validator.url'),
+                    threshold,
+                ),
+            )
+                .to.emit(aggOracleCommitteeContract, 'OwnershipTransferred')
+                .withArgs(ethers.ZeroAddress, owner.address)
+                .to.emit(aggOracleCommitteeContract, 'UpdateAggOracleProposer')
+                .withArgs(proposer.address)
+                .to.emit(aggOracleCommitteeContract, 'ValidatorsAndThresholdUpdated')
+                .withArgs(
+                    validators.map((v) => v.address),
+                    threshold,
+                );
+
+            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
+            expect(await aggOracleCommitteeContract.proposer()).to.equal(proposer.address);
+            expect(await aggOracleCommitteeContract.threshold()).to.equal(threshold);
+            expect(await aggOracleCommitteeContract.getValidatorsCount()).to.equal(3);
+            for (let i = 0; i < validators.length; i++) {
+                expect(await aggOracleCommitteeContract.validators(i)).to.equal(validators[i].address);
+                expect(await aggOracleCommitteeContract.isValidator(validators[i].address)).to.equal(true);
+            }
+        });
+
+        it('Should initialize with a single validator and threshold one', async () => {
+            await initializeDefault([validator1], 1);
+
+            expect(await aggOracleCommitteeContract.threshold()).to.equal(1);
+            expect(await aggOracleCommitteeContract.getValidatorsCount()).to.equal(1);
+        });
+
+        it('Should allow validators with an empty url', async () => {
+            await aggOracleCommitteeContract.initialize(
+                owner.address,
+                proposer.address,
+                toValidatorInfo([validator1]),
+                1,
+            );
+
+            const validatorInfo = await aggOracleCommitteeContract.validatorInfo(validator1.address);
+            expect(validatorInfo.isValidator).to.equal(true);
+            expect(validatorInfo.url).to.equal('');
+        });
+
+        it('Should fail to initialize with zero owner', async () => {
+            await expect(
+                aggOracleCommitteeContract.initialize(
+                    ethers.ZeroAddress,
+                    proposer.address,
+                    toValidatorInfo([validator1]),
+                    1,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnerCannotBeZero');
+        });
+
+        it('Should fail to initialize with zero proposer', async () => {
+            await expect(
+                aggOracleCommitteeContract.initialize(
+                    owner.address,
+                    ethers.ZeroAddress,
+                    toValidatorInfo([validator1]),
+                    1,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ProposerCannotBeZero');
+        });
+
+        it('Should fail to initialize with zero threshold', async () => {
+            await expect(
+                aggOracleCommitteeContract.initialize(
+                    owner.address,
+                    proposer.address,
+                    toValidatorInfo([validator1, validator2]),
+                    0,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeZero');
+        });
+
+        it('Should fail to initialize without validators', async () => {
+            await expect(
+                aggOracleCommitteeContract.initialize(owner.address, proposer.address, [], 0),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeZero');
+
+            await expect(
+                aggOracleCommitteeContract.initialize(owner.address, proposer.address, [], 1),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeGreaterThanValidators');
+        });
+
+        it('Should fail to initialize with threshold greater than validators', async () => {
+            await expect(
+                aggOracleCommitteeContract.initialize(
+                    owner.address,
+                    proposer.address,
+                    toValidatorInfo([validator1, validator2]),
+                    3,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeGreaterThanValidators');
+        });
+
+        it('Should fail to initialize with duplicated validators', async () => {
+            await expect(
+                aggOracleCommitteeContract.initialize(
+                    owner.address,
+                    proposer.address,
+                    toValidatorInfo([validator1, validator1]),
+                    1,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorAlreadyExists');
         });
 
         it('Should fail to reinitialize', async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address];
-
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
+            await initializeDefault([validator1, validator2], 2);
 
             await expect(
-                aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum),
+                aggOracleCommitteeContract.initialize(
+                    owner.address,
+                    proposer.address,
+                    toValidatorInfo([validator1, validator2]),
+                    2,
+                ),
             ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidInitialization');
         });
 
-        it('Should properly set globalExitRootManagerL2Sovereign', async () => {
-            expect(await aggOracleCommitteeContract.globalExitRootManagerL2Sovereign()).to.equal(
-                globalExitRootManagerContract.target,
-            );
+        it('Should properly set agglayerGERL2', async () => {
+            expect(await aggOracleCommitteeContract.agglayerGERL2()).to.equal(globalExitRootManagerContract.target);
+        });
+
+        it('Should return the correct version and constants', async () => {
+            expect(await aggOracleCommitteeContract.version()).to.equal('v2.0.0');
+            expect(await aggOracleCommitteeContract.VERSION_AGG_ORACLE_COMMITTEE()).to.equal('v2.0.0');
+            expect(await aggOracleCommitteeContract.MAX_VALIDATORS()).to.equal(255);
         });
     });
 
-    describe('Oracle Member Management', () => {
+    describe('Validators and Threshold Management', () => {
         beforeEach(async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address];
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
+            await initializeDefault([validator1, validator2], 2);
         });
 
-        it('Should add a new oracle member', async () => {
-            await expect(aggOracleCommitteeContract.connect(owner).addOracleMember(oracle3.address))
-                .to.emit(aggOracleCommitteeContract, 'AddAggOracleMember')
-                .withArgs(oracle3.address);
-
-            expect(await aggOracleCommitteeContract.getAggOracleMembersCount()).to.equal(3);
-            expect(await aggOracleCommitteeContract.addressToLastProposedGER(oracle3.address)).to.equal(
-                INITIAL_PROPOSED_GER,
-            );
-        });
-
-        it('Should fail to add zero address as oracle member', async () => {
-            await expect(aggOracleCommitteeContract.connect(owner).addOracleMember(ethers.ZeroAddress)).to.be.reverted;
-        });
-
-        it('Should fail to add existing oracle member', async () => {
-            await expect(aggOracleCommitteeContract.connect(owner).addOracleMember(oracle1.address)).to.be.reverted;
-        });
-
-        it('Should fail to add oracle member if not owner', async () => {
+        it('Should add a new validator', async () => {
             await expect(
-                aggOracleCommitteeContract.connect(oracle1).addOracleMember(oracle3.address),
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([], toValidatorInfo([validator3], 'https://v3.url'), 2),
+            )
+                .to.emit(aggOracleCommitteeContract, 'ValidatorsAndThresholdUpdated')
+                .withArgs([validator1.address, validator2.address, validator3.address], 2);
+
+            expect(await aggOracleCommitteeContract.getValidatorsCount()).to.equal(3);
+            const validatorInfo = await aggOracleCommitteeContract.validatorInfo(validator3.address);
+            expect(validatorInfo.isValidator).to.equal(true);
+            expect(validatorInfo.url).to.equal('https://v3.url');
+        });
+
+        it('Should update only the threshold', async () => {
+            await expect(aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold([], [], 1))
+                .to.emit(aggOracleCommitteeContract, 'ValidatorsAndThresholdUpdated')
+                .withArgs([validator1.address, validator2.address], 1);
+
+            expect(await aggOracleCommitteeContract.threshold()).to.equal(1);
+        });
+
+        it('Should fail to add zero address as validator', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([], [{ addr: ethers.ZeroAddress, url: '' }], 2),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorCannotBeZero');
+        });
+
+        it('Should fail to add the contract itself as validator', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([], [{ addr: aggOracleCommitteeContract.target, url: '' }], 2),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorCannotBeThisContract');
+        });
+
+        it('Should fail to add existing validator', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([], toValidatorInfo([validator1]), 2),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorAlreadyExists');
+        });
+
+        it('Should fail to update validators if not owner', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(notOwner)
+                    .updateValidatorsAndThreshold([], toValidatorInfo([validator3]), 2),
             ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
         });
 
-        it('Should remove an oracle member', async () => {
-            const oracleIndex = await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle1.address);
+        it('Should remove a validator', async () => {
+            const index = await aggOracleCommitteeContract.getValidatorIndex(validator1.address);
 
-            await expect(aggOracleCommitteeContract.connect(owner).removeOracleMember(oracle1.address, oracleIndex))
-                .to.emit(aggOracleCommitteeContract, 'RemoveAggOracleMember')
-                .withArgs(oracle1.address);
-
-            expect(await aggOracleCommitteeContract.getAggOracleMembersCount()).to.equal(1);
-            expect(await aggOracleCommitteeContract.addressToLastProposedGER(oracle1.address)).to.equal(
-                ethers.ZeroHash,
-            );
-        });
-
-        it('Should fail to remove non-existent oracle member', async () => {
-            await expect(aggOracleCommitteeContract.connect(owner).removeOracleMember(notOracle.address, 0)).to.be
-                .reverted;
-        });
-
-        it('Should fail to remove oracle member with wrong index', async () => {
-            await expect(aggOracleCommitteeContract.connect(owner).removeOracleMember(oracle1.address, 1)).to.be
-                .reverted;
-        });
-
-        it('Should fail to remove oracle member if not owner', async () => {
             await expect(
-                aggOracleCommitteeContract.connect(oracle1).removeOracleMember(oracle2.address, 1),
-            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([{ addr: validator1.address, index }], [], 1),
+            )
+                .to.emit(aggOracleCommitteeContract, 'ValidatorsAndThresholdUpdated')
+                .withArgs([validator2.address], 1);
+
+            expect(await aggOracleCommitteeContract.getValidatorsCount()).to.equal(1);
+            expect(await aggOracleCommitteeContract.isValidator(validator1.address)).to.equal(false);
+            const validatorInfo = await aggOracleCommitteeContract.validatorInfo(validator1.address);
+            expect(validatorInfo.url).to.equal('');
         });
 
-        it('Should remove oracle member and subtract their vote', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-
-            const reportBefore = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            expect(reportBefore.votes).to.equal(1);
-
-            const oracleIndex = await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle1.address);
-            await aggOracleCommitteeContract.connect(owner).removeOracleMember(oracle1.address, oracleIndex);
-
-            const reportAfter = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            expect(reportAfter.votes).to.equal(0);
+        it('Should fail to remove a validator with an out of bounds index', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([{ addr: validator1.address, index: 2 }], [], 1),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorIndexOutOfBounds');
         });
 
-        it('Should handle array reordering when removing oracle member', async () => {
-            // Add a third oracle
-            await aggOracleCommitteeContract.connect(owner).addOracleMember(oracle3.address);
+        it('Should fail to remove a validator with a wrong index', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([{ addr: validator1.address, index: 1 }], [], 1),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorIndexMismatch');
+        });
 
-            // Remove the middle oracle (oracle2)
-            const oracle2Index = await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle2.address);
-            await aggOracleCommitteeContract.connect(owner).removeOracleMember(oracle2.address, oracle2Index);
+        it('Should fail to remove a non-existent validator', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([{ addr: notValidator.address, index: 0 }], [], 1),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorIndexMismatch');
+        });
 
-            // Check that oracle3 took oracle2's place
-            const allMembers = await aggOracleCommitteeContract.getAllAggOracleMembers();
-            expect(allMembers.length).to.equal(2);
-            expect(allMembers[oracle2Index]).to.equal(oracle3.address);
+        it('Should fail to remove validators if indices are not in descending order', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold(
+                    [
+                        { addr: validator1.address, index: 0 },
+                        { addr: validator2.address, index: 1 },
+                    ],
+                    toValidatorInfo([validator3]),
+                    1,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'IndicesNotInDescendingOrder');
+        });
+
+        it('Should fail to remove validators with repeated indices', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold(
+                    [
+                        { addr: validator2.address, index: 1 },
+                        { addr: validator2.address, index: 1 },
+                    ],
+                    toValidatorInfo([validator3]),
+                    1,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'IndicesNotInDescendingOrder');
+        });
+
+        it('Should remove multiple validators in descending order and add new ones', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold(
+                    [
+                        { addr: validator2.address, index: 1 },
+                        { addr: validator1.address, index: 0 },
+                    ],
+                    toValidatorInfo([validator3, validator4]),
+                    2,
+                ),
+            )
+                .to.emit(aggOracleCommitteeContract, 'ValidatorsAndThresholdUpdated')
+                .withArgs([validator3.address, validator4.address], 2);
+
+            expect(await aggOracleCommitteeContract.isValidator(validator1.address)).to.equal(false);
+            expect(await aggOracleCommitteeContract.isValidator(validator2.address)).to.equal(false);
+            expect(await aggOracleCommitteeContract.isValidator(validator3.address)).to.equal(true);
+            expect(await aggOracleCommitteeContract.isValidator(validator4.address)).to.equal(true);
+        });
+
+        it('Should allow removing and re-adding the same validator in one call', async () => {
+            await aggOracleCommitteeContract
+                .connect(owner)
+                .updateValidatorsAndThreshold(
+                    [{ addr: validator1.address, index: 0 }],
+                    toValidatorInfo([validator1], 'https://new.url'),
+                    2,
+                );
+
+            expect(await aggOracleCommitteeContract.getValidatorIndex(validator1.address)).to.equal(1);
+            const validatorInfo = await aggOracleCommitteeContract.validatorInfo(validator1.address);
+            expect(validatorInfo.url).to.equal('https://new.url');
+        });
+
+        it('Should handle array reordering when removing a validator (swap and pop)', async () => {
+            await aggOracleCommitteeContract
+                .connect(owner)
+                .updateValidatorsAndThreshold([], toValidatorInfo([validator3, validator4]), 2);
+
+            // validators: [v1, v2, v3, v4] -> remove v1 -> [v4, v2, v3]
+            await aggOracleCommitteeContract
+                .connect(owner)
+                .updateValidatorsAndThreshold([{ addr: validator1.address, index: 0 }], [], 2);
+
+            expect(await aggOracleCommitteeContract.validators(0)).to.equal(validator4.address);
+            expect(await aggOracleCommitteeContract.validators(1)).to.equal(validator2.address);
+            expect(await aggOracleCommitteeContract.validators(2)).to.equal(validator3.address);
+            expect(await aggOracleCommitteeContract.getValidatorIndex(validator4.address)).to.equal(0);
+        });
+
+        it('Should fail to remove all validators', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold(
+                    [
+                        { addr: validator2.address, index: 1 },
+                        { addr: validator1.address, index: 0 },
+                    ],
+                    [],
+                    0,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeZero');
+
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold(
+                    [
+                        { addr: validator2.address, index: 1 },
+                        { addr: validator1.address, index: 0 },
+                    ],
+                    [],
+                    1,
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeGreaterThanValidators');
+        });
+
+        it('Should fail to update threshold to zero', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold([], [], 0),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeZero');
+        });
+
+        it('Should fail to update threshold above the number of validators', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold([], [], 3),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeGreaterThanValidators');
+        });
+
+        it('Should fail to remove a validator if the threshold is not lowered', async () => {
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([{ addr: validator1.address, index: 0 }], [], 2),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ThresholdCannotBeGreaterThanValidators');
+        });
+
+        it('Should allow up to MAX_VALIDATORS validators and fail above it', async () => {
+            const maxValidators = Number(await aggOracleCommitteeContract.MAX_VALIDATORS());
+            // 2 validators already exist
+            const newValidators = Array.from({ length: maxValidators - 2 }, () => ({
+                addr: ethers.Wallet.createRandom().address,
+                url: '',
+            }));
+
+            await aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold([], newValidators, 2);
+            expect(await aggOracleCommitteeContract.getValidatorsCount()).to.equal(maxValidators);
+
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(owner)
+                    .updateValidatorsAndThreshold([], toValidatorInfo([validator3]), 2),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'TooManyValidators');
         });
     });
 
-    describe('Quorum Management', () => {
+    describe('Proposer Management', () => {
         beforeEach(async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address];
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
+            await initializeDefault([validator1, validator2], 2);
         });
 
-        it('Should update quorum', async () => {
-            const newQuorum = 3;
-            await expect(aggOracleCommitteeContract.connect(owner).updateQuorum(newQuorum))
-                .to.emit(aggOracleCommitteeContract, 'UpdateQuorum')
-                .withArgs(newQuorum);
+        it('Should update the proposer', async () => {
+            await expect(aggOracleCommitteeContract.connect(owner).updateAggOracleProposer(notOwner.address))
+                .to.emit(aggOracleCommitteeContract, 'UpdateAggOracleProposer')
+                .withArgs(notOwner.address);
 
-            expect(await aggOracleCommitteeContract.quorum()).to.equal(newQuorum);
+            expect(await aggOracleCommitteeContract.proposer()).to.equal(notOwner.address);
         });
 
-        it('Should fail to update quorum to zero', async () => {
-            await expect(aggOracleCommitteeContract.connect(owner).updateQuorum(0)).to.be.reverted;
+        it('Should fail to update the proposer to zero address', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(owner).updateAggOracleProposer(ethers.ZeroAddress),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ProposerCannotBeZero');
         });
 
-        it('Should fail to update quorum if not owner', async () => {
-            await expect(aggOracleCommitteeContract.connect(oracle1).updateQuorum(3)).to.be.revertedWithCustomError(
+        it('Should fail to update the proposer if not owner', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).updateAggOracleProposer(notOwner.address),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
+        });
+
+        it('Should not allow the old proposer to inject after being replaced', async () => {
+            await setCommitteeAsGERUpdater();
+            await aggOracleCommitteeContract.connect(owner).updateAggOracleProposer(notOwner.address);
+
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OnlyAggOracleProposerCanCall');
+
+            await expect(aggOracleCommitteeContract.connect(notOwner).injectGER(globalExitRoot, signatures))
+                .to.emit(aggOracleCommitteeContract, 'GERInjected')
+                .withArgs(globalExitRoot);
+        });
+    });
+
+    describe('Ownership', () => {
+        beforeEach(async () => {
+            await initializeDefault([validator1, validator2], 2);
+        });
+
+        it('Should fail to renounce ownership', async () => {
+            await expect(aggOracleCommitteeContract.connect(owner).renounceOwnership()).to.be.revertedWithCustomError(
+                aggOracleCommitteeContract,
+                'RenounceOwnershipDisabled',
+            );
+            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
+        });
+
+        it('Should transfer ownership in two steps', async () => {
+            // step 1: the owner proposes the new owner, ownership does not change yet
+            await expect(aggOracleCommitteeContract.connect(owner).transferOwnership(notOwner.address))
+                .to.emit(aggOracleCommitteeContract, 'OwnershipTransferStarted')
+                .withArgs(owner.address, notOwner.address);
+
+            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(notOwner.address);
+
+            // step 2: the pending owner accepts
+            await expect(aggOracleCommitteeContract.connect(notOwner).acceptOwnership())
+                .to.emit(aggOracleCommitteeContract, 'OwnershipTransferred')
+                .withArgs(owner.address, notOwner.address);
+
+            expect(await aggOracleCommitteeContract.owner()).to.equal(notOwner.address);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(ethers.ZeroAddress);
+        });
+
+        it('Should fail to accept ownership if not the pending owner', async () => {
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(notOwner.address);
+
+            await expect(aggOracleCommitteeContract.connect(proposer).acceptOwnership())
+                .to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount')
+                .withArgs(proposer.address);
+
+            expect(await aggOracleCommitteeContract.owner()).to.equal(owner.address);
+        });
+
+        it('Should allow the owner to overwrite or cancel a pending ownership transfer', async () => {
+            // overwrite the pending owner
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(notOwner.address);
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(proposer.address);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(proposer.address);
+
+            await expect(aggOracleCommitteeContract.connect(notOwner).acceptOwnership()).to.be.revertedWithCustomError(
+                aggOracleCommitteeContract,
+                'OwnableUnauthorizedAccount',
+            );
+
+            // cancel the pending transfer
+            await aggOracleCommitteeContract.connect(owner).transferOwnership(ethers.ZeroAddress);
+            expect(await aggOracleCommitteeContract.pendingOwner()).to.equal(ethers.ZeroAddress);
+
+            await expect(aggOracleCommitteeContract.connect(proposer).acceptOwnership()).to.be.revertedWithCustomError(
                 aggOracleCommitteeContract,
                 'OwnableUnauthorizedAccount',
             );
         });
+
+        it('Should fail to start an ownership transfer if not owner', async () => {
+            await expect(
+                aggOracleCommitteeContract.connect(notOwner).transferOwnership(notOwner.address),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
+        });
     });
 
-    describe('Global Exit Root Proposals', () => {
+    describe('Global Exit Root Injection', () => {
         beforeEach(async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address, oracle3.address];
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
-
-            // Transfer globalExitRootUpdater role to aggOracleCommittee
-            await globalExitRootManagerContract.transferGlobalExitRootUpdater(aggOracleCommitteeContract.target);
-            await aggOracleCommitteeContract.connect(owner).acceptGlobalExitRootUpdater();
+            await initializeDefault([validator1, validator2, validator3], 2);
+            await setCommitteeAsGERUpdater();
         });
 
-        it('Should propose a global exit root', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
+        it('Should inject a global exit root', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
 
-            await expect(aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER))
-                .to.emit(aggOracleCommitteeContract, 'ProposedGlobalExitRoot')
-                .withArgs(proposedGER, oracle1.address);
-
-            const report = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            expect(report.votes).to.equal(1);
-            expect(report.timestamp).to.be.gt(0);
-
-            expect(await aggOracleCommitteeContract.addressToLastProposedGER(oracle1.address)).to.equal(proposedGER);
-        });
-
-        it('Should fail to propose if not oracle member', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-            await expect(aggOracleCommitteeContract.connect(notOracle).proposeGlobalExitRoot(proposedGER)).to.be
-                .reverted;
-        });
-
-        it('Should fail to propose INITIAL_PROPOSED_GER', async () => {
-            await expect(aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(INITIAL_PROPOSED_GER)).to.be
-                .reverted;
-        });
-
-        it('Should fail to propose zero hash', async () => {
-            await expect(aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(ethers.ZeroHash)).to.be
-                .reverted;
-        });
-
-        it('Should consolidate when quorum is reached', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-
-            // First vote
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-
-            // Second vote reaches quorum
-            await expect(aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER))
-                .to.emit(aggOracleCommitteeContract, 'ConsolidatedGlobalExitRoot')
-                .withArgs(proposedGER)
-                .to.emit(globalExitRootManagerContract, 'UpdateHashChainValue');
-            // Note: We don't check the second parameter (insertedGERHashChain) as it depends on the previous state
-
-            // Check that the report was deleted after consolidation
-            const report = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            expect(report.votes).to.equal(0);
-            expect(report.timestamp).to.equal(0);
-        });
-
-        it('Should handle multiple proposals without reaching quorum', async () => {
-            const proposedGER1 = ethers.solidityPacked(['uint256'], [42]);
-            const proposedGER2 = ethers.solidityPacked(['uint256'], [43]);
-
-            // Oracle1 proposes GER1
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER1);
-
-            // Oracle3 proposes GER2
-            await aggOracleCommitteeContract.connect(oracle3).proposeGlobalExitRoot(proposedGER2);
-
-            const report1 = await aggOracleCommitteeContract.proposedGERToReport(proposedGER1);
-            const report2 = await aggOracleCommitteeContract.proposedGERToReport(proposedGER2);
-
-            expect(report1.votes).to.equal(1);
-            expect(report2.votes).to.equal(1);
-        });
-
-        it('Should handle vote switching', async () => {
-            const proposedGER1 = ethers.solidityPacked(['uint256'], [42]);
-            const proposedGER2 = ethers.solidityPacked(['uint256'], [43]);
-
-            // Oracle1 proposes GER1
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER1);
-
-            // Oracle1 switches to GER2
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER2);
-
-            const report1 = await aggOracleCommitteeContract.proposedGERToReport(proposedGER1);
-            const report2 = await aggOracleCommitteeContract.proposedGERToReport(proposedGER2);
-
-            expect(report1.votes).to.equal(0); // Vote was subtracted
-            expect(report2.votes).to.equal(1); // New vote was added
-        });
-
-        it('Should not subtract vote from already consolidated report', async () => {
-            const proposedGER1 = ethers.solidityPacked(['uint256'], [42]);
-            const proposedGER2 = ethers.solidityPacked(['uint256'], [43]);
-
-            // Two oracles vote for GER1, reaching quorum and consolidating
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER1);
-            await aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER1);
-
-            // Oracle1 switches to GER2 (should not affect the already consolidated GER1)
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER2);
-
-            const report1 = await aggOracleCommitteeContract.proposedGERToReport(proposedGER1);
-            expect(report1.votes).to.equal(0); // Still 0 after consolidation
-        });
-
-        it('Should add vote to existing report', async () => {
-            // Set quorum to 3 so it's not reached with just 2 votes
-            await aggOracleCommitteeContract.connect(owner).updateQuorum(3);
-
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-
-            // First vote
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-
-            const reportBefore = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            const { timestamp } = reportBefore;
-
-            // Add time delay
-            await ethers.provider.send('evm_increaseTime', [100]);
-            await ethers.provider.send('evm_mine', []);
-
-            // Second vote to existing report
-            await aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER);
-
-            const reportAfter = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            expect(reportAfter.timestamp).to.equal(timestamp); // Timestamp should not change
-            expect(reportAfter.votes).to.equal(2); // Votes should increase
-        });
-
-        it('Should fail when oracle tries to vote for the same GER twice', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-
-            // Oracle1 proposes GER
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-
-            // Oracle1 tries to vote for the same GER again
-            await expect(
-                aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER),
-            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'AlreadyVotedForThisGER');
-        });
-
-        it('Should allow consolidateGlobalExitRoot when quorum is reached', async () => {
-            // Set quorum to 3
-            await aggOracleCommitteeContract.connect(owner).updateQuorum(3);
-
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-
-            // First two votes
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-            await aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER);
-
-            // Lower quorum to 2
-            await aggOracleCommitteeContract.connect(owner).updateQuorum(2);
-
-            // Now consolidate should work
-            await expect(aggOracleCommitteeContract.consolidateGlobalExitRoot(proposedGER))
-                .to.emit(aggOracleCommitteeContract, 'ConsolidatedGlobalExitRoot')
-                .withArgs(proposedGER)
+            await expect(aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures))
+                .to.emit(aggOracleCommitteeContract, 'GERInjected')
+                .withArgs(globalExitRoot)
                 .to.emit(globalExitRootManagerContract, 'UpdateHashChainValue');
 
-            // Check that the report was deleted after consolidation
-            const report = await aggOracleCommitteeContract.proposedGERToReport(proposedGER);
-            expect(report.votes).to.equal(0);
-            expect(report.timestamp).to.equal(0);
+            expect(await globalExitRootManagerContract.globalExitRootMap(globalExitRoot)).to.not.equal(0);
         });
 
-        it('Should fail consolidateGlobalExitRoot when quorum is not reached', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
+        it('Should inject several global exit roots with different subsets of validators', async () => {
+            const subsets = [
+                [validator1, validator2],
+                [validator2, validator3],
+                [validator1, validator3],
+            ];
 
-            // Only one vote when quorum is 2
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-
-            // Try to consolidate - should fail
-            await expect(
-                aggOracleCommitteeContract.consolidateGlobalExitRoot(proposedGER),
-            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'QuorumNotReached');
+            for (let i = 0; i < subsets.length; i++) {
+                const subset = subsets[i];
+                const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+                await expect(
+                    aggOracleCommitteeContract
+                        .connect(proposer)
+                        .injectGER(globalExitRoot, signGERSorted(globalExitRoot, subset)),
+                )
+                    .to.emit(aggOracleCommitteeContract, 'GERInjected')
+                    .withArgs(globalExitRoot);
+            }
         });
 
-        it('Should fail consolidateGlobalExitRoot for non-existent GER', async () => {
-            const nonExistentGER = ethers.solidityPacked(['uint256'], [999]);
+        it('Should fail to inject if not proposer', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
 
-            // Try to consolidate a GER that was never proposed
             await expect(
-                aggOracleCommitteeContract.consolidateGlobalExitRoot(nonExistentGER),
-            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'QuorumNotReached');
+                aggOracleCommitteeContract.connect(owner).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OnlyAggOracleProposerCanCall');
+        });
+
+        it('Should fail to inject zero global exit root', async () => {
+            const signatures = signGERSorted(ethers.ZeroHash, [validator1, validator2]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(ethers.ZeroHash, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERCannotBeZero');
+        });
+
+        it('Should fail to inject with fewer signatures than the threshold', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidSignaturesLength');
+        });
+
+        it('Should fail to inject with more signatures than the threshold', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2, validator3]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidSignaturesLength');
+        });
+
+        it('Should fail to inject with trailing bytes in the signatures', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = ethers.concat([signGERSorted(globalExitRoot, [validator1, validator2]), '0x00']);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidSignaturesLength');
+        });
+
+        it('Should fail to inject with empty signatures', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, '0x'),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidSignaturesLength');
+        });
+
+        it('Should fail to inject with a signature from a non-validator', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, notValidator]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorDoesNotExist');
+        });
+
+        it('Should fail to inject with signatures not ordered by address', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const sorted = sortByAddress([validator1, validator2]);
+            const signatures = signGER(globalExitRoot, [sorted[1], sorted[0]]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorsNotOrdered');
+        });
+
+        it('Should fail to inject with a duplicated signature', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGER(globalExitRoot, [validator1, validator1]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorsNotOrdered');
+        });
+
+        it('Should fail to inject with signatures over a different GER', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const otherGlobalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(otherGlobalExitRoot, [validator1, validator2]);
+
+            // recovered signers are random addresses, so they are not validators
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorDoesNotExist');
+        });
+
+        it('Should fail to inject with an invalid signature', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const validSignature = signGER(globalExitRoot, [sortByAddress([validator1, validator2])[0]]);
+            // r = 0 makes ecrecover return the zero address
+            const invalidSignature = ethers.concat([ethers.ZeroHash, ethers.ZeroHash, '0x1b']);
+
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(proposer)
+                    .injectGER(globalExitRoot, ethers.concat([validSignature, invalidSignature])),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ECDSAInvalidSignature');
+        });
+
+        it('Should fail to inject with a malleable (high-s) signature', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const sorted = sortByAddress([validator1, validator2]);
+            const sig = sorted[1].signingKey.sign(buildGERMessage(globalExitRoot));
+
+            // build the equivalent signature (r, n - s, flipped v)
+            const highS = ethers.toBeHex(SECP256K1_N - BigInt(sig.s), 32);
+            const flippedV = sig.v === 27 ? '0x1c' : '0x1b';
+            const malleableSignature = ethers.concat([sig.r, highS, flippedV]);
+
+            const signatures = ethers.concat([signGER(globalExitRoot, [sorted[0]]), malleableSignature]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ECDSAInvalidSignatureS');
+        });
+
+        it('Should fail to inject with signatures from a removed validator', async () => {
+            const index = await aggOracleCommitteeContract.getValidatorIndex(validator1.address);
+            await aggOracleCommitteeContract
+                .connect(owner)
+                .updateValidatorsAndThreshold([{ addr: validator1.address, index }], [], 2);
+
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorDoesNotExist');
+        });
+
+        it('Should fail to inject an already injected global exit root', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            expect(await aggOracleCommitteeContract.injectedGERs(globalExitRoot)).to.equal(false);
+            await aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures);
+            expect(await aggOracleCommitteeContract.injectedGERs(globalExitRoot)).to.equal(true);
+
+            await expect(
+                aggOracleCommitteeContract.verifyGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+        });
+
+        it('Should fail to re-inject a global exit root removed from the AgglayerGERL2 (replay)', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            await aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures);
+
+            // the globalExitRootRemover (deployer) removes the GER
+            await globalExitRootManagerContract.removeGlobalExitRoots([globalExitRoot]);
+            expect(await globalExitRootManagerContract.globalExitRootMap(globalExitRoot)).to.equal(0);
+
+            // the old signatures can not be replayed
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+
+            // fresh signatures from the validators can not re-inject it either
+            const freshSignatures = signGERSorted(globalExitRoot, [validator2, validator3]);
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, freshSignatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+        });
+
+        it('Should only mark a global exit root already set by another updater, and block its replay after removal', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            // move the updater role to the deployer, insert the GER and give the role back to the committee
+            await aggOracleCommitteeContract.connect(owner).transferGlobalExitRootUpdater(deployer.address);
+            await globalExitRootManagerContract.acceptGlobalExitRootUpdater();
+            await globalExitRootManagerContract.insertGlobalExitRoot(globalExitRoot);
+            await setCommitteeAsGERUpdater();
+            const insertedTimestamp = await globalExitRootManagerContract.globalExitRootMap(globalExitRoot);
+
+            // the GER is marked as injected without being inserted again
+            await expect(aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures))
+                .to.emit(aggOracleCommitteeContract, 'GERMarkedAsInjected')
+                .withArgs(globalExitRoot)
+                .to.not.emit(aggOracleCommitteeContract, 'GERInjected')
+                .to.not.emit(globalExitRootManagerContract, 'UpdateHashChainValue');
+            expect(await aggOracleCommitteeContract.injectedGERs(globalExitRoot)).to.equal(true);
+            expect(await globalExitRootManagerContract.globalExitRootMap(globalExitRoot)).to.equal(insertedTimestamp);
+
+            // after the remover deletes it, the old signatures can not be replayed
+            await globalExitRootManagerContract.removeGlobalExitRoots([globalExitRoot]);
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERAlreadyInjected');
+        });
+
+        it('Should fail to inject if the committee is not the globalExitRootUpdater', async () => {
+            await aggOracleCommitteeContract
+                .connect(owner)
+                .transferGlobalExitRootUpdater(newGlobalExitRootUpdater.address);
+            await globalExitRootManagerContract.connect(newGlobalExitRootUpdater).acceptGlobalExitRootUpdater();
+
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator2]);
+
+            await expect(
+                aggOracleCommitteeContract.connect(proposer).injectGER(globalExitRoot, signatures),
+            ).to.be.revertedWithCustomError(globalExitRootManagerContract, 'OnlyGlobalExitRootUpdater');
+        });
+
+        it('Should respect a threshold change for subsequent injections', async () => {
+            await aggOracleCommitteeContract.connect(owner).updateValidatorsAndThreshold([], [], 3);
+
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(proposer)
+                    .injectGER(globalExitRoot, signGERSorted(globalExitRoot, [validator1, validator2])),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidSignaturesLength');
+
+            await expect(
+                aggOracleCommitteeContract
+                    .connect(proposer)
+                    .injectGER(globalExitRoot, signGERSorted(globalExitRoot, [validator1, validator2, validator3])),
+            )
+                .to.emit(aggOracleCommitteeContract, 'GERInjected')
+                .withArgs(globalExitRoot);
+        });
+    });
+
+    describe('Global Exit Root Verification', () => {
+        beforeEach(async () => {
+            await initializeDefault([validator1, validator2, validator3], 2);
+        });
+
+        it('Should verify a valid global exit root', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+            const signatures = signGERSorted(globalExitRoot, [validator1, validator3]);
+
+            expect(await aggOracleCommitteeContract.verifyGER(globalExitRoot, signatures)).to.equal(true);
+        });
+
+        it('Should revert verifying an invalid global exit root', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+
+            await expect(
+                aggOracleCommitteeContract.verifyGER(
+                    ethers.ZeroHash,
+                    signGERSorted(ethers.ZeroHash, [validator1, validator2]),
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'GERCannotBeZero');
+
+            await expect(
+                aggOracleCommitteeContract.verifyGER(globalExitRoot, signGERSorted(globalExitRoot, [validator1])),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'InvalidSignaturesLength');
+
+            await expect(
+                aggOracleCommitteeContract.verifyGER(
+                    globalExitRoot,
+                    signGERSorted(globalExitRoot, [validator1, notValidator]),
+                ),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorDoesNotExist');
+        });
+
+        it('Should not require the committee to be the globalExitRootUpdater', async () => {
+            const globalExitRoot = ethers.hexlify(ethers.randomBytes(32));
+
+            expect(
+                await aggOracleCommitteeContract.verifyGER(
+                    globalExitRoot,
+                    signGERSorted(globalExitRoot, [validator1, validator2]),
+                ),
+            ).to.equal(true);
         });
     });
 
     describe('Global Exit Root Updater Role Transfer', () => {
         beforeEach(async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address];
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
+            await initializeDefault([validator1, validator2], 2);
         });
 
         it('Should transfer globalExitRootUpdater role', async () => {
             // First transfer to aggOracleCommittee
-            await globalExitRootManagerContract.transferGlobalExitRootUpdater(aggOracleCommitteeContract.target);
-            await aggOracleCommitteeContract.connect(owner).acceptGlobalExitRootUpdater();
+            await setCommitteeAsGERUpdater();
 
             expect(await globalExitRootManagerContract.globalExitRootUpdater()).to.equal(
                 aggOracleCommitteeContract.target,
@@ -433,7 +966,7 @@ describe('AggOracleCommittee tests', () => {
         it('Should fail to transfer if not owner', async () => {
             await expect(
                 aggOracleCommitteeContract
-                    .connect(oracle1)
+                    .connect(notOwner)
                     .transferGlobalExitRootUpdater(newGlobalExitRootUpdater.address),
             ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
         });
@@ -454,149 +987,94 @@ describe('AggOracleCommittee tests', () => {
             await globalExitRootManagerContract.transferGlobalExitRootUpdater(aggOracleCommitteeContract.target);
 
             await expect(
-                aggOracleCommitteeContract.connect(oracle1).acceptGlobalExitRootUpdater(),
+                aggOracleCommitteeContract.connect(notOwner).acceptGlobalExitRootUpdater(),
             ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'OwnableUnauthorizedAccount');
         });
     });
 
     describe('View Functions', () => {
         beforeEach(async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address, oracle3.address];
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
+            await aggOracleCommitteeContract.initialize(
+                owner.address,
+                proposer.address,
+                [
+                    { addr: validator1.address, url: 'https://v1.url' },
+                    { addr: validator2.address, url: '' },
+                    { addr: validator3.address, url: 'https://v3.url' },
+                ],
+                2,
+            );
         });
 
-        it('Should get oracle member index', async () => {
-            expect(await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle1.address)).to.equal(0);
-            expect(await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle2.address)).to.equal(1);
-            expect(await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle3.address)).to.equal(2);
+        it('Should get validator index', async () => {
+            expect(await aggOracleCommitteeContract.getValidatorIndex(validator1.address)).to.equal(0);
+            expect(await aggOracleCommitteeContract.getValidatorIndex(validator2.address)).to.equal(1);
+            expect(await aggOracleCommitteeContract.getValidatorIndex(validator3.address)).to.equal(2);
         });
 
-        it('Should revert when getting index of non-member', async () => {
-            await expect(aggOracleCommitteeContract.getAggOracleMemberIndex(notOracle.address)).to.be.reverted;
+        it('Should revert when getting index of non-validator', async () => {
+            await expect(
+                aggOracleCommitteeContract.getValidatorIndex(notValidator.address),
+            ).to.be.revertedWithCustomError(aggOracleCommitteeContract, 'ValidatorNotFound');
         });
 
-        it('Should get all oracle members', async () => {
-            const members = await aggOracleCommitteeContract.getAllAggOracleMembers();
-            expect(members.length).to.equal(3);
-            expect(members[0]).to.equal(oracle1.address);
-            expect(members[1]).to.equal(oracle2.address);
-            expect(members[2]).to.equal(oracle3.address);
+        it('Should get all validators info', async () => {
+            const validatorsInfo = await aggOracleCommitteeContract.getValidatorsInfo();
+
+            expect(validatorsInfo.length).to.equal(3);
+            expect(validatorsInfo[0].addr).to.equal(validator1.address);
+            expect(validatorsInfo[0].url).to.equal('https://v1.url');
+            expect(validatorsInfo[1].addr).to.equal(validator2.address);
+            expect(validatorsInfo[1].url).to.equal('');
+            expect(validatorsInfo[2].addr).to.equal(validator3.address);
+            expect(validatorsInfo[2].url).to.equal('https://v3.url');
         });
 
-        it('Should get oracle members count', async () => {
-            expect(await aggOracleCommitteeContract.getAggOracleMembersCount()).to.equal(3);
+        it('Should get validators count', async () => {
+            expect(await aggOracleCommitteeContract.getValidatorsCount()).to.equal(3);
         });
 
-        it('Should get oracle member by index', async () => {
-            expect(await aggOracleCommitteeContract.aggOracleMembers(0)).to.equal(oracle1.address);
-            expect(await aggOracleCommitteeContract.aggOracleMembers(1)).to.equal(oracle2.address);
-            expect(await aggOracleCommitteeContract.aggOracleMembers(2)).to.equal(oracle3.address);
+        it('Should get validator by index', async () => {
+            expect(await aggOracleCommitteeContract.validators(0)).to.equal(validator1.address);
+            expect(await aggOracleCommitteeContract.validators(1)).to.equal(validator2.address);
+            expect(await aggOracleCommitteeContract.validators(2)).to.equal(validator3.address);
         });
 
-        it('Should get constant INITIAL_PROPOSED_GER', async () => {
-            expect(await aggOracleCommitteeContract.INITIAL_PROPOSED_GER()).to.equal(INITIAL_PROPOSED_GER);
+        it('Should check if an address is a validator', async () => {
+            expect(await aggOracleCommitteeContract.isValidator(validator1.address)).to.equal(true);
+            expect(await aggOracleCommitteeContract.isValidator(notValidator.address)).to.equal(false);
+        });
+
+        it('Should get validator info from the public mapping', async () => {
+            const validatorInfo = await aggOracleCommitteeContract.validatorInfo(validator1.address);
+            expect(validatorInfo.isValidator).to.equal(true);
+            expect(validatorInfo.url).to.equal('https://v1.url');
+
+            const notValidatorInfo = await aggOracleCommitteeContract.validatorInfo(notValidator.address);
+            expect(notValidatorInfo.isValidator).to.equal(false);
+            expect(notValidatorInfo.url).to.equal('');
         });
     });
 
-    describe('Edge Cases and Complex Scenarios', () => {
-        beforeEach(async () => {
-            const quorum = 2;
-            const oracleMembers = [oracle1.address, oracle2.address, oracle3.address];
-            await aggOracleCommitteeContract.initialize(owner.address, oracleMembers, quorum);
+    describe('Upgradeability', () => {
+        it('Should upgrade the proxy and keep the storage', async () => {
+            await initializeDefault([validator1, validator2, validator3], 2);
 
-            // Transfer globalExitRootUpdater role to aggOracleCommittee
-            await globalExitRootManagerContract.transferGlobalExitRootUpdater(aggOracleCommitteeContract.target);
-            await aggOracleCommitteeContract.connect(owner).acceptGlobalExitRootUpdater();
-        });
-
-        it('Should handle multiple vote switches correctly', async () => {
-            const proposedGER1 = ethers.solidityPacked(['uint256'], [42]);
-            const proposedGER2 = ethers.solidityPacked(['uint256'], [43]);
-            const proposedGER3 = ethers.solidityPacked(['uint256'], [44]);
-
-            // Oracle1 votes for GER1
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER1);
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER1)).votes).to.equal(1);
-
-            // Oracle1 switches to GER2
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER2);
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER1)).votes).to.equal(0);
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER2)).votes).to.equal(1);
-
-            // Oracle1 switches to GER3
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER3);
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER1)).votes).to.equal(0);
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER2)).votes).to.equal(0);
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER3)).votes).to.equal(1);
-        });
-
-        it('Should handle quorum exactly equal to oracle count', async () => {
-            // Update quorum to 3 (equal to number of oracles)
-            await aggOracleCommitteeContract.connect(owner).updateQuorum(3);
-
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-
-            // First two votes
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-            await aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER);
-
-            // Still not consolidated
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER)).votes).to.equal(2);
-
-            // Third vote reaches quorum
-            await expect(aggOracleCommitteeContract.connect(oracle3).proposeGlobalExitRoot(proposedGER))
-                .to.emit(aggOracleCommitteeContract, 'ConsolidatedGlobalExitRoot')
-                .withArgs(proposedGER);
-        });
-
-        it('Should handle removing oracle after voting', async () => {
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-
-            // Oracle1 and Oracle2 vote
-            await aggOracleCommitteeContract.connect(oracle1).proposeGlobalExitRoot(proposedGER);
-            await aggOracleCommitteeContract.connect(oracle2).proposeGlobalExitRoot(proposedGER);
-
-            // Consolidation happens
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER)).votes).to.equal(0);
-
-            // Remove oracle1 after consolidation
-            const oracleIndex = await aggOracleCommitteeContract.getAggOracleMemberIndex(oracle1.address);
-            await aggOracleCommitteeContract.connect(owner).removeOracleMember(oracle1.address, oracleIndex);
-
-            // Should not affect the already consolidated report
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER)).votes).to.equal(0);
-        });
-
-        it('Should fail to initialize with quorum greater than oracle members', async () => {
-            const quorum = 1;
-            const oracleMembers: string[] = [];
-
-            // Deploy new instance
             const AggOracleCommitteeFactory = await ethers.getContractFactory('AggOracleCommittee');
-            const newAggOracleCommittee = (await upgrades.deployProxy(AggOracleCommitteeFactory, [], {
-                initializer: false,
-                constructorArgs: [globalExitRootManagerContract.target],
-                unsafeAllow: ['constructor'],
-            })) as unknown as AggOracleCommittee;
+            const upgraded = (await upgrades.upgradeProxy(
+                aggOracleCommitteeContract.target,
+                AggOracleCommitteeFactory,
+                {
+                    constructorArgs: [globalExitRootManagerContract.target],
+                    unsafeAllow: ['constructor'],
+                },
+            )) as unknown as AggOracleCommittee;
 
-            // Should fail because quorum (1) > oracle members (0)
-            await expect(
-                newAggOracleCommittee.initialize(owner.address, oracleMembers, quorum),
-            ).to.be.revertedWithCustomError(newAggOracleCommittee, 'QuorumCannotBeGreaterThanAggOracleMembers');
-        });
-
-        it('Should handle vote on first proposal after being added as oracle', async () => {
-            // Add new oracle
-            await aggOracleCommitteeContract.connect(owner).addOracleMember(oracle4.address);
-
-            // New oracle should be able to vote immediately
-            const proposedGER = ethers.solidityPacked(['uint256'], [42]);
-            await expect(aggOracleCommitteeContract.connect(oracle4).proposeGlobalExitRoot(proposedGER))
-                .to.emit(aggOracleCommitteeContract, 'ProposedGlobalExitRoot')
-                .withArgs(proposedGER, oracle4.address);
-
-            expect((await aggOracleCommitteeContract.proposedGERToReport(proposedGER)).votes).to.equal(1);
+            expect(await upgraded.owner()).to.equal(owner.address);
+            expect(await upgraded.proposer()).to.equal(proposer.address);
+            expect(await upgraded.threshold()).to.equal(2);
+            expect(await upgraded.getValidatorsCount()).to.equal(3);
+            expect(await upgraded.isValidator(validator2.address)).to.equal(true);
         });
     });
 });

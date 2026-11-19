@@ -1,17 +1,18 @@
 # Deploy AggOracleCommittee
 
-This tool allows deploying an AggOracleCommittee contract, which is responsible for managing the insertion of Global Exit Roots (GERs) into the AgglayerGERL2 through a decentralized oracle committee mechanism.
+This tool allows deploying an AggOracleCommittee contract, which is responsible for managing the insertion of Global Exit Roots (GERs) into the AgglayerGERL2 through an oracle committee of signing validators.
 
 ## Overview
 
-The AggOracleCommittee contract implements a multi-signature approach where multiple oracle members must propose the same Global Exit Root to reach consensus before it can be consolidated.
+The AggOracleCommittee contract implements a threshold multi-signature scheme: validators sign each GER off-chain, and the proposer injects it with exactly `threshold` signatures in a single transaction.
 
 Key features:
 
-- Requires a quorum of oracle members to agree on a GER before consolidation
-- Oracle members can update their votes
-- Owner can add/remove oracle members and update the quorum
-- Automatic consolidation when quorum is reached
+- A GER is injected only with `threshold` valid validator signatures, sorted by signer address in ascending order
+- Only the proposer can inject GERs; validators never send transactions
+- A GER is processed only once
+- Owner can update the validators, the threshold and the proposer
+- Two-step ownership transfer; renouncing ownership is disabled
 
 ## Requirements
 
@@ -34,8 +35,9 @@ cp tools/deployAggOracleCommittee/deploy_parameters.json.example tools/deployAgg
 
 - `globalExitRootManagerL2SovereignAddress`: Address of the AgglayerGERL2 contract that will receive the consolidated GERs
 - `ownerAddress`: Address that will own the AggOracleCommittee contract (typically a timelock contract)
-- `aggOracleMembers`: Array of addresses that will act as initial oracle members
-- `quorum`: Number of oracle members that must agree on a GER for it to be consolidated (must be <= aggOracleMembers.length and > 0)
+- `proposerAddress`: Address authorized to inject GERs (the aggoracle)
+- `validators`: Array of initial validators `{ "addr": "0x...", "url": "..." }`. `url` is optional metadata (e.g. the endpoint where the validator serves signatures) and can be an empty string
+- `threshold`: Number of validator signatures required to inject a GER (`1 <= threshold <= validators.length <= 255`)
 
 ### Optional Parameters:
 
@@ -62,29 +64,28 @@ After successful deployment, the tool will generate a `deploy_output.json` file 
 - `deployer`: Address that deployed the contract
 - `proxyAdminAddress`: ProxyAdmin contract address
 - `proxyOwnerAddress`: Owner of the ProxyAdmin
-- `ownerAddress`: Owner of the AggOracleCommittee
-- `globalExitRootManagerL2SovereignAddress`: Address of the GlobalExitRootManagerL2Sovereign
-- `aggOracleMembers`: List of initial oracle members
-- `quorum`: Configured quorum value
+- `aggOracleOwnerAddress`: Owner of the AggOracleCommittee
+- `globalExitRootManagerL2SovereignAddress`: Address of the AgglayerGERL2
+- `proposerAddress`: Configured proposer
+- `validators`: List of initial validators with their URLs
+- `threshold`: Configured threshold
 
 ## Post-Deployment
 
 After deployment, the owner can:
 
-1. **Add oracle members**: Call `addOracleMember(address)`
-2. **Remove oracle members**: Call `removeOracleMember(address, index)`
-3. **Update quorum**: Call `updateQuorum(uint64)`
-4. **Transfer globalExitRootUpdater role**: Call `transferGlobalExitRootUpdater(address)`
-5. **Accept globalExitRootUpdater role**: Call `acceptGlobalExitRootUpdater()`
+1. **Update validators and threshold**: Call `updateValidatorsAndThreshold(RemoveValidatorInfo[], ValidatorInfo[], uint256)`
+2. **Update the proposer**: Call `updateAggOracleProposer(address)`
+3. **Transfer globalExitRootUpdater role**: Call `transferGlobalExitRootUpdater(address)`
+4. **Accept globalExitRootUpdater role**: Call `acceptGlobalExitRootUpdater()`
+5. **Transfer ownership**: Call `transferOwnership(address)`; the new owner must call `acceptOwnership()`
 
-Oracle members can:
+The proposer can:
 
-1. **Propose GERs**: Call `proposeGlobalExitRoot(bytes32)`
+1. **Inject GERs**: Call `injectGER(bytes32, bytes)` with exactly `threshold` concatenated 65-byte signatures
 
 ## Important Notes
 
-- The quorum must always be greater than 0 and less than or equal to the number of oracle members
-- Oracle members cannot vote for the same GER twice without changing their vote first
-- When an oracle member is removed, their vote is automatically subtracted from any pending GER
-- GERs are automatically consolidated when they reach the quorum threshold
+- The threshold must always be greater than 0 and less than or equal to the number of validators
+- The AggOracleCommittee only injects GERs once it is the `globalExitRootUpdater` of the AgglayerGERL2: transfer the role to it (`transferGlobalExitRootUpdater` on the AgglayerGERL2) and accept it with `acceptGlobalExitRootUpdater()` on the committee
 - The contract uses OpenZeppelin's upgradeable pattern for future improvements
