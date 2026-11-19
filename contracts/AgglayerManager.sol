@@ -239,7 +239,7 @@ contract AgglayerManager is
         keccak256("EMERGENCY_COUNCIL_ADMIN");
 
     // Current rollup manager version
-    string public constant ROLLUP_MANAGER_VERSION = "v1.0.0";
+    string public constant ROLLUP_MANAGER_VERSION = "v2.0.0";
 
     // Hardcoded address used to indicate that this address triggered in an event should not be considered as valid.
     address private constant _NO_ADDRESS =
@@ -824,6 +824,8 @@ contract AgglayerManager is
     /**
      * @notice Upgrade an existing rollup from the rollup admin address
      * This address is able to update the rollup with more restrictions that the _UPDATE_ROLLUP_ROLE
+     * @dev No initialization call by design: the rollup admin must not trigger initializers reserved to the rollup manager.
+     * Upgrades needing one (e.g. AggchainBase.initAggchainManager) must use updateRollup. onlyAggchainManager initializers can still be called afterwards
      * @param rollupContract Rollup consensus proxy address
      * @param newRollupTypeID New rollupTypeID to upgrade to
      */
@@ -900,11 +902,13 @@ contract AgglayerManager is
         uint32 rollupID = rollupAddressToID[address(rollupContract)];
         RollupData storage rollup = _rollupIDToRollupData[rollupID];
         // Only allow update rollupVerifierType when updating to ALGateway
+        // StateTransition rollups must use initMigration to change their rollupVerifierType
         if (
-            rollupTypeMap[newRollupTypeID].rollupVerifierType !=
-            VerifierType.ALGateway &&
             rollup.rollupVerifierType !=
-            rollupTypeMap[newRollupTypeID].rollupVerifierType
+            rollupTypeMap[newRollupTypeID].rollupVerifierType &&
+            (rollupTypeMap[newRollupTypeID].rollupVerifierType !=
+                VerifierType.ALGateway ||
+                rollup.rollupVerifierType == VerifierType.StateTransition)
         ) {
             revert UpdateNotCompatible();
         }

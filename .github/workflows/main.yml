@@ -5,9 +5,12 @@ name: Run Tests
 
 on:
     push:
-        branches: [main, develop, feature/v12, feature/outposts]
+        branches: [main, develop, feature/v13, feature/outposts]
     pull_request:
-        branches: [main, develop, feature/v12, feature/outposts]
+        branches: [main, develop, feature/v13, feature/outposts]
+
+permissions:
+    contents: read
 
 jobs:
     lint-and-test:
@@ -25,6 +28,6 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v3
             - name: setup
-              run: npm i
+              run: npm ci
             - name: test
               run: npm run test
