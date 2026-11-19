@@ -44,9 +44,14 @@ cp ./tools/createSovereignGenesis/genesis-base.json.example ./tools/createSovere
   - `setPreMintAccount`: indicates if a preMint accounts going to be added
     - `preMintAccount.address`: ethereum address to receive an initial balance
     - `preMintAccount.balance`: balance credited to the preminted address
-  - `setTimelockParameters`: indicates if the timelock parameters are going to be changed
+  - `setTimelockParameters`: indicates if the timelock parameters are going to be changed. Must be `true`, otherwise the tool exits with an error
     - `timelockParameters.adminAddress`: address that will have all timelocks roles (ADMIN, PROPOSER, CANCELLER, EXECUTOR)
     - `timelockParameters.minDelay`: minimum delay set in the timelock smart contract
+  - `useAggOracleCommittee`: indicates if an `AggOracleCommittee` is deployed and set as the `globalExitRootUpdater` (then `globalExitRootUpdater` must not be set)
+    - `aggOracleOwner`: owner of the `AggOracleCommittee`
+    - `aggOracleProposer`: address authorized to inject GERs (the aggoracle)
+    - `aggOracleValidators`: array of validators `{ "addr": "0x...", "url": "..." }`. `url` is optional metadata and can be an empty string
+    - `aggOracleThreshold`: number of validator signatures required to inject a GER (`1 <= aggOracleThreshold <= aggOracleValidators.length <= 255`)
 - Optional parameters
   - `format`: choose genesis output format. Supported ones: `geth`
 
@@ -60,4 +65,8 @@ npx hardhat run ./tools/createSovereignGenesis/create-sovereign-genesis.ts --net
 - The output files are:
   - `genesis-rollupID-${rollupID}__${timestamp}`: genesis file
   - `output-rollupID-${rollupID}__${timestamp}`: input parameters, gastokenAddress information and network used
+- Safe contracts are always added to the genesis (`helpers-safe.ts`, data in `safe-contracts.json`), at their canonical addresses from [safe-deployments](https://github.com/safe-global/safe-deployments):
+  - Deterministic deployment factories: Arachnid `DeterministicDeploymentProxy` & Safe `SingletonFactory`
+  - Safe v1.3.0 contracts
+  - Safe v1.4.1-3 contracts
 - outputs are saved in the tool folder: `./tools/createSovereignGenesis`

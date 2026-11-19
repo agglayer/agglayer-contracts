@@ -99,7 +99,7 @@ describe('PolygonZkEVMBridge Contract', () => {
             ),
         ).to.be.revertedWith('Initializable: contract is already initialized');
 
-        expect(await polygonZkEVMBridgeContract.version()).to.be.equal('v1.1.0');
+        expect(await polygonZkEVMBridgeContract.version()).to.be.equal('v1.1.1');
     });
 
     it('should check bridgeMessageWETH reverts', async () => {
