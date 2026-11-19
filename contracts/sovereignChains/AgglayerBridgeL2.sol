@@ -18,7 +18,7 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
     address private immutable deployer;
 
     // Current bridge version
-    string internal constant BRIDGE_SOVEREIGN_VERSION = "v1.2.0";
+    string internal constant BRIDGE_SOVEREIGN_VERSION = "v1.2.1";
 
     // Struct to represent leaf data for forwardLET function
     struct LeafData {
@@ -598,7 +598,7 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
         address legacyTokenAddress,
         uint256 amount,
         bytes calldata permitData
-    ) external virtual {
+    ) external virtual nonReentrant {
         // Use permit if any
         if (permitData.length != 0) {
             _permit(legacyTokenAddress, permitData);
@@ -774,8 +774,9 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
 
         depositCount = newDepositCount;
 
-        // Update LER
+        // Update LER & lastUpdatedDepositCount
         bytes32 newLER = getRoot();
+        lastUpdatedDepositCount = uint32(newDepositCount);
         globalExitRootManager.updateExitRoot(newLER);
 
         // emit event
@@ -791,6 +792,8 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
      * @notice Move the LET forward by adding new leaves in bulk
      * @dev Permissioned function by the GlobalExitRootRemover role
      * @dev Adds new leaves incrementally using structured data and validates against expected root as health check
+     * @dev Does not update the localBalanceTree nor apply the bridgeAsset checks. If the added leaves were never bridged on this chain,
+     * the localBalanceTree must be reconciled with setLocalBalanceTree before leaving the emergency state
      * @param newLeaves Array of leaf data to add to the current tree
      * @param expectedLER The expected root after adding all new leaves (health check)
      */
@@ -837,7 +840,8 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
             revert InvalidExpectedLER();
         }
 
-        // Update GER
+        // Update LER & lastUpdatedDepositCount
+        lastUpdatedDepositCount = uint32(depositCount);
         globalExitRootManager.updateExitRoot(computedRoot);
 
         // emit event with the new deposit count
