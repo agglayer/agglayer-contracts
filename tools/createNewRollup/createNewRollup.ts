@@ -163,12 +163,6 @@ async function main() {
         globalExitRootManagerAddress,
     ) as AgglayerManager;
 
-    // Check if the deployer has right to deploy new rollups from rollupManager contract
-    if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) === false) {
-        throw new Error(
-            `Deployer does not have admin role. Use the test flag on deploy_parameters if this is a test deployment`,
-        );
-    }
     const polygonConsensusFactory = (await ethers.getContractFactory(consensusContractName, deployer)) as any;
     // Check chainID
     let rollupID = await rollupManagerContract.chainIDToRollupID(chainID);
@@ -233,10 +227,6 @@ async function main() {
             }
         }
     }
-
-    // Grant role CREATE_ROLLUP_ROLE to deployer
-    if ((await rollupManagerContract.hasRole(CREATE_ROLLUP_ROLE, deployer.address)) === false)
-        await rollupManagerContract.grantRole(CREATE_ROLLUP_ROLE, deployer.address);
 
     // Get rollup address deterministically
     const nonce = await currentProvider.getTransactionCount(rollupManagerContract.target);
@@ -347,6 +337,16 @@ async function main() {
         logger.info(`Finished script, output saved at: ${destPath}`);
         process.exit(0);
     } else {
+        // EOA: the deployer creates the rollup, so it needs CREATE_ROLLUP_ROLE (granted here if it is the admin)
+        if ((await rollupManagerContract.hasRole(CREATE_ROLLUP_ROLE, deployer.address)) === false) {
+            if ((await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, deployer.address)) === false) {
+                throw new Error(
+                    `Deployer ${deployer.address} has neither CREATE_ROLLUP_ROLE nor the admin role to grant it. Use the Timelock or Multisig type to generate the calldata`,
+                );
+            }
+            await (await rollupManagerContract.grantRole(CREATE_ROLLUP_ROLE, deployer.address)).wait();
+        }
+
         logger.info('Deploying rollup....');
         // Create new rollup
         const txDeployRollup = await rollupManagerContract.attachAggchainToAL(
