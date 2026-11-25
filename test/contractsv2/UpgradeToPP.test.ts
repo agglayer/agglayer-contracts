@@ -19,6 +19,7 @@ import {
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
 import { AL_MULTISIG_ROLE } from '../../src/constants';
+import { calculateGlobalExitRoot, calculateGlobalExitRootLeaf, calculateAccInputHashetrog } from '../../src/utils';
 
 const MerkleTreeBridge = MTBridge;
 const { getLeafValue } = mtBridgeUtils;
@@ -360,7 +361,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             forcedBlockHashL1: ethers.ZeroHash,
         } as PolygonValidiumEtrog.ValidiumBatchDataStruct;
 
-        const expectedAccInputHash = calculateAccInputHashEtrog(
+        const expectedAccInputHash = calculateAccInputHashetrog(
             await validiumContract.lastAccInputHash(),
             hashedData,
             await polygonZkEVMGlobalExitRoot.getRoot(),
@@ -617,7 +618,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             forcedBlockHashL1: ethers.ZeroHash,
         } as PolygonValidiumEtrog.ValidiumBatchDataStruct;
 
-        const expectedAccInputHash = calculateAccInputHashEtrog(
+        const expectedAccInputHash = calculateAccInputHashetrog(
             await validiumContract.lastAccInputHash(),
             hashedData,
             await polygonZkEVMGlobalExitRoot.getRoot(),
@@ -906,7 +907,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             '0x', // empty metadata
         );
 
-        const expectedAccInputHash = calculateAccInputHashEtrog(
+        const expectedAccInputHash = calculateAccInputHashetrog(
             ethers.ZeroHash,
             ethers.keccak256(transaction),
             await polygonZkEVMGlobalExitRoot.getLastGlobalExitRoot(),
@@ -952,7 +953,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
 
         const rootSC = await polygonZkEVMGlobalExitRoot.getRoot();
 
-        const expectedAccInputHash2 = calculateAccInputHashEtrog(
+        const expectedAccInputHash2 = calculateAccInputHashetrog(
             expectedAccInputHash,
             ethers.keccak256(l2txData),
             rootSC,
@@ -1227,7 +1228,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             forcedBlockHashL1: ethers.ZeroHash,
         } as PolygonValidiumEtrog.ValidiumBatchDataStruct;
 
-        const expectedAccInputHash = calculateAccInputHashEtrog(
+        const expectedAccInputHash = calculateAccInputHashetrog(
             await validiumContract.lastAccInputHash(),
             hashedData,
             await polygonZkEVMGlobalExitRoot.getRoot(),
@@ -1660,40 +1661,4 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .withArgs(newCreatedRollupID, rollupTypeIDAlGateway);
         expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
     });
-
-    /**
-     * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, seqAddress)
-     * @param {String} oldAccInputHash - old accumulateInputHash
-     * @param {String} batchHashData - Batch hash data
-     * @param {String} globalExitRoot - Global Exit Root
-     * @param {Number} timestamp - Block timestamp
-     * @param {String} sequencerAddress - Sequencer address
-     * @returns {String} - accumulateInputHash in hex encoding
-     */
-    function calculateAccInputHashEtrog(
-        oldAccInputHash: any,
-        batchHashData: any,
-        l1InfoTreeRoot: any,
-        timestamp: any,
-        sequencerAddress: any,
-        forcedBlockHash: any,
-    ) {
-        const hashKeccak = ethers.solidityPackedKeccak256(
-            ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-            [oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, sequencerAddress, forcedBlockHash],
-        );
-
-        return hashKeccak;
-    }
-
-    function calculateGlobalExitRoot(mainnetExitRoot: any, rollupExitRoot: any) {
-        return ethers.solidityPackedKeccak256(['bytes32', 'bytes32'], [mainnetExitRoot, rollupExitRoot]);
-    }
-
-    function calculateGlobalExitRootLeaf(newGlobalExitRoot: any, lastBlockHash: any, timestamp: any) {
-        return ethers.solidityPackedKeccak256(
-            ['bytes32', 'bytes32', 'uint64'],
-            [newGlobalExitRoot, lastBlockHash, timestamp],
-        );
-    }
 });
