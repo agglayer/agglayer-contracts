@@ -9,8 +9,7 @@ Builds a `geth-zkevm-contracts:latest` Docker image containing a geth node with 
 ## Commands
 
 ```bash
-npm run docker:contracts          # Build docker with basic deployment
-npm run dockerv2:contracts        # Build docker with v2 deployment
+npm run docker:contracts          # Build docker with v2 deployment (supports docker-compose and docker compose)
 npm run dockerv2:contracts:all    # Build docker with v2 + AggchainECDSA + PessimisticConsensus
 npm run docker:tests              # Run docker-based tests
 ```
