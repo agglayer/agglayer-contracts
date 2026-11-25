@@ -2435,48 +2435,6 @@ describe('Polygon Rollup Manager', () => {
                 programVKey,
             );
 
-        // Add a new rollup type (pessimistic) with timelock
-        const newRandomTypeID = 3;
-        const rollupVerifierTypeNew = 1;
-        await expect(
-            rollupManagerContract
-                .connect(timelock)
-                .addNewRollupType(
-                    PolygonZKEVMEtrogContract.target,
-                    verifierContract.target,
-                    forkID,
-                    rollupVerifierTypeNew,
-                    programVKey,
-                    description,
-                    genesisRandom,
-                ),
-        )
-            .to.emit(rollupManagerContract, 'AddNewRollupType')
-            .withArgs(
-                newRandomTypeID,
-                PolygonZKEVMEtrogContract.target,
-                verifierContract.target,
-                forkID,
-                rollupVerifierTypeNew,
-                programVKey,
-                description,
-                genesisRandom,
-            );
-
-        // assert new rollup type
-        const createdEtrogRollupType = await rollupManagerContract.rollupTypeMap(newRandomTypeID);
-
-        const expectedEtrogRollupType = [
-            PolygonZKEVMEtrogContract.target,
-            verifierContract.target,
-            forkID,
-            rollupVerifierTypeNew,
-            false,
-            programVKey,
-            genesisRandom,
-        ];
-        expect(createdEtrogRollupType).to.be.deep.equal(expectedEtrogRollupType);
-
         // Validate upgrade OZ
         const PolygonPreviousFactory = await ethers.getContractFactory('PolygonZkEVMEtrogPrevious');
 
@@ -3004,19 +2962,21 @@ describe('Polygon Rollup Manager', () => {
             ),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidImplementationAddress');
 
-        // Should revert with InvalidVerifierAddress because verifier contract code length is 0
+        // Should revert with InvalidRollupType because pessimistic verifier type is deprecated
         await expect(
             rollupManagerContract.connect(timelock).addExistingRollup(
                 PolygonZKEVMV2Contract.target,
-                computeRandomBytes(20), // wrong
+                computeRandomBytes(20),
                 forkID,
                 chainID,
                 genesisRandom,
                 1, // pessimistic
-                programVKey,
+                ethers.ZeroHash,
                 ethers.ZeroHash,
             ),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidVerifierAddress');
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
+
+        // Should revert with InvalidVerifierAddress because verifier contract code length is 0
 
         await expect(
             rollupManagerContract.connect(timelock).addExistingRollup(
