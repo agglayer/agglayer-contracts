@@ -26,12 +26,6 @@ sudo rm -rf docker/deploymentOutput
 mkdir docker/deploymentOutput
 # move rollup output to output folder
 mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output.json
-# copy new create rollup parameters (v0.2.0) to docker scripts to create new rollup v0.2.0
-cp ./docker/scripts/v2/create_rollup_parameters_docker-v0.2.0.json ./deployment/v2/create_rollup_parameters.json
-# create new rollup v0.2.0
-npx hardhat run ./deployment/v2/4_createRollup.ts --network localhost
-# move rollup output to output folder
-mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output_v0.2.0.json
 # copy new create rollup parameters (ECDSA) to docker scripts to create new rollup ECDSA
 cp ./docker/scripts/v2/create_rollup_parameters_docker-v0.3.0-ecdsa.json ./deployment/v2/create_rollup_parameters.json
 # create new rollup ECDSA

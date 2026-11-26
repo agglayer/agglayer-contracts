@@ -11,7 +11,7 @@ Builds a `geth-zkevm-contracts:latest` Docker image containing a geth node with 
 ```bash
 npm run docker:contracts          # Build docker with basic deployment
 npm run dockerv2:contracts        # Build docker with v2 deployment
-npm run dockerv2:contracts:all    # Build docker with v2 + AggchainECDSA + PessimisticConsensus
+npm run dockerv2:contracts:all    # Build docker with v2 + AggchainECDSA + zkEVM/Validium etrog rollups
 npm run docker:tests              # Run docker-based tests
 ```
 

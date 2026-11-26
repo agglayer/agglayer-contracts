@@ -51,7 +51,7 @@ You can change the deployment `mnemonic` creating a `.env` file in the project r
 - `chainID`: uint64, chainID of the new rollup
 - `adminZkEVM`: address, Admin address, can adjust Rollup parameters
 - `forkID`: uint64, Fork ID of the new rollup, indicates the prover (zkROM/executor) version
-- `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`. This is the name of the consensus of the rollupType of the rollup to be created
+- `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "AggchainECDSA", "AggchainFEP"]`. This is the name of the consensus of the rollupType of the rollup to be created
 - `gasTokenAddress`: Address of the native gas token of the rollup, zero if ether
 - `deployerPvtKey`: Not mandatory, used to deploy from specific wallet
 - `maxFeePerGas(optional)`: string, Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it
@@ -111,7 +111,7 @@ npm i
 npm run dockerv2:contracts:all
 ```
 
-It's the same docker as before but deploying `AggchainECDSA` & `PolygonPessimisticConsensus`.
+It's the same docker as before but also deploying `AggchainECDSA`, `PolygonZkEVMEtrog` and `PolygonValidiumEtrog` rollups.
 
 To create other rollup:
 
