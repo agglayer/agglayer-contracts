@@ -17,6 +17,7 @@ import {
 import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
 import { AL_MULTISIG_ROLE } from '../../src/constants';
+import { calculateAccInputHashetrog } from '../../src/utils';
 
 describe('Upgradeable to PPV2 or ALGateway', () => {
     let deployer: any;
@@ -326,7 +327,7 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             forcedBlockHashL1: ethers.ZeroHash,
         } as PolygonValidiumEtrog.ValidiumBatchDataStruct;
 
-        const expectedAccInputHash = calculateAccInputHashEtrog(
+        const expectedAccInputHash = calculateAccInputHashetrog(
             await validiumContract.lastAccInputHash(),
             hashedData,
             await polygonZkEVMGlobalExitRoot.getRoot(),
@@ -754,29 +755,4 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .withArgs(newCreatedRollupID, rollupTypeIDAlGateway);
         expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
     });
-
-    /**
-     * Compute accumulateInputHash = Keccak256(oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, seqAddress)
-     * @param {String} oldAccInputHash - old accumulateInputHash
-     * @param {String} batchHashData - Batch hash data
-     * @param {String} globalExitRoot - Global Exit Root
-     * @param {Number} timestamp - Block timestamp
-     * @param {String} sequencerAddress - Sequencer address
-     * @returns {String} - accumulateInputHash in hex encoding
-     */
-    function calculateAccInputHashEtrog(
-        oldAccInputHash: any,
-        batchHashData: any,
-        l1InfoTreeRoot: any,
-        timestamp: any,
-        sequencerAddress: any,
-        forcedBlockHash: any,
-    ) {
-        const hashKeccak = ethers.solidityPackedKeccak256(
-            ['bytes32', 'bytes32', 'bytes32', 'uint64', 'address', 'bytes32'],
-            [oldAccInputHash, batchHashData, l1InfoTreeRoot, timestamp, sequencerAddress, forcedBlockHash],
-        );
-
-        return hashKeccak;
-    }
 });
