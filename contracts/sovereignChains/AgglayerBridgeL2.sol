@@ -85,16 +85,34 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
     // This account will be able to accept the emergencyBridgeUnpauser role
     address public pendingEmergencyBridgeUnpauser;
 
+    // This account will be able to accept the bridgeManager role
+    address public pendingBridgeManager;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      */
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 
     /**
-     * @dev Emitted when a bridge manager is updated
+     * @notice Emitted when the bridgeManager starts the two-step transfer role setting a new pending bridgeManager.
+     * @param currentBridgeManager The current bridgeManager.
+     * @param newBridgeManager The new pending bridgeManager.
      */
-    event SetBridgeManager(address bridgeManager);
+    event TransferBridgeManagerRole(
+        address currentBridgeManager,
+        address newBridgeManager
+    );
+
+    /**
+     * @notice Emitted when the pending bridgeManager accepts the bridgeManager role.
+     * @param oldBridgeManager The previous bridgeManager.
+     * @param newBridgeManager The new bridgeManager.
+     */
+    event AcceptBridgeManagerRole(
+        address oldBridgeManager,
+        address newBridgeManager
+    );
 
     /**
      * @notice Emitted when the emergencyBridgePauser starts the two-step transfer role setting a new pending emergencyBridgePauser.
@@ -324,6 +342,7 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
         globalExitRootManager = _globalExitRootManager;
         polygonRollupManager = _polygonRollupManager;
         bridgeManager = _bridgeManager;
+        emit AcceptBridgeManagerRole(address(0), bridgeManager);
         emergencyBridgePauser = _emergencyBridgePauser;
         emit AcceptEmergencyBridgePauserRole(address(0), emergencyBridgePauser);
         emergencyBridgeUnpauser = _emergencyBridgeUnpauser;
@@ -427,6 +446,15 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
     }
 
     modifier onlyGlobalExitRootRemover() {
+        _checkGlobalExitRootRemover();
+        _;
+    }
+
+    /**
+     * @notice Reverts if the caller is not the GlobalExitRootRemover
+     * @dev Internal function instead of an inlined modifier body to reduce bytecode size
+     */
+    function _checkGlobalExitRootRemover() internal view {
         // Only allowed to be called by GlobalExitRootRemover
         if (
             IAgglayerGERL2(address(globalExitRootManager))
@@ -434,7 +462,6 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
         ) {
             revert OnlyGlobalExitRootRemover();
         }
-        _;
     }
 
     /**
@@ -1010,20 +1037,34 @@ contract AgglayerBridgeL2 is AgglayerBridge, IAgglayerBridgeL2 {
         }
     }
 
+    /////////////////////////////////////////
+    //   BridgeManager        functions   //
+    ///////////////////////////////////////
+
     /**
-     * @notice Updated bridge manager address, recommended to set a timelock at this address after bootstrapping phase
-     * @param _bridgeManager Bridge manager address
+     * @notice Starts the bridgeManager role transfer, recommended to set a timelock as bridgeManager after bootstrapping phase
+     * This is a two step process, the pending bridgeManager must accept to finalize the process
+     * @param newBridgeManager Address of the new pending bridgeManager
      */
-    function setBridgeManager(
-        address _bridgeManager
+    function transferBridgeManagerRole(
+        address newBridgeManager
     ) external virtual onlyBridgeManager {
-        if (_bridgeManager == address(0)) {
-            revert InvalidZeroAddress();
-        }
+        pendingBridgeManager = newBridgeManager;
 
-        bridgeManager = _bridgeManager;
+        emit TransferBridgeManagerRole(bridgeManager, newBridgeManager);
+    }
 
-        emit SetBridgeManager(bridgeManager);
+    /**
+     * @notice Allow the current pending bridgeManager to accept the bridgeManager role
+     */
+    function acceptBridgeManagerRole() external virtual {
+        require(pendingBridgeManager == msg.sender, OnlyPendingBridgeManager());
+
+        address oldBridgeManager = bridgeManager;
+        bridgeManager = pendingBridgeManager;
+        delete pendingBridgeManager;
+
+        emit AcceptBridgeManagerRole(oldBridgeManager, bridgeManager);
     }
 
     /////////////////////////////////////////

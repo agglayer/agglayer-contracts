@@ -814,15 +814,37 @@ describe('AgglayerBridgeL2 Contract', () => {
                 .setMultipleSovereignTokenAddress([networkIDMainnet], [tokenAddress], [sovereignToken.target], [false]),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyBridgeManager');
 
-        // Set rollupManager as bridge manager, revert OnlyBridgeManager
+        // Transfer bridge manager role to rollupManager, revert OnlyBridgeManager
         await expect(
-            sovereignChainBridgeContract.connect(deployer).setBridgeManager(rollupManager.address),
+            sovereignChainBridgeContract.connect(deployer).transferBridgeManagerRole(rollupManager.address),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyBridgeManager');
 
-        // Set rollupManager as bridge manager
-        await expect(sovereignChainBridgeContract.connect(bridgeManager).setBridgeManager(rollupManager.address))
-            .to.emit(sovereignChainBridgeContract, 'SetBridgeManager')
-            .withArgs(rollupManager.address);
+        // Start the bridge manager role transfer
+        await expect(
+            sovereignChainBridgeContract.connect(bridgeManager).transferBridgeManagerRole(rollupManager.address),
+        )
+            .to.emit(sovereignChainBridgeContract, 'TransferBridgeManagerRole')
+            .withArgs(bridgeManager.address, rollupManager.address);
+        expect(await sovereignChainBridgeContract.pendingBridgeManager()).to.be.equal(rollupManager.address);
+        // The role does not change until the pending bridge manager accepts it
+        expect(await sovereignChainBridgeContract.bridgeManager()).to.be.equal(bridgeManager.address);
+
+        // Only the pending bridge manager can accept the role
+        await expect(
+            sovereignChainBridgeContract.connect(bridgeManager).acceptBridgeManagerRole(),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyPendingBridgeManager');
+
+        // Accept the bridge manager role
+        await expect(sovereignChainBridgeContract.connect(rollupManager).acceptBridgeManagerRole())
+            .to.emit(sovereignChainBridgeContract, 'AcceptBridgeManagerRole')
+            .withArgs(bridgeManager.address, rollupManager.address);
+        expect(await sovereignChainBridgeContract.bridgeManager()).to.be.equal(rollupManager.address);
+        expect(await sovereignChainBridgeContract.pendingBridgeManager()).to.be.equal(ethers.ZeroAddress);
+
+        // The previous bridge manager lost the role
+        await expect(
+            sovereignChainBridgeContract.connect(bridgeManager).transferBridgeManagerRole(bridgeManager.address),
+        ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyBridgeManager');
 
         // invalid token address
         await expect(
