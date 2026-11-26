@@ -31,6 +31,6 @@ jobs:
               run: |
                   npm ci
             - name: Build docker
-              run: npm run dockerv2:contracts
+              run: npm run docker:contracts
             - name: Test docker
               run: npm run docker:tests
