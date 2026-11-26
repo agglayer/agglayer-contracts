@@ -82,6 +82,7 @@ contract ExtensionAgglayerBridgeL2 is
         globalExitRootManager = _globalExitRootManager;
         polygonRollupManager = _polygonRollupManager;
         bridgeManager = _bridgeManager;
+        emit AcceptBridgeManagerRole(address(0), bridgeManager);
         emergencyBridgePauser = _emergencyBridgePauser;
         emit AcceptEmergencyBridgePauserRole(address(0), emergencyBridgePauser);
         emergencyBridgeUnpauser = _emergencyBridgeUnpauser;
@@ -536,11 +537,22 @@ contract ExtensionAgglayerBridgeL2 is
     }
 
     /**
-     * @notice Override setBridgeManager to revert - not supported in initializer
+     * @notice Override transferBridgeManagerRole to revert - not supported in initializer
      */
-    function setBridgeManager(
+    function transferBridgeManagerRole(
         address
     ) external pure override(AgglayerBridgeL2) {
+        revert NonSupportedFunction();
+    }
+
+    /**
+     * @notice Override acceptBridgeManagerRole to revert - not supported in initializer
+     */
+    function acceptBridgeManagerRole()
+        external
+        pure
+        override(AgglayerBridgeL2)
+    {
         revert NonSupportedFunction();
     }
 

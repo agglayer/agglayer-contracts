@@ -860,13 +860,15 @@ describe('AgglayerBridgeL2 Contract Upgrade AL', () => {
                 .connect(rollupManager)
                 .setMultipleSovereignTokenAddress([networkIDMainnet], [tokenAddress], [sovereignToken.target], [false]),
         ).to.be.revertedWithCustomError(sovereignChainBridgeContract, 'OnlyBridgeManager');
-        // Set rollupManager as bridge manager
+        // Transfer bridge manager role to rollupManager
         await expect(
-            sovereignChainBridgeContract.connect(bridgeManager).setBridgeManager(ethers.ZeroAddress),
-        ).to.revertedWithCustomError(sovereignChainBridgeContract, 'InvalidZeroAddress');
-        await expect(sovereignChainBridgeContract.connect(bridgeManager).setBridgeManager(rollupManager.address))
-            .to.emit(sovereignChainBridgeContract, 'SetBridgeManager')
-            .withArgs(rollupManager.address);
+            sovereignChainBridgeContract.connect(bridgeManager).transferBridgeManagerRole(rollupManager.address),
+        )
+            .to.emit(sovereignChainBridgeContract, 'TransferBridgeManagerRole')
+            .withArgs(bridgeManager.address, rollupManager.address);
+        await expect(sovereignChainBridgeContract.connect(rollupManager).acceptBridgeManagerRole())
+            .to.emit(sovereignChainBridgeContract, 'AcceptBridgeManagerRole')
+            .withArgs(bridgeManager.address, rollupManager.address);
 
         // invalid token address
         await expect(

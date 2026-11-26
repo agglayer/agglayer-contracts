@@ -121,6 +121,11 @@ interface IAgglayerBridgeL2 is IAgglayerBridge {
     error OnlyGlobalExitRootRemover();
 
     /**
+     * @dev Thrown when trying to call a function that only the pending bridge manager can call.
+     */
+    error OnlyPendingBridgeManager();
+
+    /**
      * @dev Thrown when the caller is not the emergencyBridgePauser address
      */
     error OnlyEmergencyBridgePauser();
