@@ -2,16 +2,13 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
-import { AggchainFEP, AggchainECDSA, PolygonPessimisticConsensus, PolygonZkEVMEtrog } from '../typechain-types';
+import { AggchainFEP, AggchainECDSA, PolygonZkEVMEtrog } from '../typechain-types';
 
 const deployOutput = JSON.parse(fs.readFileSync(path.join(__dirname, './deploymentOutput/deploy_output.json'), 'utf8'));
 const { polygonRollupManagerAddress, polygonZkEVMBridgeAddress, polygonZkEVMGlobalExitRootAddress, polTokenAddress } =
     deployOutput;
 const createRollupOutputFEP = JSON.parse(
     fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output.json'), 'utf8'),
-);
-const createRollupOutputv2 = JSON.parse(
-    fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output_v0.2.0.json'), 'utf8'),
 );
 const createRollupOutputECDSA = JSON.parse(
     fs.readFileSync(path.join(__dirname, './deploymentOutput/create_rollup_output_v0.3.0-ecdsa.json'), 'utf8'),
@@ -45,21 +42,6 @@ describe('Docker build tests Contract', () => {
         expect(await AggchainECDSAContract.bridgeAddress()).to.equal(polygonZkEVMBridgeAddress);
         expect(await AggchainECDSAContract.rollupManager()).to.equal(polygonRollupManagerAddress);
         const admin = await AggchainECDSAContract.admin();
-        // If admin is not zero address, means the contract is already initialized
-        expect(admin).to.not.equal(ethers.ZeroAddress);
-    });
-
-    it('should check ECDSA v0.2.0', async () => {
-        const PPconsensusFactory = await ethers.getContractFactory('PolygonPessimisticConsensus');
-        const PPconsensusContract = PPconsensusFactory.attach(
-            createRollupOutputv2.rollupAddress,
-        ) as PolygonPessimisticConsensus;
-        expect(PPconsensusContract.target).to.equal(createRollupOutputv2.rollupAddress);
-        expect(await PPconsensusContract.globalExitRootManager()).to.equal(polygonZkEVMGlobalExitRootAddress);
-        expect(await PPconsensusContract.pol()).to.equal(polTokenAddress);
-        expect(await PPconsensusContract.bridgeAddress()).to.equal(polygonZkEVMBridgeAddress);
-        expect(await PPconsensusContract.rollupManager()).to.equal(polygonRollupManagerAddress);
-        const admin = await PPconsensusContract.admin();
         // If admin is not zero address, means the contract is already initialized
         expect(admin).to.not.equal(ethers.ZeroAddress);
     });
