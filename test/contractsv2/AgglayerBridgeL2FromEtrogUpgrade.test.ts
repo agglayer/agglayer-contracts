@@ -11,7 +11,7 @@ import {
     TokenWrapped,
     ERC20PermitMock,
 } from '../../typechain-types';
-import { computeGlobalIndex, calculateGlobalExitRoot } from './helpers/helpers-sovereign-bridge';
+import { computeGlobalIndex, calculateGlobalExitRoot } from '../../src/utils';
 
 const { getLeafValue } = mtBridgeUtils;
 const MerkleTreeBridge = MTBridge;
