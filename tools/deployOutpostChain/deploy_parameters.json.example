@@ -3,8 +3,8 @@
         "chainID": 1001,
         "rollupID": 1001,
         "networkName": "OutpostChain",
-        "tokenName": "baseETH",
-        "tokenSymbol": "BETH",
+        "tokenName": "outpostETH",
+        "tokenSymbol": "OETH",
         "tokenDecimals": 18
     },
     "timelock": {
