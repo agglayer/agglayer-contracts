@@ -21,14 +21,11 @@ Fill `.env` with your `ETHERSCAN_API_KEY` and `DEPLOYER_PRIVATE_KEY`
   - `type`: Specify the type of rollup creation, only available:
       - `EOA`: If creating the rollup from a wallet, the script will execute the creation of the rollup on the specified network
       - `Timelock`: If creating the rollup through a timelock, the script will output the execute and schedule data to send to the timelock contract
-  - `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`
+  - `consensusContract`: select between aggchain contracts. Supported: `["AggchainECDSAMultisig", "AggchainFEP"]`. Since AgglayerManager v2.0.0 only ALGateway rollup types can be added: StateTransition (`PolygonZkEVMEtrog`, `PolygonValidiumEtrog`) and `PolygonPessimisticConsensus` rollup types are rejected
   - `consensusContractAddress`: gets this address instead of deploying a new consensus implementation
   - `polygonRollupManagerAddress`: `AgglayerManager.sol` smart contract address
-  - `verifierAddress`: verifier address to be used. Only mandatory if `consensusContract !== Aggchain`
-  - `description`: string to describe rollup type added. Example: "Type: Validium, Version: etrog, genesis: /ipfs/QmUXnRoPbUmZuEZCGyiHjEsoNcFVu3hLtSvhpnfBS2mAYU"
-  - `forkID`: forkID to be used
-  - `programVKey`: program key for pessimistic consensus
-  - `genesisRoot`: initial genesis root. Must match the `genesis.json` generated.
+  - `description`: string to describe rollup type added. Example: "Type: AggchainFEP, Version: v3.0.0"
+  - The rollup type is always added with `verifier = address(0)`, `forkID = 0`, `genesis = bytes32(0)` and `programVKey = bytes32(0)`, as required for ALGateway rollup types
   - `timelockDelay`: timelock delay
   - `timelockSalt(optional)`: timelock salt
   - `predecessor(optional)`: timelock predecessor
@@ -52,10 +49,6 @@ Fill `.env` with your `ETHERSCAN_API_KEY` and `DEPLOYER_PRIVATE_KEY`
 - Copy configuration files:
 ```
 cp ./tools/addRollupType/add_rollup_type.json.example ./tools/addRollupType/add_rollup_type.json
-```
-
-```
-cp ./tools/addRollupType/genesis.json.example ./tools/addRollupType/genesis.json
 ```
 
 - Set your parameters

@@ -3,24 +3,15 @@ import { ethers } from 'hardhat';
 import fs from 'fs';
 import path from 'path';
 import shelljs from 'shelljs';
-import { ConsensusContracts } from '../src/pessimistic-utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../src/utils-common-aggchain';
 import { GENESIS_CONTRACT_NAMES, POLYGON_MULTISIG, TIMELOCK } from '../src/constants';
 import { getTimelockRoleMemberSlot, initializeTimelockStorage } from '../src/genesis/genesis-helpers';
 import safeContracts from '../tools/createSovereignGenesis/safe-contracts.json';
 
-import {
-    AgglayerManager,
-    PolygonPessimisticConsensus,
-    PolygonValidiumEtrog,
-    PolygonZkEVMEtrog,
-    AggchainFEP,
-    AggchainECDSAMultisig,
-    AgglayerGateway,
-} from '../typechain-types';
+import { AgglayerManager, AggchainFEP, AggchainECDSAMultisig, AgglayerGateway } from '../typechain-types';
 
 describe('Tooling docker build tests Contract', () => {
-    let rollupContract: PolygonZkEVMEtrog | PolygonPessimisticConsensus | AggchainECDSAMultisig | AggchainFEP;
+    let rollupContract: AggchainECDSAMultisig | AggchainFEP;
 
     it('Create a new rollup', async () => {
         // Read docker deployment output
@@ -70,15 +61,6 @@ describe('Tooling docker build tests Contract', () => {
         const rollupFactory = (await ethers.getContractFactory(createRollupConfig.consensusContractName)) as any;
 
         switch (createRollupConfig.consensusContractName) {
-            case ConsensusContracts.PolygonZkEVMEtrog:
-                rollupContract = rollupFactory.attach(createRollupOutput.rollupAddress) as PolygonZkEVMEtrog;
-                break;
-            case ConsensusContracts.PolygonValidiumEtrog:
-                rollupContract = rollupFactory.attach(createRollupOutput.rollupAddress) as PolygonValidiumEtrog;
-                break;
-            case ConsensusContracts.PolygonPessimisticConsensus:
-                rollupContract = rollupFactory.attach(createRollupOutput.rollupAddress) as PolygonPessimisticConsensus;
-                break;
             case AGGCHAIN_CONTRACT_NAMES.ECDSA:
                 rollupContract = rollupFactory.attach(createRollupOutput.rollupAddress) as AggchainECDSAMultisig;
                 break;
@@ -197,19 +179,12 @@ describe('Tooling docker build tests Contract', () => {
         // Update example config from docker deployment output
         createRollupTypeConfig.consensusContract = dockerCreateRollupOutput.consensusContract;
         createRollupTypeConfig.polygonRollupManagerAddress = dockerCreateRollupOutput.rollupManagerAddress;
-        createRollupTypeConfig.verifierAddress = dockerCreateRollupOutput.verifierAddress;
-        if (dockerCreateRollupOutput.consensusContract === ConsensusContracts.PolygonPessimisticConsensus) {
-            createRollupTypeConfig.genesisRoot = ethers.ZeroHash;
-            createRollupTypeConfig.programVKey = dockerCreateRollupOutput.programVKey;
-        } else if (Object.values(AGGCHAIN_CONTRACT_NAMES).includes(dockerCreateRollupOutput.consensusContract)) {
-            createRollupTypeConfig.genesisRoot = ethers.ZeroHash;
-            createRollupTypeConfig.programVKey = ethers.ZeroHash;
-            createRollupTypeConfig.verifierAddress = ethers.ZeroAddress;
-            createRollupTypeConfig.forkID = 0;
-        } else {
-            createRollupTypeConfig.genesisRoot = dockerCreateRollupOutput.genesis;
-            createRollupTypeConfig.programVKey = ethers.ZeroHash;
-        }
+        // Only aggchain (ALGateway) rollup types can be added
+        expect(Object.values(AGGCHAIN_CONTRACT_NAMES)).to.include(dockerCreateRollupOutput.consensusContract);
+        createRollupTypeConfig.genesisRoot = ethers.ZeroHash;
+        createRollupTypeConfig.programVKey = ethers.ZeroHash;
+        createRollupTypeConfig.verifierAddress = ethers.ZeroAddress;
+        createRollupTypeConfig.forkID = 0;
         createRollupTypeConfig.polygonRollupManagerAddress = dockerDeploymentOutput.polygonRollupManagerAddress;
         createRollupTypeConfig.outputPath = 'add_rollup_type_output.json';
         delete createRollupTypeConfig.customALGatewayAddress;

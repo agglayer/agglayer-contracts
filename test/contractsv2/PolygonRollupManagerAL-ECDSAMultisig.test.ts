@@ -649,7 +649,7 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
             );
     });
 
-    it('should throw reverts UpdateToOldRollupTypeID, OnlyStateTransitionChains and StateTransitionChainsNotAllowed', async () => {
+    it('should throw reverts UpdateToOldRollupTypeID and OnlyStateTransitionChains', async () => {
         // create two ECDSA multisig rollup types
         const ecdsaRollupTypeID1 = await createECDSAMultisigRollupType();
         const ecdsaRollupTypeID2 = await createECDSAMultisigRollupType();
@@ -662,38 +662,24 @@ describe('Polygon rollup manager aggregation layer v3: ECDSA Multisig', () => {
                 .updateRollupByRollupAdmin(ecdsaRollupAddress as string, ecdsaRollupTypeID1),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'UpdateToOldRollupTypeID');
 
-        // Trigger OnlyStateTransitionChains from onSequenceBatches
-        await ethers.provider.send('hardhat_setBalance', [ecdsaRollupAddress, '0x100000000000000']);
-        await ethers.provider.send('hardhat_impersonateAccount', [ecdsaRollupAddress]);
-        const ecdsaRollupSigner = await ethers.getSigner(ecdsaRollupAddress as string);
+        // Trigger OnlyStateTransitionChains from rollbackBatches
         await expect(
-            rollupManagerContract.connect(ecdsaRollupSigner).onSequenceBatches(3, computeRandomBytes(32)),
+            rollupManagerContract.connect(timelock).rollbackBatches(ecdsaRollupAddress as string, 0),
         ).to.be.revertedWithCustomError(rollupManagerContract, 'OnlyStateTransitionChains');
 
-        // Add an existing state transition rollup and trigger StateTransitionChainsNotAllowed
-        const stateTransitionRollupID = Number(await rollupManagerContract.rollupCount()) + 1;
-        await rollupManagerContract.connect(timelock).addExistingRollup(
-            polTokenContract.target, // any contract address
-            verifierContract.target,
-            1, // forkID
-            2002, // chainID
-            computeRandomBytes(32), // genesis
-            VerifierType.StateTransition,
-            ethers.ZeroHash, // programVKey
-            ethers.ZeroHash, // initPessimisticRoot
-        );
+        // StateTransition rollups can no longer be added
         await expect(
-            rollupManagerContract
-                .connect(trustedAggregator)
-                .verifyPessimisticTrustedAggregator(
-                    stateTransitionRollupID,
-                    0,
-                    computeRandomBytes(32),
-                    computeRandomBytes(32),
-                    '0x',
-                    '0x',
-                ),
-        ).to.be.revertedWithCustomError(rollupManagerContract, 'StateTransitionChainsNotAllowed');
+            rollupManagerContract.connect(timelock).addExistingRollup(
+                polTokenContract.target, // any contract address
+                verifierContract.target,
+                1, // forkID
+                2002, // chainID
+                computeRandomBytes(32), // genesis
+                VerifierType.StateTransition,
+                ethers.ZeroHash, // programVKey
+                ethers.ZeroHash, // initPessimisticRoot
+            ),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
     });
 
     it('should not allow to use the deprecated Pessimistic verifier type', async () => {

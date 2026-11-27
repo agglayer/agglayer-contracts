@@ -5,11 +5,11 @@ import path = require('path');
 import fs = require('fs');
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
-import { transactionTypes, genOperation, checkBridgeAddress } from '../utils';
+import { transactionTypes, genOperation } from '../utils';
 import { DEFAULT_ADMIN_ROLE, ADD_ROLLUP_TYPE_ROLE } from '../../src/constants';
 
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
-import { ConsensusContracts, VerifierType } from '../../src/pessimistic-utils';
+import { VerifierType } from '../../src/pessimistic-utils';
 import addRollupTypeParameters from './add_rollup_type.json';
 import { AgglayerManager } from '../../typechain-types';
 import {
@@ -39,17 +39,8 @@ async function main() {
      */
     const mandatoryParameters = ['type', 'description', 'consensusContract', 'polygonRollupManagerAddress'];
 
-    const {
-        type,
-        description,
-        forkID,
-        consensusContract,
-        polygonRollupManagerAddress,
-        timelockDelay,
-        genesisRoot,
-        programVKey,
-        customALGatewayAddress,
-    } = addRollupTypeParameters;
+    const { type, description, consensusContract, polygonRollupManagerAddress, timelockDelay, customALGatewayAddress } =
+        addRollupTypeParameters;
 
     // check add new rollup type
     switch (type) {
@@ -77,27 +68,17 @@ async function main() {
     const deployer = await getDeployerFromParameters(currentProvider, addRollupTypeParameters, ethers);
     logger.info(`Using deployer: ${deployer.address}`);
 
-    const supportedConsensus = Object.values(ConsensusContracts).concat(AggchainContracts);
-    const isPessimistic = consensusContract === ConsensusContracts.PolygonPessimisticConsensus;
-
-    if (!supportedConsensus.includes(consensusContract)) {
-        throw new Error(`Consensus contract not supported, supported contracts are: ${supportedConsensus}`);
+    // Only aggchains (VerifierType.ALGateway) rollup types can be added: StateTransition and Pessimistic are deprecated
+    if (!AggchainContracts.includes(consensusContract)) {
+        throw new Error(`Consensus contract not supported, supported contracts are: ${AggchainContracts}`);
     }
 
-    // verifierAddress only mandatory if consensusContract !== Aggchain
-    let verifierAddress;
-    let finalForkId = forkID;
-
-    if (!consensusContract.includes('Aggchain')) {
-        verifierAddress = addRollupTypeParameters.verifierAddress;
-        if (verifierAddress === undefined || verifierAddress === '') {
-            throw new Error('Missing parameter: verifierAddress');
-        }
-    } else {
-        verifierAddress = ethers.ZeroAddress;
-        // no fork id for Aggchain
-        finalForkId = 0;
-    }
+    // ALGateway rollup types: verifier = address(0), forkID = 0, genesis = bytes32(0) and programVKey = bytes32(0)
+    const verifierAddress = ethers.ZeroAddress;
+    const finalForkId = 0;
+    const rollupVerifierType = VerifierType.ALGateway;
+    const genesisFinal = ethers.ZeroHash;
+    const programVKeyFinal = ethers.ZeroHash;
 
     // Load Rollup manager
     const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManager', deployer);
@@ -112,22 +93,6 @@ async function main() {
     expect(polygonZkEVMBridgeAddress).to.not.equal(ethers.ZeroAddress);
     expect(polygonZkEVMGlobalExitRootAddress).to.not.equal(ethers.ZeroAddress);
     expect(polTokenAddress).to.not.equal(ethers.ZeroAddress);
-
-    let genesis;
-    if (!isPessimistic && !AggchainContracts.includes(consensusContract)) {
-        // Checks for state transition verifier types
-        const pathGenesis = path.join(__dirname, './genesis.json');
-        genesis = JSON.parse(fs.readFileSync(pathGenesis, 'utf8'));
-
-        // checks for rollups
-        // Sanity checks genesisRoot
-        if (genesisRoot !== genesis.root) {
-            throw new Error("Genesis root in the 'add_rollup_type.json' does not match the root in the 'genesis.json'");
-        }
-
-        // check bridge address is the same in genesisBase and on-chain
-        checkBridgeAddress(genesis, polygonZkEVMBridgeAddress);
-    }
 
     if (type !== transactionTypes.TIMELOCK) {
         // Check roles
@@ -155,92 +120,43 @@ async function main() {
         consensusContractAddress = addRollupTypeParameters.consensusContractAddress;
     } else {
         const polygonConsensusFactory = (await ethers.getContractFactory(consensusContract, deployer)) as any;
-        let polygonConsensusContract;
 
-        // Create consensus/aggchain implementation
-        if (!AggchainContracts.includes(consensusContract)) {
-            polygonConsensusContract = await polygonConsensusFactory.deploy(
-                polygonZkEVMGlobalExitRootAddress,
-                polTokenAddress,
-                polygonZkEVMBridgeAddress,
-                polygonRollupManagerAddress,
-            );
-            await polygonConsensusContract.waitForDeployment();
-
-            deployedContracts[consensusContract] = polygonConsensusContract.target;
-
-            logger.info('#######################\n');
-            logger.info(`new consensus name: ${consensusContract}`);
-            logger.info(`new ${consensusContract} impl: ${polygonConsensusContract.target}`);
-
-            await verifyContractEtherscan(polygonConsensusContract.target, [
-                polygonZkEVMGlobalExitRootAddress,
-                polTokenAddress,
-                polygonZkEVMBridgeAddress,
-                polygonRollupManagerAddress,
-            ]);
+        // Create aggchain implementation
+        let aggLayerGatewayAddress;
+        if (setCustomALGatewayAddress) {
+            aggLayerGatewayAddress = customALGatewayAddress;
         } else {
-            let aggLayerGatewayAddress;
-            if (setCustomALGatewayAddress) {
-                aggLayerGatewayAddress = customALGatewayAddress;
-            } else {
-                // Retrieve ALGateway from rollupManagerContract
-                aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
-            }
-            logger.info(`AgglayerGateway address: ${aggLayerGatewayAddress}`);
-            polygonConsensusContract = await polygonConsensusFactory.deploy(
-                polygonZkEVMGlobalExitRootAddress,
-                polTokenAddress,
-                polygonZkEVMBridgeAddress,
-                polygonRollupManagerAddress,
-                aggLayerGatewayAddress,
-            );
-            await polygonConsensusContract.waitForDeployment();
-
-            deployedContracts[consensusContract] = polygonConsensusContract.target;
-
-            logger.info('#######################\n');
-            logger.info(`new aggchain name: ${consensusContract}`);
-            logger.info(`new ${consensusContract} impl: ${polygonConsensusContract.target}`);
-
-            await verifyContractEtherscan(polygonConsensusContract.target, [
-                polygonZkEVMGlobalExitRootAddress,
-                polTokenAddress,
-                polygonZkEVMBridgeAddress,
-                polygonRollupManagerAddress,
-                aggLayerGatewayAddress,
-            ]);
+            // Retrieve ALGateway from rollupManagerContract
+            aggLayerGatewayAddress = await rollupManagerContract.aggLayerGateway();
         }
+        logger.info(`AgglayerGateway address: ${aggLayerGatewayAddress}`);
+        const polygonConsensusContract = await polygonConsensusFactory.deploy(
+            polygonZkEVMGlobalExitRootAddress,
+            polTokenAddress,
+            polygonZkEVMBridgeAddress,
+            polygonRollupManagerAddress,
+            aggLayerGatewayAddress,
+        );
+        await polygonConsensusContract.waitForDeployment();
+
+        deployedContracts[consensusContract] = polygonConsensusContract.target;
+
+        logger.info('#######################\n');
+        logger.info(`new aggchain name: ${consensusContract}`);
+        logger.info(`new ${consensusContract} impl: ${polygonConsensusContract.target}`);
+
+        await verifyContractEtherscan(polygonConsensusContract.target, [
+            polygonZkEVMGlobalExitRootAddress,
+            polTokenAddress,
+            polygonZkEVMBridgeAddress,
+            polygonRollupManagerAddress,
+            aggLayerGatewayAddress,
+        ]);
 
         consensusContractAddress = polygonConsensusContract.target;
     }
 
     // Add a new rollup type
-    let rollupVerifierType;
-    let genesisFinal;
-    let programVKeyFinal;
-
-    if (AggchainContracts.includes(consensusContract)) {
-        // rollupVerifierType = VerifierType.ALGateway = 2
-        rollupVerifierType = VerifierType.ALGateway;
-        // genesis = bytes32(0)
-        genesisFinal = ethers.ZeroHash;
-        // programVKey = bytes32(0)
-        programVKeyFinal = ethers.ZeroHash;
-    } else if (isPessimistic) {
-        // rollupVerifierType = VerifierType.Pessimistic = 1
-        rollupVerifierType = VerifierType.Pessimistic;
-        // genesis = bytes32(0)
-        genesisFinal = ethers.ZeroHash;
-        programVKeyFinal = programVKey || ethers.ZeroHash;
-    } else {
-        // rollupVerifierType = VerifierType.StateTransition = 0
-        rollupVerifierType = VerifierType.StateTransition;
-        genesisFinal = genesis.root;
-        // programVKey = bytes32(0)
-        programVKeyFinal = ethers.ZeroHash;
-    }
-
     if (type === transactionTypes.EOA) {
         await (
             await rollupManagerContract

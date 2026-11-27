@@ -66,7 +66,7 @@ To verify a rollup created by an older rollup manager:
 Implementation constructor arguments depend on the consensus type, so they are not derived by the script. If `implementationContract` or `implementationConstructorArgs` is missing for an entry, the implementation verification is skipped (logged and shown as `skipped` in the summary). For reference:
 
 - `AggchainFEP` / `AggchainECDSAMultisig`: `[globalExitRootManager, pol, bridge, rollupManager, aggLayerGateway]`
-- `PolygonValidiumEtrog` / `PolygonZkEVMEtrog`: `[globalExitRootManager, pol, bridge, rollupManager]`
+- `PolygonValidiumEtrog` / `PolygonZkEVMEtrog` (legacy StateTransition rollups, archived in `contracts/previousVersions/v12/` since AgglayerManager v2.0.0; verify them from a tag where they live in `contracts/consensus/`): `[globalExitRootManager, pol, bridge, rollupManager]`
 
 The implementation must be compiled with the same sources and compiler settings it was deployed with (checkout the matching tag).
 

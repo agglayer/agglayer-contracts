@@ -61,6 +61,7 @@ export const ADD_EXISTING_ROLLUP_ROLE = ethers.id('ADD_EXISTING_ROLLUP_ROLE');
 export const UPDATE_ROLLUP_ROLE = ethers.id('UPDATE_ROLLUP_ROLE');
 export const TRUSTED_AGGREGATOR_ROLE = ethers.id('TRUSTED_AGGREGATOR_ROLE');
 export const TRUSTED_AGGREGATOR_ROLE_ADMIN = ethers.id('TRUSTED_AGGREGATOR_ROLE_ADMIN');
+// Legacy AgglayerManager roles: no function uses them since v2.0.0
 export const TWEAK_PARAMETERS_ROLE = ethers.id('TWEAK_PARAMETERS_ROLE');
 export const SET_FEE_ROLE = ethers.id('SET_FEE_ROLE');
 export const STOP_EMERGENCY_ROLE = ethers.id('STOP_EMERGENCY_ROLE');

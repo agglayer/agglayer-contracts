@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.28;
 
-import "../../lib/PolygonRollupBaseEtrog.sol";
+import "./PolygonRollupBaseEtrog.sol";
 import "../../interfaces/IDataAvailabilityProtocol.sol";
 import "../../interfaces/IPolygonValidium.sol";
 
@@ -60,7 +60,7 @@ contract PolygonValidiumEtrog is PolygonRollupBaseEtrog, IPolygonValidium {
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IAgglayerBridge _bridgeAddress,
-        AgglayerManager _rollupManager
+        AgglayerManagerV12 _rollupManager
     )
         PolygonRollupBaseEtrog(
             _globalExitRootManager,

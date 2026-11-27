@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 import "./interfaces/IAgglayerGER.sol";
 import "./interfaces/IPolygonZkEVMBridge.sol";
 import "./interfaces/IPolygonRollupBase.sol";
-import "./interfaces/IVerifierRollup.sol";
 import "./lib/EmergencyManager.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
 // @dev For ReentrancyGuardTransient there is no difference between upgradable and not upgradable contracts
@@ -14,7 +13,6 @@ import "./lib/PolygonTransparentProxy.sol";
 import "./lib/PolygonAccessControlUpgradeable.sol";
 import "./lib/LegacyZKEVMStateVariables.sol";
 import "./lib/PolygonConstantsBase.sol";
-import "./interfaces/ISP1Verifier.sol";
 import "./interfaces/IAgglayerManager.sol";
 import "./interfaces/IAggchainBase.sol";
 import "./interfaces/IAgglayerGateway.sol";
@@ -22,10 +20,11 @@ import "./interfaces/IVersion.sol";
 import "./lib/Hashes.sol";
 
 /**
- * Contract responsible for managing rollups and the verification of their batches.
- * This contract will create and update rollups and store all the hashed sequenced data from them.
- * The logic for sequence batches is moved to the `consensus` contracts, while the verification of all of
- * them will be done in this one. In this way, the proof aggregation of the rollups will be easier on a close future.
+ * Contract responsible for managing rollups and the verification of their pessimistic proofs.
+ * This contract will create and update rollups (aggchains) and verify their state transitions through the AgglayerGateway.
+ * @dev Legacy StateTransition rollups can no longer sequence nor verify batches: they can only roll back
+ * their unverified batches and migrate to ALGateway through `initMigration`.
+ * Their data is kept in storage and exposed through the view functions for backwards compatibility.
  */
 contract AgglayerManager is
     PolygonAccessControlUpgradeable,
@@ -36,8 +35,6 @@ contract AgglayerManager is
     ReentrancyGuardTransient,
     IVersion
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-
     /**
      * @notice Struct which to store the rollup type data
      * @param consensusImplementation Consensus implementation ( contains the consensus logic for the transparent proxy)
@@ -168,22 +165,6 @@ contract AgglayerManager is
         bytes32 programVKey;
     }
 
-    // Modulus zkSNARK
-    uint256 internal constant _RFIELD =
-        21888242871839275222246405745257275088548364400416034343698204186575808495617;
-
-    // Max batch fee value
-    uint256 internal constant _MAX_BATCH_FEE = 1000 ether;
-
-    // Min value batch fee
-    uint256 internal constant _MIN_BATCH_FEE = 1 gwei;
-
-    // Goldilocks prime field
-    uint256 internal constant _GOLDILOCKS_PRIME_FIELD = 0xFFFFFFFF00000001; // 2 ** 64 - 2 ** 32 + 1
-
-    // Max uint64
-    uint256 internal constant _MAX_UINT_64 = type(uint64).max; // 0xFFFFFFFFFFFFFFFF
-
     // Exit merkle tree levels
     uint256 internal constant _EXIT_TREE_DEPTH = 32;
 
@@ -217,13 +198,6 @@ contract AgglayerManager is
     // Be able to set the trusted aggregator address
     bytes32 internal constant _TRUSTED_AGGREGATOR_ROLE_ADMIN =
         keccak256("TRUSTED_AGGREGATOR_ROLE_ADMIN");
-
-    // Be able to tweak parameters
-    bytes32 internal constant _TWEAK_PARAMETERS_ROLE =
-        keccak256("TWEAK_PARAMETERS_ROLE");
-
-    // Be able to set the current batch fee
-    bytes32 internal constant _SET_FEE_ROLE = keccak256("SET_FEE_ROLE");
 
     // Be able to stop the emergency state
     bytes32 internal constant _STOP_EMERGENCY_ROLE =
@@ -281,11 +255,13 @@ contract AgglayerManager is
     // note we will take care to avoid that current known chainIDs are not reused in our networks (example: 1)
     mapping(uint64 chainID => uint32 rollupID) public chainIDToRollupID;
 
-    // Total sequenced batches across all rollups
-    uint64 public totalSequencedBatches;
+    // Total sequenced batches across all rollups (deprecated: batches are no longer sequenced)
+    /// @custom:oz-renamed-from totalSequencedBatches
+    uint64 internal __legacyTotalSequencedBatches;
 
-    // Total verified batches across all rollups
-    uint64 public totalVerifiedBatches;
+    // Total verified batches across all rollups (deprecated: batches are no longer verified)
+    /// @custom:oz-renamed-from totalVerifiedBatches
+    uint64 internal __legacyTotalVerifiedBatches;
 
     // Last timestamp when an aggregation happen
     uint64 public lastAggregationTimestamp;
@@ -308,9 +284,9 @@ contract AgglayerManager is
     /// @custom:oz-renamed-from multiplierBatchFee
     uint16 internal __legacyMultiplierBatchFee;
 
-    // Current POL fee per batch sequenced
-    // note This variable is internal, since the view function getBatchFee is likely to be upgraded
-    uint256 internal _batchFee;
+    // POL fee per batch sequenced (deprecated: batches are no longer sequenced)
+    /// @custom:oz-renamed-from _batchFee
+    uint256 internal __legacyBatchFee;
 
     // Timestamp when the last emergency state was deactivated
     uint64 public lastDeactivatedEmergencyStateTimestamp;
@@ -372,12 +348,7 @@ contract AgglayerManager is
     );
 
     /**
-     * @dev Emitted when a new verifier is added
-     */
-    event OnSequenceBatches(uint32 indexed rollupID, uint64 lastBatchSequenced);
-
-    /**
-     * @dev Emitted when the trusted aggregator verifies batches
+     * @dev Emitted when the trusted aggregator verifies a pessimistic proof, kept for backwards compatibility
      */
     event VerifyBatchesTrustedAggregator(
         uint32 indexed rollupID,
@@ -395,16 +366,6 @@ contract AgglayerManager is
         uint64 indexed targetBatch,
         bytes32 accInputHashToRollback
     );
-
-    /**
-     * @dev Emitted when is updated the trusted aggregator address
-     */
-    event SetTrustedAggregator(address newTrustedAggregator);
-
-    /**
-     * @dev Emitted when is updated the batch fee
-     */
-    event SetBatchFee(uint256 newBatchFee);
 
     /**
      * @dev Emitted when rollup manager is upgraded
@@ -489,7 +450,7 @@ contract AgglayerManager is
     /**
      * Initializer function to set new rollup manager version
      */
-    function initialize() external virtual reinitializer(5) {
+    function initialize() external virtual reinitializer(6) {
         emit UpdateRollupManagerVersion(ROLLUP_MANAGER_VERSION);
     }
 
@@ -525,23 +486,17 @@ contract AgglayerManager is
             revert InvalidImplementationAddress();
         }
 
-        uint32 rollupTypeID = ++rollupTypeCount;
+        // Only ALGateway rollup types can be added: VerifierType.StateTransition and VerifierType.Pessimistic are deprecated
+        // Those params should be zero for ALGateway rollup types
+        if (
+            rollupVerifierType != VerifierType.ALGateway ||
+            verifier != address(0) ||
+            forkID != 0 ||
+            genesis != bytes32(0) ||
+            programVKey != bytes32(0)
+        ) revert InvalidRollupType();
 
-        if (rollupVerifierType == VerifierType.ALGateway) {
-            // Those params should be zero for ALGateway rollup types
-            if (
-                verifier != address(0) ||
-                forkID != 0 ||
-                genesis != bytes32(0) ||
-                programVKey != bytes32(0)
-            ) revert InvalidRollupType();
-        } else if (rollupVerifierType == VerifierType.StateTransition) {
-            // No programVKey on state transition rollups
-            if (programVKey != bytes32(0)) revert InvalidRollupType();
-        } else {
-            // VerifierType.Pessimistic is deprecated: no new rollup types can be added with it
-            revert InvalidRollupType();
-        }
+        uint32 rollupTypeID = ++rollupTypeCount;
 
         rollupTypeMap[rollupTypeID] = RollupType({
             consensusImplementation: consensusImplementation,
@@ -593,8 +548,7 @@ contract AgglayerManager is
      * @param rollupTypeID Rollup type to deploy
      * @param chainID ChainID of the rollup, must be a new one, can not have more than 32 bits
      * @param initializeBytesAggchain Encoded params to initialize the chain. Each aggchain has its encoded params.
-     * @dev in case of rollupType state transition, the encoded params
-     * are the following: (address admin, address sequencer, address gasTokenAddress, string sequencerURL, string networkName)
+     * @dev Only ALGateway rollup types can be used: the first encoded param is the aggchain manager
      */
     function attachAggchainToAL(
         uint32 rollupTypeID,
@@ -611,8 +565,9 @@ contract AgglayerManager is
             revert RollupTypeObsolete();
         }
 
-        // VerifierType.Pessimistic is deprecated: legacy pessimistic rollup types may still exist but can not be used
-        if (rollupType.rollupVerifierType == VerifierType.Pessimistic) {
+        // VerifierType.StateTransition and VerifierType.Pessimistic are deprecated:
+        // legacy rollup types may still exist but can not be used
+        if (rollupType.rollupVerifierType != VerifierType.ALGateway) {
             revert InvalidRollupType();
         }
 
@@ -648,87 +603,48 @@ contract AgglayerManager is
         rollup.rollupContract = rollupAddress;
         rollup.chainID = chainID;
         rollup.rollupTypeID = rollupTypeID;
-        rollup.rollupVerifierType = rollupType.rollupVerifierType;
+        rollup.rollupVerifierType = VerifierType.ALGateway;
 
-        if (rollupType.rollupVerifierType == VerifierType.ALGateway) {
-            // Emit create new aggchain event
-            emit CreateNewAggchain(
-                rollupID,
-                rollupTypeID,
-                rollupAddress,
-                chainID,
-                uint8(rollupType.rollupVerifierType),
-                initializeBytesAggchain
-            );
+        // Emit create new aggchain event
+        emit CreateNewAggchain(
+            rollupID,
+            rollupTypeID,
+            rollupAddress,
+            chainID,
+            uint8(VerifierType.ALGateway),
+            initializeBytesAggchain
+        );
 
-            // This event is emitted for backwards compatibility
-            /// @dev the address is hardcoded as it doesn't apply for aggchains and zero address is used for ether
-            emit CreateNewRollup(
-                rollupID,
-                rollupTypeID,
-                rollupAddress,
-                chainID,
-                _NO_ADDRESS
-            );
+        // This event is emitted for backwards compatibility
+        /// @dev the address is hardcoded as it doesn't apply for aggchains and zero address is used for ether
+        emit CreateNewRollup(
+            rollupID,
+            rollupTypeID,
+            rollupAddress,
+            chainID,
+            _NO_ADDRESS
+        );
 
-            address aggchainManager = abi.decode(
-                initializeBytesAggchain,
-                (address)
-            );
+        address aggchainManager = abi.decode(
+            initializeBytesAggchain,
+            (address)
+        );
 
-            // Set the aggchain manager, aggchain contract will be initialized later
-            // through the aggchain manager
-            IAggchainBase(rollupAddress).initAggchainManager(aggchainManager);
-        } else {
-            // assign non ALGateway values to rollup data
-            rollup.forkID = rollupType.forkID;
-            rollup.verifier = rollupType.verifier;
-            rollup.batchNumToStateRoot[0] = rollupType.genesis;
-            rollup.programVKey = rollupType.programVKey;
-
-            // custom parsing of the initializeBytesAggchain for a state transition rollup
-            (
-                address admin,
-                address sequencer,
-                address gasTokenAddress,
-                string memory sequencerURL,
-                string memory networkName
-            ) = abi.decode(
-                    initializeBytesAggchain,
-                    (address, address, address, string, string)
-                );
-
-            // Emit create new rollup event
-            emit CreateNewRollup(
-                rollupID,
-                rollupTypeID,
-                rollupAddress,
-                chainID,
-                gasTokenAddress
-            );
-
-            // Initialize new rollup
-            IPolygonRollupBase(rollupAddress).initialize(
-                admin,
-                sequencer,
-                rollupID,
-                gasTokenAddress,
-                sequencerURL,
-                networkName
-            );
-        }
+        // Set the aggchain manager, aggchain contract will be initialized later
+        // through the aggchain manager
+        IAggchainBase(rollupAddress).initAggchainManager(aggchainManager);
     }
 
     /**
      * @notice Add an already deployed rollup
-     * note that this rollup does not follow any rollupType
+     * note that this rollup does not follow any rollupType. Only ALGateway rollups can be added
      * @param rollupAddress Rollup address
-     * @param verifier Verifier address, must be added before
-     * @param forkID Fork id of the added rollup
+     * @param verifier Must be zero, kept for interface compatibility
+     * @param forkID Must be zero, kept for interface compatibility
      * @param chainID Chain id of the added rollup
-     * @param initRoot Genesis block for StateTransitionChains & localExitRoot for ALGateway chains
-     * @param rollupVerifierType Compatibility ID for the added rollup
-     * @param programVKey Hashed program that will be executed in case of using a "general purpose ZK verifier" e.g SP1
+     * @param initRoot Local exit root of the added rollup
+     * @param rollupVerifierType Must be VerifierType.ALGateway
+     * @param programVKey Must be zero, kept for interface compatibility
      * @param initPessimisticRoot Pessimistic root to init the chain.
      */
     function addExistingRollup(
@@ -771,40 +687,23 @@ contract AgglayerManager is
         // Store rollup data
         rollupAddressToID[address(rollupAddress)] = rollupID;
 
-        RollupData storage rollup = _rollupIDToRollupData[rollupID];
-        rollup.rollupContract = rollupAddress;
-        rollup.forkID = forkID;
-        rollup.verifier = verifier;
-        rollup.chainID = chainID;
-        rollup.rollupVerifierType = rollupVerifierType;
-
-        // Check verifier type
-        if (rollupVerifierType == VerifierType.ALGateway) {
-            if (
-                verifier != address(0) ||
-                forkID != 0 ||
-                programVKey != bytes32(0)
-            ) {
-                revert InvalidInputsForRollupType();
-            }
-
-            rollup.lastPessimisticRoot = initPessimisticRoot;
-            rollup.lastLocalExitRoot = initRoot;
-        } else if (rollupVerifierType == VerifierType.StateTransition) {
-            if (
-                programVKey != bytes32(0) || initPessimisticRoot != bytes32(0)
-            ) {
-                revert InvalidInputsForRollupType();
-            }
-
-            rollup.batchNumToStateRoot[0] = initRoot;
-            if (verifier.code.length == 0) {
-                revert InvalidVerifierAddress();
-            }
-        } else {
-            // VerifierType.Pessimistic is deprecated: no rollups can be added with it
+        // VerifierType.StateTransition and VerifierType.Pessimistic are deprecated: no rollups can be added with them
+        if (rollupVerifierType != VerifierType.ALGateway) {
             revert InvalidRollupType();
         }
+
+        if (
+            verifier != address(0) || forkID != 0 || programVKey != bytes32(0)
+        ) {
+            revert InvalidInputsForRollupType();
+        }
+
+        RollupData storage rollup = _rollupIDToRollupData[rollupID];
+        rollup.rollupContract = rollupAddress;
+        rollup.chainID = chainID;
+        rollup.rollupVerifierType = VerifierType.ALGateway;
+        rollup.lastPessimisticRoot = initPessimisticRoot;
+        rollup.lastLocalExitRoot = initRoot;
 
         emit AddExistingRollup(
             rollupID,
@@ -853,17 +752,13 @@ contract AgglayerManager is
                 revert UpdateNotCompatible();
             }
         } else {
-            // Check admin of the network is msg.sender
+            // Legacy rollups: check admin of the network is msg.sender
+            // StateTransition rollups can not be updated to a StateTransition rollup type, see `_updateRollup`
             if (
                 IPolygonRollupBase(address(rollupContract)).admin() !=
                 msg.sender
             ) {
                 revert OnlyRollupAdmin();
-            }
-
-            // Check all sequenced batches are verified
-            if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
-                revert AllSequencedMustBeVerified();
             }
         }
 
@@ -949,6 +844,11 @@ contract AgglayerManager is
             revert RollupTypeObsolete();
         }
 
+        // VerifierType.StateTransition is deprecated: StateTransition rollups can only migrate to ALGateway through `initMigration`
+        if (newRollupType.rollupVerifierType == VerifierType.StateTransition) {
+            revert InvalidRollupType();
+        }
+
         // Update rollup parameters
         rollup.verifier = newRollupType.verifier;
         rollup.forkID = newRollupType.forkID;
@@ -987,6 +887,7 @@ contract AgglayerManager is
         );
 
         // No pending batches to verify allowed before migration
+        // Batches can no longer be verified: unverified sequenced batches must be removed first with `rollbackBatches`
         if (rollup.lastBatchSequenced != rollup.lastVerifiedBatch) {
             revert AllSequencedMustBeVerified();
         }
@@ -1014,7 +915,8 @@ contract AgglayerManager is
 
     /**
      * @notice Rollback batches of the target rollup
-     * Only applies to state transition rollups
+     * Only applies to state transition rollups. Batches can no longer be verified, so this is used to remove
+     * the unverified sequenced batches before migrating the rollup to ALGateway with `initMigration`
      * @param rollupContract Rollup consensus proxy address
      * @param targetBatch Batch to rollback up to but not including this batch
      */
@@ -1077,9 +979,6 @@ contract AgglayerManager is
         // Update last batch sequenced on rollup data
         rollup.lastBatchSequenced = targetBatch;
 
-        // Update totalSequencedBatches
-        totalSequencedBatches -= lastBatchSequenced - targetBatch;
-
         // Clean pending state if any
         rollupContract.rollbackBatches(
             targetBatch,
@@ -1093,199 +992,9 @@ contract AgglayerManager is
         );
     }
 
-    /////////////////////////////////////
-    // Sequence/Verify batches functions
-    ////////////////////////////////////
-
-    /**
-     * @notice Sequence batches, callback called by one of the consensus managed by this contract
-     * @param newSequencedBatches Number of batches sequenced
-     * @param newAccInputHash New accumulate input hash
-     */
-    function onSequenceBatches(
-        uint64 newSequencedBatches,
-        bytes32 newAccInputHash
-    ) external ifNotEmergencyState returns (uint64) {
-        // Check that the msg.sender is an added rollup
-        uint32 rollupID = rollupAddressToID[msg.sender];
-        if (rollupID == 0) {
-            revert SenderMustBeRollup();
-        }
-
-        // This prevents overwriting sequencedBatches
-        if (newSequencedBatches == 0) {
-            revert MustSequenceSomeBatch();
-        }
-
-        RollupData storage rollup = _rollupIDToRollupData[rollupID];
-
-        if (rollup.rollupVerifierType != VerifierType.StateTransition) {
-            revert OnlyStateTransitionChains();
-        }
-
-        // Update total sequence parameters
-        totalSequencedBatches += newSequencedBatches;
-
-        // Update sequenced batches of the current rollup
-        uint64 previousLastBatchSequenced = rollup.lastBatchSequenced;
-        uint64 newLastBatchSequenced = previousLastBatchSequenced +
-            newSequencedBatches;
-
-        rollup.lastBatchSequenced = newLastBatchSequenced;
-        rollup.sequencedBatches[newLastBatchSequenced] = SequencedBatchData({
-            accInputHash: newAccInputHash,
-            sequencedTimestamp: uint64(block.timestamp),
-            previousLastBatchSequenced: previousLastBatchSequenced
-        });
-
-        emit OnSequenceBatches(rollupID, newLastBatchSequenced);
-
-        return newLastBatchSequenced;
-    }
-
-    /**
-     * @notice Allows a trusted aggregator to verify multiple batches
-     * @param rollupID Rollup identifier
-     * @param pendingStateNum Init pending state, 0 if consolidated state is used (deprecated)
-     * @param initNumBatch Batch which the aggregator starts the verification
-     * @param finalNewBatch Last batch aggregator intends to verify
-     * @param newLocalExitRoot New local exit root once the batch is processed
-     * @param newStateRoot New State root once the batch is processed
-     * @param beneficiary Address that will receive the verification reward
-     * @param proof Fflonk proof
-     */
-    function verifyBatchesTrustedAggregator(
-        uint32 rollupID,
-        uint64 pendingStateNum,
-        uint64 initNumBatch,
-        uint64 finalNewBatch,
-        bytes32 newLocalExitRoot,
-        bytes32 newStateRoot,
-        address beneficiary,
-        bytes32[24] calldata proof
-    ) external onlyRole(_TRUSTED_AGGREGATOR_ROLE) {
-        // Pending state became deprecated,
-        // It's still there just to have backwards compatibility interface
-        if (pendingStateNum != 0) {
-            revert PendingStateNumExist();
-        }
-
-        RollupData storage rollup = _rollupIDToRollupData[rollupID];
-
-        if (rollup.rollupVerifierType != VerifierType.StateTransition) {
-            revert OnlyStateTransitionChains();
-        }
-
-        _verifyAndRewardBatches(
-            rollup,
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            newStateRoot,
-            beneficiary,
-            proof
-        );
-
-        // Consolidate state
-        rollup.lastVerifiedBatch = finalNewBatch;
-        rollup.batchNumToStateRoot[finalNewBatch] = newStateRoot;
-        rollup.lastLocalExitRoot = newLocalExitRoot;
-
-        // Interact with globalExitRootManager
-        globalExitRootManager.updateExitRoot(getRollupExitRoot());
-
-        emit VerifyBatchesTrustedAggregator(
-            rollupID,
-            finalNewBatch,
-            newStateRoot,
-            newLocalExitRoot,
-            msg.sender
-        );
-    }
-
-    /**
-     * @notice Verify and reward batches internal function
-     * @param rollup Rollup Data storage pointer that will be used to the verification
-     * @param initNumBatch Batch which the aggregator starts the verification
-     * @param finalNewBatch Last batch aggregator intends to verify
-     * @param newLocalExitRoot New local exit root once the batch is processed
-     * @param newStateRoot New State root once the batch is processed
-     * @param beneficiary Address that will receive the verification reward
-     * @param proof Fflonk proof
-     */
-    function _verifyAndRewardBatches(
-        RollupData storage rollup,
-        uint64 initNumBatch,
-        uint64 finalNewBatch,
-        bytes32 newLocalExitRoot,
-        bytes32 newStateRoot,
-        address beneficiary,
-        bytes32[24] calldata proof
-    ) internal virtual {
-        bytes32 oldStateRoot;
-
-        uint64 currentLastVerifiedBatch = _getLastVerifiedBatch(rollup);
-
-        if (initNumBatch < rollup.lastVerifiedBatchBeforeUpgrade) {
-            revert InitBatchMustMatchCurrentForkID();
-        }
-
-        // Use consolidated state
-        oldStateRoot = rollup.batchNumToStateRoot[initNumBatch];
-
-        if (oldStateRoot == bytes32(0)) {
-            revert OldStateRootDoesNotExist();
-        }
-
-        // Check initNumBatch is inside the range, sanity check
-        if (initNumBatch > currentLastVerifiedBatch) {
-            revert InitNumBatchAboveLastVerifiedBatch();
-        }
-
-        // Check final batch
-        if (finalNewBatch <= currentLastVerifiedBatch) {
-            revert FinalNumBatchBelowLastVerifiedBatch();
-        }
-
-        // Get snark bytes
-        bytes memory snarkHashBytes = _getInputSnarkBytes(
-            rollup,
-            initNumBatch,
-            finalNewBatch,
-            newLocalExitRoot,
-            oldStateRoot,
-            newStateRoot
-        );
-
-        // Calculate the snark input
-        uint256 inputSnark = uint256(sha256(snarkHashBytes)) % _RFIELD;
-
-        // Verify proof
-        if (
-            !IVerifierRollup(rollup.verifier).verifyProof(proof, [inputSnark])
-        ) {
-            revert InvalidProof();
-        }
-
-        // Pay POL rewards
-        uint64 newVerifiedBatches = finalNewBatch - currentLastVerifiedBatch;
-
-        pol.safeTransfer(
-            beneficiary,
-            calculateRewardPerBatch() * newVerifiedBatches
-        );
-
-        // Update aggregation parameters
-        totalVerifiedBatches += newVerifiedBatches;
-        lastAggregationTimestamp = uint64(block.timestamp);
-
-        // Callback to the rollup address
-        IPolygonRollupBase(rollup.rollupContract).onVerifyBatches(
-            finalNewBatch,
-            newStateRoot,
-            msg.sender
-        );
-    }
+    ////////////////////
+    // Verify functions
+    ////////////////////
 
     /**
      * @notice Allows a trusted aggregator to verify pessimistic proof
@@ -1451,23 +1160,6 @@ contract AgglayerManager is
         super._activateEmergencyState();
     }
 
-    //////////////////
-    // Setter functions
-    //////////////////
-
-    /**
-     * @notice Set the current batch fee
-     * @param newBatchFee new batch fee
-     */
-    function setBatchFee(uint256 newBatchFee) external onlyRole(_SET_FEE_ROLE) {
-        // check fees min and max
-        if (newBatchFee > _MAX_BATCH_FEE || newBatchFee < _MIN_BATCH_FEE) {
-            revert BatchFeeOutOfRange();
-        }
-        _batchFee = newBatchFee;
-        emit SetBatchFee(newBatchFee);
-    }
-
     ////////////////////////
     // view/pure functions
     ///////////////////////
@@ -1553,46 +1245,7 @@ contract AgglayerManager is
     function getLastVerifiedBatch(
         uint32 rollupID
     ) public view returns (uint64) {
-        return _getLastVerifiedBatch(_rollupIDToRollupData[rollupID]);
-    }
-
-    /**
-     * @notice Get the last verified batch
-     */
-    function _getLastVerifiedBatch(
-        RollupData storage rollup
-    ) internal view returns (uint64) {
-        return rollup.lastVerifiedBatch;
-    }
-
-    /**
-     * @notice Function to calculate the reward to verify a single batch
-     */
-    function calculateRewardPerBatch() public view returns (uint256) {
-        uint256 currentBalance = pol.balanceOf(address(this));
-
-        // Total Batches to be verified = total Sequenced Batches - total verified Batches
-        uint256 totalBatchesToVerify = totalSequencedBatches -
-            totalVerifiedBatches;
-
-        if (totalBatchesToVerify == 0) return 0;
-        return currentBalance / totalBatchesToVerify;
-    }
-
-    /**
-     * @notice Get batch fee
-     * This function is used instead of the automatic public view one,
-     * because in a future might change the behavior and we will be able to maintain the interface
-     */
-    function getBatchFee() public view returns (uint256) {
-        return _batchFee;
-    }
-
-    /**
-     * @notice Get forced batch fee
-     */
-    function getForcedBatchFee() public view returns (uint256) {
-        return _batchFee * 100;
+        return _rollupIDToRollupData[rollupID].lastVerifiedBatch;
     }
 
     /**
@@ -1649,109 +1302,6 @@ contract AgglayerManager is
             newLocalExitRoot,
             newPessimisticRoot
         );
-    }
-
-    /**
-     * @notice Function to calculate the input snark bytes
-     * @param rollupID Rollup id used to calculate the input snark bytes
-     * @param initNumBatch Batch which the aggregator starts the verification
-     * @param finalNewBatch Last batch aggregator intends to verify
-     * @param newLocalExitRoot New local exit root once the batch is processed
-     * @param oldStateRoot State root before batch is processed
-     * @param newStateRoot New State root once the batch is processed
-     */
-    function getInputSnarkBytes(
-        uint32 rollupID,
-        uint64 initNumBatch,
-        uint64 finalNewBatch,
-        bytes32 newLocalExitRoot,
-        bytes32 oldStateRoot,
-        bytes32 newStateRoot
-    ) public view returns (bytes memory) {
-        return
-            _getInputSnarkBytes(
-                _rollupIDToRollupData[rollupID],
-                initNumBatch,
-                finalNewBatch,
-                newLocalExitRoot,
-                oldStateRoot,
-                newStateRoot
-            );
-    }
-
-    /**
-     * @notice Function to calculate the input snark bytes
-     * @param rollup Rollup data storage pointer
-     * @param initNumBatch Batch which the aggregator starts the verification
-     * @param finalNewBatch Last batch aggregator intends to verify
-     * @param newLocalExitRoot New local exit root once the batch is processed
-     * @param oldStateRoot State root before batch is processed
-     * @param newStateRoot New State root once the batch is processed
-     */
-    function _getInputSnarkBytes(
-        RollupData storage rollup,
-        uint64 initNumBatch,
-        uint64 finalNewBatch,
-        bytes32 newLocalExitRoot,
-        bytes32 oldStateRoot,
-        bytes32 newStateRoot
-    ) internal view returns (bytes memory) {
-        // Sanity check
-        bytes32 oldAccInputHash = rollup
-            .sequencedBatches[initNumBatch]
-            .accInputHash;
-
-        bytes32 newAccInputHash = rollup
-            .sequencedBatches[finalNewBatch]
-            .accInputHash;
-
-        // Sanity check
-        if (initNumBatch != 0 && oldAccInputHash == bytes32(0)) {
-            revert OldAccInputHashDoesNotExist();
-        }
-
-        if (newAccInputHash == bytes32(0)) {
-            revert NewAccInputHashDoesNotExist();
-        }
-
-        // Check that new state root is inside goldilocks field
-        if (!_checkStateRootInsidePrime(uint256(newStateRoot))) {
-            revert NewStateRootNotInsidePrime();
-        }
-
-        return
-            abi.encodePacked(
-                msg.sender,
-                oldStateRoot,
-                oldAccInputHash,
-                initNumBatch,
-                rollup.chainID,
-                rollup.forkID,
-                newStateRoot,
-                newAccInputHash,
-                newLocalExitRoot,
-                finalNewBatch
-            );
-    }
-
-    /**
-     * @notice Function to check if the state root is inside of the prime field
-     * @param newStateRoot New State root once the batch is processed
-     */
-    function _checkStateRootInsidePrime(
-        uint256 newStateRoot
-    ) internal pure returns (bool) {
-        if (
-            ((newStateRoot & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD) &&
-            (((newStateRoot >> 64) & _MAX_UINT_64) < _GOLDILOCKS_PRIME_FIELD) &&
-            (((newStateRoot >> 128) & _MAX_UINT_64) <
-                _GOLDILOCKS_PRIME_FIELD) &&
-            ((newStateRoot >> 192) < _GOLDILOCKS_PRIME_FIELD)
-        ) {
-            return true;
-        } else {
-            return false;
-        }
     }
 
     /**

@@ -37,7 +37,7 @@ cp ./tools/initializeRollup/initialize_rollup.json.example ./tools/initializeRol
     - `trustedSequencer`: Sequencer address of the new rollup.
     - `chainID`: ChainID of the rollup (must be unique, 32 bits max).
     - `rollupAdminAddress`: Admin address of the new rollup.
-    - `consensusContractName`: Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`.
+    - `consensusContractName`: Supported: `["AggchainECDSAMultisig", "AggchainFEP"]`. StateTransition and `PolygonPessimisticConsensus` rollups can no longer be created (AgglayerManager v2.0.0), so they can not be initialized either.
     - `gasTokenAddress`: Address of the native gas token (zero address if ether).
     - `deployerPvtKey` (optional): Private key to deploy from a specific wallet.
     - `maxFeePerGas` (optional): String, set `maxFeePerGas` (in gwei). Must also set `maxPriorityFeePerGas` to use.

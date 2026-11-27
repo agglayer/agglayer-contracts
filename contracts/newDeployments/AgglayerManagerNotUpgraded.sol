@@ -30,9 +30,8 @@ contract AgglayerManagerNotUpgraded is AgglayerManager {
         address admin,
         address timelock,
         address emergencyCouncil
-    ) external reinitializer(5) {
+    ) external reinitializer(6) {
         // Constant deployment variables
-        _batchFee = 0.1 ether; // 0.1 Matic
 
         // Initialize OZ contracts
         __AccessControl_init();
@@ -55,11 +54,8 @@ contract AgglayerManagerNotUpgraded is AgglayerManager {
         _setupRole(_OBSOLETE_ROLLUP_TYPE_ROLE, admin);
         _setupRole(_CREATE_ROLLUP_ROLE, admin);
         _setupRole(_STOP_EMERGENCY_ROLE, admin);
-        _setupRole(_TWEAK_PARAMETERS_ROLE, admin);
         _setRoleAdmin(_TRUSTED_AGGREGATOR_ROLE, _TRUSTED_AGGREGATOR_ROLE_ADMIN);
         _setupRole(_TRUSTED_AGGREGATOR_ROLE_ADMIN, admin);
-
-        _setupRole(_SET_FEE_ROLE, admin);
 
         // Emergency council roles
         _setRoleAdmin(_EMERGENCY_COUNCIL_ROLE, _EMERGENCY_COUNCIL_ADMIN);

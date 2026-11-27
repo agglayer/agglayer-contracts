@@ -4,7 +4,7 @@ import path = require('path');
 import fs = require('fs');
 import * as dotenv from 'dotenv';
 import { ethers } from 'hardhat';
-import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
+import { VerifierType } from '../../src/pessimistic-utils';
 import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
 import { AGGCHAIN_CONTRACT_NAMES } from '../../src/utils-common-aggchain';
 import { logger } from '../../src/logger';
@@ -67,14 +67,12 @@ async function main() {
         type,
     } = initializeRollupParameters;
 
-    // Check supported consensus is correct
-    const supportedConsensusArray = Object.values(ConsensusContracts);
+    // Check supported consensus is correct: only aggchains can be initialized
     const supportedAggchainsArray = Object.values(AGGCHAIN_CONTRACT_NAMES);
-    const supportedConsensus = supportedConsensusArray.concat(supportedAggchainsArray);
 
-    if (!supportedConsensus.includes(consensusContractName)) {
+    if (!supportedAggchainsArray.includes(consensusContractName)) {
         throw new Error(
-            `Consensus contract ${consensusContractName} not supported, supported contracts are: ${supportedConsensus}`,
+            `Consensus contract ${consensusContractName} not supported, supported contracts are: ${supportedAggchainsArray}`,
         );
     }
 
@@ -94,10 +92,7 @@ async function main() {
     // Check chainID
     const rollupID = await rollupManagerContract.chainIDToRollupID(chainID);
     const rollup = await rollupManagerContract.rollupIDToRollupData(rollupID);
-    if (
-        supportedAggchainsArray.includes(consensusContractName) &&
-        Number(rollup.rollupVerifierType) !== VerifierType.ALGateway
-    ) {
+    if (Number(rollup.rollupVerifierType) !== VerifierType.ALGateway) {
         throw new Error(
             `Mismatch RollupTypeID: Verifier type should be ${VerifierType.ALGateway} for ${consensusContractName}`,
         );

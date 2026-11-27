@@ -29,8 +29,6 @@ import {
     UPDATE_ROLLUP_ROLE,
     TRUSTED_AGGREGATOR_ROLE,
     TRUSTED_AGGREGATOR_ROLE_ADMIN,
-    TWEAK_PARAMETERS_ROLE,
-    SET_FEE_ROLE,
     STOP_EMERGENCY_ROLE,
     EMERGENCY_COUNCIL_ROLE,
     EMERGENCY_COUNCIL_ADMIN,
@@ -627,8 +625,6 @@ async function main() {
     expect(await polygonRollupManagerContract.hasRole(OBSOLETE_ROLLUP_TYPE_ROLE, admin)).to.be.equal(true);
     expect(await polygonRollupManagerContract.hasRole(CREATE_ROLLUP_ROLE, admin)).to.be.equal(true);
     expect(await polygonRollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE_ADMIN, admin)).to.be.equal(true);
-    expect(await polygonRollupManagerContract.hasRole(TWEAK_PARAMETERS_ROLE, admin)).to.be.equal(true);
-    expect(await polygonRollupManagerContract.hasRole(SET_FEE_ROLE, admin)).to.be.equal(true);
     expect(await polygonRollupManagerContract.hasRole(STOP_EMERGENCY_ROLE, admin)).to.be.equal(true);
 
     expect(await polygonRollupManagerContract.hasRole(EMERGENCY_COUNCIL_ROLE, emergencyCouncilAddress)).to.be.equal(

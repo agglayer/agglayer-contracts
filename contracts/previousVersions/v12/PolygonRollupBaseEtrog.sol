@@ -2,15 +2,15 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "../interfaces/IAgglayerGER.sol";
-import "../interfaces/IPolygonZkEVMErrors.sol";
-import "../interfaces/IPolygonZkEVMEtrogErrors.sol";
-import "../AgglayerManager.sol";
-import "../interfaces/IPolygonRollupBase.sol";
-import "../interfaces/IAgglayerBridge.sol";
+import "../../interfaces/IAgglayerGER.sol";
+import "../../interfaces/IPolygonZkEVMErrors.sol";
+import "../../interfaces/IPolygonZkEVMEtrogErrors.sol";
+import "./AgglayerManagerV12.sol";
+import "../../interfaces/IPolygonRollupBase.sol";
+import "../../interfaces/IAgglayerBridge.sol";
 import "@openzeppelin/contracts-upgradeable4/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "./PolygonConstantsBase.sol";
-import "./PolygonConsensusBase.sol";
+import "../../lib/PolygonConstantsBase.sol";
+import "./PolygonConsensusBaseV12.sol";
 
 /**
  * Contract responsible for managing the states and the updates of L2 network.
@@ -21,7 +21,7 @@ import "./PolygonConsensusBase.sol";
  * To enter and exit of the L2 network will be used a PolygonZkEVMBridge smart contract that will be deployed in both networks.
  */
 abstract contract PolygonRollupBaseEtrog is
-    PolygonConsensusBase,
+    PolygonConsensusBaseV12,
     PolygonConstantsBase,
     IPolygonRollupBase
 {
@@ -200,9 +200,9 @@ abstract contract PolygonRollupBaseEtrog is
         IAgglayerGER _globalExitRootManager,
         IERC20Upgradeable _pol,
         IAgglayerBridge _bridgeAddress,
-        AgglayerManager _rollupManager
+        AgglayerManagerV12 _rollupManager
     )
-        PolygonConsensusBase(
+        PolygonConsensusBaseV12(
             _globalExitRootManager,
             _pol,
             _bridgeAddress,
@@ -228,7 +228,7 @@ abstract contract PolygonRollupBaseEtrog is
         string memory _networkName
     )
         external
-        override(IPolygonConsensusBase, PolygonConsensusBase)
+        override(IPolygonConsensusBase, PolygonConsensusBaseV12)
         onlyRollupManager
         initializer
     {

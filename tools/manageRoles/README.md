@@ -53,8 +53,8 @@ Edit `manageRoles.json` with the following structure:
 - `UPDATE_ROLLUP_ROLE` - Ability to update rollups
 - `TRUSTED_AGGREGATOR_ROLE` - Priority verification role
 - `TRUSTED_AGGREGATOR_ROLE_ADMIN` - Manage trusted aggregator
-- `TWEAK_PARAMETERS_ROLE` - Ability to tweak parameters
-- `SET_FEE_ROLE` - Ability to set batch fees
+- `TWEAK_PARAMETERS_ROLE` - Legacy: no AgglayerManager function uses it since v2.0.0, kept to revoke it from current holders
+- `SET_FEE_ROLE` - Legacy: batch fees were removed in AgglayerManager v2.0.0, kept to revoke it from current holders
 - `STOP_EMERGENCY_ROLE` - Ability to stop emergency state
 - `EMERGENCY_COUNCIL_ROLE` - Ability to activate emergency state
 - `EMERGENCY_COUNCIL_ADMIN` - Manage emergency council

@@ -37,7 +37,6 @@ contract AgglayerManagerMock is AgglayerManager {
         //trustedAggregatorTimeout = _trustedAggregatorTimeout;
 
         // Constant deployment variables
-        _batchFee = 0.1 ether; // 0.1 Matic
         //verifyBatchTimeTarget = 30 minutes;
         //multiplierBatchFee = 1002;
 
@@ -62,11 +61,8 @@ contract AgglayerManagerMock is AgglayerManager {
         _setupRole(_OBSOLETE_ROLLUP_TYPE_ROLE, admin);
         _setupRole(_CREATE_ROLLUP_ROLE, admin);
         _setupRole(_STOP_EMERGENCY_ROLE, admin);
-        _setupRole(_TWEAK_PARAMETERS_ROLE, admin);
         _setRoleAdmin(_TRUSTED_AGGREGATOR_ROLE, _TRUSTED_AGGREGATOR_ROLE_ADMIN);
         _setupRole(_TRUSTED_AGGREGATOR_ROLE_ADMIN, admin);
-
-        _setupRole(_SET_FEE_ROLE, admin);
 
         // Emergency council roles
         _setRoleAdmin(_EMERGENCY_COUNCIL_ROLE, _EMERGENCY_COUNCIL_ADMIN);
@@ -87,12 +83,6 @@ contract AgglayerManagerMock is AgglayerManager {
             _rollupIDToRollupData[uint32(i + 1)]
                 .lastLocalExitRoot = localExitRoots[i];
         }
-    }
-
-    function exposed_checkStateRootInsidePrime(
-        uint256 newStateRoot
-    ) public pure returns (bool) {
-        return _checkStateRootInsidePrime(newStateRoot);
     }
 
     function setRollupData(
