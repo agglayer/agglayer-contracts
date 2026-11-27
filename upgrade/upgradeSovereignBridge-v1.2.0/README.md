@@ -8,10 +8,11 @@ The deployed L1 `AgglayerBridge` does not need an upgrade. Its shared-storage re
 
 ## Modular Bridge
 
-The bridge keeps every existing function, parameter name, return type, mutability, event, and error in its compiled ABI, except the declared two-step `bridgeManager` change in `tools/bridgeCompatibility/bridgeL2Changes.ts`:
+The bridge keeps every existing function, parameter name, return type, mutability, event, and error in its compiled ABI, except the declared changes in `tools/bridgeCompatibility/bridgeL2Changes.ts`:
 
 - removed: `setBridgeManager(address)` and `SetBridgeManager(address)`;
 - added: `transferBridgeManagerRole(address)`, `acceptBridgeManagerRole()`, `pendingBridgeManager()`, `TransferBridgeManagerRole`, `AcceptBridgeManagerRole` and `OnlyPendingBridgeManager`;
+- added: `DetailedBridgeEvent`, emitted right after each `BridgeEvent` with the same leaf fields plus `txOrigin` and `msgSender` (L2 only, the L1 `AgglayerBridge` ABI is unchanged);
 - storage: `pendingBridgeManager` takes the first slot of the `AgglayerBridgeL2` reserved gap (`__gap` shrinks from 48 to 47 slots).
 
 The checks reject any other ABI or storage difference. Explicit forwarding functions delegate L2 management and recovery operations to `AgglayerBridgeL2Module`; ordinary bridging, claims, initialization, and getters remain on the implementation. Etherscan Read/Write as Proxy therefore uses the same complete ABI after verification and proxy implementation detection.

@@ -241,6 +241,33 @@ abstract contract AgglayerBridgeL2Storage is AgglayerBridgeStorage {
         bytes metadata
     );
 
+    /**
+     * @dev Emitted right after each BridgeEvent with the same leaf information plus the transaction origin and the direct caller
+     * Allows indexers to know who triggered the bridge without tracing the transaction
+     * @param leafType Leaf type
+     * @param originNetwork Origin network
+     * @param originAddress Origin address
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     * @param depositCount Index of the leaf in the local exit tree, same as in BridgeEvent
+     * @param txOrigin tx.origin of the bridge transaction
+     * @param msgSender Direct caller of the bridge function (msg.sender)
+     */
+    event DetailedBridgeEvent(
+        uint8 leafType,
+        uint32 originNetwork,
+        address originAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes metadata,
+        uint32 depositCount,
+        address indexed txOrigin,
+        address indexed msgSender
+    );
+
     modifier onlyBridgeManager() {
         if (bridgeManager != msg.sender) {
             revert IAgglayerBridgeL2.OnlyBridgeManager();

@@ -4,7 +4,8 @@ import assert from 'assert';
  * Intended AgglayerBridgeL2 interface changes from the archived v1.2.0 release to v1.3.0.
  * `bridgeManager` became a two-step role transfer: `setBridgeManager` and its event are replaced by
  * `transferBridgeManagerRole` / `acceptBridgeManagerRole`, and `pendingBridgeManager` takes the first slot of the
- * AgglayerBridgeL2 reserved gap. Every other ABI entry and storage field must stay identical.
+ * AgglayerBridgeL2 reserved gap. `DetailedBridgeEvent` is emitted after each BridgeEvent with tx.origin and msg.sender.
+ * Every other ABI entry and storage field must stay identical.
  */
 export const BRIDGE_L2_ABI_CHANGES = {
     removed: ['function setBridgeManager', 'event SetBridgeManager'],
@@ -15,6 +16,7 @@ export const BRIDGE_L2_ABI_CHANGES = {
         'event TransferBridgeManagerRole',
         'event AcceptBridgeManagerRole',
         'error OnlyPendingBridgeManager',
+        'event DetailedBridgeEvent',
     ],
 };
 
@@ -47,7 +49,7 @@ export function assertExpectedBridgeL2Abi(actual: any[], baseline: any[]) {
     assert.deepStrictEqual(
         canonical(actual.filter((entry) => !added.includes(abiKey(entry)))),
         canonical(baseline.filter((entry) => !removed.includes(abiKey(entry)))),
-        'Bridge ABI differs from v1.2.0 beyond the declared two-step bridgeManager changes',
+        'Bridge ABI differs from v1.2.0 beyond the declared changes',
     );
 }
 
