@@ -21,6 +21,7 @@ The Bridge deployment involves 4 internal contracts that are automatically deplo
 - **WrappedTokenBytecodeStorer** - Stores the bytecode for wrapped token deployments (reduces bridge contract size)
 - **WrappedTokenBridgeImplementation** - Implementation contract used as template for all wrapped tokens deployed via proxy pattern
 - **BridgeLib** - Library contract containing bridge-related functions (reduces bridge contract size)
+- **AgglayerBridgeL2Module** - Immutable module that receives the delegated L2 management and recovery entrypoints of the bridge (reduces bridge contract size). Its address is reported as `bridgeL2Module` in the output and it is verified on Etherscan
 
 **During Bridge Initialization:**
 

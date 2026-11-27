@@ -115,6 +115,7 @@ async function main() {
     outputJson.bridgeL2SovereignChainImplementation = sovereignBridge.implementation;
     outputJson.wrappedTokenBridgeImplementation = sovereignBridge.wrappedTokenBridgeImplementation;
     outputJson.bridgeLib = sovereignBridge.bridgeLib;
+    outputJson.bridgeL2Module = sovereignBridge.bridgeL2Module;
     outputJson.WETH = sovereignBridge.WETH;
 
     // Step 5.1: Verify that actual Bridge address matches pre-calculated address
@@ -348,6 +349,7 @@ async function deployBridgeL2SovereignChain(
     implementation: string;
     wrappedTokenBridgeImplementation: string;
     bridgeLib: string;
+    bridgeL2Module: string;
     WETH: string;
 }> {
     const BridgeFactory = await ethers.getContractFactory('AgglayerBridgeL2', deployer);
@@ -382,6 +384,15 @@ async function deployBridgeL2SovereignChain(
         [], // No constructor arguments
         5, // 5 seconds wait time
     );
+
+    // The implementation constructor deploys TokenWrapped implementation (nonce 1), BridgeLib (nonce 2) and the
+    // AgglayerBridgeL2Module (nonce 3), which receives the delegated entrypoints of the bridge
+    const bridgeL2Module = ethers.getCreateAddress({ from: bridgeImplementation.target as string, nonce: 3 });
+    if ((await ethers.provider.getCode(bridgeL2Module)) === '0x') {
+        throw new Error(`AgglayerBridgeL2Module not found at expected address ${bridgeL2Module}`);
+    }
+    logger.info(`✅ AgglayerBridgeL2Module deployed: ${bridgeL2Module}`);
+    await verifyContractEtherscan(bridgeL2Module, [], 5);
 
     // Step 2: Deploy TransparentUpgradeableProxy with centralized ProxyAdmin
     logger.info('📍 Step 2: Deploying Bridge proxy with centralized ProxyAdmin...');
@@ -486,6 +497,7 @@ async function deployBridgeL2SovereignChain(
         implementation: bridgeImplementation.target as string,
         wrappedTokenBridgeImplementation,
         bridgeLib,
+        bridgeL2Module,
         WETH,
     };
 }

@@ -202,9 +202,9 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         nonce: 2,
     });
 
-    // Check nonce is 4
+    // Check nonce is 4: TokenWrapped implementation (1), BridgeLib (2) and AgglayerBridgeL2Module (3) deployed by the constructor
     const bridgeState = await zkEVMDB.getCurrentAccountState(sovereignBridgeAddress);
-    expect(Number(bridgeState.nonce)).to.equal(3);
+    expect(Number(bridgeState.nonce)).to.equal(4);
 
     // Replace it with deployed bridgeLib contract
     const bridgeLibImplementationDeployedBytecode = `0x${await zkEVMDB.getBytecode(precalculatedAddressBridgeLib)}`;
@@ -239,6 +239,44 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
         Object.assign(bridgeLibImplementationObject, bridgeLibImplementationObjectNew);
         // Check bytecode of the BridgeLib contract
         expect(bridgeLibImplementationObject.bytecode).to.equal(bridgeLibImplementationDeployedBytecode);
+    }
+
+    /// ///////////////////////
+    // AgglayerBridgeL2Module contract
+    /// ///////////////////////
+    // The sovereign bridge delegates part of its entrypoints to an immutable module deployed by its constructor with nonce 3
+    const precalculatedAddressBridgeModule = ethers.getCreateAddress({
+        from: sovereignBridgeAddress,
+        nonce: 3,
+    });
+
+    const bridgeModuleDeployedBytecode = `0x${await zkEVMDB.getBytecode(precalculatedAddressBridgeModule)}`;
+    const bridgeModuleState = await zkEVMDB.getCurrentAccountState(precalculatedAddressBridgeModule);
+    const bridgeModuleObjectNew = {
+        contractName: GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_MODULE,
+        balance: bridgeModuleState.balance.toString(),
+        nonce: bridgeModuleState.nonce.toString(),
+        address: precalculatedAddressBridgeModule,
+        bytecode: bridgeModuleDeployedBytecode,
+    };
+    // preserve initialization state from _disableInitializers() call in constructor
+    bridgeModuleObjectNew.storage = await zkEVMDB.dumpStorage(precalculatedAddressBridgeModule);
+    bridgeModuleObjectNew.storage = Object.entries(bridgeModuleObjectNew.storage).reduce((acc, [key, value]) => {
+        acc[key] = padTo32Bytes(value);
+        return acc;
+    }, {});
+
+    // Check if the genesis contains the AgglayerBridgeL2Module contract and replace it, or add it if not present
+    let bridgeModuleObject = genesis.genesis.find(function (obj) {
+        return obj.contractName === GENESIS_CONTRACT_NAMES.SOVEREIGN_BRIDGE_MODULE;
+    });
+
+    if (typeof bridgeModuleObject === 'undefined') {
+        bridgeModuleObject = bridgeModuleObjectNew;
+        genesis.genesis.push(bridgeModuleObject);
+    } else {
+        // modify the reference in genesis.genesis
+        Object.assign(bridgeModuleObject, bridgeModuleObjectNew);
     }
 
     /// ///////////////////////
@@ -581,6 +619,10 @@ async function updateVanillaGenesis(genesis, chainID, initializeParams) {
 
     // Check bridge implementation bytecode contains bridgeLib contract address
     expect(oldBridge.bytecode).to.include(precalculatedAddressBridgeLib.toLowerCase().slice(2));
+
+    // Check bridge implementation bytecode contains AgglayerBridgeL2Module contract address and the module has bytecode
+    expect(oldBridge.bytecode).to.include(precalculatedAddressBridgeModule.toLowerCase().slice(2));
+    expect(bridgeModuleObject.bytecode).to.not.equal('0x');
 
     // Check bridge implementation has initializer disabled
     expect(oldBridge.storage['0x0000000000000000000000000000000000000000000000000000000000000000'].slice(-2)).to.equal(
