@@ -83,6 +83,7 @@ export const GENESIS_CONTRACT_NAMES = {
     SOVEREIGN_BRIDGE: 'AgglayerBridgeL2',
     SOVEREIGN_BRIDGE_IMPLEMENTATION: 'AgglayerBridgeL2 implementation',
     SOVEREIGN_BRIDGE_PROXY: 'AgglayerBridgeL2 proxy',
+    SOVEREIGN_BRIDGE_MODULE: 'AgglayerBridgeL2Module',
     BYTECODE_STORER: 'BytecodeStorer',
     BRIDGE_V2: 'AgglayerBridge',
     BRIDGE_V2_IMPLEMENTATION: 'AgglayerBridge implementation',
