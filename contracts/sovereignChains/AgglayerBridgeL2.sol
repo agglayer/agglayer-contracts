@@ -759,6 +759,50 @@ contract AgglayerBridgeL2 is
     }
 
     /**
+     * @notice Emits the BridgeEvent and the DetailedBridgeEvent, which adds the tx.origin and msg.sender of the bridge
+     * @param leafType Leaf type
+     * @param originNetwork Origin network
+     * @param originAddress Origin address
+     * @param destinationNetwork Destination network
+     * @param destinationAddress Destination address
+     * @param amount Amount of tokens
+     * @param metadata Raw metadata bytes
+     */
+    function _emitBridgeEvent(
+        uint8 leafType,
+        uint32 originNetwork,
+        address originAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes memory metadata
+    ) internal override {
+        super._emitBridgeEvent(
+            leafType,
+            originNetwork,
+            originAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata
+        );
+
+        // tx.origin is only emitted for indexing, never used for authorization
+        emit DetailedBridgeEvent(
+            leafType,
+            originNetwork,
+            originAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata,
+            uint32(depositCount),
+            tx.origin,
+            msg.sender
+        );
+    }
+
+    /**
      * @notice Get leaf value and verify the merkle proof
      * @param smtProofLocalExitRoot Smt proof to proof the leaf against the exit root
      * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot against the rollups exit root

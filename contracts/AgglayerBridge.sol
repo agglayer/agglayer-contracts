@@ -247,15 +247,14 @@ contract AgglayerBridge is AgglayerBridgeStorage, IAgglayerBridge, IVersion {
             }
         }
 
-        emit BridgeEvent(
+        _emitBridgeEvent(
             _LEAF_TYPE_ASSET,
             originNetwork,
             originTokenAddress,
             destinationNetwork,
             destinationAddress,
             leafAmount,
-            metadata,
-            uint32(depositCount)
+            metadata
         );
 
         _addLeafBridge(
@@ -356,15 +355,14 @@ contract AgglayerBridge is AgglayerBridgeStorage, IAgglayerBridge, IVersion {
             revert DestinationNetworkInvalid();
         }
 
-        emit BridgeEvent(
+        _emitBridgeEvent(
             _LEAF_TYPE_MESSAGE,
             networkID,
             msg.sender,
             destinationNetwork,
             destinationAddress,
             amountEther,
-            metadata,
-            uint32(depositCount)
+            metadata
         );
 
         _addLeafBridge(
@@ -1059,6 +1057,38 @@ contract AgglayerBridge is AgglayerBridgeStorage, IAgglayerBridge, IVersion {
 
         // Last 20 bytes of hash to address
         return address(uint160(uint256(hashCreate2)));
+    }
+
+    /**
+     * @notice Emits the BridgeEvent of a new leaf, using the current depositCount (the index the leaf is added at)
+     * @dev Internal virtual so that sovereign chains can emit additional information. Must be called before `_addLeafBridge`
+     * @param leafType Leaf type
+     * @param originNetwork Origin network
+     * @param originAddress Origin address
+     * @param destinationNetwork Destination network
+     * @param destinationAddress Destination address
+     * @param amount Amount of tokens
+     * @param metadata Raw metadata bytes
+     */
+    function _emitBridgeEvent(
+        uint8 leafType,
+        uint32 originNetwork,
+        address originAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes memory metadata
+    ) internal virtual {
+        emit BridgeEvent(
+            leafType,
+            originNetwork,
+            originAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata,
+            uint32(depositCount)
+        );
     }
 
     /**
