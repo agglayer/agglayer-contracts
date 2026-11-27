@@ -15,5 +15,9 @@ https://polygon.technology/careers
 ## Polygon security contact details.
 security@polygon.technology
 
-## The URL for accessing the security.txt file.
-Canonical: https://polygon.technology/security.txt
+## Bug bounty programs.
+Smart contracts: https://immunefi.com/bounty/polygon
+All programs: https://docs.polygon.technology/tools/security/bugbounty
+
+## Responsible disclosure (including the PGP key to encrypt reports).
+https://docs.polygon.technology/tools/security/disclosure
