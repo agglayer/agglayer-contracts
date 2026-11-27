@@ -37,10 +37,10 @@ cp artifacts/contracts/AgglayerGER.sol/AgglayerGER.json compiled-contracts/
 cp artifacts/contracts/AgglayerGER.sol/AgglayerGER.json compiled-contracts/
 
 ## V2 Consensus
-cp artifacts/contracts/consensus/zkEVM/PolygonZkEVMEtrog.sol/PolygonZkEVMEtrog.json compiled-contracts/
-cp artifacts/contracts/consensus/zkEVM/PolygonZkEVMExistentEtrog.sol/PolygonZkEVMExistentEtrog.json compiled-contracts/
-cp artifacts/contracts/consensus/validium/PolygonValidiumEtrog.sol/PolygonValidiumEtrog.json compiled-contracts/
-cp artifacts/contracts/consensus/validium/PolygonDataCommittee.sol/PolygonDataCommittee.json compiled-contracts/
+cp artifacts/contracts/previousVersions/v12/PolygonZkEVMEtrog.sol/PolygonZkEVMEtrog.json compiled-contracts/
+cp artifacts/contracts/previousVersions/v12/PolygonZkEVMExistentEtrog.sol/PolygonZkEVMExistentEtrog.json compiled-contracts/
+cp artifacts/contracts/previousVersions/v12/PolygonValidiumEtrog.sol/PolygonValidiumEtrog.json compiled-contracts/
+cp artifacts/contracts/previousVersions/v12/PolygonDataCommittee.sol/PolygonDataCommittee.json compiled-contracts/
 cp artifacts/contracts/consensus/pessimistic/PolygonPessimisticConsensus.sol/PolygonPessimisticConsensus.json compiled-contracts/
 
 ## V2 utils

@@ -3,15 +3,11 @@
     "consensusContract": "AggchainFEP",
     "consensusContractAddress": "",
     "polygonRollupManagerAddress": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
-    "verifierAddress": "",
-    "description": "Type: Validium, Version: etrog, genesis: /ipfs/QmUXnRoPbUmZuEZCGyiHjEsoNcFVu3hLtSvhpnfBS2mAYU",
-    "forkID": 0,
+    "description": "Type: AggchainFEP, Version: v3.0.0",
     "timelockDelay": 864000,
     "timelockSalt": "",
     "maxFeePerGas":"",
     "maxPriorityFeePerGas":"",
     "multiplierGas": "",
-    "genesisRoot": "0x4e162206cf43dc25698089ff4183ab1ef31c56049d57bcb295e1fc7a734cfe8f",
-    "programVKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "customALGatewayAddress": "0x..."
 }

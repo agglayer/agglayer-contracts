@@ -16,6 +16,7 @@ import { VerifierType, computeInputPessimisticBytes } from '../../../src/pessimi
 import inputProof from './test-inputs/input.json';
 import inputZkevmMigration from './test-inputs/input-zkevm-migration.json';
 import { encodeInitializeBytesLegacy, encodeInitAggchainManager } from '../../../src/utils-common-aggchain';
+import { deployRollupManagerV12, upgradeToCurrentRollupManager } from '../helpers/helpers-rollup-manager';
 import {
     DEFAULT_ADMIN_ROLE,
     ADD_ROLLUP_TYPE_ROLE,
@@ -25,8 +26,6 @@ import {
     UPDATE_ROLLUP_ROLE,
     TRUSTED_AGGREGATOR_ROLE,
     TRUSTED_AGGREGATOR_ROLE_ADMIN,
-    TWEAK_PARAMETERS_ROLE,
-    SET_FEE_ROLE,
     STOP_EMERGENCY_ROLE,
     EMERGENCY_COUNCIL_ROLE,
     EMERGENCY_COUNCIL_ADMIN,
@@ -53,7 +52,9 @@ describe('Polygon Rollup Manager with AggchainECDSAMultisig (real SP1 verifier)'
     let polygonZkEVMBridgeContract: AgglayerBridge;
     let polTokenContract: ERC20PermitMock;
     let polygonZkEVMGlobalExitRoot: AgglayerGERMock;
-    let rollupManagerContract: AgglayerManagerMock;
+    // Deployed as the archived v12 AgglayerManager (StateTransition support), upgraded to AgglayerManagerMock in each test
+    let rollupManagerContract: AgglayerManagerMock | any;
+    let rollupManagerConstructorArgs: any[];
     let aggLayerGatewayContract: any;
 
     const polTokenName = 'POL Token';
@@ -152,20 +153,13 @@ describe('Polygon Rollup Manager with AggchainECDSAMultisig (real SP1 verifier)'
         })) as unknown as AgglayerBridge;
 
         // deploy polygon rollup manager mock
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
-
-        rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
-            initializer: false,
-            constructorArgs: [
-                polygonZkEVMGlobalExitRoot.target,
-                polTokenContract.target,
-                polygonZkEVMBridgeContract.target,
-                aggLayerGatewayContract.target,
-            ],
-            unsafeAllow: ['constructor', 'state-variable-immutable'],
-        })) as unknown as AgglayerManagerMock;
-
-        await rollupManagerContract.waitForDeployment();
+        rollupManagerConstructorArgs = [
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            aggLayerGatewayContract.target,
+        ];
+        rollupManagerContract = await deployRollupManagerV12(rollupManagerConstructorArgs);
 
         // check precalculated address
         expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
@@ -195,13 +189,14 @@ describe('Polygon Rollup Manager with AggchainECDSAMultisig (real SP1 verifier)'
     });
 
     it('should check the initialized parameters', async () => {
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
+        );
+
         expect(await rollupManagerContract.globalExitRootManager()).to.be.equal(polygonZkEVMGlobalExitRoot.target);
         expect(await rollupManagerContract.pol()).to.be.equal(polTokenContract.target);
         expect(await rollupManagerContract.bridgeAddress()).to.be.equal(polygonZkEVMBridgeContract.target);
-
-        expect(await rollupManagerContract.getBatchFee()).to.be.equal(ethers.parseEther('0.1'));
-        expect(await rollupManagerContract.getForcedBatchFee()).to.be.equal(ethers.parseEther('10'));
-        expect(await rollupManagerContract.calculateRewardPerBatch()).to.be.equal(0);
 
         // Check roles
         expect(await rollupManagerContract.hasRole(DEFAULT_ADMIN_ROLE, timelock.address)).to.be.equal(true);
@@ -216,8 +211,6 @@ describe('Polygon Rollup Manager with AggchainECDSAMultisig (real SP1 verifier)'
         expect(await rollupManagerContract.hasRole(OBSOLETE_ROLLUP_TYPE_ROLE, admin.address)).to.be.equal(true);
         expect(await rollupManagerContract.hasRole(CREATE_ROLLUP_ROLE, admin.address)).to.be.equal(true);
         expect(await rollupManagerContract.hasRole(TRUSTED_AGGREGATOR_ROLE_ADMIN, admin.address)).to.be.equal(true);
-        expect(await rollupManagerContract.hasRole(TWEAK_PARAMETERS_ROLE, admin.address)).to.be.equal(true);
-        expect(await rollupManagerContract.hasRole(SET_FEE_ROLE, admin.address)).to.be.equal(true);
         expect(await rollupManagerContract.hasRole(STOP_EMERGENCY_ROLE, admin.address)).to.be.equal(true);
 
         expect(await rollupManagerContract.hasRole(EMERGENCY_COUNCIL_ROLE, emergencyCouncil.address)).to.be.equal(true);
@@ -227,6 +220,11 @@ describe('Polygon Rollup Manager with AggchainECDSAMultisig (real SP1 verifier)'
     });
 
     it('should verify pessimistic proof: AggchainECDSAMultisig with a real verifier (not mock)', async () => {
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
+        );
+
         // The v6 input.json was generated against an AggchainECDSAMultisig with a single
         // signer = inputProof.signer and threshold = 1, empty aggchainData. We mirror that
         // setup and route the proof through the AgglayerGateway path (VerifierType.ALGateway).
@@ -505,6 +503,12 @@ describe('Polygon Rollup Manager with AggchainECDSAMultisig (real SP1 verifier)'
                 trustedAggregator.address,
                 zkProofFFlonk,
             );
+
+        // Upgrade AgglayerManager: StateTransition rollups can only migrate
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
+        );
 
         // Migrate to ECDSA Multisig using initMigration
         const upgradeData = aggchainECDSAMultisigFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()');

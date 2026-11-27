@@ -6,24 +6,14 @@ import fs = require('fs');
 import * as dotenv from 'dotenv';
 import { ethers, upgrades } from 'hardhat';
 import { processorUtils, Constants } from '@0xpolygonhermez/zkevm-commonjs';
-import { VerifierType, ConsensusContracts } from '../../src/pessimistic-utils';
+import { VerifierType } from '../../src/pessimistic-utils';
 import { genOperation, transactionTypes, convertBigIntsToNumbers } from '../utils';
-import {
-    AGGCHAIN_CONTRACT_NAMES,
-    encodeInitializeBytesLegacy,
-    encodeInitAggchainManager,
-} from '../../src/utils-common-aggchain';
+import { AGGCHAIN_CONTRACT_NAMES, encodeInitAggchainManager } from '../../src/utils-common-aggchain';
 import { GENESIS_CONTRACT_NAMES, DEFAULT_ADMIN_ROLE, CREATE_ROLLUP_ROLE } from '../../src/constants';
 import createRollupParameters from './create_new_rollup.json';
 import updateVanillaGenesis from '../../deployment/v2/utils/updateVanillaGenesis';
 import { logger } from '../../src/logger';
-import {
-    AgglayerManager,
-    PolygonZkEVMEtrog,
-    AgglayerBridge,
-    PolygonValidiumEtrog,
-    PolygonPessimisticConsensus,
-} from '../../typechain-types';
+import { AgglayerManager, AgglayerBridge } from '../../typechain-types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -70,37 +60,18 @@ async function main() {
         }
     });
 
-    const {
-        trustedSequencerURL,
-        networkName,
-        trustedSequencer,
-        chainID,
-        rollupAdminAddress,
-        consensusContractName,
-        isVanillaClient,
-        sovereignParams,
-        proxiedTokensManager,
-    } = createRollupParameters;
+    // trustedSequencerURL, networkName and rollupAdminAddress are set later by the aggchain manager (initializeRollup tool)
+    const { trustedSequencer, chainID, consensusContractName, isVanillaClient, sovereignParams, proxiedTokensManager } =
+        createRollupParameters;
 
     // Check supported consensus is correct
-    const supportedConsensusArray = Object.values(ConsensusContracts);
+    // Only aggchains (VerifierType.ALGateway) can be created: StateTransition and Pessimistic consensus are deprecated
     const supportedAggchainsArray = Object.values(AGGCHAIN_CONTRACT_NAMES);
-    const supportedConsensus = supportedConsensusArray.concat(supportedAggchainsArray);
 
-    if (!supportedConsensus.includes(consensusContractName)) {
+    if (!supportedAggchainsArray.includes(consensusContractName)) {
         throw new Error(
-            `Consensus contract ${consensusContractName} not supported, supported contracts are: ${supportedConsensus}`,
+            `Consensus contract ${consensusContractName} not supported, supported contracts are: ${supportedAggchainsArray}`,
         );
-    }
-
-    // Check consensus compatibility
-    if (isVanillaClient) {
-        if (
-            consensusContractName !== ConsensusContracts.PolygonPessimisticConsensus &&
-            !supportedAggchainsArray.includes(consensusContractName)
-        ) {
-            throw new Error(`Vanilla client only supports PolygonPessimisticConsensus and Aggchain contracts`);
-        }
     }
 
     // Load provider
@@ -173,59 +144,10 @@ async function main() {
     const rollupType = await rollupManagerContract.rollupTypeMap(createRollupParameters.rollupTypeId);
     const consensusContractAddress = rollupType[0];
     const verifierType = Number(rollupType[3]);
-    if (
-        consensusContractName === ConsensusContracts.PolygonPessimisticConsensus &&
-        verifierType !== VerifierType.Pessimistic
-    ) {
-        throw new Error(
-            `Mismatch RollupTypeID: Verifier type should be ${VerifierType.StateTransition} for ${consensusContractName}`,
-        );
-    }
-    if (supportedAggchainsArray.includes(consensusContractName) && verifierType !== VerifierType.ALGateway) {
+    if (verifierType !== VerifierType.ALGateway) {
         throw new Error(
             `Mismatch RollupTypeID: Verifier type should be ${VerifierType.ALGateway} for ${consensusContractName}`,
         );
-    }
-    if (
-        consensusContractName !== ConsensusContracts.PolygonPessimisticConsensus &&
-        !supportedAggchainsArray.includes(consensusContractName)
-    ) {
-        if (verifierType !== VerifierType.StateTransition) {
-            throw new Error(
-                `Mismatch RollupTypeID: Verifier type should be ${VerifierType.Pessimistic} for ${consensusContractName}`,
-            );
-        }
-        const polygonValidiumConsensusFactory = (await ethers.getContractFactory(
-            ConsensusContracts.PolygonValidiumEtrog,
-            deployer,
-        )) as any;
-        const polygonValidiumConsensusContract = polygonValidiumConsensusFactory.attach(
-            consensusContractAddress,
-        ) as PolygonValidiumEtrog;
-
-        let hasMethodImplemented;
-
-        try {
-            hasMethodImplemented = await polygonValidiumConsensusContract.isSequenceWithDataAvailabilityAllowed();
-        } catch (error) {
-            logger.info('RollupTypeID selected ');
-        }
-
-        // Consensus PolygonZkEVMEtrog: if 'hasMethodImplemented' does not have any value
-        if (typeof hasMethodImplemented === 'undefined') {
-            if (consensusContractName === ConsensusContracts.PolygonValidiumEtrog) {
-                throw new Error(
-                    `The consensus contract at ${consensusContractAddress} does not have the public method "isSequenceWithDataAvailabilityAllowed", this means is a rollup and you are trying to create a validium`,
-                );
-            }
-        } else {
-            // Consensus PolygonValidiumEtrog: if 'hasMethodImplemented' does not have any value
-            if (consensusContractName === ConsensusContracts.PolygonZkEVMEtrog) {
-                throw new Error(
-                    `The consensus contract at ${consensusContractAddress} does have the public var "isSequenceWithDataAvailabilityAllowed", this means is a validium and you are trying to create a rollup`,
-                );
-            }
-        }
     }
 
     // Get rollup address deterministically
@@ -234,7 +156,6 @@ async function main() {
         from: rollupManagerContract.target as string,
         nonce,
     });
-    let globalExitRoot = '';
     let batchData = {};
     // Populate output json
     outputJson.consensusContractName = consensusContractName;
@@ -243,20 +164,8 @@ async function main() {
     outputJson.gasTokenAddress = createRollupParameters.gasTokenAddress;
     outputJson.rollupManagerAddress = createRollupParameters.rollupManagerAddress;
 
-    let initializeBytes;
-    if (supportedConsensusArray.includes(consensusContractName)) {
-        // if consensusContractName is a consensus
-        initializeBytes = encodeInitializeBytesLegacy(
-            rollupAdminAddress,
-            trustedSequencer,
-            createRollupParameters.gasTokenAddress,
-            trustedSequencerURL,
-            networkName,
-        );
-    } else if (supportedAggchainsArray.includes(consensusContractName)) {
-        // if consensusContractName is a AggchainECDSA
-        initializeBytes = encodeInitAggchainManager(createRollupParameters.aggchainParams.aggchainManager);
-    }
+    // Aggchains are initialized by the aggchain manager after creation
+    const initializeBytes = encodeInitAggchainManager(createRollupParameters.aggchainParams.aggchainManager);
 
     if (createRollupParameters.type === transactionTypes.TIMELOCK) {
         logger.info('Creating timelock txs for rollup creation...');
@@ -370,16 +279,6 @@ async function main() {
             `Created new ${consensusContractName} Rollup: ${createdRollupAddress} with rollupTypeId: ${createRollupParameters.rollupTypeId}`,
         );
 
-        // Search added global exit root on the logs
-        receipt?.logs.forEach((log) => {
-            if (log.address === createdRollupAddress) {
-                const parsedLog = polygonConsensusFactory.interface.parseLog(log);
-                if (parsedLog !== null && parsedLog.name === 'InitialSequenceBatches') {
-                    globalExitRoot = parsedLog.args.lastGlobalExitRoot;
-                }
-            }
-        });
-
         // Assert admin address
         expect(await upgrades.erc1967.getAdminAddress(createdRollupAddress)).to.be.equal(rollupManagerContract.target);
         expect(await upgrades.erc1967.getImplementationAddress(createdRollupAddress)).to.be.equal(
@@ -388,35 +287,6 @@ async function main() {
     }
     // Update rollupId
     rollupID = await rollupManagerContract.chainIDToRollupID(chainID);
-
-    // If is a validium, data committee must be set up
-    const dataAvailabilityProtocol = createRollupParameters.dataAvailabilityProtocol || 'PolygonDataCommittee';
-    if (consensusContractName.includes('PolygonValidiumEtrog') && dataAvailabilityProtocol === 'PolygonDataCommittee') {
-        logger.info('Is a validium, setting up data committee...');
-        // deploy data committee
-        const PolygonDataCommitteeContract = (await ethers.getContractFactory('PolygonDataCommittee', deployer)) as any;
-        const polygonDataCommittee = await upgrades.deployProxy(PolygonDataCommitteeContract, [], {
-            unsafeAllow: ['constructor'],
-        });
-        await polygonDataCommittee?.waitForDeployment();
-        logger.info(`Deployed PolygonDataCommittee at ${polygonDataCommittee?.address}`);
-        // Load data committee
-        const PolygonValidiumContract = (await polygonConsensusFactory.attach(
-            createdRollupAddress,
-        )) as PolygonValidiumEtrog;
-        // add data committee to the consensus contract
-        if ((await PolygonValidiumContract.admin()) === deployer.address) {
-            await (
-                await PolygonValidiumContract.setDataAvailabilityProtocol(polygonDataCommittee?.target as any)
-            ).wait();
-        } else {
-            logger.info('Is a validium, setting up data committee...');
-            // eslint-disable-next-line no-unsafe-optional-chaining
-            await (await polygonDataCommittee?.transferOwnership(rollupAdminAddress)).wait();
-            logger.info(`Transferred ownership of PolygonDataCommittee to ${rollupAdminAddress}`);
-        }
-        outputJson.polygonDataCommitteeAddress = polygonDataCommittee?.target;
-    }
 
     let gasTokenAddress;
     let gasTokenNetwork;
@@ -503,12 +373,10 @@ async function main() {
             logger.info(`ERROR UPDATING GENESIS: ${e}`);
         }
     } else {
-        if (consensusContractName === 'PolygonPessimisticConsensus') {
-            logger.info('Pessimistic rollup detected, injecting initialization batch...');
+        if (consensusContractName === AGGCHAIN_CONTRACT_NAMES.ECDSA) {
+            logger.info('Non vanilla AggchainECDSAMultisig rollup detected, injecting initialization batch...');
             // Add the first batch of the created rollup
-            const newPessimisticRollup = (await polygonConsensusFactory.attach(
-                createdRollupAddress,
-            )) as PolygonPessimisticConsensus;
+            const newPessimisticRollup = (await polygonConsensusFactory.attach(createdRollupAddress)) as any;
 
             // Get last GER
             const lastGER = await globalExitRootManagerContract.getLastGlobalExitRoot();
@@ -554,20 +422,6 @@ async function main() {
             batchData = Object.assign(batchData, {
                 batchL2Data: customData,
                 globalExitRoot: lastGER,
-                sequencer: trustedSequencer,
-            });
-        } else if (supportedConsensusArray.includes(consensusContractName)) {
-            logger.info('Setting initialization batch for the rollup...');
-            // Add the first batch of the created rollup
-            const newRollupContract = (await polygonConsensusFactory.attach(createdRollupAddress)) as PolygonZkEVMEtrog;
-            batchData = Object.assign(batchData, {
-                batchL2Data: await newRollupContract.generateInitializeTransaction(
-                    Number(rollupID),
-                    gasTokenAddress,
-                    gasTokenNetwork,
-                    gasTokenMetadata as any,
-                ),
-                globalExitRoot,
                 sequencer: trustedSequencer,
             });
         }

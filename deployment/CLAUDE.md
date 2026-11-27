@@ -36,16 +36,16 @@ Both live in `deployment/v2/` (copy from `.example` files):
 - `multisigRoleAddress`, `signersToAdd`, `newThreshold`: AgglayerGateway multisig config
 
 **`create_rollup_parameters.json`** -- Rollup creation config:
-- `consensusContract`: one of `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`
+- `consensusContract`: one of `["AggchainECDSA", "AggchainFEP"]` (StateTransition and Pessimistic rollups can no longer be created)
 - `chainID`, `forkID`, `networkName`, `description`
 - `trustedSequencer`, `trustedSequencerURL`
 - `adminZkEVM`: rollup admin
 - `gasTokenAddress`: native gas token (0x0 for ETH)
-- `programVKey`: for pessimistic consensus
+- `programVKey`: must be bytes32(0)
 - `isVanillaClient`: flag for sovereign chains (requires `sovereignParams`)
 - `aggchainParams`: for AggchainECDSA/AggchainFEP (see deployment/v2/README.md for full details)
 
-**Optional params** (both files): `deployerPvtKey`, `maxFeePerGas`, `maxPriorityFeePerGas`, `multiplierGas`, `dataAvailabilityProtocol`
+**Optional params** (both files): `deployerPvtKey`, `maxFeePerGas`, `maxPriorityFeePerGas`, `multiplierGas`
 
 ## Network Targeting
 

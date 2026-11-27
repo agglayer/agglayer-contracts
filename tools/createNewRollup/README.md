@@ -30,7 +30,7 @@ cp ./tools/createNewRollup/create_new_rollup.json.example ./tools/createNewRollu
     -   `trustedSequencer`: Sequencer address of the new created rollup
     -   `chainID`: ChainID of the rollup, must be a new one, can not have more than 32 bits
     -   `rollupAdminAddress`: Admin address of the new created rollup
-    -   `consensusContractName`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus"]`. This is the name of the consensus of the rollupType of the rollup to be created
+    -   `consensusContractName`: select between aggchain contracts. Supported: `["AggchainECDSAMultisig", "AggchainFEP"]`. This is the name of the consensus of the rollupType of the rollup to be created. StateTransition (`PolygonZkEVMEtrog`, `PolygonValidiumEtrog`) and `PolygonPessimisticConsensus` rollups can no longer be created (AgglayerManager v2.0.0)
     -   `gasTokenAddress`: Address of the native gas token of the rollup, zero if ether
     -   `deployerPvtKey`: Not mandatory, used to deploy from specific wallet
     -   `maxFeePerGas(optional)`: string, Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it
@@ -39,7 +39,7 @@ cp ./tools/createNewRollup/create_new_rollup.json.example ./tools/createNewRollu
     - `timelockDelay(optional)`: timelock delay, only required on timelock type
     - `timelockSalt(optional)`: timelock salt, only required on timelock type
     -   `rollupManagerAddress`: Address of deployed rollupManager contract
-    -   `rollupTypeId`: The id of the rollup type of the rollup to deploy. WARNING: the type must match with the `consensusContractName`. Example: if the type is validium, the contract name has to be `PolygonValidiumEtrog`
+    -   `rollupTypeId`: The id of the rollup type of the rollup to deploy. It must be an ALGateway rollup type. WARNING: the type must match with the `consensusContractName`. Example: if the type is AggchainFEP, the contract name has to be `AggchainFEP`
     -   `proxiedTokensManager`:  Address of proxiedTokensManager role
     -   `isVanillaClient`: Flag for vanilla/sovereign clients handling
     -   `sovereignParams`:

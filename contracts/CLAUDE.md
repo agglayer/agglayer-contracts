@@ -8,7 +8,7 @@ Always use Agglayer names (not legacy Polygon names).
 
 | Contract | Description | Upgradeable |
 |---|---|---|
-| `AgglayerManager.sol` | Central rollup manager. Registers rollup types, creates rollups, verifies batches, manages chain upgrades via `updateRollup`. Deploys `PolygonTransparentProxy` for each chain. | Yes (proxy) |
+| `AgglayerManager.sol` | Central rollup manager. Registers ALGateway rollup types, creates aggchains, verifies pessimistic proofs, manages chain upgrades via `updateRollup`. Legacy StateTransition rollups can only roll back unverified batches and migrate (`initMigration`). Deploys `PolygonTransparentProxy` for each chain. | Yes (proxy) |
 | `AgglayerBridge.sol` | Cross-chain bridge deployed on L1 and all rollups. Manages deposits (Merkle tree), claims, wrapped token creation. | Yes (proxy) |
 | `AgglayerGER.sol` | Global Exit Root manager. Maintains the L1 info tree combining mainnet exit root + rollup exit root. Immutables: `bridgeAddress`, `rollupManager`. | Yes (proxy) |
 | `AgglayerGateway.sol` | Stores common info for all chains: default VKeys (program verification keys), shared multisig config, PP verification key routes. | Yes (proxy) |
@@ -27,14 +27,16 @@ Both inherit from `lib/AggchainBase.sol` -> `PolygonConsensusBase`.
 
 All aggchain contracts are deployed through AgglayerManager as `PolygonTransparentProxy` instances. Upgrades happen via `AgglayerManager.updateRollup()`.
 
-## Legacy Consensus Contracts (`consensus/`) -- DEPRECATED
+## Legacy Consensus Contracts -- DEPRECATED
+
+StateTransition consensus contracts were archived in `previousVersions/v12/` together with `AgglayerManagerV12` (the last manager able to create, sequence and verify them), used by the tests to build StateTransition state before upgrading. No logic changes, only import paths and the manager type (`AgglayerManagerV12`).
 
 | Contract | Status |
 |---|---|
-| `consensus/validium/PolygonValidiumEtrog.sol` | Still "living" for existing chains |
-| `consensus/validium/PolygonDataCommittee.sol` | Data availability committee (validium) |
-| `consensus/zkEVM/PolygonZkEVMEtrog.sol` | DEPRECATED |
-| `consensus/zkEVM/PolygonZkEVMExistentEtrog.sol` | DEPRECATED (migration helper) |
+| `previousVersions/v12/PolygonValidiumEtrog.sol` | Archived: StateTransition, can only migrate to ALGateway |
+| `previousVersions/v12/PolygonDataCommittee.sol` | Archived: data availability committee (validium) |
+| `previousVersions/v12/PolygonZkEVMEtrog.sol` | Archived: StateTransition, can only migrate to ALGateway |
+| `previousVersions/v12/PolygonZkEVMExistentEtrog.sol` | Archived (migration helper) |
 | `consensus/pessimistic/PolygonPessimisticConsensus.sol` | DEPRECATED |
 
 ## Sovereign Chain Contracts (`sovereignChains/`) -- L2 SIDE
@@ -53,7 +55,7 @@ These are deployed on the sovereign chain itself (L2), not on L1:
 | `PolygonAccessControlUpgradeable` | Custom role-based access control |
 | `EmergencyManager` | Emergency state toggle |
 | `PolygonConsensusBase` | Base for aggchain and pessimistic consensus |
-| `PolygonRollupBaseEtrog` | Base for legacy zkEVM/validium consensus |
+| `PolygonRollupBaseEtrog` | Base for legacy zkEVM/validium consensus (archived in `previousVersions/v12/`) |
 | `AggchainBase` | Base for current aggchain contracts |
 | `DepositContractV2` / `DepositContractBase` | Merkle tree for bridge deposits |
 | `GlobalExitRootLib` | Exit root hash computation |

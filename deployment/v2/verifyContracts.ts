@@ -140,39 +140,9 @@ async function main() {
         expect(error.message.toLowerCase().includes('already verified')).to.be.equal(true);
     }
 
-    // verify zkEVM address or validium
+    // verify aggchain address
 
-    if (createRollupOutputParameters.consensusContract === 'PolygonZkEVMEtrog') {
-        try {
-            await hre.run('verify:verify', {
-                contract: 'contracts/v2/consensus/zkEVM/PolygonZkEVMEtrog.sol:PolygonZkEVMEtrog',
-                address: createRollupOutputParameters.rollupAddress,
-                constructorArguments: [
-                    deployOutputParameters.polygonZkEVMGlobalExitRootAddress,
-                    deployOutputParameters.polTokenAddress,
-                    deployOutputParameters.polygonZkEVMBridgeAddress,
-                    deployOutputParameters.polygonRollupManagerAddress,
-                ],
-            });
-        } catch (error) {
-            // expect(error.message.toLowerCase().includes('proxyadmin')).to.be.equal(true);
-        }
-    } else if (createRollupOutputParameters.consensusContract === 'PolygonValidiumEtrog') {
-        try {
-            await hre.run('verify:verify', {
-                contract: 'contracts/v2/consensus/validium/PolygonValidiumEtrog.sol:PolygonValidiumEtrog',
-                address: createRollupOutputParameters.rollupAddress,
-                constructorArguments: [
-                    deployOutputParameters.polygonZkEVMGlobalExitRootAddress,
-                    deployOutputParameters.polTokenAddress,
-                    deployOutputParameters.polygonZkEVMBridgeAddress,
-                    deployOutputParameters.polygonRollupManagerAddress,
-                ],
-            });
-        } catch (error) {
-            // expect(error.message.toLowerCase().includes('proxyadmin')).to.be.equal(true);
-        }
-    } else if (createRollupOutputParameters.consensusContract === 'AggchainECDSAMultisig') {
+    if (createRollupOutputParameters.consensusContract === 'AggchainECDSAMultisig') {
         try {
             await hre.run('verify:verify', {
                 contract: 'contracts/v2/aggchains/AggchainECDSAMultisig.sol:AggchainECDSAMultisig',

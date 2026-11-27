@@ -20,14 +20,20 @@ npm i
   - `maxFeePerGas`: set custom gas
   - `maxPriorityFeePerGas`: set custom gas
   - `multiplierGas`: set custom gas
-  - `rollupID`: Identifier of the rollup to upgrade (must be validium or zkevm)
-  - `newRollupTypeId`: Identifier for the target Pessimistic Proof rollup type
+  - `rollupID`: Identifier of the rollup to upgrade (must be a StateTransition rollup: validium or zkevm)
+  - `newRollupTypeId`: Identifier for the target ALGateway (aggchain) rollup type
+  - `upgradeData`: calldata executed on the rollup proxy during the upgrade, e.g. `AggchainECDSAMultisig.migrateFromLegacyConsensus()`
 > All paths are from root repository
+
+### Before migrating
+Since AgglayerManager v2.0.0 StateTransition rollups can no longer sequence nor verify batches. `initMigration` reverts with `AllSequencedMustBeVerified` while the rollup has sequenced batches that were never verified (`lastBatchSequenced != lastVerifiedBatch`, see `rollupIDToRollupDataV2`). Remove them first with `rollbackBatches(rollupAddress, lastVerifiedBatch)`, callable by the `UPDATE_ROLLUP_ROLE` holder or the rollup admin.
+
+The migration is completed by the first `verifyPessimisticTrustedAggregator`, whose `newLocalExitRoot` must match the last verified local exit root.
 
 ## Usage
 > All commands are done from root repository.
 
-### Call 'updateRollup'
+### Call 'initMigration'
 - Copy configuration file:
 ```
 cp ./tools/initMigration/initMigration.json.example ./tools/initMigration/initMigration.json

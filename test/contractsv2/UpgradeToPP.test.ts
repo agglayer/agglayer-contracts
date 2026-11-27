@@ -18,6 +18,7 @@ import { encodeInitializeBytesLegacy } from '../../src/utils-common-aggchain';
 import { VerifierType, computeRandomBytes } from '../../src/pessimistic-utils';
 import { AL_MULTISIG_ROLE } from '../../src/constants';
 import { calculateAccInputHashetrog } from '../../src/utils';
+import { deployRollupManagerV12, upgradeToCurrentRollupManager } from './helpers/helpers-rollup-manager';
 
 describe('Upgradeable to PPV2 or ALGateway', () => {
     let deployer: any;
@@ -32,7 +33,9 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
     let verifierContract: VerifierRollupHelperMock;
     let polygonZkEVMBridgeContract: AgglayerBridge;
     let polygonZkEVMGlobalExitRoot: AgglayerGER;
-    let rollupManagerContract: AgglayerManagerMock;
+    // StateTransition rollups are created on the archived v12 AgglayerManager, then the proxy is upgraded to AgglayerManagerMock
+    let rollupManagerContract: AgglayerManagerMock | any;
+    let rollupManagerConstructorArgs: any[];
     let aggchainECDSAContract: AggchainECDSAMultisig;
 
     const networkIDMainnet = 0;
@@ -118,20 +121,14 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
         });
 
         // deploy AgglayerManager
-        const PolygonRollupManagerFactory = await ethers.getContractFactory('AgglayerManagerMock');
-
-        rollupManagerContract = (await upgrades.deployProxy(PolygonRollupManagerFactory, [], {
-            initializer: false,
-            constructorArgs: [
-                polygonZkEVMGlobalExitRoot.target,
-                polTokenContract.target,
-                polygonZkEVMBridgeContract.target,
-                aggLayerGatewayContract.target,
-            ],
-            unsafeAllow: ['constructor', 'missing-initializer', 'missing-initializer-call', 'state-variable-immutable'],
-        })) as unknown as AgglayerManagerMock;
-
-        await rollupManagerContract.waitForDeployment();
+        // The archived v12 AgglayerManager is deployed first: it is the last version able to create StateTransition rollups
+        rollupManagerConstructorArgs = [
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            aggLayerGatewayContract.target,
+        ];
+        rollupManagerContract = await deployRollupManagerV12(rollupManagerConstructorArgs);
 
         // check precalculated address
         expect(precalculateBridgeAddress).to.be.equal(polygonZkEVMBridgeContract.target);
@@ -409,6 +406,12 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 zkProofFFlonk,
             );
 
+        // Upgrade AgglayerManager: StateTransition rollups can no longer sequence nor verify batches, only migrate
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
+        );
+
         const rollupData = await rollupManagerContract.rollupIDToRollupDataV2Deserialized(newCreatedRollupID);
         const lastBatchSequenced = rollupData[5];
         const lastBatchVerified = rollupData[6];
@@ -553,6 +556,12 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             newStateRoot,
             trustedAggregator.address,
             zkProofFFlonk,
+        );
+
+        // Upgrade AgglayerManager: StateTransition rollups can no longer sequence nor verify batches, only migrate
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
         );
 
         // Create FEP rollup type
@@ -737,6 +746,12 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
                 new Array(24).fill(ethers.ZeroHash),
             );
 
+        // Upgrade AgglayerManager: StateTransition rollups can no longer sequence nor verify batches, only migrate
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
+        );
+
         // updateRollup can not move a StateTransition rollup to ALGateway: it would skip the initMigration bootstrap
         // and leave the rollup with lastLocalExitRoot != 0 and lastPessimisticRoot == 0, which no pessimistic proof can match
         const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
@@ -754,5 +769,213 @@ describe('Upgradeable to PPV2 or ALGateway', () => {
             .to.emit(rollupManagerContract, 'InitMigration')
             .withArgs(newCreatedRollupID, rollupTypeIDAlGateway);
         expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(true);
+    });
+
+    it('should rollback unverified batches and migrate a StateTransition rollup after the AgglayerManager upgrade', async () => {
+        // Create a zkEVM etrog rollup on the archived v12 AgglayerManager
+        const chainID = 1000;
+        const PolygonZKEVMV2Factory = await ethers.getContractFactory('PolygonZkEVMEtrog');
+        const zkEVMImplementation = await PolygonZKEVMV2Factory.deploy(
+            polygonZkEVMGlobalExitRoot.target,
+            polTokenContract.target,
+            polygonZkEVMBridgeContract.target,
+            rollupManagerContract.target,
+        );
+        await zkEVMImplementation.waitForDeployment();
+
+        // Two StateTransition rollup types: 2 and 3
+        const stRollupTypeID = 2;
+        const stRollupTypeID2 = 3;
+        for (let i = 0; i < 2; i++) {
+            await rollupManagerContract
+                .connect(timelock)
+                .addNewRollupType(
+                    zkEVMImplementation.target,
+                    verifierContract.target,
+                    0,
+                    VerifierType.StateTransition,
+                    ethers.id('genesis'),
+                    'zkevm test',
+                    ethers.ZeroHash,
+                );
+        }
+
+        const rollupAddress = ethers.getCreateAddress({ from: rollupManagerContract.target as string, nonce: 1 });
+        const initializeBytesLegacy = encodeInitializeBytesLegacy(
+            admin.address,
+            trustedSequencer.address,
+            ethers.ZeroAddress,
+            'http://zkevm-json-rpc:8123',
+            'zkevm',
+        );
+        await rollupManagerContract.connect(admin).attachAggchainToAL(stRollupTypeID, chainID, initializeBytesLegacy);
+
+        // Verify the initial batch (1)
+        const lastLocalExitRoot = ethers.id('lastLocalExitRoot');
+        await rollupManagerContract
+            .connect(trustedAggregator)
+            .verifyBatchesTrustedAggregator(
+                newCreatedRollupID,
+                0,
+                0,
+                1,
+                lastLocalExitRoot,
+                newStateRoot,
+                trustedAggregator.address,
+                new Array(24).fill(ethers.ZeroHash),
+            );
+
+        // Sequence 2 more batches (2-3) that will never be verified
+        await ethers.provider.send('hardhat_setBalance', [rollupAddress, '0x100000000000000']);
+        await ethers.provider.send('hardhat_impersonateAccount', [rollupAddress]);
+        const rollupSigner = await ethers.getSigner(rollupAddress);
+        await rollupManagerContract.connect(rollupSigner).onSequenceBatches(2, ethers.id('accInputHash'));
+        let rollupData = await rollupManagerContract.rollupIDToRollupDataV2Deserialized(newCreatedRollupID);
+        expect(rollupData.lastBatchSequenced).to.be.equal(3);
+        expect(rollupData.lastVerifiedBatch).to.be.equal(1);
+
+        // Upgrade AgglayerManager
+        rollupManagerContract = await upgradeToCurrentRollupManager(
+            rollupManagerContract.target,
+            rollupManagerConstructorArgs,
+        );
+
+        // Hermez prover functions are removed: no sequencing, verification nor batch fees
+        const removedFunctions = [
+            'onSequenceBatches',
+            'verifyBatchesTrustedAggregator',
+            'getInputSnarkBytes',
+            'calculateRewardPerBatch',
+            'getBatchFee',
+            'getForcedBatchFee',
+            'setBatchFee',
+            'totalSequencedBatches',
+            'totalVerifiedBatches',
+        ];
+        for (let i = 0; i < removedFunctions.length; i++) {
+            const fn = removedFunctions[i];
+            expect(rollupManagerContract.interface.getFunction(fn), fn).to.be.equal(null);
+        }
+        const onSequenceBatchesData = new ethers.Interface([
+            'function onSequenceBatches(uint64,bytes32) returns (uint64)',
+        ]).encodeFunctionData('onSequenceBatches', [1, ethers.id('accInputHash')]);
+        await expect(rollupSigner.sendTransaction({ to: rollupManagerContract.target, data: onSequenceBatchesData })).to
+            .be.reverted;
+
+        // The StateTransition data is kept
+        rollupData = await rollupManagerContract.rollupIDToRollupDataV2Deserialized(newCreatedRollupID);
+        expect(rollupData.rollupVerifierType).to.be.equal(VerifierType.StateTransition);
+        expect(rollupData.lastLocalExitRoot).to.be.equal(lastLocalExitRoot);
+        expect(rollupData.lastBatchSequenced).to.be.equal(3);
+        expect(await rollupManagerContract.getLastVerifiedBatch(newCreatedRollupID)).to.be.equal(1);
+        expect(await rollupManagerContract.getRollupBatchNumToStateRoot(newCreatedRollupID, 1)).to.be.equal(
+            newStateRoot,
+        );
+        expect((await rollupManagerContract.getRollupSequencedBatches(newCreatedRollupID, 3)).accInputHash).to.be.equal(
+            ethers.id('accInputHash'),
+        );
+
+        // StateTransition rollup types can no longer be used: nor to create, add or update rollups
+        await expect(
+            rollupManagerContract.connect(admin).attachAggchainToAL(stRollupTypeID, chainID + 1, initializeBytesLegacy),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .addNewRollupType(
+                    zkEVMImplementation.target,
+                    verifierContract.target,
+                    0,
+                    VerifierType.StateTransition,
+                    ethers.id('genesis'),
+                    'zkevm test',
+                    ethers.ZeroHash,
+                ),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .addExistingRollup(
+                    polTokenContract.target,
+                    verifierContract.target,
+                    0,
+                    chainID + 1,
+                    ethers.id('genesis'),
+                    VerifierType.StateTransition,
+                    ethers.ZeroHash,
+                    ethers.ZeroHash,
+                ),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
+        await expect(
+            rollupManagerContract.connect(timelock).updateRollup(rollupAddress, stRollupTypeID2, '0x'),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
+        await expect(
+            rollupManagerContract.connect(admin).updateRollupByRollupAdmin(rollupAddress, stRollupTypeID2),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'InvalidRollupType');
+
+        // StateTransition rollups can not verify pessimistic proofs before initMigration
+        await expect(
+            rollupManagerContract
+                .connect(trustedAggregator)
+                .verifyPessimisticTrustedAggregator(
+                    newCreatedRollupID,
+                    await polygonZkEVMGlobalExitRoot.depositCount(),
+                    lastLocalExitRoot,
+                    computeRandomBytes(32),
+                    `${PESSIMISTIC_SELECTOR}00`,
+                    CUSTOM_DATA_ECDSA,
+                ),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'StateTransitionChainsNotAllowed');
+
+        // Unverified batches block the migration
+        const aggchainECDSAFactory = await ethers.getContractFactory('AggchainECDSAMultisig');
+        const upgradeData = aggchainECDSAFactory.interface.encodeFunctionData('migrateFromLegacyConsensus()');
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .initMigration(newCreatedRollupID, rollupTypeIDAlGateway, upgradeData),
+        ).to.be.revertedWithCustomError(rollupManagerContract, 'AllSequencedMustBeVerified');
+
+        // Rollback the unverified batches up to the last verified one
+        const rollupContract = PolygonZKEVMV2Factory.attach(rollupAddress) as any;
+        await expect(rollupManagerContract.connect(timelock).rollbackBatches(rollupAddress, 1))
+            .to.emit(rollupManagerContract, 'RollbackBatches')
+            .withArgs(
+                newCreatedRollupID,
+                1,
+                (await rollupManagerContract.getRollupSequencedBatches(newCreatedRollupID, 1)).accInputHash,
+            )
+            .to.emit(rollupContract, 'RollbackBatches');
+        rollupData = await rollupManagerContract.rollupIDToRollupDataV2Deserialized(newCreatedRollupID);
+        expect(rollupData.lastBatchSequenced).to.be.equal(1);
+
+        // Migrate to ALGateway
+        await expect(
+            rollupManagerContract
+                .connect(timelock)
+                .initMigration(newCreatedRollupID, rollupTypeIDAlGateway, upgradeData),
+        )
+            .to.emit(rollupManagerContract, 'InitMigration')
+            .withArgs(newCreatedRollupID, rollupTypeIDAlGateway)
+            .to.emit(rollupManagerContract, 'UpdateRollup')
+            .withArgs(newCreatedRollupID, rollupTypeIDAlGateway, 1);
+
+        // Complete the migration with the bootstrap pessimistic proof, which must match the last verified LER
+        const lastL1InfoTreeLeafCount = await polygonZkEVMGlobalExitRoot.depositCount();
+        await expect(
+            rollupManagerContract
+                .connect(trustedAggregator)
+                .verifyPessimisticTrustedAggregator(
+                    newCreatedRollupID,
+                    lastL1InfoTreeLeafCount,
+                    lastLocalExitRoot,
+                    computeRandomBytes(32),
+                    `${PESSIMISTIC_SELECTOR}00`,
+                    CUSTOM_DATA_ECDSA,
+                ),
+        )
+            .to.emit(rollupManagerContract, 'CompletedMigration')
+            .withArgs(newCreatedRollupID);
+        expect(await rollupManagerContract.isRollupMigrating(newCreatedRollupID)).to.be.equal(false);
     });
 });

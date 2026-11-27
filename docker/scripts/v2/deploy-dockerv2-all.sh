@@ -40,18 +40,6 @@ cp ./docker/scripts/v2/create_rollup_parameters_docker-v0.3.0-ecdsa.json ./deplo
 npx hardhat run ./deployment/v2/4_createRollup.ts --network localhost
 # move rollup output to output folder
 mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output_v0.3.0-ecdsa.json
-# copy new create rollup parameters (PolygonZkEVMEtrog) to docker scripts to create new rollup PolygonZkEVMEtrog
-cp ./docker/scripts/v2/create_rollup_parameters_docker-fork12.json ./deployment/v2/create_rollup_parameters.json
-# create new rollup PolygonZkEVMEtrog
-npx hardhat run ./deployment/v2/4_createRollup.ts --network localhost
-# move rollup output to output folder
-mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output_fork12.json
-# copy new create rollup parameters (PolygonValidiumEtrog) to docker scripts to create new rollup PolygonValidiumEtrog
-cp ./docker/scripts/v2/create_rollup_parameters_docker-validium.json ./deployment/v2/create_rollup_parameters.json
-# create new rollup PolygonValidiumEtrog
-npx hardhat run ./deployment/v2/4_createRollup.ts --network localhost
-# move rollup output to output folder
-mv ./deployment/v2/create_rollup_output_*.json ./docker/deploymentOutput/create_rollup_output_validium.json
 # move deployment output to output folder
 mv deployment/v2/deploy_output.json docker/deploymentOutput
 mv deployment/v2/genesis.json docker/deploymentOutput

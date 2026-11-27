@@ -76,17 +76,16 @@ A new folder will be created with the following name `deployments/${network}_$(d
 
 ## create_rollup_parameters.json
 
-- `realVerifier`: bool, Indicates whether deploy a real verifier or not for the new created
 - `trustedSequencerURL`: string, trustedSequencer URL
 - `networkName`: string, networkName
 - `description`: string, Description of the new rollup type
 - `trustedSequencer`: address, trusted sequencer address
 - `chainID`: uint64, chainID of the new rollup
 - `adminZkEVM`: address, Admin address, can adjust Rollup parameters
-- `forkID`: uint64, Fork ID of the new rollup, indicates the prover (zkROM/executor) version
-- `consensusContract`: select between consensus contract. Supported: `["PolygonZkEVMEtrog", "PolygonValidiumEtrog", "PolygonPessimisticConsensus", "AggchainECDSA", "AggchainFEP"]`.
+- `forkID`: uint64, must be `0` (aggchains have no fork ID)
+- `consensusContract`: select between consensus contract. Supported: `["AggchainECDSA", "AggchainFEP"]`. StateTransition (`PolygonZkEVMEtrog`, `PolygonValidiumEtrog`) and `PolygonPessimisticConsensus` rollups can no longer be created since AgglayerManager v2.0.0.
 - `gasTokenAddress`: address, Gas token address, empty or address(0) for ether
-- `programVKey`: program key for pessimistic consensus. if consensus != pessimistic, programVKey === bytes32(0).
+- `programVKey`: must be bytes32(0) for aggchains.
 - `isVanillaClient`: Flag for vanilla/sovereign clients handling
 - `sovereignParams`: Only mandatory if isVanillaClient = true
     - `bridgeManager`: bridge manager address
@@ -96,7 +95,7 @@ A new folder will be created with the following name `deployments/${network}_$(d
     - `globalExitRootRemover`: Address of globalExitRootRemover for sovereign chains
     - `emergencyBridgePauser`: emergency bridge pauser address, can stop the bridge, recommended to be a multisig
     - `emergencyBridgeUnpauser`: emergency bridge unpauser address, can unpause the bridge, recommended to be a multisig
-- `aggchainParams`: Only mandatory if consensusContract is AggchainECDSA or AggchainFEP
+- `aggchainParams`: mandatory
     - `aggchainManager`: Address that manages all the functionalities related to the aggchain
     - `aggchainManagerPvtKey`: (Optional) Private key for the aggchainManager account. If provided, will be used to sign transactions. If empty, will use deployer.
     - `initParams`: Only mandatory if consensusContract is AggchainFEP
@@ -123,7 +122,6 @@ A new folder will be created with the following name `deployments/${network}_$(d
 - `maxFeePerGas`: string, Set `maxFeePerGas`, must define as well `maxPriorityFeePerGas` to use it
 - `maxPriorityFeePerGas`: string, Set `maxPriorityFeePerGas`, must define as well `maxFeePerGas` to use it
 - `multiplierGas`: number, Gas multiplier with 3 decimals. If `maxFeePerGas` and `maxPriorityFeePerGas` are set, this will not take effect
-- `dataAvailabilityProtocol`: string, Data availability protocol, only mandatory/used when consensus contract is a Validium, currently the only supported value is: `PolygonDataCommittee`
 
 ## Notes
 

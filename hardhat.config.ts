@@ -244,6 +244,27 @@ const config: HardhatUserConfig = {
                     evmVersion: 'cancun',
                 }, // try yul optimizer
             },
+            // Archived v12 AgglayerManager (last version with StateTransition support), same settings as AgglayerManager
+            'contracts/previousVersions/v12/AgglayerManagerV12.sol': {
+                version: '0.8.28',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 100,
+                    },
+                    evmVersion: 'cancun',
+                },
+            },
+            'contracts/previousVersions/v12/AgglayerManagerV12Mock.sol': {
+                version: '0.8.28',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 100,
+                    },
+                    evmVersion: 'cancun',
+                },
+            },
             // Should have the same optimizations than the RollupManager to verify
             'contracts/lib/PolygonTransparentProxy.sol': {
                 version: '0.8.28',

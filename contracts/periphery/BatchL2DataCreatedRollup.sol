@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.20;
 
-import "../lib/PolygonRollupBaseEtrog.sol";
+import "../previousVersions/v12/PolygonRollupBaseEtrog.sol";
 
 // This contract is only used for a specific tool: zkevm-contracts/tools/batchL2DataCreatedRollup.
-// This contract is part of the zkevm-contracts/contracts/lib/PolygonRollupBaseEtrog.sol contract.
+// This contract is part of the zkevm-contracts/contracts/previousVersions/v12/PolygonRollupBaseEtrog.sol contract.
 contract BatchL2DataCreatedRollup {
     uint8 public constant INITIALIZE_TX_BRIDGE_LIST_LEN_LEN = 0xf9;
     bytes public constant INITIALIZE_TX_BRIDGE_PARAMS = hex"80808401c9c38094";

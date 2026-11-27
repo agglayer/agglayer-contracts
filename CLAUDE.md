@@ -9,7 +9,7 @@ License: AGPL-3.0
 
 ```
 contracts/          Main Solidity contracts (0.8.28 primary)
-  consensus/        Consensus implementations (zkEVM, validium, pessimistic)
+  consensus/        Legacy pessimistic consensus (zkEVM/validium archived in previousVersions/v12/)
   aggchains/        Aggchain implementations (AggchainECDSA, AggchainFEP)
   sovereignChains/  Sovereign chain L2 contracts (bridge, GER, oracle committee)
   interfaces/       29 interface files
@@ -120,15 +120,15 @@ Important: Cannot deploy twice on the same network with the same `salt` + `initi
 - `AggchainECDSA` (AggchainECDSAMultisig) -- Pessimistic Proof only. Both PP and ECDSA multisig authorize inputs (hence the name).
 
 **Legacy consensus types (deprecated but still deployed):**
-- `PolygonValidiumEtrog` -- Validium with off-chain DA. Still "living" for existing chains.
-- `PolygonZkEVMEtrog` -- zkEVM rollup with full ZK proofs. Deprecated.
+- `PolygonValidiumEtrog` -- Validium with off-chain DA. StateTransition: since AgglayerManager v2.0.0 it can no longer sequence nor verify batches, only roll back and migrate to ALGateway (`initMigration`). Archived in `contracts/previousVersions/v12/`.
+- `PolygonZkEVMEtrog` -- zkEVM rollup with full ZK proofs. Same as validium. Archived in `contracts/previousVersions/v12/`.
 - `PolygonPessimisticConsensus` -- Pessimistic consensus. Deprecated.
 
 **Outpost patterns (non-Polygon chains joining Agglayer):**
 - Purely PP (pessimistic proof) -- use `AggchainECDSA`
 - Bridge proof -- custom contract that reads the chain's state posting + a custom circuit to verify that state root against the L2 bridge using zkvm Succinct
 
-Aggchain contracts inherit from `AggchainBase` -> `PolygonConsensusBase`. Legacy types use `PolygonRollupBaseEtrog`.
+Aggchain contracts inherit from `AggchainBase` -> `PolygonConsensusBase`. Legacy types use `PolygonRollupBaseEtrog` (archived in `contracts/previousVersions/v12/`).
 
 All chain contracts are deployed through AgglayerManager, which creates a `PolygonTransparentProxy` (slightly modified OZ transparent proxy). AgglayerManager manages upgrades via `updateRollup`.
 
